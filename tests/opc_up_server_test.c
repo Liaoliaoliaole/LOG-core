@@ -76,7 +76,7 @@ static UA_StatusCode readCurrentInteger(UA_Server *server,
                 UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
                 UA_DataValue *dataValue) 
 {
-	i = i + .001;
+	//i = i + .001;
     UA_Variant_setScalarCopy(&dataValue->value, &i,&UA_TYPES[UA_TYPES_FLOAT]);
     dataValue->hasValue = true;
     return UA_STATUSCODE_GOOD;
@@ -89,8 +89,7 @@ static UA_StatusCode writeCurrentInteger(UA_Server *server,
 {
     //UA_Variant_setScalarCopy(&dataValue->value, &dataValue->value,&UA_TYPES[UA_TYPES_INT32]);
 	//i=data->value;
-	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                "THE VALUE HAS CHANGED");
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,"THE VALUE HAS CHANGED");
 	
     return UA_STATUSCODE_GOOD;
 }
@@ -107,7 +106,7 @@ static void addDataSourceVariable(UA_Server *server)
     UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
     UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
     UA_NodeId variableTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE);
-
+	UA_Variant_setScalar(&attr.value, 0,&UA_TYPES[UA_TYPES_INT32]);
     UA_DataSource timeDataSource;
     timeDataSource.read = readCurrentInteger;
     timeDataSource.write = writeCurrentInteger;
