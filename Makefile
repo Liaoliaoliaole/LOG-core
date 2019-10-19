@@ -5,10 +5,10 @@ BUILD_dir=build
 WORK_dir=work
 SOURCE_dir=src
 
-$(BUILD_dir)/morfeas_core: $(WORK_dir)/morfeas_core.o 
+$(BUILD_dir)/morfeas_opc_ua: $(WORK_dir)/morfeas_opc_ua.o 
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 	
-$(WORK_dir)/morfeas_core.o: $(SOURCE_dir)/morfeas_core.c
+$(WORK_dir)/morfeas_opc_ua.o: $(SOURCE_dir)/morfeas_opc_ua.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 tree: 
