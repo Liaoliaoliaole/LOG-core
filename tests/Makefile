@@ -1,8 +1,10 @@
 CC=gcc
 CFLAGS=-std=c99 -DUA_ARCHITECTURE_POSIX -Wall
-LDLIBS=$(shell pkg-config --cflags --libs open62541 libxml-2.0) 
+LDLIBS=$(shell pkg-config --cflags --libs open62541 libxml-2.0 libgtop-2.0) 
 
-all: opc_ua_server_test xml_parsing_test shm_server shm_client
+comp_progs = opc_ua_server_test xml_parsing_test shm_server shm_client libgtop_test
+
+all: $(comp_progs)
 
 opc_ua_server_test: opc_ua_server_test.c 
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS) 
@@ -15,9 +17,12 @@ shm_server: shm_server.c
 
 shm_client: shm_client.c
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
-	
-clean:
-	rm -f *.o opc_ua_server_test xml_parsing_test shm_server shm_client
+
+libgtop_test: libgtop_test.c
+	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
+		
+clean: 
+	rm -f *.o $(comp_progs)
 
 .PHONY: all clean clean-tree 
 
