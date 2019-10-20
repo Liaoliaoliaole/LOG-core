@@ -17,11 +17,11 @@ int main()
 	glibtop_get_cpu (&buff_cpuload);
 	glibtop_get_mem (&buff_mem);
 	
-	printf("Uptime=%f"
+	printf("Uptime=%ld"
 		   "\nCPU_load=%"G_GUINT64_FORMAT
 		   "\nUsed_mem=%"G_GUINT64_FORMAT
-		   "\n",buff_uptime.uptime/3600.0,
-				buff_cpuload.idle/buff_cpuload.frequency,
+		   "\n",(long)buff_uptime.uptime/3600,
+				buff_cpuload.user/buff_cpuload.frequency,
 				buff_mem.total);
 	
 }
