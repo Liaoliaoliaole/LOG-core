@@ -1,8 +1,8 @@
 CC=gcc
 CFLAGS=-std=c99 -DUA_ARCHITECTURE_POSIX -Wall
-LDLIBS=$(shell pkg-config --cflags --libs open62541 libxml-2.0 libgtop-2.0) 
+LDLIBS=$(shell pkg-config --cflags --libs open62541 libxml-2.0 libgtop-2.0) -lrt
 
-comp_progs = opc_ua_server_test xml_parsing_test shm_server shm_client libgtop_test
+comp_progs = opc_ua_server_test xml_parsing_test shm_server shm_client libgtop_test timer_test
 
 all: $(comp_progs)
 
@@ -20,6 +20,9 @@ shm_client: shm_client.c
 
 libgtop_test: libgtop_test.c
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+timer_test: timer_test.c
+	$(CC) $^ -o $@ -lrt -Wall 
 		
 clean: 
 	rm -f *.o $(comp_progs)
