@@ -139,14 +139,17 @@ static void addVariable(UA_Server *server)
 }
 
 static volatile UA_Boolean running = true;
-static void stopHandler(int sign) {
-    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
+void stopHandler(int sign) 
+{
+    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "From handler -> Received ctrl-c");
     running = false;
 }
 
 int main(void) {
-    signal(SIGINT, stopHandler);
-    signal(SIGTERM, stopHandler);
+    struct sigaction sa={0};
+    sa.sa_handler = &stopHandler;
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 
     UA_Server *server = UA_Server_new();
     UA_ServerConfig_setDefault(UA_Server_getConfig(server));

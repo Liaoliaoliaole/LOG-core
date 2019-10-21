@@ -19,7 +19,7 @@ shm_client: shm_client.c
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 libgtop_test: libgtop_test.c
-	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
+	$(CC) -Wall $^ -o $@ $(LDLIBS)
 
 timer_test: timer_test.c
 	$(CC) $^ -o $@ -lrt -Wall 

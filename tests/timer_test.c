@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 void timer_handler (int signum)
 {
@@ -17,7 +18,7 @@ int main ()
  /* Install timer_handler as the signal handler for SIGVTALRM. */
  memset (&sa, 0, sizeof (sa));
  sa.sa_handler = &timer_handler;
- sigaction (SIGVTALRM, &sa, NULL);
+ sigaction (SIGALRM, &sa, NULL); 
 
  /* Configure the timer to expire after 250 msec... */
  timer.it_value.tv_sec = 0;
@@ -27,8 +28,9 @@ int main ()
  timer.it_interval.tv_usec = 250000;
  /* Start a virtual timer. It counts down whenever this process is
    executing. */
- setitimer (ITIMER_VIRTUAL, &timer, NULL);
+ setitimer (ITIMER_REAL, &timer, NULL);
 
  /* Do busy work. */
- while (1);
+ while (1)
+ 	sleep(500);
 }
