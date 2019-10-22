@@ -51,7 +51,7 @@ int main()
 	struct sigaction sa;
 	struct itimerval timer;
 
-	/* Install timer_handler as the signal handler for SIGVTALRM. */
+	/* Install timer_handler as the signal handler for SIGALRM. */
 	memset (&sa, 0, sizeof (sa));
 	sa.sa_handler = &timer_handler;
 	sigaction (SIGALRM, &sa, NULL);
