@@ -141,8 +141,9 @@ static void addVariable(UA_Server *server)
 static volatile UA_Boolean running = true;
 void stopHandler(int sign) 
 {
-    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "From handler -> Received ctrl-c");
-    running = false;
+	if(sign==SIGINT)
+		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "From Handler -> Received ctrl-c");
+	running = false;
 }
 
 int main(void) {
@@ -158,8 +159,8 @@ int main(void) {
 	//addValueCallbackToCurrentTimeVariable(server);
 	addVariable(server);
 	addDataSourceVariable(server);
+	
     UA_StatusCode retval = UA_Server_run(server, &running);
-
     UA_Server_delete(server);
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
