@@ -1,128 +1,194 @@
+#define CPU_temp_sysfs_file "/sys/class/thermal/thermal_zone0/temp"
+
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 
+#include <glib.h>
+#include <glibtop.h>
+#include <glibtop/uptime.h>
+#include <glibtop/cpu.h>
+#include <glibtop/mem.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <time.h>
 #include <signal.h>
-#include <stdlib.h> 
+#include <string.h>
+#include <sys/time.h>
+#include <unistd.h>
 
-static void
-updateCurrentTime(UA_Server *server) {
-    UA_DateTime now = UA_DateTime_now();
-    UA_Variant value;
-    UA_Variant_setScalar(&value, &now, &UA_TYPES[UA_TYPES_DATETIME]);
-    UA_NodeId currentNodeId = UA_NODEID_STRING(1, "current-time-value-callback");
-    UA_Server_writeValue(server, currentNodeId, value);
-}
+//OPC_UA local Functions
+void RPi_stat_Define(UA_Server *server);
+void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type); 
 
-static void
-beforeReadTime(UA_Server *server,
-               const UA_NodeId *sessionId, void *sessionContext,
-               const UA_NodeId *nodeid, void *nodeContext,
-               const UA_NumericRange *range, const UA_DataValue *data) {
-    updateCurrentTime(server);
-}
 
-static void
-afterWriteTime(UA_Server *server,
-               const UA_NodeId *sessionId, void *sessionContext,
-               const UA_NodeId *nodeId, void *nodeContext,
-               const UA_NumericRange *range, const UA_DataValue *data) 
-{
-    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                "The variable was updated");
-}
-
-static void
-addValueCallbackToCurrentTimeVariable(UA_Server *server) {
-    UA_NodeId currentNodeId = UA_NODEID_STRING(1, "current-time-value-callback");
-    UA_ValueCallback callback ;
-    callback.onRead = beforeReadTime;
-    callback.onWrite = afterWriteTime;
-    UA_Server_setVariableNode_valueCallback(server, currentNodeId, callback);
-}
-
-static void
-addCurrentTimeVariable(UA_Server *server) {
-    UA_DateTime now = 0;
-    UA_VariableAttributes attr = UA_VariableAttributes_default;
-    attr.displayName = UA_LOCALIZEDTEXT("en-US", "Current time - value callback");
-    attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-    UA_Variant_setScalar(&attr.value, &now, &UA_TYPES[UA_TYPES_DATETIME]);
-
-    UA_NodeId currentNodeId = UA_NODEID_STRING(1, "current-time-value-callback");
-    UA_QualifiedName currentName = UA_QUALIFIEDNAME(1, "current-time-value-callback");
-    UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
-    UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
-    UA_NodeId variableTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE);
-    UA_Server_addVariableNode(server, currentNodeId, parentNodeId,
-                              parentReferenceNodeId, currentName,
-                              variableTypeNodeId, attr, NULL, NULL);
-
-    updateCurrentTime(server);
-}
-static UA_StatusCode
-readCurrentTime(UA_Server *server,
-                const UA_NodeId *sessionId, void *sessionContext,
-                const UA_NodeId *nodeId, void *nodeContext,
-                UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
-                UA_DataValue *dataValue) {
-    UA_DateTime now = UA_DateTime_now();
-    UA_Variant_setScalarCopy(&dataValue->value, &now,
-                             &UA_TYPES[UA_TYPES_DATETIME]);
-    dataValue->hasValue = true;
-    return UA_STATUSCODE_GOOD;
-}
-
-static UA_StatusCode
-writeCurrentTime(UA_Server *server,
-                 const UA_NodeId *sessionId, void *sessionContext,
-                 const UA_NodeId *nodeId, void *nodeContext,
-                 const UA_NumericRange *range, const UA_DataValue *data) {
-    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                "Changing the system time is not implemented");
-    return UA_STATUSCODE_BADINTERNALERROR;
-}
-
-static void
-addCurrentTimeDataSourceVariable(UA_Server *server) {
-    UA_VariableAttributes attr = UA_VariableAttributes_default;
-    attr.displayName = UA_LOCALIZEDTEXT("en-US", "Current time - data source");
-    attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-
-    UA_NodeId currentNodeId = UA_NODEID_STRING(1, "current-time-datasource");
-    UA_QualifiedName currentName = UA_QUALIFIEDNAME(1, "current-time-datasource");
-    UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
-    UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
-    UA_NodeId variableTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE);
-
-    UA_DataSource timeDataSource;
-    timeDataSource.read = readCurrentTime;
-    timeDataSource.write = writeCurrentTime;
-    UA_Server_addDataSourceVariableNode(server, currentNodeId, parentNodeId,
-                                        parentReferenceNodeId, currentName,
-                                        variableTypeNodeId, attr,
-                                        timeDataSource, NULL, NULL);
-}
-
+//Global variables
 static volatile UA_Boolean running = true;
-static void stopHandler(int sign) {
-    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
-    running = false;
+UA_Server *server;
+
+static void stopHandler(int sign) 
+{
+    if(sign==SIGINT)
+		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
+	running = false;
 }
 
-int main(void) {
-    signal(SIGINT, stopHandler);
-    signal(SIGTERM, stopHandler);
+void timer_handler (int sign)
+{
+	FILE *CPU_temp_fp;
+	char cpu_temp_str[20];
+	unsigned int Up_time;
+	float CPU_Util,RAM_Util,CPU_temp;
+	static glibtop_cpu buff_cpuload_before={0};
+	glibtop_cpu buff_cpuload_after={0};
+	glibtop_uptime buff_uptime;
+	glibtop_mem buff_mem;
+	
+	//Read values
+	glibtop_get_uptime (&buff_uptime);//get computer's Up_time
+	glibtop_get_mem (&buff_mem);//get ram util
+	glibtop_get_cpu (&buff_cpuload_after);//get cpu util
+	//Calc CPU Utilization. Using current and old sample
+	CPU_Util=100.0*(buff_cpuload_after.user-buff_cpuload_before.user);
+	CPU_Util/=(buff_cpuload_after.total-buff_cpuload_before.total);
+	//store current CPU stat sample to old
+	memcpy(&buff_cpuload_before,&buff_cpuload_after,sizeof(glibtop_cpu));
+	
+	//Calc ram utilization
+	RAM_Util=100.0*(buff_mem.used - buff_mem.buffer - buff_mem.cached);
+	RAM_Util/=buff_mem.total;
+	Up_time=buff_uptime.uptime;
+	
+	CPU_temp_fp = fopen(CPU_temp_sysfs_file, "r");
+	if(CPU_temp_fp!=NULL)
+	{
+		fscanf(CPU_temp_fp, "%s", cpu_temp_str);
+		fclose(CPU_temp_fp);
+		CPU_temp = atof(cpu_temp_str) / 1E3;
+	}
+	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
+	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
+	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
+	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
+	
+	//Print results on screen
+	/*
+	printf("\n\n-------------------------"
+		   "\nUptime=%u sec"
+		   "\nCPU_load=%.2f%%"
+		   "\nUsed_memory=%.2f%%"
+		   "\nCPU_Temp=%.2f°C"
+		   "\n",Up_time,
+				CPU_Util,
+				RAM_Util,
+				CPU_temp);
+	*/
+}
 
-    UA_Server *server = UA_Server_new();
+int main(void) 
+{
+	struct sigaction tim_sa,stop_sa;
+	struct itimerval timer;
+	
+	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
+    memset (&stop_sa, 0, sizeof (stop_sa));
+	stop_sa.sa_handler = &stopHandler;
+	sigaction (SIGINT, &stop_sa, NULL);
+    sigaction (SIGTERM, &stop_sa, NULL);
+
+	//Install timer_handler as the signal handler for SIGALRM.
+	memset (&tim_sa, 0, sizeof (tim_sa));
+	tim_sa.sa_handler = &timer_handler;
+	sigaction (SIGALRM, &tim_sa, NULL);
+
+	// Configure the timer to repeat every 500ms 
+	timer.it_value.tv_sec = 0;
+	timer.it_value.tv_usec = 500000;
+	timer.it_interval.tv_sec = 0;
+	timer.it_interval.tv_usec = 500000;
+	// Start a virtual timer
+	setitimer (ITIMER_REAL, &timer, NULL);
+	
+	//Init OPC_UA Server
+    //UA_Server *server = UA_Server_new();
+	server = UA_Server_new();
     UA_ServerConfig_setDefault(UA_Server_getConfig(server));
-
+	RPi_stat_Define(server);
+	
+	/*
     addCurrentTimeVariable(server);
     addValueCallbackToCurrentTimeVariable(server);
     addCurrentTimeDataSourceVariable(server);
-
+	*/
+	
+	//Start OPC_UA Server
     UA_StatusCode retval = UA_Server_run(server, &running);
 
     UA_Server_delete(server);
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+void RPi_stat_Define(UA_Server *server) 
+{
+    //Root of the object
+	UA_NodeId RPi_status; /* get the nodeid assigned by the server */
+    UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "RPi_status");
+    UA_Server_addObjectNode(server, UA_NODEID_NULL,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                            UA_QUALIFIEDNAME(1, "RPi_status"), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+                            oAttr, NULL, &RPi_status);
+	//add UpTime property 
+    UA_VariableAttributes UpT_Attr = UA_VariableAttributes_default;
+	UA_Int64 Up_time=0;
+    UA_Variant_setScalar(&UpT_Attr.value, &Up_time, &UA_TYPES[UA_TYPES_UINT32]);
+    UpT_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Up_time (sec)");
+	UpT_Attr.dataType = UA_TYPES[UA_TYPES_UINT32].typeId;
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "Up_time"), RPi_status, 
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                              UA_QUALIFIEDNAME(1, "Up_time"),
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), UpT_Attr, NULL, NULL);
+	//add CPU utilization property  
+    UA_VariableAttributes CPU_util_Attr = UA_VariableAttributes_default;
+    UA_Float CPU_util = 0;
+    UA_Variant_setScalar(&CPU_util_Attr.value, &CPU_util, &UA_TYPES[UA_TYPES_FLOAT]);
+    CPU_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_Util (%)");
+	CPU_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_Util"), RPi_status,
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                              UA_QUALIFIEDNAME(1, "CPU_Util"),
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_util_Attr, NULL, NULL);
+	
+	//add RAM utilization property  
+    UA_VariableAttributes RAM_util_Attr = UA_VariableAttributes_default;
+    UA_Float RAM_util = 0;
+    UA_Variant_setScalar(&RAM_util_Attr.value, &RAM_util, &UA_TYPES[UA_TYPES_FLOAT]);
+    RAM_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "RAM_Util (%)");
+	RAM_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "RAM_Util"), RPi_status,
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                              UA_QUALIFIEDNAME(1, "RAM_Util"),
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), RAM_util_Attr, NULL, NULL);
+	//add CPU Temp property  
+    UA_VariableAttributes CPU_temp_Attr = UA_VariableAttributes_default;
+    UA_Float CPU_temp = 0;
+    UA_Variant_setScalar(&CPU_temp_Attr.value, &CPU_temp, &UA_TYPES[UA_TYPES_FLOAT]);
+    CPU_temp_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_temp (°C)");
+	CPU_temp_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_temp"), RPi_status,
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                              UA_QUALIFIEDNAME(1, "CPU_temp"),
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_temp_Attr, NULL, NULL);
+
+}
+
+void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void *value, int _UA_Type) 
+{
+	UA_Variant temp_value;
+    UA_Variant_setScalar(&temp_value, value, &UA_TYPES[_UA_Type]);
+    UA_Server_writeValue(server, Node_to_update, temp_value);
+}
+

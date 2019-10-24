@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-std=c99 -DUA_ARCHITECTURE_POSIX -Wall
-LDLIBS=$(shell pkg-config --cflags --libs open62541) 
+LDLIBS=$(shell pkg-config --cflags --libs open62541 libxml-2.0 libgtop-2.0) -lrt
 BUILD_dir=build
 WORK_dir=work
 SOURCE_dir=src
