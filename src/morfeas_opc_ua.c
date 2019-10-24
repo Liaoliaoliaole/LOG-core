@@ -9,15 +9,16 @@
 #include <glibtop/uptime.h>
 #include <glibtop/cpu.h>
 #include <glibtop/mem.h>
+#include <glibtop/fsusage.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <math.h>
 #include <signal.h>
-#include <string.h>
 #include <sys/time.h>
-#include <unistd.h>
 
 //OPC_UA local Functions
 void RPi_stat_Define(UA_Server *server);
@@ -40,27 +41,29 @@ void timer_handler (int sign)
 	FILE *CPU_temp_fp;
 	char cpu_temp_str[20];
 	unsigned int Up_time;
-	float CPU_Util,RAM_Util,CPU_temp;
+	float CPU_Util,RAM_Util,CPU_temp,Disk_Util;
 	static glibtop_cpu buff_cpuload_before={0};
 	glibtop_cpu buff_cpuload_after={0};
 	glibtop_uptime buff_uptime;
-	glibtop_mem buff_mem;
+	glibtop_mem buff_ram;
+	glibtop_fsusage buff_disk;
 	
 	//Read values
 	glibtop_get_uptime (&buff_uptime);//get computer's Up_time
-	glibtop_get_mem (&buff_mem);//get ram util
+	glibtop_get_mem (&buff_ram);//get ram util
 	glibtop_get_cpu (&buff_cpuload_after);//get cpu util
+	glibtop_get_fsusage (&buff_disk,"/");
 	//Calc CPU Utilization. Using current and old sample
 	CPU_Util=100.0*(buff_cpuload_after.user-buff_cpuload_before.user);
 	CPU_Util/=(buff_cpuload_after.total-buff_cpuload_before.total);
 	//store current CPU stat sample to old
 	memcpy(&buff_cpuload_before,&buff_cpuload_after,sizeof(glibtop_cpu));
-	
 	//Calc ram utilization
-	RAM_Util=100.0*(buff_mem.used - buff_mem.buffer - buff_mem.cached);
-	RAM_Util/=buff_mem.total;
+	RAM_Util=(buff_ram.used - buff_ram.buffer - buff_ram.cached) * 100.0 / buff_ram.total;
 	Up_time=buff_uptime.uptime;
-	
+	//Calc Disk Utilization
+	Disk_Util=(buff_disk.blocks - buff_disk.bavail) * 100.0 / buff_disk.blocks;
+	//Read CPU Temp from sysfs
 	CPU_temp_fp = fopen(CPU_temp_sysfs_file, "r");
 	if(CPU_temp_fp!=NULL)
 	{
@@ -68,11 +71,16 @@ void timer_handler (int sign)
 		fclose(CPU_temp_fp);
 		CPU_temp = atof(cpu_temp_str) / 1E3;
 	}
+	else
+		CPU_temp = NAN;
+	
+		
+	//Update health_values to OPC_UA mem space
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
-	
+	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
 	//Print results on screen
 	/*
 	printf("\n\n-------------------------"
@@ -116,13 +124,7 @@ int main(void)
 	server = UA_Server_new();
     UA_ServerConfig_setDefault(UA_Server_getConfig(server));
 	RPi_stat_Define(server);
-	
-	/*
-    addCurrentTimeVariable(server);
-    addValueCallbackToCurrentTimeVariable(server);
-    addCurrentTimeDataSourceVariable(server);
-	*/
-	
+		
 	//Start OPC_UA Server
     UA_StatusCode retval = UA_Server_run(server, &running);
 
@@ -133,21 +135,21 @@ int main(void)
 void RPi_stat_Define(UA_Server *server) 
 {
     //Root of the object
-	UA_NodeId RPi_status; /* get the nodeid assigned by the server */
+	UA_NodeId Health_status; /* get the nodeid assigned by the server */
     UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "RPi_status");
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Health_status");
     UA_Server_addObjectNode(server, UA_NODEID_NULL,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                            UA_QUALIFIEDNAME(1, "RPi_status"), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
-                            oAttr, NULL, &RPi_status);
+                            UA_QUALIFIEDNAME(1, "Health_status"), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+                            oAttr, NULL, &Health_status);
 	//add UpTime property 
     UA_VariableAttributes UpT_Attr = UA_VariableAttributes_default;
 	UA_Int64 Up_time=0;
     UA_Variant_setScalar(&UpT_Attr.value, &Up_time, &UA_TYPES[UA_TYPES_UINT32]);
     UpT_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Up_time (sec)");
 	UpT_Attr.dataType = UA_TYPES[UA_TYPES_UINT32].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "Up_time"), RPi_status, 
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "Up_time"), Health_status, 
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "Up_time"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), UpT_Attr, NULL, NULL);
@@ -157,7 +159,7 @@ void RPi_stat_Define(UA_Server *server)
     UA_Variant_setScalar(&CPU_util_Attr.value, &CPU_util, &UA_TYPES[UA_TYPES_FLOAT]);
     CPU_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_Util (%)");
 	CPU_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_Util"), RPi_status,
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_Util"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "CPU_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_util_Attr, NULL, NULL);
@@ -168,24 +170,34 @@ void RPi_stat_Define(UA_Server *server)
     UA_Variant_setScalar(&RAM_util_Attr.value, &RAM_util, &UA_TYPES[UA_TYPES_FLOAT]);
     RAM_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "RAM_Util (%)");
 	RAM_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "RAM_Util"), RPi_status,
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "RAM_Util"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "RAM_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), RAM_util_Attr, NULL, NULL);
+	//add Disk utilization property  
+    UA_VariableAttributes Disk_Util_Attr = UA_VariableAttributes_default;
+    UA_Float Disk_Util = 0;
+    UA_Variant_setScalar(&Disk_Util_Attr.value, &Disk_Util, &UA_TYPES[UA_TYPES_FLOAT]);
+    Disk_Util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Disk_Util (%)");
+	Disk_Util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "Disk_Util"), Health_status,
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                              UA_QUALIFIEDNAME(1, "Disk_Util"),
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), Disk_Util_Attr, NULL, NULL);
 	//add CPU Temp property  
     UA_VariableAttributes CPU_temp_Attr = UA_VariableAttributes_default;
     UA_Float CPU_temp = 0;
     UA_Variant_setScalar(&CPU_temp_Attr.value, &CPU_temp, &UA_TYPES[UA_TYPES_FLOAT]);
     CPU_temp_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_temp (°C)");
 	CPU_temp_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_temp"), RPi_status,
+    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_temp"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "CPU_temp"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_temp_Attr, NULL, NULL);
 
 }
 
-void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void *value, int _UA_Type) 
+inline void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void *value, int _UA_Type) 
 {
 	UA_Variant temp_value;
     UA_Variant_setScalar(&temp_value, value, &UA_TYPES[_UA_Type]);
