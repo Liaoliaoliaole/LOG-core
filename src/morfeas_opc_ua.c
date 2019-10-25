@@ -81,18 +81,6 @@ void timer_handler (int sign)
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
-	//Print results on screen
-	/*
-	printf("\n\n-------------------------"
-		   "\nUptime=%u sec"
-		   "\nCPU_load=%.2f%%"
-		   "\nUsed_memory=%.2f%%"
-		   "\nCPU_Temp=%.2f°C"
-		   "\n",Up_time,
-				CPU_Util,
-				RAM_Util,
-				CPU_temp);
-	*/
 }
 
 int main(void) 
