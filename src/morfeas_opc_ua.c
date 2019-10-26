@@ -74,7 +74,6 @@ void timer_handler (int sign)
 	else
 		CPU_temp = NAN;
 	
-		
 	//Update health_values to OPC_UA mem space
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
@@ -104,7 +103,7 @@ int main(void)
 	timer.it_value.tv_usec = 500000;
 	timer.it_interval.tv_sec = 0;
 	timer.it_interval.tv_usec = 500000;
-	// Start a virtual timer
+	// Start a timer 
 	setitimer (ITIMER_REAL, &timer, NULL);
 	
 	//Init OPC_UA Server
@@ -120,13 +119,13 @@ int main(void)
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-void RPi_stat_Define(UA_Server *server) 
+void RPi_stat_Define(UA_Server *server_ptr) 
 {
     //Root of the object
 	UA_NodeId Health_status; /* get the nodeid assigned by the server */
     UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Health_status");
-    UA_Server_addObjectNode(server, UA_NODEID_NULL,
+    UA_Server_addObjectNode(server_ptr, UA_NODEID_NULL,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                             UA_QUALIFIEDNAME(1, "Health_status"), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
@@ -137,7 +136,7 @@ void RPi_stat_Define(UA_Server *server)
     UA_Variant_setScalar(&UpT_Attr.value, &Up_time, &UA_TYPES[UA_TYPES_UINT32]);
     UpT_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Up_time (sec)");
 	UpT_Attr.dataType = UA_TYPES[UA_TYPES_UINT32].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "Up_time"), Health_status, 
+    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "Up_time"), Health_status, 
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "Up_time"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), UpT_Attr, NULL, NULL);
@@ -147,7 +146,7 @@ void RPi_stat_Define(UA_Server *server)
     UA_Variant_setScalar(&CPU_util_Attr.value, &CPU_util, &UA_TYPES[UA_TYPES_FLOAT]);
     CPU_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_Util (%)");
 	CPU_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_Util"), Health_status,
+    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "CPU_Util"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "CPU_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_util_Attr, NULL, NULL);
@@ -158,7 +157,7 @@ void RPi_stat_Define(UA_Server *server)
     UA_Variant_setScalar(&RAM_util_Attr.value, &RAM_util, &UA_TYPES[UA_TYPES_FLOAT]);
     RAM_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "RAM_Util (%)");
 	RAM_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "RAM_Util"), Health_status,
+    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "RAM_Util"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "RAM_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), RAM_util_Attr, NULL, NULL);
@@ -168,7 +167,7 @@ void RPi_stat_Define(UA_Server *server)
     UA_Variant_setScalar(&Disk_Util_Attr.value, &Disk_Util, &UA_TYPES[UA_TYPES_FLOAT]);
     Disk_Util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Disk_Util (%)");
 	Disk_Util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "Disk_Util"), Health_status,
+    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "Disk_Util"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "Disk_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), Disk_Util_Attr, NULL, NULL);
@@ -178,17 +177,17 @@ void RPi_stat_Define(UA_Server *server)
     UA_Variant_setScalar(&CPU_temp_Attr.value, &CPU_temp, &UA_TYPES[UA_TYPES_FLOAT]);
     CPU_temp_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_temp (°C)");
 	CPU_temp_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server, UA_NODEID_STRING(1, "CPU_temp"), Health_status,
+    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "CPU_temp"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "CPU_temp"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_temp_Attr, NULL, NULL);
 
 }
 
-inline void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void *value, int _UA_Type) 
+inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, void *value, int _UA_Type) 
 {
 	UA_Variant temp_value;
     UA_Variant_setScalar(&temp_value, value, &UA_TYPES[_UA_Type]);
-    UA_Server_writeValue(server, Node_to_update, temp_value);
+    UA_Server_writeValue(server_ptr, Node_to_update, temp_value);
 }
 
