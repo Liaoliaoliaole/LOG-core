@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 	//Disable Loopback
 	const int disable_loopback = 0;
 	setsockopt(socket_num, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &disable_loopback, sizeof(disable_loopback)); 
-	//bind CAN Socket
+	//bind CAN Socket to address
 	if(bind(socket_num, (struct sockaddr *)&addr, sizeof(addr)) < 0) 
 	{
 		perror("Error in socket bind");
