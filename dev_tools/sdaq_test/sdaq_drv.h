@@ -13,6 +13,7 @@
 
 #define PROTOCOL_ID 0x35
 #define Parking -1;
+
 /* SDAQ's CAN identifier encoder/decoder */
 typedef struct SDAQ_Identifier_Decoder{
 	unsigned channel_num : 6;

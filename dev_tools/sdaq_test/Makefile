@@ -3,9 +3,9 @@ CFLAGS= -Wall
 LDLIBS=-lrt #$(shell pkg-config --cflags --libs open62541 libxml-2.0 libgtop-2.0) 
 BUILD_dir=build
 WORK_dir=work
-DEP=$(WORK_dir)/sdaq_drv.o sdaq_drv.h sdaq_app.c
+DEP=$(WORK_dir)/sdaq_drv.o sdaq_drv.h SDAQ_tester.c
 
-$(BUILD_dir)/sdaq_app: $(DEP)
+$(BUILD_dir)/SDAQ_tester: $(DEP)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 	
 $(WORK_dir)/sdaq_drv.o: sdaq_drv.c 
