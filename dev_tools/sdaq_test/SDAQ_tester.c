@@ -32,9 +32,8 @@ int main(int argc, char *argv[])
 		return -2;
 	}
 	
-	Start(socket_num, 0);
-	sleep(10);
 	Stop(socket_num, 0);
+	SetDeviceAddress(socket_num,0xD7493B25,0);
 	//QueryDeviceInfo(socket_num,0);
 	return 0;
 }
