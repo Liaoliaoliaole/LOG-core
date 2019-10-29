@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ncurses.h> 
+#include <string.h> 
+#include <signal.h>
+#include <pthread.h> 
 
 #include <net/if.h>
 #include <sys/ioctl.h>

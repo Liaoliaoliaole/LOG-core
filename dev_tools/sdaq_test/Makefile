@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS= -Wall
-LDLIBS=-lrt #$(shell pkg-config --cflags --libs open62541 libxml-2.0 libgtop-2.0) 
+LDLIBS=-lrt -lpthread $(shell pkg-config --cflags --libs ncurses) 
 BUILD_dir=build
 WORK_dir=work
 DEP=$(WORK_dir)/sdaq_drv.o sdaq_drv.h SDAQ_tester.c
