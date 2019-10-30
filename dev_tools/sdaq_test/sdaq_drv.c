@@ -1,6 +1,25 @@
 #include "sdaq_drv.h"
-
 /*
+// enumerator for payload_type
+enum payload_type{
+	Synchronization_command = 1,
+	Start_command = 2,
+	Stop_command = 3,
+	Set_dev_address = 6,
+	Query_Dev_info = 7,
+	Query_Calibration_Data = 8,
+	Write_calibration_Date = 9,
+	Write_calibration_Point_Data = 10,
+	Measurement_value = 0x84, 
+	Device_status = 0x86, 
+	Device_info = 0x88,
+	Calibration_Date = 0x89,
+	Calibration_Point_Data = 0x8a,
+	Bootloader_Reply = 0xa0,
+	Page_Buffer_Data = 0xa1,
+	Sync Info = 0xc0};
+
+// SDAQ's CAN identifier encoder/decoder 
 typedef struct{
 	unsigned flags : 3;//EFF/RTR/ERR flags
 	unsigned priority : 3;
@@ -21,7 +40,7 @@ int Sync(int socket_fd, short time_seed)
 	//construct identifier for synchronization measure message
 	sdaq_id_ptr->flags = 4;//set the EFF
 	sdaq_id_ptr->protocol_id = PROTOCOL_ID;
-	sdaq_id_ptr->payload_type = 0x01;//Payload type for synchronization command
+	sdaq_id_ptr->payload_type = Synchronization_command;//Payload type for synchronization command
 	sdaq_id_ptr->device_addr = 0;//TX from broadcast only
 	frame_tx.can_dlc = sizeof(short);//Payload size
 	*((short *)frame_tx.data) = time_seed;
@@ -39,7 +58,7 @@ int Start(int socket_fd,unsigned char dev_address)
 	//construct identifier for start measure message
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id=PROTOCOL_ID;
-	sdaq_id_ptr->payload_type=0x02;//Payload type for start measure command
+	sdaq_id_ptr->payload_type=Start_command;//Payload type for start measure command
 	sdaq_id_ptr->device_addr=dev_address;
 	frame_tx.can_dlc = 0;//No payload
 	if(write(socket_fd, &frame_tx, sizeof(struct can_frame))<0)
@@ -56,7 +75,7 @@ int Stop(int socket_fd,unsigned char dev_address)
 	//construct identifier for stop measure message
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id=PROTOCOL_ID;
-	sdaq_id_ptr->payload_type=0x03;//Payload type for stop measure command
+	sdaq_id_ptr->payload_type=Stop_command;//Payload type for stop measure command
 	sdaq_id_ptr->device_addr=dev_address;
 	frame_tx.can_dlc = 0;//No payload
 	if(write(socket_fd, &frame_tx, sizeof(struct can_frame))<0)
@@ -73,7 +92,7 @@ int SetDeviceAddress(int socket_fd,unsigned int dev_SN, unsigned char new_dev_ad
 	//construct identifier for change of device address message
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id=PROTOCOL_ID;
-	sdaq_id_ptr->payload_type=0x06;//Payload type for change of device address command
+	sdaq_id_ptr->payload_type=Set_dev_address;//Payload type for change of device address command
 	sdaq_id_ptr->device_addr=0;//TX from broadcast only
 	frame_tx.can_dlc = sizeof(unsigned int) + sizeof(unsigned char);//Payload size
 	*((int *)frame_tx.data) = htonl(dev_SN); //Endianness correction 
@@ -92,7 +111,7 @@ int QueryDeviceInfo(int socket_fd,unsigned char dev_address)
 	//construct identifier for device info request command
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id = PROTOCOL_ID;
-	sdaq_id_ptr->payload_type=0x07;//Payload type for device info request command
+	sdaq_id_ptr->payload_type=Query_Dev_info;//Payload type for device info request command
 	sdaq_id_ptr->device_addr=dev_address;
 	frame_tx.can_dlc = 0;//No payload
 	if(write(socket_fd, &frame_tx, sizeof(struct can_frame))<0)
