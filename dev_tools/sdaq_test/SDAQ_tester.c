@@ -5,7 +5,7 @@
 struct thread_arguments_passer{
 	int socket_num;
 	unsigned char dev_addr;
-	WINDOW *meas_win,*status_win,*info_win;
+	WINDOW *meas_win,*status_win,*info_win,*raw_meas_win;
 };
 
 //global variables
@@ -108,7 +108,7 @@ void * CAN_socket_RX(void *varg_pt)
 		}
 		else
 		{
-			mvprintw(0,0,"Socket Timeout");
+			mvprintw(24,42,"Socket Timeout");
 			refresh();
 		}
 	}
@@ -175,15 +175,17 @@ int main(int argc, char *argv[])
 	//Stop any measurements on CAN-bus
 	Stop(socket_num, 0);				 
 	
-	//Init Measurement mode
+	//Init Measurement mode with ncurses
+	system("printf '\e[8;28;100t'");
 	initscr(); // start the curses mode
 	raw();//getch without return
 	noecho();//disable echo
 	cbreak();//exit on break
 	curs_set(0);//hide cursor
-	thread_arg.status_win = newwin(6,100, 0, 0);//create window for measurements
-	thread_arg.info_win   = newwin(7,100, 6, 0);//create window for measurements
-	thread_arg.meas_win   = newwin(17,100, 13, 0);//create window for measurements
+	thread_arg.status_win  = newwin(7,49, 0, 0);//create window for status
+	thread_arg.info_win    = newwin(7,49, 0, 50);//create window for info
+	thread_arg.meas_win    = newwin(17,49, 7, 0);//create window for measurements
+	thread_arg.raw_meas_win= newwin(17,49, 7, 50);//create window for measurements
 	
 	//mount the CAN-bus receiver on a thread, and load arguments 
 	pthread_create(&CAN_socket_RX_Thread_id, NULL, CAN_socket_RX, &thread_arg);
@@ -203,6 +205,18 @@ int main(int argc, char *argv[])
 					mvprintw(row-2,0,"Function Buttons:\n");
 					printw("'q' quit 1 Start_Measuring 2 Stop_Measuring 3 Query Info ");
 					refresh();
+					wclear(thread_arg.status_win);
+					wclear(thread_arg.info_win);
+					wclear(thread_arg.meas_win);
+					wclear(thread_arg.raw_meas_win);					
+					box(thread_arg.status_win,0,0);
+					box(thread_arg.info_win,0,0);
+					box(thread_arg.meas_win,0,0);
+					box(thread_arg.raw_meas_win,0,0);
+					wrefresh(thread_arg.status_win);
+					wrefresh(thread_arg.info_win);
+					wrefresh(thread_arg.meas_win);
+					wrefresh(thread_arg.raw_meas_win);
 				pthread_mutex_unlock(&display_access);
 				QueryDeviceInfo(socket_num,dev_addr);
 				last_col=col;
@@ -225,5 +239,6 @@ int main(int argc, char *argv[])
 		printf("Terminal need to be at least %dx%d\n",30,100);
 	//Stop any measurements on CAN-bus
 	Stop(socket_num, 0);
+	system("clear");
 	return 0;
 }
