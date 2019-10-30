@@ -16,7 +16,10 @@
 #include <linux/can/raw.h>
 
 #define PROTOCOL_ID 0x35
-#define Parking -1;
+#define Parking_address 63
+
+const char *unit_str[]={" ","V","A","°C","Pa","mV"}; 
+const char *dev_type_str[]={" ","SDAQ-TC-1","SDAQ-TC-16","SDAQ-PT100-1"}; 
 
 // enumerator for payload_type
 enum payload_type

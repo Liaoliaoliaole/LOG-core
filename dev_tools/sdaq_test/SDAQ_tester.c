@@ -9,7 +9,7 @@ struct thread_arguments_passer{
 };
 
 //global variables
-volatile unsigned char running=1;
+volatile char running=1;
 pthread_mutex_t display_access = PTHREAD_MUTEX_INITIALIZER;
 
 //application functions
@@ -17,12 +17,12 @@ WINDOW *create_newwin(int height, int width, int starty, int startx);
 //void logger(const char msg[]);
 
 //threaded function. Act as CAN-bus message Receiver and decoder for SDAQ devices
-void * CAN_socket_RX(void *vargp) 
+void * CAN_socket_RX(void *varg_pt) 
 { 
 	unsigned char avg_cnt,i,amount_of_inputs=1;
 	float meas_value[16]={0.0};
 	//passed arguments decoder
-	struct thread_arguments_passer *arg = (struct thread_arguments_passer *) vargp; 
+	struct thread_arguments_passer *arg = (struct thread_arguments_passer *) varg_pt; 
 	//local variables for CAN Socket frame and SDAQ messages decoders
 	struct can_frame frame_rx;
 	int RX_bytes;
@@ -31,7 +31,7 @@ void * CAN_socket_RX(void *vargp)
 	sdaq_meas *meas_dec;
 	sdaq_info *info_dec;
 	
-	while(running)
+	while(running>0)
 	{		
 		RX_bytes=read(arg->socket_num, &frame_rx, sizeof(frame_rx));
 		if(RX_bytes==sizeof(frame_rx))
@@ -56,7 +56,8 @@ void * CAN_socket_RX(void *vargp)
 							for(i=0;i<amount_of_inputs;i++)
 							{
 								if(meas_value[i]!=0.0)
-									mvwprintw(arg->meas_win,i+3,3,"CH%2d = %4.3f%s ",i,meas_value[i]/AVG_INTERVAL,"°C");
+									mvwprintw(arg->meas_win,i+3,3,"CH%2d = %4.3f%s "
+														,i,meas_value[i]/AVG_INTERVAL,unit_str[meas_dec->unit]);
 								else
 									mvwprintw(arg->meas_win,i+3,3,"CH%2d = No sensor ",i);
 								meas_value[i]=0.0;
@@ -68,10 +69,11 @@ void * CAN_socket_RX(void *vargp)
 					case Device_status: 
 						//wclear(arg->status_win);
 						status_dec = (sdaq_status *)frame_rx.data;
-						mvwprintw(arg->status_win,2,2,"Device_status:"); 
+						mvwprintw(arg->status_win,2,2,"Device_status & S/N:"); 
 						mvwprintw(arg->status_win,3,3,"Dev serial number = %d",status_dec->dev_sn);
 						mvwprintw(arg->status_win,4,3,"Dev status = %d",status_dec->status);
-						mvwprintw(arg->status_win,5,3,"Dev type = %d",status_dec->device_type);
+						mvwprintw(arg->status_win,5,3,"Dev type = %s (%d)",dev_type_str[status_dec->device_type],
+																		  status_dec->device_type);
 						wrefresh(arg->status_win);
 						if(!(status_dec->status & 0x01))
 						{
@@ -105,7 +107,10 @@ void * CAN_socket_RX(void *vargp)
 			}
 		}
 		else
-			mvprintw(0,0,"Socket Timeout",0,0);
+		{
+			mvprintw(0,0,"Socket Timeout");
+			refresh();
+		}
 	}
 	return NULL;
 } 
@@ -131,6 +136,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	dev_addr = atoi(argv[2]);
+	if(dev_addr<1||dev_addr>=Parking_address)
+	{
+		printf("Device address Out of range\n");
+		exit(1);
+	}
 	thread_arg.dev_addr=dev_addr;
 	//CAN Socket Opening
 	if((socket_num = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) 
@@ -150,9 +160,9 @@ int main(int argc, char *argv[])
 	//Disable Loopback
 	setsockopt(socket_num, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &disable_loopback, sizeof(disable_loopback)); 
 	// Add timeout option to the CAN Socket
-	tv.tv_sec = 20;
+	tv.tv_sec = 25;
 	tv.tv_usec = 0;
-	setsockopt(socket_num, SOL_CAN_RAW, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+	setsockopt(socket_num, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
 	
 	//bind CAN Socket to address
 	addr.can_family  = AF_CAN;
@@ -163,8 +173,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	//Stop any measurements on CAN-bus
-	Stop(socket_num, 0);
-	//SetDeviceAddress(socket_num,0xD7493B25,10);				 
+	Stop(socket_num, 0);				 
 	
 	//Init Measurement mode
 	initscr(); // start the curses mode
@@ -184,22 +193,27 @@ int main(int argc, char *argv[])
 	pthread_create(&CAN_socket_RX_Thread_id, NULL, CAN_socket_RX, &thread_arg);
 	usleep(10000);
 	QueryDeviceInfo(socket_num,dev_addr);
-	while(running)
+	while(running>0)
 	{
 		getmaxyx(stdscr,row,col);
 		if(last_row!=row||last_col!=col)//reset display in case of terminal resize 
 		{
-			pthread_mutex_lock(&display_access);
-			clear();
-			mvprintw(row-2,0,"Function Buttons:\n",row,col);
-			printw("'q' quit 1 Start_Measuring 2 Stop_Measuring 3 Query Info ");
-			refresh();
-			pthread_mutex_unlock(&display_access);
-			QueryDeviceInfo(socket_num,dev_addr);
-			last_col=col;
-			last_row=row;
+			if(col<50&&row<50)//check if the terminal is smaller that the requirement 
+				running = -1;
+			else
+			{
+				pthread_mutex_lock(&display_access);
+				clear();
+				mvprintw(row-2,0,"Function Buttons:\n");
+				printw("'q' quit 1 Start_Measuring 2 Stop_Measuring 3 Query Info ");
+				refresh();
+				pthread_mutex_unlock(&display_access);
+				QueryDeviceInfo(socket_num,dev_addr);
+				last_col=col;
+				last_row=row;
+			}
 		}
-		user_pressed_key=getch();
+		user_pressed_key=getch();// get the user's entrance 
 		switch(user_pressed_key)
 		{
 			case '1': Start(socket_num,dev_addr); break;
@@ -211,6 +225,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	endwin();
+	if(running<0)
+		printf("Terminal need to be at least %dx%d\n",30,100);
 	//Stop any measurements on CAN-bus
 	Stop(socket_num, 0);
 	return 0;
