@@ -40,69 +40,69 @@ void * CAN_socket_RX(void *varg_pt)
 			if(arg->dev_addr==id_dec->device_addr)
 			{
 				pthread_mutex_lock(&display_access);
-				switch(id_dec->payload_type)
-				{
-					case Measurement_value: 
-						//wclear(arg->meas_win);
-						meas_dec = (sdaq_meas *)frame_rx.data;
-						mvwprintw(arg->meas_win,2,2,"Measurements:");
-						if(!(meas_dec->status))
-							meas_value[(id_dec->channel_num)-1]+=meas_dec->meas;
-						else
-							meas_value[(id_dec->channel_num)-1]=0.0;
-						avg_cnt++;
-						if (avg_cnt>=AVG_INTERVAL*amount_of_inputs)
-						{
-							for(i=0;i<amount_of_inputs;i++)
+					switch(id_dec->payload_type)
+					{
+						case Measurement_value: 
+							//wclear(arg->meas_win);
+							meas_dec = (sdaq_meas *)frame_rx.data;
+							mvwprintw(arg->meas_win,2,2,"Measurements:");
+							if(!(meas_dec->status))
+								meas_value[(id_dec->channel_num)-1]+=meas_dec->meas;
+							else
+								meas_value[(id_dec->channel_num)-1]=0.0;
+							avg_cnt++;
+							if (avg_cnt>=AVG_INTERVAL*amount_of_inputs)
 							{
-								if(meas_value[i]!=0.0)
-									mvwprintw(arg->meas_win,i+3,3,"CH%2d = %4.3f%s "
-														,i,meas_value[i]/AVG_INTERVAL,unit_str[meas_dec->unit]);
-								else
-									mvwprintw(arg->meas_win,i+3,3,"CH%2d = No sensor ",i);
-								meas_value[i]=0.0;
+								for(i=0;i<amount_of_inputs;i++)
+								{
+									if(meas_value[i]!=0.0)
+										mvwprintw(arg->meas_win,i+3,3,"CH%2d = %4.3f%s "
+															,i,meas_value[i]/AVG_INTERVAL,unit_str[meas_dec->unit]);
+									else
+										mvwprintw(arg->meas_win,i+3,3,"CH%2d = No sensor ",i);
+									meas_value[i]=0.0;
+								}
+								wrefresh(arg->meas_win);
+								avg_cnt=0;
 							}
+							break;
+						case Device_status: 
+							//wclear(arg->status_win);
+							status_dec = (sdaq_status *)frame_rx.data;
+							mvwprintw(arg->status_win,2,2,"Device_status & S/N:"); 
+							mvwprintw(arg->status_win,3,3,"Dev serial number = %d",status_dec->dev_sn);
+							mvwprintw(arg->status_win,4,3,"Dev status = %d",status_dec->status);
+							mvwprintw(arg->status_win,5,3,"Dev type = %s (%d)",dev_type_str[status_dec->device_type],
+																			  status_dec->device_type);
+							wrefresh(arg->status_win);
+							if(!(status_dec->status & 0x01))
+							{
+								wclear(arg->meas_win);
+								wrefresh(arg->meas_win);
+							}
+							break;
+						case Device_info: 
+							//wclear(arg->meas_win);
+							info_dec = (sdaq_info *)frame_rx.data;
+							mvwprintw(arg->info_win,2,2,"Device_info:");
+							mvwprintw(arg->info_win,3,3,"Device type:(%d)",info_dec->dev_type);
+							mvwprintw(arg->info_win,4,3,"Firmware rev:%d",info_dec->firm_rev);
+							mvwprintw(arg->info_win,5,3,"Hardware rev:%d",info_dec->hw_rev);
+							mvwprintw(arg->info_win,6,3,"Number of channels:%d",info_dec->num_of_ch);
+							mvwprintw(arg->info_win,7,3,"Samplerate:%d sps",info_dec->sample_rate);
+							wrefresh(arg->info_win);
+							amount_of_inputs=info_dec->num_of_ch;
+							break;
+						/*
+						case Calibration_Date: 
+							//wclear(arg->meas_win); 
+							mvwprintw(arg->meas_win,1,1,"Calibration_Date"); 
 							wrefresh(arg->meas_win);
-							avg_cnt=0;
-						}
-						break;
-					case Device_status: 
-						//wclear(arg->status_win);
-						status_dec = (sdaq_status *)frame_rx.data;
-						mvwprintw(arg->status_win,2,2,"Device_status & S/N:"); 
-						mvwprintw(arg->status_win,3,3,"Dev serial number = %d",status_dec->dev_sn);
-						mvwprintw(arg->status_win,4,3,"Dev status = %d",status_dec->status);
-						mvwprintw(arg->status_win,5,3,"Dev type = %s (%d)",dev_type_str[status_dec->device_type],
-																		  status_dec->device_type);
-						wrefresh(arg->status_win);
-						if(!(status_dec->status & 0x01))
-						{
-							wclear(arg->meas_win);
-							wrefresh(arg->meas_win);
-						}
-						break;
-					case Device_info: 
-						//wclear(arg->meas_win);
-						info_dec = (sdaq_info *)frame_rx.data;
-						mvwprintw(arg->info_win,2,2,"Device_info:");
-						mvwprintw(arg->info_win,3,3,"Device type:(%d)",info_dec->dev_type);
-						mvwprintw(arg->info_win,4,3,"Firmware rev:%d",info_dec->firm_rev);
-						mvwprintw(arg->info_win,5,3,"Hardware rev:%d",info_dec->hw_rev);
-						mvwprintw(arg->info_win,6,3,"Number of channels:%d",info_dec->num_of_ch);
-						mvwprintw(arg->info_win,7,3,"Samplerate:%d sps",info_dec->sample_rate);
-						wrefresh(arg->info_win);
-						amount_of_inputs=info_dec->num_of_ch;
-						break;
-					/*
-					case Calibration_Date: 
-						//wclear(arg->meas_win); 
-						mvwprintw(arg->meas_win,1,1,"Calibration_Date"); 
-						wrefresh(arg->meas_win);
-						break;
-					*/
-					default: break; 
-				}
-				refresh();
+							break;
+						*/
+						default: break; 
+					}
+					//refresh();
 				pthread_mutex_unlock(&display_access);
 			}
 		}
@@ -199,10 +199,10 @@ int main(int argc, char *argv[])
 			else
 			{
 				pthread_mutex_lock(&display_access);
-				clear();
-				mvprintw(row-2,0,"Function Buttons:\n");
-				printw("'q' quit 1 Start_Measuring 2 Stop_Measuring 3 Query Info ");
-				refresh();
+					clear();
+					mvprintw(row-2,0,"Function Buttons:\n");
+					printw("'q' quit 1 Start_Measuring 2 Stop_Measuring 3 Query Info ");
+					refresh();
 				pthread_mutex_unlock(&display_access);
 				QueryDeviceInfo(socket_num,dev_addr);
 				last_col=col;
