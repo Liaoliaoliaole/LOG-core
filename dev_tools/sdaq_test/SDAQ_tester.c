@@ -181,10 +181,6 @@ int main(int argc, char *argv[])
 	noecho();//disable echo
 	cbreak();//exit on break
 	curs_set(0);//hide cursor
-	getmaxyx(stdscr,row,col);
-	mvprintw(row-2,0,"Function Buttons:\n",row,col);
-	printw("'q' quit 1 Start_Measuring 2 Stop_Measuring ");
-	refresh();
 	thread_arg.status_win = newwin(6,100, 0, 0);//create window for measurements
 	thread_arg.info_win   = newwin(7,100, 6, 0);//create window for measurements
 	thread_arg.meas_win   = newwin(17,100, 13, 0);//create window for measurements
@@ -192,11 +188,11 @@ int main(int argc, char *argv[])
 	//mount the CAN-bus receiver on a thread, and load arguments 
 	pthread_create(&CAN_socket_RX_Thread_id, NULL, CAN_socket_RX, &thread_arg);
 	usleep(10000);
-	QueryDeviceInfo(socket_num,dev_addr);
+	//QueryDeviceInfo(socket_num,dev_addr);
 	while(running>0)
 	{
 		getmaxyx(stdscr,row,col);
-		if(last_row!=row||last_col!=col)//reset display in case of terminal resize 
+		if(last_row!=row||last_col!=col)//reset display in case of terminal resize, or enter on first time
 		{
 			if(col<50&&row<50)//check if the terminal is smaller that the requirement 
 				running = -1;
