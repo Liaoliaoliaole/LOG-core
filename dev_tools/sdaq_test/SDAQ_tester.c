@@ -13,7 +13,7 @@ volatile char running=1;
 pthread_mutex_t display_access = PTHREAD_MUTEX_INITIALIZER;
 
 //application functions
-WINDOW *create_newwin(int height, int width, int starty, int startx);
+void wclean_refresh(WINDOW *ptr);
 //void logger(const char msg[]);
 
 //threaded function. Act as CAN-bus message Receiver and decoder for SDAQ devices
@@ -76,10 +76,7 @@ void * CAN_socket_RX(void *varg_pt)
 																			  status_dec->device_type);
 							wrefresh(arg->status_win);
 							if(!(status_dec->status & 0x01))
-							{
-								wclear(arg->meas_win);
-								wrefresh(arg->meas_win);
-							}
+								wclean_refresh(arg->meas_win);
 							break;
 						case Device_info: 
 							//wclear(arg->meas_win);
@@ -102,13 +99,12 @@ void * CAN_socket_RX(void *varg_pt)
 						*/
 						default: break; 
 					}
-					//refresh();
 				pthread_mutex_unlock(&display_access);
 			}
 		}
 		else
 		{
-			mvprintw(24,42,"Socket Timeout");
+			mvprintw(24,36,"Error: Socket Timeout");
 			refresh();
 		}
 	}
@@ -205,18 +201,11 @@ int main(int argc, char *argv[])
 					mvprintw(row-2,0,"Function Buttons:\n");
 					printw("'q' quit 1 Start_Measuring 2 Stop_Measuring 3 Query Info ");
 					refresh();
-					wclear(thread_arg.status_win);
-					wclear(thread_arg.info_win);
-					wclear(thread_arg.meas_win);
-					wclear(thread_arg.raw_meas_win);					
-					box(thread_arg.status_win,0,0);
-					box(thread_arg.info_win,0,0);
-					box(thread_arg.meas_win,0,0);
-					box(thread_arg.raw_meas_win,0,0);
-					wrefresh(thread_arg.status_win);
-					wrefresh(thread_arg.info_win);
-					wrefresh(thread_arg.meas_win);
-					wrefresh(thread_arg.raw_meas_win);
+					wclean_refresh(thread_arg.status_win);
+					wclean_refresh(thread_arg.info_win);
+					wclean_refresh(thread_arg.meas_win);
+					wclean_refresh(thread_arg.raw_meas_win);
+					
 				pthread_mutex_unlock(&display_access);
 				QueryDeviceInfo(socket_num,dev_addr);
 				last_col=col;
@@ -239,6 +228,14 @@ int main(int argc, char *argv[])
 		printf("Terminal need to be at least %dx%d\n",30,100);
 	//Stop any measurements on CAN-bus
 	Stop(socket_num, 0);
-	system("clear");
+	//system("clear");
 	return 0;
+}
+
+void wclean_refresh(WINDOW *ptr)
+{
+	wclear(ptr);
+	box(ptr,0,0);
+	wrefresh(ptr);
+	return;
 }
