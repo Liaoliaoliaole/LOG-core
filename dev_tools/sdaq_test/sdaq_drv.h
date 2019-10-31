@@ -2,10 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <ncurses.h> 
+#include <math.h>
 #include <string.h> 
-#include <signal.h>
-#include <pthread.h> 
 
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -18,8 +16,8 @@
 #define PROTOCOL_ID 0x35
 #define Parking_address 63
 
-const char *unit_str[]={" ","V","A","°C","Pa","mV"}; 
-const char *dev_type_str[]={" ","SDAQ-TC-1","SDAQ-TC-16","SDAQ-PT100-1"}; 
+extern const char *unit_str[]; 
+extern const char *dev_type_str[]; 
 
 // enumerator for payload_type
 enum payload_type
@@ -32,11 +30,13 @@ enum payload_type
 	Query_Calibration_Data = 8,
 	Write_calibration_Date = 9,
 	Write_calibration_Point_Data = 10,
+	Configure_Additional_data = 12,
 	Measurement_value = 0x84, 
 	Device_status = 0x86, 
 	Device_info = 0x88,
 	Calibration_Date = 0x89,
 	Calibration_Point_Data = 0x8a,
+	Uncalibrated_meas = 0x8b,
 	Bootloader_Reply = 0xa0,
 	Page_Buffer_Data = 0xa1,
 	Sync_Info = 0xc0
@@ -88,6 +88,8 @@ int Start(int socket_fd,unsigned char dev_address);
 int Stop(int socket_fd,unsigned char dev_address);
 //Synchronize the SDAQ devices. Requested by broadcast only.
 int Sync(int socket_fd, short time_seed);
+//Control Configure Additional data. If Device is in measure will transmit raw measurement message
+int Raw_meas(int socket_fd,unsigned char dev_address,const unsigned char Config);
 //request change of device address with the specific serial number.
 int SetDeviceAddress(int socket_fd,unsigned int dev_SN, unsigned char new_dev_address);
 //request device info. Device answer with 3 messages: Device ID/status, Device Info and Calibration Date. 

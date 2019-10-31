@@ -1,7 +1,8 @@
 #include "sdaq_drv.h"
 /*
 // enumerator for payload_type
-enum payload_type{
+enum payload_type
+{
 	Synchronization_command = 1,
 	Start_command = 2,
 	Stop_command = 3,
@@ -10,14 +11,17 @@ enum payload_type{
 	Query_Calibration_Data = 8,
 	Write_calibration_Date = 9,
 	Write_calibration_Point_Data = 10,
+	Configure_Additional_data = 0x0C,
 	Measurement_value = 0x84, 
 	Device_status = 0x86, 
 	Device_info = 0x88,
 	Calibration_Date = 0x89,
 	Calibration_Point_Data = 0x8a,
+	Uncalibrated_meas = 0x8b,
 	Bootloader_Reply = 0xa0,
 	Page_Buffer_Data = 0xa1,
-	Sync Info = 0xc0};
+	Sync_Info = 0xc0
+};
 
 // SDAQ's CAN identifier encoder/decoder 
 typedef struct{
@@ -29,6 +33,9 @@ typedef struct{
 	unsigned channel_num : 6;
 }sdaq_can_identifier; 
 */
+
+const char *unit_str[]={"","V","A","°C","Pa","mV"}; 
+const char *dev_type_str[]={"","SDAQ-TC-1","SDAQ-TC-16","SDAQ-PT100-1"}; 
 
 //Synchronize the SDAQ devices. Requested by broadcast only.
 int Sync(int socket_fd, short time_seed)
@@ -117,4 +124,23 @@ int QueryDeviceInfo(int socket_fd,unsigned char dev_address)
 	if(write(socket_fd, &frame_tx, sizeof(struct can_frame))<0)
 		return 1;
 	return 0;	
+}
+
+//Control Configure Additional data. If Device is in measure will transmit raw measurement message
+int Raw_meas(int socket_fd,unsigned char dev_address,const unsigned char Config)
+{
+	sdaq_can_identifier *sdaq_id_ptr;
+	struct can_frame frame_tx;
+	sdaq_id_ptr = (sdaq_can_identifier *)&(frame_tx.can_id);
+	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_identifier));
+	//construct identifier for "Configure Additional data" command
+	sdaq_id_ptr->flags=4;//set the EFF
+	sdaq_id_ptr->protocol_id = PROTOCOL_ID;
+	sdaq_id_ptr->payload_type = Configure_Additional_data;//Payload type for "Configure Additional data" command
+	sdaq_id_ptr->device_addr = dev_address;
+	frame_tx.can_dlc = 1;//Payload size
+	frame_tx.data[0] = Config;
+	if(write(socket_fd, &frame_tx, sizeof(struct can_frame))<0)
+		return 1;
+	return 0;
 }
