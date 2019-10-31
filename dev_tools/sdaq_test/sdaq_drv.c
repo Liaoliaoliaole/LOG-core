@@ -31,7 +31,7 @@ typedef struct{
 	unsigned payload_type: 8;
 	unsigned device_addr : 6;
 	unsigned channel_num : 6;
-}sdaq_can_identifier; 
+}sdaq_can_id; 
 */
 
 const char *unit_str[]={"","V","A","°C","Pa","mV"}; 
@@ -40,10 +40,10 @@ const char *dev_type_str[]={"","SDAQ-TC-1","SDAQ-TC-16","SDAQ-PT100-1"};
 //Synchronize the SDAQ devices. Requested by broadcast only.
 int Sync(int socket_fd, short time_seed)
 {
-	sdaq_can_identifier *sdaq_id_ptr;
+	sdaq_can_id *sdaq_id_ptr;
 	struct can_frame frame_tx;
-	sdaq_id_ptr = (sdaq_can_identifier *)&(frame_tx.can_id);
-	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_identifier));
+	sdaq_id_ptr = (sdaq_can_id *)&(frame_tx.can_id);
+	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_id));
 	//construct identifier for synchronization measure message
 	sdaq_id_ptr->flags = 4;//set the EFF
 	sdaq_id_ptr->protocol_id = PROTOCOL_ID;
@@ -58,10 +58,10 @@ int Sync(int socket_fd, short time_seed)
 //Request start of measure from the SDAQ device. For all dev_addr=0
 int Start(int socket_fd,unsigned char dev_address)
 {
-	sdaq_can_identifier *sdaq_id_ptr;
+	sdaq_can_id *sdaq_id_ptr;
 	struct can_frame frame_tx;
-	sdaq_id_ptr = (sdaq_can_identifier *)&(frame_tx.can_id);
-	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_identifier));
+	sdaq_id_ptr = (sdaq_can_id *)&(frame_tx.can_id);
+	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_id));
 	//construct identifier for start measure message
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id=PROTOCOL_ID;
@@ -75,10 +75,10 @@ int Start(int socket_fd,unsigned char dev_address)
 //Request stop of measure from the SDAQ device. For all dev_addr=0
 int Stop(int socket_fd,unsigned char dev_address)
 {
-	sdaq_can_identifier *sdaq_id_ptr;
+	sdaq_can_id *sdaq_id_ptr;
 	struct can_frame frame_tx;
-	sdaq_id_ptr = (sdaq_can_identifier *)&(frame_tx.can_id);
-	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_identifier));
+	sdaq_id_ptr = (sdaq_can_id *)&(frame_tx.can_id);
+	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_id));
 	//construct identifier for stop measure message
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id=PROTOCOL_ID;
@@ -92,10 +92,10 @@ int Stop(int socket_fd,unsigned char dev_address)
 //request change of device address with the specific serial number.
 int SetDeviceAddress(int socket_fd,unsigned int dev_SN, unsigned char new_dev_address)
 {
-	sdaq_can_identifier *sdaq_id_ptr;
+	sdaq_can_id *sdaq_id_ptr;
 	struct can_frame frame_tx;
-	sdaq_id_ptr = (sdaq_can_identifier *)&(frame_tx.can_id);
-	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_identifier));
+	sdaq_id_ptr = (sdaq_can_id *)&(frame_tx.can_id);
+	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_id));
 	//construct identifier for change of device address message
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id=PROTOCOL_ID;
@@ -111,10 +111,10 @@ int SetDeviceAddress(int socket_fd,unsigned int dev_SN, unsigned char new_dev_ad
 //request device info. Device answer with 3 messages: Device ID/status, Device Info and Calibration Date. 
 int QueryDeviceInfo(int socket_fd,unsigned char dev_address)
 {
-	sdaq_can_identifier *sdaq_id_ptr;
+	sdaq_can_id *sdaq_id_ptr;
 	struct can_frame frame_tx;
-	sdaq_id_ptr = (sdaq_can_identifier *)&(frame_tx.can_id);
-	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_identifier));
+	sdaq_id_ptr = (sdaq_can_id *)&(frame_tx.can_id);
+	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_id));
 	//construct identifier for device info request command
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id = PROTOCOL_ID;
@@ -129,10 +129,10 @@ int QueryDeviceInfo(int socket_fd,unsigned char dev_address)
 //Control Configure Additional data. If Device is in measure will transmit raw measurement message
 int Raw_meas(int socket_fd,unsigned char dev_address,const unsigned char Config)
 {
-	sdaq_can_identifier *sdaq_id_ptr;
+	sdaq_can_id *sdaq_id_ptr;
 	struct can_frame frame_tx;
-	sdaq_id_ptr = (sdaq_can_identifier *)&(frame_tx.can_id);
-	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_identifier));
+	sdaq_id_ptr = (sdaq_can_id *)&(frame_tx.can_id);
+	memset(sdaq_id_ptr, 0, sizeof(sdaq_can_id));
 	//construct identifier for "Configure Additional data" command
 	sdaq_id_ptr->flags=4;//set the EFF
 	sdaq_id_ptr->protocol_id = PROTOCOL_ID;

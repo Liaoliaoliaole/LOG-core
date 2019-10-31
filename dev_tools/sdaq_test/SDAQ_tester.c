@@ -30,7 +30,7 @@ pthread_mutex_t display_access = PTHREAD_MUTEX_INITIALIZER;
 void wclean_refresh(WINDOW *ptr);
 void Discover_SDAQs();
 void Autoconfig_SDAQs();
-
+void print_usage();
 //void logger(const char msg[]);
 
 //threaded function. Act as CAN-bus message Receiver and decoder for SDAQ devices
@@ -45,7 +45,7 @@ void * CAN_socket_RX(void *varg_pt)
 	//local variables for CAN Socket frame and SDAQ messages decoders
 	struct can_frame frame_rx;
 	int RX_bytes;
-	sdaq_can_identifier *id_dec;
+	sdaq_can_id *id_dec;
 	sdaq_status *status_dec;
 	sdaq_meas *meas_dec;
 	sdaq_info *info_dec;
@@ -55,7 +55,7 @@ void * CAN_socket_RX(void *varg_pt)
 		RX_bytes=read(arg->socket_num, &frame_rx, sizeof(frame_rx));
 		if(RX_bytes==sizeof(frame_rx))
 		{
-			id_dec = (sdaq_can_identifier *)&(frame_rx.can_id);
+			id_dec = (sdaq_can_id *)&(frame_rx.can_id);
 			if(arg->dev_addr==id_dec->device_addr)
 			{
 				pthread_mutex_lock(&display_access);
@@ -164,15 +164,17 @@ int main(int argc, char *argv[])
 	struct timeval tv;
 	struct ifreq ifr;
 	struct sockaddr_can addr;	
+	struct can_filter RX_filter;
+	sdaq_can_id *can_filter_enc;
 	int socket_num;
 	const int disable_loopback = 0;
 	//variables for threads
 	pthread_t CAN_socket_RX_Thread_id; 
 	struct thread_arguments_passer thread_arg;
 	
-	if(argc != 3)
+	if(argc == 1)
 	{
-		printf("Argument Error\n");
+		print_usage();
 		exit(1);
 	}
 	dev_addr = atoi(argv[2]);
@@ -189,7 +191,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	thread_arg.socket_num=socket_num;
-	//link inerface name to socket
+	//Link inerface name to socket
 	strcpy(ifr.ifr_name, argv[1]); // get name from main arguments
 	if(ioctl(socket_num, SIOCGIFINDEX, &ifr))
 	{
@@ -197,14 +199,31 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
+	//Filter for CAN messages	-- SocketCAN Filters act as: <received_can_id> & mask == can_id & mask
+	
+	can_filter_enc = (sdaq_can_id *)&RX_filter.can_id;//Set encoder to filter.can_id
+	memset(can_filter_enc, 0, sizeof(sdaq_can_id));
+	can_filter_enc->flags = 4;//set the EFF
+	can_filter_enc->protocol_id = PROTOCOL_ID; // Received only Messages with protocol_id == PROTOCOL_ID
+	can_filter_enc->payload_type = 0x80; // + Received only Messages with payload_type & 0x80 == TRUE, aka Master <- SDAQ.
+	
+	can_filter_enc = (sdaq_can_id *)&RX_filter.can_mask; //Set encoder to filter.can_mask
+	memset(can_filter_enc, 0, sizeof(sdaq_can_id));
+	can_filter_enc->protocol_id = -1; // Protocol_id field marked for examination 
+	can_filter_enc->payload_type = 0x80; // + The most significant bit of Payload_type field marked for examination.  
+	
+	RX_filter.can_mask |= CAN_EFF_MASK;//(CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_EFF_MASK);
+	
+	setsockopt(socket_num, SOL_CAN_RAW, CAN_RAW_FILTER, &RX_filter, sizeof(RX_filter));
+	
 	//Disable Loopback
-	setsockopt(socket_num, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &disable_loopback, sizeof(disable_loopback)); 
+	//setsockopt(socket_num, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &disable_loopback, sizeof(disable_loopback)); 
 	// Add timeout option to the CAN Socket
 	tv.tv_sec = 25;
 	tv.tv_usec = 0;
 	setsockopt(socket_num, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
 	
-	//bind CAN Socket to address
+	//Bind CAN Socket to address
 	addr.can_family  = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 	if(bind(socket_num, (struct sockaddr *)&addr, sizeof(addr)) < 0) 
@@ -281,6 +300,39 @@ int main(int argc, char *argv[])
 		if(running<0)
 			printf("Terminal need to be at least %dx%d\n",71,31);
 		return 0;
+}
+
+void print_usage()
+{
+	const char manual[] = {
+		"commands that can be entered at runtime:\n"
+		" q<ENTER>        - quit\n"
+		" b<ENTER>        - toggle binary / HEX-ASCII output\n"
+		" B<ENTER>        - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
+		" c<ENTER>        - toggle color mode\n"
+		" #<ENTER>        - notch currently marked/changed bits (can be used repeatedly)\n"
+		" *<ENTER>        - clear notched marked\n"
+		" rMYNAME<ENTER>  - read settings file (filter/notch)\n"
+		" wMYNAME<ENTER>  - write settings file (filter/notch)\n"
+		" +FILTER<ENTER>  - add CAN-IDs to sniff\n"
+		" -FILTER<ENTER>  - remove CAN-IDs to sniff\n"
+		"\n"
+		"FILTER can be a single CAN-ID or a CAN-ID/Bitmask:\n"
+		" +1F5<ENTER>     - add CAN-ID 0x1F5\n"
+		" -42E<ENTER>     - remove CAN-ID 0x42E\n"
+		" -42E7FF<ENTER>  - remove CAN-ID 0x42E (using Bitmask)\n"
+		" -500700<ENTER>  - remove CAN-IDs 0x500 - 0x5FF\n"
+		" +400600<ENTER>  - add CAN-IDs 0x400 - 0x5FF\n"
+		" +000000<ENTER>  - add all CAN-IDs\n"
+		" -000000<ENTER>  - remove all CAN-IDs\n"
+		"\n"
+		"if (id & filter) == (sniff-id & filter) the action (+/-) is performed,\n"
+		"which is quite easy when the filter is 000\n"
+		"\n"
+	};
+	
+	printf("\n");
+	return;
 }
 
 void wclean_refresh(WINDOW *ptr)

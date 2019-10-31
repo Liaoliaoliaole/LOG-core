@@ -43,7 +43,7 @@ enum payload_type
 };
 
 /* SDAQ's CAN identifier encoder/decoder */
-typedef struct SDAQ_Identifier_Decoder
+typedef struct SDAQ_Identifier_Encoder_Decoder
 {
 	unsigned channel_num : 6;
 	unsigned device_addr : 6;
@@ -51,7 +51,7 @@ typedef struct SDAQ_Identifier_Decoder
 	unsigned protocol_id : 6;
 	unsigned priority : 3;
 	unsigned flags : 3;//EFF/RTR/ERR flags
-}sdaq_can_identifier; 
+}sdaq_can_id; 
 
 /* SDAQ's CAN measurement message decoder */
 typedef struct SDAQ_Measurement_Decoder
