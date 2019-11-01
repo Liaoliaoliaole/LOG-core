@@ -1,3 +1,15 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <math.h>
+#include <string.h> 
+
+#include <arpa/inet.h> //for htonl,htons
+
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
 #include "sdaq_drv.h"
 /*
 // enumerator for payload_type
