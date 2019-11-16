@@ -4,3 +4,6 @@
 [submodule "src/sdaq-worker"]
 	path = src/sdaq-worker
 	url = https://gitlab.com/fantomsam/sdaq-worker.git
+[submodule "src/open62541"]
+	path = src/open62541
+	url = https://github.com/open62541/open62541.git
