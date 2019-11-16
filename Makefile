@@ -1,17 +1,24 @@
 CC=gcc
 CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall
-LDLIBS= -lrt -lpthread $(shell pkg-config --cflags --libs open62541 libxml-2.0 libgtop-2.0 glib-2.0)
+LDLIBS= -lrt -lpthread $(shell pkg-config --cflags --libs open62541 ncurses libxml-2.0 libgtop-2.0 glib-2.0 libcjson)
 BUILD_dir=build
 WORK_dir=work
 SRC_dir=src
-DEP=$(WORK_dir)/Discover_and_autoconfig.o $(WORK_dir)/Measure.o $(WORK_dir)/Logging.o $(WORK_dir)/info.o $(WORK_dir)/SDAQ_drv.o $(WORK_dir)/SDAQ_xml.o
+CANif_DEP_dir = ./src/sdaq-worker/work
+CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src
+CANif_DEP=$(CANif_DEP_dir)/Discover_and_autoconfig.o\
+		  $(CANif_DEP_dir)/Measure.o\
+		  $(CANif_DEP_dir)/Logging.o\
+		  $(CANif_DEP_dir)/info.o\
+		  $(CANif_DEP_dir)/SDAQ_drv.o\
+		  $(CANif_DEP_dir)/SDAQ_xml.o
 
 all: $(BUILD_dir)/morfeas_opc_ua $(BUILD_dir)/morfeas_SDAQ_if
 
-$(BUILD_dir)/morfeas_opc_ua:  $(SRC_dir)/*.h $(WORK_dir)/morfeas_opc_ua.o 
+$(BUILD_dir)/morfeas_opc_ua: $(WORK_dir)/morfeas_opc_ua.o 
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 	
-$(BUILD_dir)/morfeas_SDAQ_if: $(SRC_dir)/*.h $(WORK_dir)/morfeas_SDAQ_if.o 
+$(BUILD_dir)/morfeas_SDAQ_if: $(CANif_DEP_HEADERS_dir)/*.h $(WORK_dir)/morfeas_SDAQ_if.o $(CANif_DEP)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 	
 $(WORK_dir)/morfeas_opc_ua.o: $(SRC_dir)/morfeas_opc_ua.c
