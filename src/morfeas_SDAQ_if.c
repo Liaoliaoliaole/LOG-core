@@ -41,12 +41,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "sdaq-worker/src/Modes.h"
 
+//Morfeas_SDAQ-if struct
+struct Morfeas_SDAQ_if_stats{
+	char *CAN_IF_name;
+	float Bus_util;
+	unsigned char detected_SDAQs;
+	unsigned char online_SDAQs;
+};
+
+
 //Global variables
 struct timespec tstart;
 int socket_num, run=1;
 
 //Local function (declaration)
-void CAN_if_timer_handler (int signum);
+void CAN_if_timer_handler(int signum);
+void quit_signal_handler(int signum);
 void print_usage(char *prog_name);//print the usage manual
 
 
@@ -112,10 +122,11 @@ int main(int argc, char *argv[])
 	
 	//Link signal SIGALRM to timer's handler
 	signal(SIGALRM, CAN_if_timer_handler);
-	
+	//Link signal SIGINT to quit_signal_handler
+	signal(SIGINT, quit_signal_handler);
 	//Initialize timer expired time 
 	memset (&timer, 0, sizeof(struct itimerval));
-	timer.it_interval.tv_sec = 1;
+	timer.it_interval.tv_sec = 10;
 	timer.it_interval.tv_usec = 0;
 	timer.it_value.tv_sec = timer.it_interval.tv_sec;
 	timer.it_value.tv_usec = timer.it_interval.tv_usec;
@@ -130,9 +141,15 @@ int main(int argc, char *argv[])
 	}
 	
 	close(socket_num);
+	printf("\n%s quiting...\n",argv[0]);
 	return EXIT_SUCCESS;
 }
 
+void quit_signal_handler(int signum)
+{
+	run = 0;
+	return;
+}
 
 void CAN_if_timer_handler (int signum)
 {
@@ -144,8 +161,9 @@ void CAN_if_timer_handler (int signum)
 	if(time_seed>=60000)
 	{	
 		clock_gettime(CLOCK_MONOTONIC_RAW, &tstart);
-		time_seed = 0;
+		time_seed -= 60000;
 	}
+	printf("timeseed = %hu\n",time_seed);
 	Sync(socket_num, time_seed);
 	return;
 }
