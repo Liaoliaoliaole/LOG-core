@@ -253,7 +253,6 @@ GSList * find_SDAQs(int socket_fd)
 		if(retval == -1)
 		{
 			perror("select()");
-			close(socket_num);
 			exit(EXIT_FAILURE);
 		}
 		else if (retval)
