@@ -173,7 +173,7 @@ void RPi_stat_Define(UA_Server *server_ptr)
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), Disk_Util_Attr, NULL, NULL);
 	//add CPU Temp property  
     UA_VariableAttributes CPU_temp_Attr = UA_VariableAttributes_default;
-    UA_Float CPU_temp = 0;
+    UA_Float CPU_temp = 0; 
     UA_Variant_setScalar(&CPU_temp_Attr.value, &CPU_temp, &UA_TYPES[UA_TYPES_FLOAT]);
     CPU_temp_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_temp (°C)");
 	CPU_temp_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;

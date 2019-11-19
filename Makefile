@@ -14,20 +14,20 @@ CANif_DEP_SRC_dir = ./src/sdaq-worker/src
 		  #$(CANif_DEP_dir)/info.o\
 		  #$(CANif_DEP_dir)/SDAQ_xml.o
 
-all: $(BUILD_dir)/morfeas_opc_ua $(BUILD_dir)/morfeas_SDAQ_if
+all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if
 
-$(BUILD_dir)/morfeas_opc_ua: $(WORK_dir)/morfeas_opc_ua.o 
+$(BUILD_dir)/Morfeas_opc_ua: $(WORK_dir)/Morfeas_opc_ua.o 
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 	
-$(BUILD_dir)/morfeas_SDAQ_if: $(CANif_DEP_HEADERS_dir) $(WORK_dir)/morfeas_SDAQ_if.o $(WORK_dir)/SDAQ_drv.o
+$(BUILD_dir)/Morfeas_SDAQ_if: $(CANif_DEP_HEADERS_dir) $(WORK_dir)/Morfeas_SDAQ_if.o $(WORK_dir)/SDAQ_drv.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 #Dependences of the Morfeas_opc_ua	
-$(WORK_dir)/morfeas_opc_ua.o: $(SRC_dir)/morfeas_opc_ua.c
+$(WORK_dir)/Morfeas_opc_ua.o: $(SRC_dir)/Morfeas_opc_ua.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Dependences of the Morfeas_SDAQ_if
-$(WORK_dir)/morfeas_SDAQ_if.o: $(SRC_dir)/morfeas_SDAQ_if.c
+$(WORK_dir)/Morfeas_SDAQ_if.o: $(SRC_dir)/Morfeas_SDAQ_if.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/SDAQ_drv.o: $(CANif_DEP_SRC_dir)/SDAQ_drv.c
