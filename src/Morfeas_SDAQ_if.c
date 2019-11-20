@@ -17,16 +17,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define YELLOW_LED 19
 #define RED_LED 13
 
-#define LIFE_TIME 15 //used on clean up. Value In seconds and is the time that SDAQ_info_entry node defined as dead 
+#define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <math.h>
 #include <ctype.h>
-
 #include <signal.h>
+#include <dirent.h>
+#include <errno.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -44,7 +46,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Include Functions implementation header
 #include "Types.h"
-//#include "sdaq-worker/src/Modes.h"
+#include "Morfeas_JSON.h"
 
 //Global variables
 static struct timespec tstart;
@@ -79,6 +81,7 @@ void printf_SDAQentry(gpointer node, gpointer arg_pass);
 int main(int argc, char *argv[])
 {
 	//Operational flags variables 
+	char *logstat_path = argv[2];
 	int Stop_flag=0;//this used to block the Stop message spamming in case of conflict.
 	//Variables for Socket CAN
 	int RX_bytes;
@@ -103,6 +106,19 @@ int main(int argc, char *argv[])
 	{
 		print_usage(argv[0]);
 		exit(1);
+	}
+	if(argv[2]==NULL)
+		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
+	else
+	{
+		DIR* dir = opendir(logstat_path);
+		if (dir)
+			closedir(dir);
+		else 
+		{
+			fprintf(stderr,"logstat_path is invalid!\n");
+			return EXIT_FAILURE;
+		}
 	}
 	//CAN Socket Opening
 	if((CAN_socket_num = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
@@ -167,6 +183,7 @@ int main(int argc, char *argv[])
 	else
 		Stop_flag = 1;
 	led_stat(&stats);
+	logstat_json(logstat_path,&stats);
 	
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
@@ -212,11 +229,13 @@ int main(int argc, char *argv[])
 							Stop(CAN_socket_num,Broadcast);
 						}
 						led_stat(&stats);
+						logstat_json(logstat_path,&stats);
 						
 						printf("\t\tOperation: Register SDAQ in Park\n");
 						printf("\nParked SDAQ found with S/N : %u\n",status_dec->dev_sn);
 						printf("New SDAQ_list:\n");
 						g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+						printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
 						printf("\n\n");
 					}
 					else //message from pre-addressed SDAQ 
@@ -228,10 +247,12 @@ int main(int argc, char *argv[])
 								Start(CAN_socket_num,sdaq_id_dec->device_addr); // put SDAQ of sdaq_id_dec->device_addr on measure
 								Stop_flag = 0;
 								led_stat(&stats);
+								logstat_json(logstat_path,&stats);
 								
 								printf("\t\tOperation: Update SDAQ on address(%hhu)\n",sdaq_id_dec->device_addr);
 								printf("Updated SDAQ_list:\n");
 								g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+								printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
 								printf("\n\n");
 							}
 						}
@@ -242,11 +263,13 @@ int main(int argc, char *argv[])
 								Stop(CAN_socket_num,Broadcast);
 								Stop_flag = 1;
 								led_stat(&stats);
+								logstat_json(logstat_path,&stats);
 								
 								printf("\t\tOperation: Stop measure due address conflict\n");
 								printf("Conflicts = %d\n",stats.conflicts);
 								printf("SDAQ_list:\n");
 								g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+								printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
 								printf("\n\n");
 							}
 						}
@@ -271,11 +294,13 @@ int main(int argc, char *argv[])
 				Stop_flag = 0;
 			}
 			led_stat(&stats);
+			logstat_json(logstat_path,&stats);
 			
 			printf("\t\tOperation: Clean-Up list_SDAQ\n");
 			printf("Conflicts = %d\n",stats.conflicts);
 			printf("New SDAQ_list:\n");
 			g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+			printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
 			printf("\n\n");
 		}
 	}
@@ -355,7 +380,7 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	if(led_existent)
 	{
 		!stats->conflicts ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
-		stats->Bus_util < 90.0 ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
+		stats->detected_SDAQs ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
 	}
 }
 
@@ -396,7 +421,7 @@ void print_usage(char *prog_name)
 	const char exp[] = {
 	"\tCAN-IF: The name of the CAN-Bus adapter\n\n"
 	};
-	printf("%s\nUsage: %s CAN-IF \n\n%s\n", preamp, prog_name,exp);
+	printf("%s\nUsage: %s CAN-IF [/path/to/logstat/directory] \n\n%s\n", preamp, prog_name,exp);
 	return;
 }
 
@@ -748,6 +773,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 			t_lst = t_lst -> next;//next node
 			if((now - ((struct SDAQ_info_entry *)check_node->data)->last_seen) > LIFE_TIME)
 			{
+				stats->detected_SDAQs--;
 				free_SDAQ_info_entry(check_node->data);
 				stats->list_SDAQs = g_slist_delete_link(stats->list_SDAQs, check_node);
 			}

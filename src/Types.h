@@ -15,14 +15,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 #include <gmodule.h>
 #include <glib.h>
-#include <math.h>
 
 //Include SDAQ Driver header
 #include "sdaq-worker/src/SDAQ_drv.h"
 
-//Morfeas_SDAQ-if struct
+
+//Morfeas_SDAQ-if stats struct
 struct Morfeas_SDAQ_if_stats{
 	char *CAN_IF_name;
 	float Bus_util;
