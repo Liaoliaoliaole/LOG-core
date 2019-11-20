@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define YELLOW_LED 19
 #define RED_LED 13
 
-#define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list 
+#define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +80,7 @@ void printf_SDAQentry(gpointer node, gpointer arg_pass);
 
 int main(int argc, char *argv[])
 {
-	//Operational flags variables 
+	//Operational flags variables
 	char *logstat_path = argv[2];
 	int Stop_flag=0;//this used to block the Stop message spamming in case of conflict.
 	//Variables for Socket CAN
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 	struct Morfeas_SDAQ_if_stats stats = {0};
 	//Timers related Variables
 	struct itimerval timer;
-	
+
 	if(argc == 1)
 	{
 		print_usage(argv[0]);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 		DIR* dir = opendir(logstat_path);
 		if (dir)
 			closedir(dir);
-		else 
+		else
 		{
 			fprintf(stderr,"logstat_path is invalid!\n");
 			return EXIT_FAILURE;
@@ -166,9 +166,9 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, CAN_if_timer_handler);
 	//Link signal SIGINT to quit_signal_handler
 	signal(SIGINT, quit_signal_handler);
-	
-	
-	led_init(); //init the indication LEDs of the Morfeas-proto
+
+
+	led_init(stats.CAN_IF_name); //init the indication LEDs of the Morfeas-proto
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
@@ -176,15 +176,14 @@ int main(int argc, char *argv[])
 	find_SDAQs(CAN_socket_num, &stats);
 	if(!autoconfig_full(CAN_socket_num, &stats))//do autoconfig for all SDAQ in park, answering with 0 if no conflict
 	{
-		sleep(2);//if success, wait all SDAQ to reboot 
+		sleep(2);//if success, wait all SDAQ to reboot
 		Start(CAN_socket_num,Broadcast);//request start of measurements on all SDAQ
-		sleep(2);//Wait all SDAQ to start measuring
 	}
 	else
 		Stop_flag = 1;
 	led_stat(&stats);
 	logstat_json(logstat_path,&stats);
-	
+
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 10;
@@ -221,7 +220,7 @@ int main(int argc, char *argv[])
 						if(!stats.conflicts)
 						{
 							Stop_flag = 0;
-							Start(CAN_socket_num,Broadcast);	
+							Start(CAN_socket_num,Broadcast);
 						}
 						else
 						{
@@ -230,7 +229,7 @@ int main(int argc, char *argv[])
 						}
 						led_stat(&stats);
 						logstat_json(logstat_path,&stats);
-						
+
 						printf("\t\tOperation: Register SDAQ in Park\n");
 						printf("\nParked SDAQ found with S/N : %u\n",status_dec->dev_sn);
 						printf("New SDAQ_list:\n");
@@ -238,7 +237,7 @@ int main(int argc, char *argv[])
 						printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
 						printf("\n\n");
 					}
-					else //message from pre-addressed SDAQ 
+					else //message from pre-addressed SDAQ
 					{
 						if(!add_or_refresh_list_SDAQs(CAN_socket_num, sdaq_id_dec->device_addr, status_dec, &stats))
 						{
@@ -248,7 +247,7 @@ int main(int argc, char *argv[])
 								Stop_flag = 0;
 								led_stat(&stats);
 								logstat_json(logstat_path,&stats);
-								
+
 								printf("\t\tOperation: Update SDAQ on address(%hhu)\n",sdaq_id_dec->device_addr);
 								printf("Updated SDAQ_list:\n");
 								g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
@@ -264,7 +263,7 @@ int main(int argc, char *argv[])
 								Stop_flag = 1;
 								led_stat(&stats);
 								logstat_json(logstat_path,&stats);
-								
+
 								printf("\t\tOperation: Stop measure due address conflict\n");
 								printf("Conflicts = %d\n",stats.conflicts);
 								printf("SDAQ_list:\n");
@@ -276,7 +275,7 @@ int main(int argc, char *argv[])
 					}
 					break;
 				case Sync_Info:
-					
+
 					break;
 				case Device_info:
 					break;
@@ -295,7 +294,7 @@ int main(int argc, char *argv[])
 			}
 			led_stat(&stats);
 			logstat_json(logstat_path,&stats);
-			
+
 			printf("\t\tOperation: Clean-Up list_SDAQ\n");
 			printf("Conflicts = %d\n",stats.conflicts);
 			printf("New SDAQ_list:\n");
@@ -313,45 +312,47 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-void led_init()
+void led_init(char *CAN_IF_name)
 {
 	char path[35];
 	char buffer[3];
 	ssize_t bytes_written;
 	int sysfs_fd, i, pin;
-	//init GPIO on sysfs
-	for(i=0; i<2; i++)
-	{
-		sysfs_fd = open("/sys/class/gpio/export", O_WRONLY);
-		if(sysfs_fd < 0)
+	if(!strcmp(CAN_IF_name, "can0") || !strcmp(CAN_IF_name, "can1"))
+	{	//init GPIO on sysfs
+		for(i=0; i<2; i++)
 		{
-			fprintf(stderr, "LEDs are Not supported!\n");
-			return;
+			sysfs_fd = open("/sys/class/gpio/export", O_WRONLY);
+			if(sysfs_fd < 0)
+			{
+				fprintf(stderr, "LEDs are Not supported!\n");
+				return;
+			}
+			pin = i ? YELLOW_LED : RED_LED;
+			bytes_written = snprintf(buffer, 3, "%d", pin);
+			write(sysfs_fd, buffer, bytes_written);
+			close(sysfs_fd);
 		}
-		pin = i ? YELLOW_LED : RED_LED;
-		bytes_written = snprintf(buffer, 3, "%d", pin);
-		write(sysfs_fd, buffer, bytes_written);
-		close(sysfs_fd);
+		//Set direction of GPIOs
+		for(i=0; i<2; i++)
+		{
+			pin = i ? YELLOW_LED : RED_LED;
+			snprintf(path, 35, "/sys/class/gpio/gpio%d/direction", pin);
+			sysfs_fd = open(path, O_WRONLY);
+			if(sysfs_fd < 0)
+			{
+				fprintf(stderr, "LEDs are Not supported!\n");
+				return;
+			}
+			if (write(sysfs_fd, "out", 3)<0)
+			{
+				fprintf(stderr, "Failed to set direction!\n");
+				return;
+			}
+			close(sysfs_fd);
+		}
+		led_existent = 1;
 	}
-	//Set direction of GPIOs 
-	for(i=0; i<2; i++)
-	{
-		pin = i ? YELLOW_LED : RED_LED;
-		snprintf(path, 35, "/sys/class/gpio/gpio%d/direction", pin);
-		sysfs_fd = open(path, O_WRONLY);
-		if(sysfs_fd < 0)
-		{
-			fprintf(stderr, "LEDs are Not supported!\n");
-			return; 
-		}
-		if (write(sysfs_fd, "out", 3)<0) 
-		{
-			fprintf(stderr, "Failed to set direction!\n");
-			return;
-		}
-		close(sysfs_fd);
-	}
-	led_existent = 1;
 }
 
 static int GPIOWrite(int pin, int value)
@@ -361,12 +362,12 @@ static int GPIOWrite(int pin, int value)
 	int fd;
 	snprintf(path, 30, "/sys/class/gpio/gpio%d/value", pin);
 	fd = open(path, O_WRONLY);
-	if (-1 == fd) 
+	if (-1 == fd)
 	{
 		fprintf(stderr, "Failed to open gpio value for writing!\n");
 		return(-1);
 	}
-	if (1 != write(fd, &s_values_str[!value ? 0 : 1], 1)) 
+	if (1 != write(fd, &s_values_str[!value ? 0 : 1], 1))
 	{
 		fprintf(stderr, "Failed to write value!\n");
 		return(-1);
@@ -379,8 +380,10 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 {
 	if(led_existent)
 	{
-		!stats->conflicts ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
-		stats->detected_SDAQs ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
+		if(!strcmp(stats->CAN_IF_name,"can0"))
+			!stats->conflicts ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
+		else if(!strcmp(stats->CAN_IF_name,"can1"))
+			!stats->conflicts ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
 	}
 }
 
@@ -477,7 +480,7 @@ void printf_SDAQentry(gpointer node, gpointer arg_pass)
 	else
 		sprintf(str_address,"in_Park");
 	if(node)
-    	printf("%13s with S/N: %010d at Address: %s last_seen @ %s",
+    	printf("%13s with S/N: %010d at Address: %2s last_seen @ %s",
 												  dev_type_str[node_dec->SDAQ_status.dev_type],
 												  node_dec->SDAQ_status.dev_sn,
 												  str_address,
@@ -691,6 +694,7 @@ int autoconfig_new_SDAQ(int socket_fd, unsigned int serial_number ,struct Morfea
 	t_lst = g_slist_find_custom(stats->list_SDAQs, &serial_number, SDAQ_info_entry_find_serial_number);
 	if(t_lst)
 	{
+		stats->detected_SDAQs--;
 		free_SDAQ_info_entry(t_lst->data);
 		stats->list_SDAQs = g_slist_delete_link(stats->list_SDAQs, t_lst);
 	}
@@ -745,7 +749,7 @@ int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status 
 		time(&new_sdaq->last_seen);
 
 	}
-	else // If SDAQ is in the list : update status
+	else // If SDAQ is not in to the list : New entry
 	{
 		stats->detected_SDAQs++;
 		// set SDAQ info data
