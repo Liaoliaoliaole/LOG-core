@@ -14,6 +14,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define YELLOW_LED 19
+#define RED_LED 13
+
+#define LIFE_TIME 15 //used on clean up. Value In seconds and is the time that SDAQ_info_entry node defined as dead 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,10 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <time.h>
 #include <ctype.h>
-#include <math.h>
-#include <gmodule.h>
-#include <glib.h>
-#include <sys/time.h>
+
 #include <signal.h>
 
 #include <linux/can.h>
@@ -36,32 +37,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-//Header for cJSON
-#include <cjson/cJSON.h>
-//Include SDAQ Driver header
-#include "sdaq-worker/src/SDAQ_drv.h"
+#include <sys/time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+
 //Include Functions implementation header
+#include "Types.h"
 //#include "sdaq-worker/src/Modes.h"
 
-//Morfeas_SDAQ-if struct
-struct Morfeas_SDAQ_if_stats{
-	char *CAN_IF_name;
-	float Bus_util;
-	unsigned char detected_SDAQs;// Amount of online SDAQ.
-	unsigned char conflicts;// Amount of SDAQ with conflict addresses
-	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
-};
-// Data of list_SDAQs nodes
-struct SDAQ_info_entry{
-	unsigned char SDAQ_address;
-	sdaq_status SDAQ_status;
-	sdaq_info SDAQ_info;
-	time_t last_seen;
-};
-
 //Global variables
-struct timespec tstart;
-int CAN_socket_num, run=1;
+static struct timespec tstart;
+static int CAN_socket_num, run=1, led_existent=0;
+static int Clean_flag=0;//used trig a clean of list_SDAQ.
 
 /* Local function (declaration)
  * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success.
@@ -69,19 +57,29 @@ int CAN_socket_num, run=1;
 void quit_signal_handler(int signum);//SIGINT handler function
 void CAN_if_timer_handler(int signum);//sync timer handler function
 void print_usage(char *prog_name);//print the usage manual
-int find_SDAQs(int socket_fd, struct Morfeas_SDAQ_if_stats *stats);//discover the online SDAQs and load them on stats, used on start.
-int autoconfig_full(int socket_fd, struct Morfeas_SDAQ_if_stats *stats);//Auto-configure all the online SDAQ, used on start.
-/*Function for handle detection of new SDAQ on park. Used in FSM*/
+	/*Morfeas_SDAQ-if functions*/
+//Error Warning Leds controlling function
+void led_init();
+void led_stat(struct Morfeas_SDAQ_if_stats *stats);
+//discover the online SDAQs and load them on stats, used on start.
+int find_SDAQs(int socket_fd, struct Morfeas_SDAQ_if_stats *stats);
+//Auto-configure all the online SDAQ, used on start.
+int autoconfig_full(int socket_fd, struct Morfeas_SDAQ_if_stats *stats);
+//Cleaning the list_SDAQ from dead entries
+int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
+// Function for handle detection of new SDAQ on park. Used in FSM
 int autoconfig_new_SDAQ(int socket_fd, unsigned int serial_number, struct Morfeas_SDAQ_if_stats *stats);
 /*Function for handle detection of new SDAQ with non parking address. Used in FSM*/
 int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
 
-//lists related functions
+	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node
 void printf_SDAQentry(gpointer node, gpointer arg_pass);
 
 int main(int argc, char *argv[])
 {
+	//Operational flags variables 
+	int Stop_flag=0;//this used to block the Stop message spamming in case of conflict.
 	//Variables for Socket CAN
 	int RX_bytes;
 	struct timeval tv;
@@ -100,7 +98,7 @@ int main(int argc, char *argv[])
 	struct Morfeas_SDAQ_if_stats stats = {0};
 	//Timers related Variables
 	struct itimerval timer;
-
+	
 	if(argc == 1)
 	{
 		print_usage(argv[0]);
@@ -152,15 +150,25 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, CAN_if_timer_handler);
 	//Link signal SIGINT to quit_signal_handler
 	signal(SIGINT, quit_signal_handler);
-
+	
+	
+	led_init(); //init the indication LEDs of the Morfeas-proto
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
 	//find the online SDAQ
 	find_SDAQs(CAN_socket_num, &stats);
-	if(!autoconfig_full(CAN_socket_num, &stats))//make autoconfig for all SDAQ in park
-		Start(CAN_socket_num,Broadcast);//start measurements on success
-	//Initialize timer expired time
+	if(!autoconfig_full(CAN_socket_num, &stats))//do autoconfig for all SDAQ in park, answering with 0 if no conflict
+	{
+		sleep(2);//if success, wait all SDAQ to reboot 
+		Start(CAN_socket_num,Broadcast);//request start of measurements on all SDAQ
+		sleep(2);//Wait all SDAQ to start measuring
+	}
+	else
+		Stop_flag = 1;
+	led_stat(&stats);
+	
+	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 10;
 	timer.it_interval.tv_usec = 0;
@@ -190,34 +198,85 @@ int main(int argc, char *argv[])
 				case Measurement_value:
 					break;
 				case Device_status:
-					if(sdaq_id_dec->device_addr == Parking_address)
+					if(sdaq_id_dec->device_addr == Parking_address) // message from parked SDAQ
 					{
-						printf("\n\nNew SDAQ found with S/N : %u\n",status_dec->dev_sn);
 						autoconfig_new_SDAQ(CAN_socket_num, status_dec->dev_sn, &stats);
+						if(!stats.conflicts)
+						{
+							Stop_flag = 0;
+							Start(CAN_socket_num,Broadcast);	
+						}
+						else
+						{
+							Stop_flag = 1;
+							Stop(CAN_socket_num,Broadcast);
+						}
+						led_stat(&stats);
+						
+						printf("\t\tOperation: Register SDAQ in Park\n");
+						printf("\nParked SDAQ found with S/N : %u\n",status_dec->dev_sn);
 						printf("New SDAQ_list:\n");
 						g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
-						printf("Conflicts = %d\n",stats.conflicts);
-						if(!stats.conflicts)
-							Start(CAN_socket_num,Broadcast);
-						else
-							Stop(CAN_socket_num,Broadcast);
+						printf("\n\n");
 					}
-					else
+					else //message from pre-addressed SDAQ 
 					{
-						if(add_or_refresh_list_SDAQs(CAN_socket_num, sdaq_id_dec->device_addr, status_dec, &stats))
+						if(!add_or_refresh_list_SDAQs(CAN_socket_num, sdaq_id_dec->device_addr, status_dec, &stats))
 						{
-							printf("\n\n SDAQ request update from address: %hhu with S/N : %u\n", sdaq_id_dec->device_addr, status_dec->dev_sn);
-							printf("Updated SDAQ_list:\n");
-							g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+							if(!(status_dec->status & 1<<State)) //SDAQ of sdaq_id_dec->device_addr not measure
+							{
+								Start(CAN_socket_num,sdaq_id_dec->device_addr); // put SDAQ of sdaq_id_dec->device_addr on measure
+								Stop_flag = 0;
+								led_stat(&stats);
+								
+								printf("\t\tOperation: Update SDAQ on address(%hhu)\n",sdaq_id_dec->device_addr);
+								printf("Updated SDAQ_list:\n");
+								g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+								printf("\n\n");
+							}
+						}
+						else// conflict detected
+						{
+							if(!Stop_flag)
+							{
+								Stop(CAN_socket_num,Broadcast);
+								Stop_flag = 1;
+								led_stat(&stats);
+								
+								printf("\t\tOperation: Stop measure due address conflict\n");
+								printf("Conflicts = %d\n",stats.conflicts);
+								printf("SDAQ_list:\n");
+								g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+								printf("\n\n");
+							}
 						}
 					}
 					break;
 				case Sync_Info:
+					
 					break;
 				case Device_info:
 					break;
-				//case Calibration_Date:
+				case Calibration_Date:
+					break;
 			}
+		}
+		if(Clean_flag)
+		{
+			clean_up_list_SDAQs(&stats);
+			Clean_flag = 0;
+			if(Stop_flag && !stats.conflicts)
+			{
+				Start(CAN_socket_num,Broadcast);
+				Stop_flag = 0;
+			}
+			led_stat(&stats);
+			
+			printf("\t\tOperation: Clean-Up list_SDAQ\n");
+			printf("Conflicts = %d\n",stats.conflicts);
+			printf("New SDAQ_list:\n");
+			g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+			printf("\n\n");
 		}
 	}
 
@@ -227,6 +286,77 @@ int main(int argc, char *argv[])
 	Stop(CAN_socket_num,Broadcast);
 	close(CAN_socket_num);
 	return EXIT_SUCCESS;
+}
+
+void led_init()
+{
+	char path[35];
+	char buffer[3];
+	ssize_t bytes_written;
+	int sysfs_fd, i, pin;
+	//init GPIO on sysfs
+	for(i=0; i<2; i++)
+	{
+		sysfs_fd = open("/sys/class/gpio/export", O_WRONLY);
+		if(sysfs_fd < 0)
+		{
+			fprintf(stderr, "LEDs are Not supported!\n");
+			return;
+		}
+		pin = i ? YELLOW_LED : RED_LED;
+		bytes_written = snprintf(buffer, 3, "%d", pin);
+		write(sysfs_fd, buffer, bytes_written);
+		close(sysfs_fd);
+	}
+	//Set direction of GPIOs 
+	for(i=0; i<2; i++)
+	{
+		pin = i ? YELLOW_LED : RED_LED;
+		snprintf(path, 35, "/sys/class/gpio/gpio%d/direction", pin);
+		sysfs_fd = open(path, O_WRONLY);
+		if(sysfs_fd < 0)
+		{
+			fprintf(stderr, "LEDs are Not supported!\n");
+			return; 
+		}
+		if (write(sysfs_fd, "out", 3)<0) 
+		{
+			fprintf(stderr, "Failed to set direction!\n");
+			return;
+		}
+		close(sysfs_fd);
+	}
+	led_existent = 1;
+}
+
+static int GPIOWrite(int pin, int value)
+{
+	static const char s_values_str[] = "01";
+	char path[30];
+	int fd;
+	snprintf(path, 30, "/sys/class/gpio/gpio%d/value", pin);
+	fd = open(path, O_WRONLY);
+	if (-1 == fd) 
+	{
+		fprintf(stderr, "Failed to open gpio value for writing!\n");
+		return(-1);
+	}
+	if (1 != write(fd, &s_values_str[!value ? 0 : 1], 1)) 
+	{
+		fprintf(stderr, "Failed to write value!\n");
+		return(-1);
+	}
+	close(fd);
+	return(0);
+}
+
+void led_stat(struct Morfeas_SDAQ_if_stats *stats)
+{
+	if(led_existent)
+	{
+		!stats->conflicts ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
+		stats->Bus_util < 90.0 ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
+	}
 }
 
 void quit_signal_handler(int signum)
@@ -247,6 +377,8 @@ void CAN_if_timer_handler (int signum)
 		clock_gettime(CLOCK_MONOTONIC_RAW, &tstart);
 		time_seed -= 60000;
 	}
+	if((time_seed%20000)<=100) //approximately every 20 sec
+		Clean_flag=1;//trig a clean up of list_SDAQ.
 	//printf("timeseed = %hu\n",time_seed);
 	//Send Synchronization with time_seed to all SDAQs
 	Sync(CAN_socket_num, time_seed);
@@ -578,56 +710,53 @@ int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status 
 {
 	struct SDAQ_info_entry *new_sdaq;
 	GSList *t_lst = NULL, *conflict_lst =NULL;
-
-
+	/*Check if SDAQ is in the list*/
 	t_lst = g_slist_find_custom(stats->list_SDAQs, &status_dec->dev_sn, SDAQ_info_entry_find_serial_number);
-	if(t_lst)
+	if(t_lst) // If SDAQ is in the list : update status
 	{
 		new_sdaq = (struct SDAQ_info_entry *)t_lst->data;
 		new_sdaq->SDAQ_address = address;
 		memcpy(&new_sdaq->SDAQ_status, status_dec, sizeof(sdaq_status));
 		time(&new_sdaq->last_seen);
+
+	}
+	else // If SDAQ is in the list : update status
+	{
+		stats->detected_SDAQs++;
+		// set SDAQ info data
+		new_sdaq = new_SDAQ_info_entry();
+		new_sdaq->SDAQ_address = address;
+		memcpy(&new_sdaq->SDAQ_status, status_dec, sizeof(sdaq_status));
+		time(&(new_sdaq->last_seen));
+		stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, new_sdaq, SDAQ_info_entry_cmp);
+	}
+	conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
+	stats->conflicts = g_slist_length(conflict_lst);
+	g_slist_free(conflict_lst);
+	return !stats->conflicts ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
+{
+	GSList *t_lst = stats->list_SDAQs, *check_node = NULL, *conflict_lst =NULL;
+	time_t now=time(NULL);
+	if(t_lst)//check if list_SDAQs have elements
+	{
+		for(int i=g_slist_length(stats->list_SDAQs);i;i--)
+		{
+			check_node = t_lst;
+			t_lst = t_lst -> next;//next node
+			if((now - ((struct SDAQ_info_entry *)check_node->data)->last_seen) > LIFE_TIME)
+			{
+				free_SDAQ_info_entry(check_node->data);
+				stats->list_SDAQs = g_slist_delete_link(stats->list_SDAQs, check_node);
+			}
+		}
+		//Check for conflicts
 		conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
 		stats->conflicts = g_slist_length(conflict_lst);
 		g_slist_free(conflict_lst);
-		return EXIT_SUCCESS;
 	}
-	/*
-	 * This code check all the list_SDAQs for nodes that does not have address == addr_t
-	 * The first available address send it to the SDAQ with S/N == serial_number
-	 *
-	for(unsigned char addr_t=1;addr_t<Parking_address;addr_t++)
-	{
-		if(!g_slist_find_custom(stats->list_SDAQs,&addr_t,SDAQ_info_entry_find_address))
-		{
-			printf("New in list\n");
-			SetDeviceAddress(socket_fd, serial_number, addr_t);
-			do{
-				time(&start_of_loop);
-					RX_bytes = read(socket_fd, &frame_rx, sizeof(frame_rx));
-					if(RX_bytes==sizeof(frame_rx) &&
-					   id_dec->payload_type == Device_status &&
-					   id_dec->device_addr == addr_t)
-					{
-						stats->detected_SDAQs++;
-						// set SDAQ info data
-						new_sdaq = new_SDAQ_info_entry();
-						new_sdaq->SDAQ_address = id_dec->device_addr;
-						new_sdaq->SDAQ_status.dev_sn = status_dec->dev_sn;
-						new_sdaq->SDAQ_status.status = status_dec->status;
-						new_sdaq->SDAQ_status.dev_type = status_dec->dev_type;
-						time(&(new_sdaq->last_seen));
-						stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, new_sdaq, SDAQ_info_entry_cmp);
-						conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
-						stats->conflicts = g_slist_length(conflict_lst);
-						g_slist_free(conflict_lst);
-						return EXIT_SUCCESS;
-					}
-				time(&end_of_loop);
-			}while((end_of_loop - start_of_loop)<3); //run for 3 seconds
-		}
-	}*/
-	return EXIT_FAILURE;
+	return !stats->conflicts ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-
 
