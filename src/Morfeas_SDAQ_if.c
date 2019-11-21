@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 					}
 					else //message from pre-addressed SDAQ
 					{
-						if(!add_or_refresh_list_SDAQs(CAN_socket_num, sdaq_id_dec->device_addr, status_dec, &stats)) // Answer 0 on non conflict
+						if(!add_or_refresh_list_SDAQs(CAN_socket_num, sdaq_id_dec->device_addr, status_dec, &stats)) // Answer 0 if no conflict
 						{
 							if(!(status_dec->status & 1<<State)) //SDAQ of sdaq_id_dec->device_addr not measure
 							{
