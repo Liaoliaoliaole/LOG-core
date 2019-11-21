@@ -333,6 +333,7 @@ void led_init(char *CAN_IF_name)
 			write(sysfs_fd, buffer, bytes_written);
 			close(sysfs_fd);
 		}
+		sleep(1); 
 		//Set direction of GPIOs
 		for(i=0; i<2; i++)
 		{
@@ -341,7 +342,7 @@ void led_init(char *CAN_IF_name)
 			sysfs_fd = open(path, O_WRONLY);
 			if(sysfs_fd < 0)
 			{
-				fprintf(stderr, "LEDs are Not supported!\n");
+				fprintf(stderr, "LEDs are Not supported! (direction)\n");
 				return;
 			}
 			if (write(sysfs_fd, "out", 3)<0)
@@ -350,6 +351,7 @@ void led_init(char *CAN_IF_name)
 				return;
 			}
 			close(sysfs_fd);
+			
 		}
 		led_existent = 1;
 	}
