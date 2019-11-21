@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 						{
 							Stop_flag = 0;
 							if(new_SDAQ_addr && new_SDAQ_addr < Parking_address)
-							Start(CAN_socket_num,new_SDAQ_addr);
+								Start(CAN_socket_num,new_SDAQ_addr);
 						}
 						else
 						{
