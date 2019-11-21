@@ -694,7 +694,8 @@ int autoconfig_new_SDAQ(int socket_fd, unsigned int serial_number ,struct Morfea
 	
 	// The bellow code check the list_SDAQs for node with node_dec->SDAQ_status.dev_sn == serial_number, (result on t_lst)
 	t_lst = g_slist_find_custom(stats->list_SDAQs, &serial_number, SDAQ_info_entry_find_serial_number);
-	if(t_lst && !stats->conflicts) //If SDAQ is in the list : configure it with the previous and update last_seen
+	//If SDAQ is in the list : configure it with the previous and update last_seen
+	if(t_lst && !stats->conflicts) 
 	{
 		sdaq_node = t_lst->data;
 		time(&(sdaq_node->last_seen));
@@ -707,8 +708,8 @@ int autoconfig_new_SDAQ(int socket_fd, unsigned int serial_number ,struct Morfea
 		if(check_node)
 		{
 			stats->detected_SDAQs--;
+			stats->list_SDAQs = g_slist_delete_link(stats->list_SDAQs, g_slist_find(stats->list_SDAQs, check_node->data));
 			free_SDAQ_info_entry(check_node->data);
-			stats->list_SDAQs = g_slist_delete_link(stats->list_SDAQs, check_node);
 			conflict_lst = g_slist_delete_link(conflict_lst, check_node);
 		}
 		for(unsigned char addr_t=1;addr_t<Parking_address;addr_t++)
