@@ -666,7 +666,6 @@ int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec ,struct Morfeas_S
 	if(t_lst && !stats->conflicts)
 	{
 		sdaq_node = t_lst->data;
-		printf("Enter \n");
 		time(&(sdaq_node->last_seen));
 		SetDeviceAddress(socket_fd, status_dec->dev_sn, sdaq_node->SDAQ_address);
 	}
@@ -675,7 +674,6 @@ int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec ,struct Morfeas_S
 		conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
 		if(t_lst && stats->conflicts)
 		{
-			printf("Enter\n");
 			check_node = g_slist_find_custom(conflict_lst, &status_dec->dev_sn, SDAQ_info_entry_find_serial_number);
 			if(check_node)
 			{
