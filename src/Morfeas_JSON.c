@@ -36,9 +36,9 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	struct Morfeas_SDAQ_if_stats *stats = (struct Morfeas_SDAQ_if_stats *) stats_arg;
 	FILE * pFile;
 	char *logstat_path_and_name, *slash;
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name));
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_12345.json"));
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
-	sprintf(logstat_path_and_name,"%s%sloagstat_%s.json",logstat_path, slash, stats->CAN_IF_name);
+	sprintf(logstat_path_and_name,"%s%slogstat_%s.json",logstat_path, slash, stats->CAN_IF_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
 	cJSON *root = NULL;
