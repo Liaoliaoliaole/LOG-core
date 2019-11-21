@@ -203,7 +203,6 @@ int main(int argc, char *argv[])
 
 	//FSM of Morfeas_SDAQ_if
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
-
 	while(run)
 	{
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
@@ -220,6 +219,7 @@ int main(int argc, char *argv[])
 						if(!stats.conflicts)
 						{
 							Stop_flag = 0;
+							if(new_SDAQ_addr && new_SDAQ_addr < Parking_address)
 							Start(CAN_socket_num,new_SDAQ_addr);
 						}
 						else
