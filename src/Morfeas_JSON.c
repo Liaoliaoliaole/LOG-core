@@ -49,7 +49,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
     cJSON *list_SDAQs = NULL;
 	
 	//get and format time
-	strftime (date,DATE_LEN,"%x %R",gmtime(&now_time));
+	strftime (date,DATE_LEN,"%x %T",gmtime(&now_time));
     //printf("Version: %s\n", cJSON_Version());
 	root = cJSON_CreateObject();
 	cJSON_AddItemToObject(root, "logstat_build_date(UTC)", cJSON_CreateString(date));
@@ -77,23 +77,45 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	return 0;
 }
 
-void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
+void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 {
-	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
+	char date[DATE_LEN];
+	struct Channel_date_entry *node_dec = (struct Channel_date_entry *)node;
 	cJSON *list_SDAQs = (cJSON *)arg_pass;
 	cJSON *node_data = cJSON_CreateObject();
+	time_t exp_date = node_dec->CH_date.date;
 	
+	//format time
+	strftime(date,DATE_LEN,"%Y/%m",gmtime(&exp_date));
+	cJSON_AddNumberToObject(node_data, "Channel", node_dec->Channel);
+	cJSON_AddItemToObject(node_data, "Cal_Exp_date", cJSON_CreateString(date));
+	cJSON_AddNumberToObject(node_data, "Cal_Exp_date(UNIX)", exp_date);
+	cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
+	cJSON_AddItemToObject(node_data, "Channel's_Unit", cJSON_CreateString(unit_str[node_dec->CH_date.cal_units]));
+	cJSON_AddItemToObject(list_SDAQs, "Calibration_date", node_data);
+}
+
+void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
+{
 	char date[DATE_LEN];
-	//get and format time
-	strftime (date,DATE_LEN,"%x %R",gmtime(&node_dec->last_seen));
+	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
+	GSList *SDAQ_Channels_cal_dates = node_dec->SDAQ_Channels_cal_dates;
+	cJSON *list_SDAQs = (cJSON *)arg_pass;
+	cJSON *list_SDAQ_Channels_cal_dates = cJSON_CreateObject();
+	cJSON *node_data = cJSON_CreateObject();
+	
+	//format time
+	strftime(date,DATE_LEN,"%x %T",gmtime(&node_dec->last_seen));
 	cJSON_AddNumberToObject(node_data, "Address", node_dec->SDAQ_address);
 	cJSON_AddNumberToObject(node_data, "Serial_number", (node_dec->SDAQ_status).dev_sn);
-	cJSON_AddItemToObject(node_data, "dev_type", cJSON_CreateString(dev_type_str[(node_dec->SDAQ_info).dev_type]));
+	cJSON_AddItemToObject(node_data, "SDAQ_type", cJSON_CreateString(dev_type_str[(node_dec->SDAQ_info).dev_type]));
 	cJSON_AddNumberToObject(node_data, "firm_rev", (node_dec->SDAQ_info).firm_rev);
 	cJSON_AddNumberToObject(node_data, "hw_rev", (node_dec->SDAQ_info).hw_rev);
 	cJSON_AddNumberToObject(node_data, "Number_of_channels", (node_dec->SDAQ_info).num_of_ch);
 	cJSON_AddNumberToObject(node_data, "Sample_rate", (node_dec->SDAQ_info).sample_rate);
 	cJSON_AddNumberToObject(node_data, "Max_cal_point", (node_dec->SDAQ_info).max_cal_point);
+	cJSON_AddItemToObject(node_data, "Calibration_date",list_SDAQ_Channels_cal_dates = cJSON_CreateArray());
+	g_slist_foreach(SDAQ_Channels_cal_dates, extract_list_SDAQ_Channels_cal_dates, list_SDAQ_Channels_cal_dates);
 	cJSON_AddStringToObject(node_data, "Last_seen(UTC)", date);
 	cJSON_AddNumberToObject(node_data, "Last_seen(UNIX)", node_dec->last_seen);
 	cJSON_AddNumberToObject(node_data, "Timediff", node_dec->Timediff);

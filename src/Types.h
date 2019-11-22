@@ -15,13 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include <gmodule.h>
 #include <glib.h>
-
 //Include SDAQ Driver header
 #include "sdaq-worker/src/SDAQ_drv.h"
-
 
 //Morfeas_SDAQ-if stats struct
 struct Morfeas_SDAQ_if_stats{
@@ -32,17 +29,23 @@ struct Morfeas_SDAQ_if_stats{
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
 };
-// Data of list_SDAQs nodes
+// Data of a list_SDAQs node
 struct SDAQ_info_entry{
 	unsigned char SDAQ_address;
 	short Timediff; 
 	sdaq_status SDAQ_status;
 	sdaq_info SDAQ_info;
-	sdaq_calibration_date SDAQ_cal_dates;
+	GSList *SDAQ_Channels_cal_dates;
 	time_t last_seen;
 };
 
-// Data of list_SDAQs nodes
+// Data of a SDAQ_cal_dates node
+struct Channel_date_entry{
+	unsigned char Channel;
+	sdaq_calibration_date CH_date;
+};
+
+// Data of a list_SDAQs node
 struct LogBook_entry{
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;

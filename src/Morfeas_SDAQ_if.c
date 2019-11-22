@@ -75,6 +75,8 @@ int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec, struct Morfeas_S
 int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats);
+/*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
+int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats);
 /*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats);
 
@@ -100,10 +102,9 @@ int main(int argc, char *argv[])
 	sdaq_status *status_dec = (sdaq_status *)frame_rx.data;
 	sdaq_info *info_dec = (sdaq_info *)frame_rx.data;
 	sdaq_sync_debug_data *ts_dec = (sdaq_sync_debug_data *)frame_rx.data;
-	/*
-	sdaq_meas *meas_dec = (sdaq_meas *)frame_rx.data;
+	sdaq_calibration_date *date_dec = (sdaq_calibration_date *)frame_rx.data;
+	//sdaq_meas *meas_dec = (sdaq_meas *)frame_rx.data;
 	
-	*/
 	//data_and stats of the Morfeas-SDAQ_IF
 	struct Morfeas_SDAQ_if_stats stats = {0};
 	//Timers related Variables
@@ -173,11 +174,11 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, CAN_if_timer_handler);
 	//Link signal SIGINT to quit_signal_handler
 	signal(SIGINT, quit_signal_handler);
+	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
+	led_init(stats.CAN_IF_name); 
 	
-	led_init(stats.CAN_IF_name); //init the indication LEDs of the Morfeas-proto
-	
-	//TO-DO load the LogBook file to LogBook List
-	/*Code for this here*/
+	//Load the LogBook file to LogBook List
+	/*TO-DO: Code for this here*/
 	
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
@@ -292,6 +293,8 @@ int main(int argc, char *argv[])
 						logstat_json(logstat_path,&stats);
 					break;
 				case Calibration_Date:
+					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
+						logstat_json(logstat_path,&stats);
 					break;
 			}
 		}
@@ -439,16 +442,37 @@ void print_usage(char *prog_name)
 	return;
 }
 
-//Lists related function implementation
+/*Lists related function implementation*/
+//SDAQ_info_entry allocator
 struct SDAQ_info_entry* new_SDAQ_info_entry()
 {
-    struct SDAQ_info_entry *new_SDAQ = (struct SDAQ_info_entry *) g_slice_alloc(sizeof(struct SDAQ_info_entry));
-    return new_SDAQ;
+    struct SDAQ_info_entry *new_node = (struct SDAQ_info_entry *) g_slice_alloc(sizeof(struct SDAQ_info_entry));
+    return new_node;
+}
+//Channel_date_entry allocator
+struct Channel_date_entry* new_SDAQ_Channel_date_entry()
+{
+    struct Channel_date_entry *new_node = (struct Channel_date_entry *) g_slice_alloc(sizeof(struct Channel_date_entry));
+    return new_node;
+}
+//LogBook_entry allocator
+struct LogBook_entry* new_LogBook_entry()
+{
+    struct LogBook_entry *new_node = (struct LogBook_entry *) g_slice_alloc(sizeof(struct LogBook_entry));
+    return new_node;
+}
+
+//free a node from list SDAQ_Channels_cal_dates
+void free_channel_cal_dates_entry(gpointer node)
+{
+    g_slice_free(struct Channel_date_entry, node);
 }
 //free a node from list SDAQ_info
 void free_SDAQ_info_entry(gpointer node)
 {
-    g_slice_free(struct SDAQ_info_entry, node);
+	struct SDAQ_info_entry *node_dec = node;
+	g_slist_free_full(node_dec->SDAQ_Channels_cal_dates, free_channel_cal_dates_entry);
+	g_slice_free(struct SDAQ_info_entry, node);
 }
 //free a node from List LogBook 
 void free_LogBook_entry(gpointer node)
@@ -669,6 +693,103 @@ void send_newaddress_to_SDAQs(gpointer node, gpointer arg_pass)
 	return;
 }
 
+short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
+{
+	short ret = dev_time > ref_time ? dev_time - ref_time : ref_time - dev_time;
+	if(ret<0)
+		ret = 60000 - dev_time - ref_time;
+	return ret;
+}
+
+/*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
+int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
+{
+	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
+	struct SDAQ_info_entry *sdaq_node;
+	if (list_SDAQs)
+	{	
+		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
+		if(list_node)
+		{
+			sdaq_node = list_node->data;
+			sdaq_node->Timediff = time_diff_cal(ts_dec->dev_time, ts_dec->ref_time);
+			time(&(sdaq_node->last_seen));
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
+/*
+	Comparing function used in g_slist_find_custom, comp arg channel to node's channel.
+*/
+gint SDAQ_Channels_cal_dates_entry_find_address (gconstpointer node, gconstpointer arg)
+{
+	const unsigned char *arg_t = arg;
+	struct Channel_date_entry *node_dec = (struct Channel_date_entry *) node;
+	return node_dec->Channel == *arg_t ? 0 : 1;
+}
+/*
+	Comparing function used in g_slist_insert_sorted,
+*/
+gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
+{
+	return (((struct Channel_date_entry *)a)->Channel <= ((struct Channel_date_entry *)b)->Channel) ?  0 : 1;
+}
+/*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
+int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats)
+{
+	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL, *date_list_node = NULL;
+	struct SDAQ_info_entry *sdaq_node;
+	struct Channel_date_entry *sdaq_Channels_cal_dates_node;
+	
+	if (list_SDAQs)
+	{	
+		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
+		if(list_node)
+		{
+			sdaq_node = list_node->data;
+			date_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_cal_dates, &channel, SDAQ_Channels_cal_dates_entry_find_address);
+			if(date_list_node)//channel is already in to the SDAQ_Channels_cal_dates list: Update CH_date.
+			{
+				sdaq_Channels_cal_dates_node = date_list_node->data;
+				memcpy(&(sdaq_Channels_cal_dates_node->CH_date), date_dec, sizeof(sdaq_calibration_date));
+			}
+			else//Channel is not in the list 
+			{
+				sdaq_Channels_cal_dates_node = new_SDAQ_Channel_date_entry();
+				sdaq_Channels_cal_dates_node->Channel = channel;
+				memcpy(&(sdaq_Channels_cal_dates_node->CH_date), date_dec, sizeof(sdaq_calibration_date));
+				sdaq_node->SDAQ_Channels_cal_dates = g_slist_insert_sorted(sdaq_node->SDAQ_Channels_cal_dates, sdaq_Channels_cal_dates_node, SDAQ_Channels_cal_dates_entry_cmp);
+			}
+			time(&(sdaq_node->last_seen));
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+/*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
+int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
+{
+	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
+	struct SDAQ_info_entry *sdaq_node;
+	if (list_SDAQs)
+	{	
+		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
+		if(list_node)
+		{
+			sdaq_node = list_node->data;
+			memcpy(&sdaq_node->SDAQ_info, info_dec, sizeof(sdaq_info));
+			time(&(sdaq_node->last_seen));
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
 //autoconfig all the online SDAQ
 int autoconfig_full(int socket_fd, struct Morfeas_SDAQ_if_stats *stats)
 {
@@ -712,54 +833,7 @@ int autoconfig_full(int socket_fd, struct Morfeas_SDAQ_if_stats *stats)
 	}
 	return ret_val;
 }
-
-short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
-{
-	short ret = dev_time > ref_time ? dev_time - ref_time : ref_time - dev_time;
-	if(ret<0)
-		ret = 60000 - dev_time - ref_time;
-	return ret;
-}
-
-/*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
-int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
-{
-	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
-	struct SDAQ_info_entry *sdaq_node;
-	if (list_SDAQs)
-	{	
-		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
-		if(list_node)
-		{
-			sdaq_node = list_node->data;
-			sdaq_node->Timediff = time_diff_cal(ts_dec->dev_time, ts_dec->ref_time);
-			time(&(sdaq_node->last_seen));
-		}
-		else
-			return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
-int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
-{
-	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
-	struct SDAQ_info_entry *sdaq_node;
-	if (list_SDAQs)
-	{	
-		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
-		if(list_node)
-		{
-			sdaq_node = list_node->data;
-			memcpy(&sdaq_node->SDAQ_info, info_dec, sizeof(sdaq_info));
-			time(&(sdaq_node->last_seen));
-		}
-		else
-			return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
+// autoconfigure a new_SDAQ
 int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec ,struct Morfeas_SDAQ_if_stats *stats)
 {
 	struct SDAQ_info_entry *sdaq_node;
