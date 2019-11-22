@@ -30,13 +30,21 @@ struct Morfeas_SDAQ_if_stats{
 	unsigned char detected_SDAQs;// Amount of online SDAQ.
 	unsigned char conflicts;// Amount of SDAQ with conflict addresses
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
+	GSList *LogBook;//List of the LogBook file
 };
 // Data of list_SDAQs nodes
 struct SDAQ_info_entry{
 	unsigned char SDAQ_address;
-	short time_diff; 
+	short Timediff; 
 	sdaq_status SDAQ_status;
 	sdaq_info SDAQ_info;
 	sdaq_calibration_date SDAQ_cal_dates;
 	time_t last_seen;
+};
+
+// Data of list_SDAQs nodes
+struct LogBook_entry{
+	unsigned int SDAQ_sn;
+	unsigned char SDAQ_address;
+	time_t fisrt_seen;
 };
