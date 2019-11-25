@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 	sdaq_sync_debug_data *ts_dec = (sdaq_sync_debug_data *)frame_rx.data;
 	sdaq_calibration_date *date_dec = (sdaq_calibration_date *)frame_rx.data;
 	//sdaq_meas *meas_dec = (sdaq_meas *)frame_rx.data;
-	
+
 	//data_and stats of the Morfeas-SDAQ_IF
 	struct Morfeas_SDAQ_if_stats stats = {0};
 	//Timers related Variables
@@ -175,11 +175,11 @@ int main(int argc, char *argv[])
 	//Link signal SIGINT to quit_signal_handler
 	signal(SIGINT, quit_signal_handler);
 	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
-	led_init(stats.CAN_IF_name); 
-	
+	led_init(stats.CAN_IF_name);
+
 	//Load the LogBook file to LogBook List
 	/*TO-DO: Code for this here*/
-	
+
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num, Broadcast);
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
 			led_stat(&stats);
 			logstat_json(logstat_path,&stats);
 			Clean_flag = 0;
-			
+
 			printf("\t\tOperation: Clean Up\n");
 			printf("Conflicts = %d\n",stats.conflicts);
 			printf("SDAQ_list:\n");
@@ -474,7 +474,7 @@ void free_SDAQ_info_entry(gpointer node)
 	g_slist_free_full(node_dec->SDAQ_Channels_cal_dates, free_channel_cal_dates_entry);
 	g_slice_free(struct SDAQ_info_entry, node);
 }
-//free a node from List LogBook 
+//free a node from List LogBook
 void free_LogBook_entry(gpointer node)
 {
 	g_slice_free(struct LogBook_entry, node);
@@ -535,17 +535,17 @@ gint SDAQ_info_entry_cmp (gconstpointer a, gconstpointer b)
 void printf_SDAQentry(gpointer node, gpointer arg_pass)
 {
 	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
-	char str_address[12], *last_seen_date = ctime (&node_dec->last_seen);
+	char str_address[12];
 	if(node_dec->SDAQ_address!=Parking_address)
 		sprintf(str_address,"%d",node_dec->SDAQ_address);
 	else
 		sprintf(str_address,"in_Park");
 	if(node)
-    	printf("%13s with S/N: %010d at Address: %2s last_seen @ %s",
+    	printf("%13s with S/N: %010d at Address: %2s last_seen  %7.3f sec ago\n",
 												  dev_type_str[node_dec->SDAQ_status.dev_type],
 												  node_dec->SDAQ_status.dev_sn,
 												  str_address,
-												  last_seen_date);
+												  difftime(time(NULL), node_dec->last_seen));
 }
 
 /*return a list with all the SDAQs on bus, sort by address*/
@@ -707,7 +707,7 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (list_SDAQs)
-	{	
+	{
 		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
 		{
@@ -743,9 +743,9 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL, *date_list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	struct Channel_date_entry *sdaq_Channels_cal_dates_node;
-	
+
 	if (list_SDAQs)
-	{	
+	{
 		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
 		{
@@ -756,12 +756,20 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 				sdaq_Channels_cal_dates_node = date_list_node->data;
 				memcpy(&(sdaq_Channels_cal_dates_node->CH_date), date_dec, sizeof(sdaq_calibration_date));
 			}
-			else//Channel is not in the list 
+			else//Channel is not in the list
 			{
 				sdaq_Channels_cal_dates_node = new_SDAQ_Channel_date_entry();
-				sdaq_Channels_cal_dates_node->Channel = channel;
-				memcpy(&(sdaq_Channels_cal_dates_node->CH_date), date_dec, sizeof(sdaq_calibration_date));
-				sdaq_node->SDAQ_Channels_cal_dates = g_slist_insert_sorted(sdaq_node->SDAQ_Channels_cal_dates, sdaq_Channels_cal_dates_node, SDAQ_Channels_cal_dates_entry_cmp);
+				if(sdaq_Channels_cal_dates_node)
+				{
+					sdaq_Channels_cal_dates_node->Channel = channel;
+					memcpy(&(sdaq_Channels_cal_dates_node->CH_date), date_dec, sizeof(sdaq_calibration_date));
+					sdaq_node->SDAQ_Channels_cal_dates = g_slist_insert_sorted(sdaq_node->SDAQ_Channels_cal_dates, sdaq_Channels_cal_dates_node, SDAQ_Channels_cal_dates_entry_cmp);
+				}
+				else
+				{
+					fprintf(stderr,"Memory error!!!\n");
+					exit(EXIT_FAILURE);
+				}
 			}
 			time(&(sdaq_node->last_seen));
 		}
@@ -776,7 +784,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (list_SDAQs)
-	{	
+	{
 		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
 		{
