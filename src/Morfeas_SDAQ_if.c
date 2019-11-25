@@ -866,18 +866,26 @@ int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec ,struct Morfeas_S
 		{
 			if(!g_slist_find_custom(stats->list_SDAQs,&addr_t,SDAQ_info_entry_find_address))
 			{
-				SetDeviceAddress(socket_fd, status_dec->dev_sn, addr_t);
-				stats->detected_SDAQs++;
 				// set SDAQ info data
 				sdaq_node = new_SDAQ_info_entry();
-				sdaq_node->SDAQ_address = addr_t;
-				memcpy(&sdaq_node->SDAQ_status, status_dec, sizeof(sdaq_status));
-				time(&(sdaq_node->last_seen));
-				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, sdaq_node, SDAQ_info_entry_cmp);
-				//update number of conflict
-				stats->conflicts = g_slist_length(conflict_lst);
-				g_slist_free(conflict_lst);
-				return addr_t;
+				if(sdaq_node)
+				{
+					sdaq_node->SDAQ_address = addr_t;
+					memcpy(&sdaq_node->SDAQ_status, status_dec, sizeof(sdaq_status));
+					time(&(sdaq_node->last_seen));
+					stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, sdaq_node, SDAQ_info_entry_cmp);
+					SetDeviceAddress(socket_fd, status_dec->dev_sn, addr_t);
+					stats->detected_SDAQs++;
+					//update number of conflict
+					stats->conflicts = g_slist_length(conflict_lst);
+					g_slist_free(conflict_lst);
+					return addr_t;
+				}
+				else
+				{
+					fprintf(stderr,"Memory error!\n");
+					exit(EXIT_FAILURE);
+				}
 			}
 		}
 	}
