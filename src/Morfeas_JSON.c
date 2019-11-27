@@ -52,8 +52,8 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	strftime (date,DATE_LEN,"%x %T",gmtime(&now_time));
     //printf("Version: %s\n", cJSON_Version());
 	root = cJSON_CreateObject();
-	cJSON_AddItemToObject(root, "logstat_build_date(UTC)", cJSON_CreateString(date));
-	cJSON_AddNumberToObject(root, "logstat_build_date(UNIX)", now_time);
+	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
@@ -89,7 +89,7 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 	strftime(date,DATE_LEN,"%Y/%m",gmtime(&exp_date));
 	cJSON_AddNumberToObject(node_data, "Channel", node_dec->Channel);
 	cJSON_AddItemToObject(node_data, "Cal_Exp_date", cJSON_CreateString(date));
-	cJSON_AddNumberToObject(node_data, "Cal_Exp_date(UNIX)", exp_date);
+	cJSON_AddNumberToObject(node_data, "Cal_Exp_date_UNIX", exp_date);
 	cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
 	cJSON_AddItemToObject(node_data, "Channel's_Unit", cJSON_CreateString(unit_str[node_dec->CH_date.cal_units]));
 	cJSON_AddItemToObject(list_SDAQs, "Calibration_date", node_data);
@@ -116,8 +116,8 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	cJSON_AddNumberToObject(node_data, "Max_cal_point", (node_dec->SDAQ_info).max_cal_point);
 	cJSON_AddItemToObject(node_data, "Calibration_date",list_SDAQ_Channels_cal_dates = cJSON_CreateArray());
 	g_slist_foreach(SDAQ_Channels_cal_dates, extract_list_SDAQ_Channels_cal_dates, list_SDAQ_Channels_cal_dates);
-	cJSON_AddStringToObject(node_data, "Last_seen(UTC)", date);
-	cJSON_AddNumberToObject(node_data, "Last_seen(UNIX)", node_dec->last_seen);
+	cJSON_AddStringToObject(node_data, "Last_seen_UTC", date);
+	cJSON_AddNumberToObject(node_data, "Last_seen_UNIX", node_dec->last_seen);
 	cJSON_AddNumberToObject(node_data, "Timediff", node_dec->Timediff);
 	cJSON_AddItemToObject(list_SDAQs, "SDAQs_data",node_data);
 }
