@@ -37,9 +37,9 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	struct Morfeas_SDAQ_if_stats *stats = (struct Morfeas_SDAQ_if_stats *) stats_arg;
 	FILE * pFile;
 	char *logstat_path_and_name, *slash, date[DATE_LEN];
-	//make time_t variable and get unix time 
+	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
-	
+
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_12345.json"));
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_%s.json",logstat_path, slash, stats->CAN_IF_name);
@@ -47,7 +47,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	char *JSON_str = NULL;
 	cJSON *root = NULL;
     cJSON *logstat = NULL;
-	
+
 	//get and format time
 	strftime (date,DATE_LEN,"%x %T",gmtime(&now_time));
     //printf("Version: %s\n", cJSON_Version());
@@ -79,12 +79,14 @@ int logstat_json(char *logstat_path, void *stats_arg)
 
 void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 {
-	char date[DATE_LEN];
+	char date[DATE_LEN], unit[10];
 	struct Channel_date_entry *node_dec = node;
 	cJSON *list_SDAQs = (cJSON *)arg_pass;
 	cJSON *node_data = cJSON_CreateObject();
 	if(node)
 	{
+		sprintf(unit,"%s%s",unit_str[node_dec->CH_date.cal_units]
+						   ,node_dec->CH_date.cal_units<20?"(UNCAL)":"");
 		time_t exp_date = node_dec->CH_date.date;
 		//format time
 		strftime(date,DATE_LEN,"%Y/%m",gmtime(&exp_date));
@@ -92,7 +94,7 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 		cJSON_AddItemToObject(node_data, "Cal_Exp_date", cJSON_CreateString(date));
 		cJSON_AddNumberToObject(node_data, "Cal_Exp_date_UNIX", exp_date);
 		cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
-		cJSON_AddItemToObject(node_data, "Channel's_Unit", cJSON_CreateString(unit_str[node_dec->CH_date.cal_units]));
+		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit));
 		cJSON_AddItemToObject(list_SDAQs, "Calibration_date", node_data);
 	}
 }
@@ -105,7 +107,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	cJSON *list_SDAQs = (cJSON *)arg_pass;
 	cJSON *list_SDAQ_Channels_cal_dates = cJSON_CreateObject();
 	cJSON *node_data = cJSON_CreateObject();
-	
+
 	//format time
 	strftime(date,DATE_LEN,"%x %T",gmtime(&node_dec->last_seen));
 	cJSON_AddNumberToObject(node_data, "Address", node_dec->SDAQ_address);
@@ -125,7 +127,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 }
 
 /*
- SDAQ's CAN Device_info message decoder 
+ SDAQ's CAN Device_info message decoder
 typedef struct SDAQ_Info_Decoder{
 	unsigned char dev_type;
 	unsigned char firm_rev;
