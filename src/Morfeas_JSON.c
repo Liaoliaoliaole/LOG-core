@@ -79,7 +79,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
 
 void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 {
-	char date[DATE_LEN], unit[10];
+	char date[DATE_LEN], unit[20];
 	struct Channel_date_entry *node_dec = node;
 	cJSON *list_SDAQs = (cJSON *)arg_pass;
 	cJSON *node_data = cJSON_CreateObject();
