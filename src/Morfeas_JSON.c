@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define DATE_LEN 50
+#define STR_LEN 50
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
 		return 1;
 	struct Morfeas_SDAQ_if_stats *stats = (struct Morfeas_SDAQ_if_stats *) stats_arg;
 	FILE * pFile;
-	char *logstat_path_and_name, *slash, date[DATE_LEN];
+	char *logstat_path_and_name, *slash, date[STR_LEN];
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 
@@ -49,7 +49,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
     cJSON *logstat = NULL;
 
 	//get and format time
-	strftime (date,DATE_LEN,"%x %T",gmtime(&now_time));
+	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
     //printf("Version: %s\n", cJSON_Version());
 	root = cJSON_CreateObject();
 	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
@@ -79,29 +79,34 @@ int logstat_json(char *logstat_path, void *stats_arg)
 
 void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 {
-	char date[DATE_LEN], unit[20];
+	char date[STR_LEN], unit[STR_LEN];
 	struct Channel_date_entry *node_dec = node;
+	struct tm cal_date = {0};
 	cJSON *list_SDAQs = (cJSON *)arg_pass;
 	cJSON *node_data = cJSON_CreateObject();
 	if(node)
 	{
 		sprintf(unit,"%s%s",unit_str[node_dec->CH_date.cal_units]
-						   ,node_dec->CH_date.cal_units<20?"(UNCAL)":"");
-		time_t exp_date = node_dec->CH_date.date;
+						   ,node_dec->CH_date.cal_units<20?"(UNCAL)":"");// 20 sizeof base unit code region
+		cal_date.tm_year = node_dec->CH_date.year + 100;//100 = 2000 - 1900
+		cal_date.tm_mon = node_dec->CH_date.month - 1;
+		cal_date.tm_mday = node_dec->CH_date.day;
 		//format time
-		strftime(date,DATE_LEN,"%Y/%m",gmtime(&exp_date));
+		strftime(date,STR_LEN,"%Y/%m/%d",&cal_date);
 		cJSON_AddNumberToObject(node_data, "Channel", node_dec->Channel);
-		cJSON_AddItemToObject(node_data, "Cal_Exp_date", cJSON_CreateString(date));
-		cJSON_AddNumberToObject(node_data, "Cal_Exp_date_UNIX", exp_date);
+		cJSON_AddItemToObject(node_data, "Calibration_date", cJSON_CreateString(date));
+		cJSON_AddNumberToObject(node_data, "Calibration_date_UNIX", mktime(&cal_date));
+		cJSON_AddNumberToObject(node_data, "Calibration_period", node_dec->CH_date.period);
 		cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
 		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit));
-		cJSON_AddItemToObject(list_SDAQs, "Calibration_date", node_data);
+		cJSON_AddNumberToObject(node_data, "Unit_code", node_dec->CH_date.cal_units);
+		cJSON_AddItemToObject(list_SDAQs, "Calibration_Data", node_data);
 	}
 }
 
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 {
-	char date[DATE_LEN];
+	char date[STR_LEN];
 	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
 	GSList *SDAQ_Channels_cal_dates = node_dec->SDAQ_Channels_cal_dates;
 	cJSON *list_SDAQs = (cJSON *)arg_pass;
@@ -109,7 +114,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	cJSON *node_data = cJSON_CreateObject();
 
 	//format time
-	strftime(date,DATE_LEN,"%x %T",gmtime(&node_dec->last_seen));
+	strftime(date,STR_LEN,"%x %T",gmtime(&node_dec->last_seen));
 	cJSON_AddNumberToObject(node_data, "Address", node_dec->SDAQ_address);
 	cJSON_AddNumberToObject(node_data, "Serial_number", (node_dec->SDAQ_status).dev_sn);
 	cJSON_AddItemToObject(node_data, "SDAQ_type", cJSON_CreateString(dev_type_str[(node_dec->SDAQ_info).dev_type]));
@@ -125,16 +130,4 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	cJSON_AddNumberToObject(node_data, "Timediff", node_dec->Timediff);
 	cJSON_AddItemToObject(list_SDAQs, "SDAQs_data",node_data);
 }
-
-/*
- SDAQ's CAN Device_info message decoder
-typedef struct SDAQ_Info_Decoder{
-	unsigned char dev_type;
-	unsigned char firm_rev;
-	unsigned char hw_rev;
-	unsigned char num_of_ch;
-	unsigned char sample_rate;
-	unsigned char max_cal_point;
-}sdaq_info;
-*/
 
