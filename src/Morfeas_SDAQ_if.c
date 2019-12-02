@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
-#define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud  
+#define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,7 +62,7 @@ static struct timespec tstart;
 static int CAN_socket_num;
 
 /* Local function (declaration)
- * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success. except of other notice
+ * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success. Except of other notice
  */
 void quit_signal_handler(int signum);//SIGINT handler function
 void CAN_if_timer_handler(int signum);//sync timer handler function
@@ -73,12 +73,16 @@ void print_usage(char *prog_name);//print the usage manual
 void led_init();
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 
-//function to clean-up list_SDAQs from non active SDAQ
+//Function to clean-up list_SDAQs from non active SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
+//Function for handle detection of new SDAQ.
+int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
+
 // Function for handle detection of new SDAQ on park. Return the new_address of the SDAQ or -1 in failure
 int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
 /*Function for handle detection of new SDAQ with non parking address or to update status of already existed. Used in FSM*/
 int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
+
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats);
 /*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
@@ -189,7 +193,7 @@ int main(int argc, char *argv[])
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num, Broadcast);
-	
+
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -259,7 +263,7 @@ int main(int argc, char *argv[])
 							{
 								Stop(CAN_socket_num,Broadcast);
 								Stop_flag = 1;
-								
+
 								printf("\t\tOperation: Stop measure due to address conflict\n");
 								printf("Conflicts = %d\n",stats.conflicts);
 								printf("SDAQ_list:\n");
@@ -285,7 +289,7 @@ int main(int argc, char *argv[])
 						logstat_json(logstat_path,&stats);
 					break;
 			}
-			msg_cnt++;//increase message counter 
+			msg_cnt++;//increase message counter
 		}
 		if(flags.Clean_flag)
 		{
@@ -813,6 +817,40 @@ int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status 
 	return !stats->conflicts ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats)
+{
+	struct SDAQ_info_entry *list_SDAQ_node_data;
+	struct LogBook_entry *LogBook_node_data;
+	GSList *check_is_in_list_SDAQ = NULL, *check_is_in_LogBook =NULL;
+
+	if(sdaq_id_dec->device_addr != Parking_address) //message from pre-addressed SDAQ
+	{
+		check_is_in_LogBook = g_slist_find_custom(stats->LogBook, &(status_dec->dev_sn), LogBook_entry_find_serial_number);
+		check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
+		if(check_is_in_list_SDAQ)//SDAQ is in list_SDAQ
+		{
+			list_SDAQ_node_data = check_is_in_list_SDAQ->data;
+			if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//if TRUE, set back to the node_data->SDAQ_address
+				SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
+			time(&(list_SDAQ_node_data->last_seen));//update last_seen for the SDAQ entry
+			return EXIT_SUCCESS;
+		}
+		if(check_is_in_LogBook)//SDAQ is not in list_SDAQ, but is in LogBook (Old Known)
+		{
+			LogBook_node_data = check_is_in_LogBook->data;
+			check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(LogBook_node_data->SDAQ_address), SDAQ_info_entry_find_address);
+			if(!check_is_in_list_SDAQ)//Not the same address in list_SDAQs
+			{
+
+			}
+		}
+	}
+	else // message from parked SDAQ
+	{
+
+	}
+	return EXIT_FAILURE;
+}
 
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
@@ -824,7 +862,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		//check for dead SDAQs
 		while(check_node)
 		{
-			if(check_node->data)	
+			if(check_node->data)
 			{
 				last_seen = ((struct SDAQ_info_entry *)check_node->data)->last_seen;
 				if((now - last_seen) > LIFE_TIME)
