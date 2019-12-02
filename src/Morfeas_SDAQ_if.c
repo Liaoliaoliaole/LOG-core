@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
-#define MAX_CANBus_FPS 3400.0 //Maximum amount of frames per sec for 500Kbaud  
+#define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud  
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 {
 	//Operational variables
 	char *logstat_path = argv[2];
-	unsigned int msg_cnt=0;
+	unsigned long msg_cnt=0;
 	unsigned char new_SDAQ_addr, Stop_flag=0;//this used to block the Stop message spamming in case of conflict.
 	//Variables for Socket CAN
 	int RX_bytes;
