@@ -185,7 +185,11 @@ int main(int argc, char *argv[])
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num, Broadcast);
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> 49cfd070d5aaf618396e866d7a16ff1fc227b572
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 10;
@@ -255,7 +259,7 @@ int main(int argc, char *argv[])
 							{
 								Stop(CAN_socket_num,Broadcast);
 								Stop_flag = 1;
-								
+
 								printf("\t\tOperation: Stop measure due to address conflict\n");
 								printf("Conflicts = %d\n",stats.conflicts);
 								printf("SDAQ_list:\n");
@@ -804,7 +808,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		//check for dead SDAQs
 		while(check_node)
 		{
-			if(check_node->data)	
+			if(check_node->data)
 			{
 				last_seen = ((struct SDAQ_info_entry *)check_node->data)->last_seen;
 				if((now - last_seen) > LIFE_TIME)
