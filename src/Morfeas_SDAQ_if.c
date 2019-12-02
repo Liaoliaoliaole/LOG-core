@@ -17,7 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define YELLOW_LED 19
 #define RED_LED 13
 
+#define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
+#define MAX_CANBus_FPS 3400.0 //Maximum amount of frames per sec for 500Kbaud  
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,9 +50,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Types.h"
 #include "Morfeas_JSON.h"
 
+static struct Morfeas_SDAQ_if_flags{
+	unsigned run : 1;
+	unsigned led_existent :1;
+	unsigned Clean_flag :1;
+	unsigned calc_util :1;
+}flags = {.run=1,0};
+
 //Global variables
 static struct timespec tstart;
-static int CAN_socket_num, run=1, led_existent=0, Clean_flag=0;
+static int CAN_socket_num;
 
 /* Local function (declaration)
  * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success. except of other notice
@@ -63,14 +72,9 @@ void print_usage(char *prog_name);//print the usage manual
 //Error Warning Leds controlling function
 void led_init();
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
+
 //function to clean-up list_SDAQs from non active SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
-/*
-//discover the online SDAQs and load them on stats, used on start.
-int find_SDAQs(int socket_fd, struct Morfeas_SDAQ_if_stats *stats);
-//Auto-configure all the online SDAQ, used on start.
-int autoconfig_full(int socket_fd, struct Morfeas_SDAQ_if_stats *stats);
-*/
 // Function for handle detection of new SDAQ on park. Return the new_address of the SDAQ or -1 in failure
 int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
 /*Function for handle detection of new SDAQ with non parking address or to update status of already existed. Used in FSM*/
@@ -91,8 +95,8 @@ int main(int argc, char *argv[])
 {
 	//Operational variables
 	char *logstat_path = argv[2];
-	int Stop_flag=0;//this used to block the Stop message spamming in case of conflict.
-	unsigned char new_SDAQ_addr;
+	unsigned int msg_cnt=0;
+	unsigned char new_SDAQ_addr, Stop_flag=0;//this used to block the Stop message spamming in case of conflict.
 	//Variables for Socket CAN
 	int RX_bytes;
 	struct timeval tv;
@@ -188,7 +192,7 @@ int main(int argc, char *argv[])
 	
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
-	timer.it_interval.tv_sec = 10;
+	timer.it_interval.tv_sec = 1;
 	timer.it_interval.tv_usec = 0;
 	timer.it_value.tv_sec = timer.it_interval.tv_sec;
 	timer.it_value.tv_usec = timer.it_interval.tv_usec;
@@ -199,7 +203,7 @@ int main(int argc, char *argv[])
 
 	//FSM of Morfeas_SDAQ_if
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
-	while(run)
+	while(flags.run)
 	{
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
 		if(RX_bytes==sizeof(frame_rx))
@@ -281,13 +285,14 @@ int main(int argc, char *argv[])
 						logstat_json(logstat_path,&stats);
 					break;
 			}
+			msg_cnt++;//increase message counter 
 		}
-		if(Clean_flag)
+		if(flags.Clean_flag)
 		{
 			clean_up_list_SDAQs(&stats);
 			led_stat(&stats);
 			logstat_json(logstat_path,&stats);
-			Clean_flag = 0;
+			flags.Clean_flag = 0;
 
 			printf("\t\tOperation: Clean Up\n");
 			printf("Conflicts = %d\n",stats.conflicts);
@@ -295,6 +300,14 @@ int main(int argc, char *argv[])
 			g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
 			printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
 			printf("\n\n");
+		}
+		if(flags.calc_util)
+		{
+			//Calculate CANBus utilization
+			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
+			msg_cnt = 0;
+			flags.calc_util = 0;
+			logstat_json(logstat_path,&stats);
 		}
 	}
 	printf("\nExiting...\n");
@@ -348,7 +361,7 @@ void led_init(char *CAN_IF_name)
 			close(sysfs_fd);
 
 		}
-		led_existent = 1;
+		flags.led_existent = 1;
 	}
 }
 
@@ -375,7 +388,7 @@ static int GPIOWrite(int pin, int value)
 
 void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 {
-	if(led_existent)
+	if(flags.led_existent)
 	{
 		if(!strcmp(stats->CAN_IF_name,"can0"))
 			!stats->conflicts ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
@@ -384,30 +397,37 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	}
 }
 
-void quit_signal_handler(int signum)
+inline void quit_signal_handler(int signum)
 {
-	run = 0;
+	flags.run = 0;
 	return;
 }
 
-void CAN_if_timer_handler (int signum)
+inline void CAN_if_timer_handler (int signum)
 {
-	unsigned short time_seed;
-	struct timespec time_rep = {0,0};
-	clock_gettime(CLOCK_MONOTONIC_RAW, &time_rep);
-	time_seed = (time_rep.tv_nsec - tstart.tv_nsec)/1000000;
-	time_seed += (time_rep.tv_sec - tstart.tv_sec)*1000;
-	if(time_seed>=60000)
+	static unsigned char timer_ring_cnt = SYNC_INTERVAL;
+	timer_ring_cnt--;
+	if(!timer_ring_cnt)
 	{
-		clock_gettime(CLOCK_MONOTONIC_RAW, &tstart);
-		time_seed -= 60000;
+		unsigned short time_seed;
+		struct timespec time_rep = {0,0};
+		clock_gettime(CLOCK_MONOTONIC_RAW, &time_rep);
+		time_seed = (time_rep.tv_nsec - tstart.tv_nsec)/1000000;
+		time_seed += (time_rep.tv_sec - tstart.tv_sec)*1000;
+		if(time_seed>=60000)
+		{
+			clock_gettime(CLOCK_MONOTONIC_RAW, &tstart);
+			time_seed -= 60000;
+		}
+		// Clean up cycle trig
+		if((time_seed%20000)<=100) //approximately every 20 sec
+			flags.Clean_flag=1;//trig a clean up of list_SDAQ.
+		//printf("timeseed = %hu\n",time_seed);
+		//Send Synchronization with time_seed to all SDAQs
+		Sync(CAN_socket_num, time_seed);
+		timer_ring_cnt = SYNC_INTERVAL;//reset timer_ring_cnt
 	}
-	// Clean up cycle trig
-	if((time_seed%20000)<=100) //approximately every 20 sec
-		Clean_flag=1;//trig a clean up of list_SDAQ.
-	//printf("timeseed = %hu\n",time_seed);
-	//Send Synchronization with time_seed to all SDAQs
-	Sync(CAN_socket_num, time_seed);
+	flags.calc_util = 1;
 	return;
 }
 
