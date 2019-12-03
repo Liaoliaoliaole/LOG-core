@@ -592,47 +592,6 @@ GSList* find_SDAQs_inParking(GSList *head)
 	return ret_list;
 }
 
-/*return a list with all the SDAQs nodes (from head) that have same address (aka conflict)*/
-GSList * find_SDAQs_Conflicts(GSList * head)
-{
-	GSList *ret_list=NULL; // function's return pointer
-	volatile GSList *look_ptr, *start_ptr = head; //start_ptr pointer pointing the first node on list.
-	unsigned char cur_address=0;
-	if(g_slist_length(head)>1)
-	{
-		//Place start_ptr pointer at first SDAQ list node that does not have parking address
-		while(start_ptr->next && ((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==Parking_address))
-			start_ptr = start_ptr->next; //move start_ptr to then next node
-		while(start_ptr->next)//Run until start_ptr pointer be at the end node of the list.
-		{
-			ret_list = g_slist_append (ret_list, (gpointer) start_ptr->data); //append node that looked by start pointer in ret_list, as a possible conflict.
-			look_ptr = start_ptr->next;//look_ptr pointer pointing the next node after the start_ptr
-			while(look_ptr)//Run until look_ptr pointer be NULL. aka, pass from the last node.
-			{
-				//Check if the address field of the start_ptr node is the same with the node that point the look_ptr. aka if true, conflict found.
-				if(((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address == ((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address)
-				{
-					ret_list = g_slist_append(ret_list, look_ptr->data);
-					cur_address = (((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address);
-				}
-				//Avoid, look_ptr points nodes with Parking address
-				do{
-					look_ptr = look_ptr->next; //move look_ptr pointer to next node
-				}while(look_ptr && (((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address)==Parking_address);
-			}
-			//delete last appending on ret_list if does not have conflict address. aka above check with look_ptr give false.
-			if(g_slist_last(ret_list)->data == start_ptr->data)
-				ret_list = g_slist_delete_link(ret_list,g_slist_last(ret_list));
-			//Avoid, start_ptr points nodes with already checked address and nodes with Parking address
-			do{
-				start_ptr = start_ptr->next;//move start_ptr to then next node
-			}while(start_ptr->next && (((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==cur_address)
-							   ||  ((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==Parking_address)));
-		}
-	}
-	return ret_list;
-}
-
 short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
 {
 	short ret = dev_time > ref_time ? dev_time - ref_time : ref_time - dev_time;
@@ -640,7 +599,6 @@ short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
 		ret = 60000 - dev_time - ref_time;
 	return ret;
 }
-
 /*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
@@ -660,7 +618,6 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 	}
 	return EXIT_SUCCESS;
 }
-
 /*
 	Comparing function used in g_slist_find_custom, comp arg channel to node's channel.
 */
@@ -888,6 +845,47 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 			}
 		}
 	}
+}
+
+/*return a list with all the SDAQs nodes (from head) that have same address (aka conflict)*/
+GSList * find_SDAQs_Conflicts(GSList * head)
+{
+	GSList *ret_list=NULL; // function's return pointer
+	volatile GSList *look_ptr, *start_ptr = head; //start_ptr pointer pointing the first node on list.
+	unsigned char cur_address=0;
+	if(g_slist_length(head)>1)
+	{
+		//Place start_ptr pointer at first SDAQ list node that does not have parking address
+		while(start_ptr->next && ((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==Parking_address))
+			start_ptr = start_ptr->next; //move start_ptr to then next node
+		while(start_ptr->next)//Run until start_ptr pointer be at the end node of the list.
+		{
+			ret_list = g_slist_append (ret_list, (gpointer) start_ptr->data); //append node that looked by start pointer in ret_list, as a possible conflict.
+			look_ptr = start_ptr->next;//look_ptr pointer pointing the next node after the start_ptr
+			while(look_ptr)//Run until look_ptr pointer be NULL. aka, pass from the last node.
+			{
+				//Check if the address field of the start_ptr node is the same with the node that point the look_ptr. aka if true, conflict found.
+				if(((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address == ((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address)
+				{
+					ret_list = g_slist_append(ret_list, look_ptr->data);
+					cur_address = (((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address);
+				}
+				//Avoid, look_ptr points nodes with Parking address
+				do{
+					look_ptr = look_ptr->next; //move look_ptr pointer to next node
+				}while(look_ptr && (((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address)==Parking_address);
+			}
+			//delete last appending on ret_list if does not have conflict address. aka above check with look_ptr give false.
+			if(g_slist_last(ret_list)->data == start_ptr->data)
+				ret_list = g_slist_delete_link(ret_list,g_slist_last(ret_list));
+			//Avoid, start_ptr points nodes with already checked address and nodes with Parking address
+			do{
+				start_ptr = start_ptr->next;//move start_ptr to then next node
+			}while(start_ptr->next && (((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==cur_address)
+							   ||  ((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==Parking_address)));
+		}
+	}
+	return ret_list;
 }
 
 unsigned char update_conflicts(struct Morfeas_SDAQ_if_stats *stats)
