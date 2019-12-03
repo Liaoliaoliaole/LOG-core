@@ -248,9 +248,8 @@ int main(int argc, char *argv[])
 							}
 							QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 						}
-						else //if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
+						else if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
 						{
-							//Start(CAN_socket_num,SDAQ_data->SDAQ_address);
 							//this is only for debugging
 							printf("\n\t\tOperation: Register new SDAQ with S/N : %u\n",status_dec->dev_sn);
 							printf("New SDAQ_list:\n");
@@ -270,7 +269,14 @@ int main(int argc, char *argv[])
 					break;
 				case Calibration_Date:
 					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
+					{
+						if(!incomplete_SDAQs(&stats))
+						{
+							Start(CAN_socket_num, Broadcast);
+							flags.stop_meas = 0;
+						}
 						logstat_json(logstat_path,&stats);
+					}
 					break;
 			}
 			msg_cnt++;//increase message counter
@@ -286,12 +292,6 @@ int main(int argc, char *argv[])
 				printf("\n\t\tOperation: Stop measuring Due to Address Conflict\n");
 				Stop(CAN_socket_num,Broadcast);
 				flags.stop_meas = 1;
-			}
-			else if(!incomplete_SDAQs(&stats))
-			{
-				printf("\n\t\tOperation: Start Measure\n");
-				Start(CAN_socket_num,Broadcast);
-				flags.stop_meas = 0;
 			}
 			logstat_json(logstat_path,&stats);
 			//bellow will removed is only for debugging
