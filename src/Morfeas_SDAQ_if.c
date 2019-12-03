@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
 						logstat_json(logstat_path,&stats);
 					break;
 				case Device_status:
-					//clean_up_list_SDAQs(&stats);//clean up dead SDAQs
+					clean_up_list_SDAQs(&stats);//clean up dead SDAQs
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
 						if(!SDAQ_data->info_complete)
