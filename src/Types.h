@@ -33,11 +33,12 @@ struct Morfeas_SDAQ_if_stats{
 // Data of a list_SDAQs node
 struct SDAQ_info_entry{
 	unsigned char SDAQ_address;
-	short Timediff; 
+	short Timediff;
 	sdaq_status SDAQ_status;
 	sdaq_info SDAQ_info;
 	GSList *SDAQ_Channels_cal_dates;
 	time_t last_seen;
+	unsigned info_complete : 1;
 };
 
 // Data of a SDAQ_cal_dates node

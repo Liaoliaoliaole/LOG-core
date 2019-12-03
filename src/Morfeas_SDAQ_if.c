@@ -73,19 +73,21 @@ void print_usage(char *prog_name);//print the usage manual
 //Error Warning Leds controlling function
 void led_init();
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
-//Logbook read and write from file; 
+//Logbook read and write from file;
 void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append);
 //Function to clean-up list_SDAQs from non active SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function that returns the amount of detected conflicts in list_SDAQ
-unsigned char update_conflicts(struct Morfeas_SDAQ_if_stats *stats); 
-//Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM
-int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
-/*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
+unsigned char update_conflicts(struct Morfeas_SDAQ_if_stats *stats);
+//Function that add or refresh SDAQ to lists list_SDAQ and LogBook, Return the data of node or NULL. Used in FSM
+struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
+//Function for Updating "Device Info" of a SDAQ. Used in FSM
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats);
-/*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
+//Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats);
-/*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
+//Function that find and return the amount of incomplete (with out all info and dates) nodes.
+int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
+//Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats);
 
 	/*GSList related functions*/
@@ -102,7 +104,7 @@ int main(int argc, char *argv[])
 	//Operational variables
 	char *logstat_path = argv[2];
 	unsigned long msg_cnt=0;
-	unsigned char SDAQ_addr;
+	struct SDAQ_info_entry *SDAQ_data;
 	//Variables for Socket CAN
 	int RX_bytes;
 	struct timeval tv;
@@ -140,7 +142,7 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	}
-	
+
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
 	if (dir)
@@ -202,7 +204,7 @@ int main(int argc, char *argv[])
 	//Load the LogBook file to LogBook List
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
-	
+
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num, Broadcast);
@@ -229,14 +231,26 @@ int main(int argc, char *argv[])
 			{
 				case Measurement_value:
 					break;
+				case Sync_Info:
+					if(!update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats))
+						logstat_json(logstat_path,&stats);
+					break;
 				case Device_status:
-					clean_up_list_SDAQs(&stats);//clean up dead SDAQs
-					SDAQ_addr = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats);
-					if(SDAQ_addr>0)
+					//clean_up_list_SDAQs(&stats);//clean up dead SDAQs
+					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
-						if(!(status_dec->status & 1<<State)) //SDAQ of sdaq_id_dec->device_addr not measure
+						if(!SDAQ_data->info_complete)
 						{
-							Start(CAN_socket_num,SDAQ_addr);
+							if(!flags.stop_meas)
+							{
+								Stop(CAN_socket_num,Broadcast);
+								flags.stop_meas = 1;
+							}
+							QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+						}
+						else //if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
+						{
+							//Start(CAN_socket_num,SDAQ_data->SDAQ_address);
 							//this is only for debugging
 							printf("\n\t\tOperation: Register new SDAQ with S/N : %u\n",status_dec->dev_sn);
 							printf("New SDAQ_list:\n");
@@ -247,17 +261,8 @@ int main(int argc, char *argv[])
 					}
 					else
 						printf("\n\t\tMaximum amount of address is reached \n");
-					if(update_conflicts(&stats))
-					{
-						printf("\n\t\tOperation: Stop measuring Due Address Conflict\n");
-						Stop(CAN_socket_num,Broadcast);
-					}
 					led_stat(&stats);
 					logstat_json(logstat_path,&stats);
-					break;
-				case Sync_Info:
-					if(!update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats))
-						logstat_json(logstat_path,&stats);
 					break;
 				case Device_info:
 					if(!update_info(sdaq_id_dec->device_addr, info_dec, &stats))
@@ -272,11 +277,24 @@ int main(int argc, char *argv[])
 		}
 		if(flags.Clean_flag)
 		{
+
 			clean_up_list_SDAQs(&stats);
 			led_stat(&stats);
-			logstat_json(logstat_path,&stats);
 			flags.Clean_flag = 0;
-
+			if(update_conflicts(&stats))
+			{
+				printf("\n\t\tOperation: Stop measuring Due to Address Conflict\n");
+				Stop(CAN_socket_num,Broadcast);
+				flags.stop_meas = 1;
+			}
+			else if(!incomplete_SDAQs(&stats))
+			{
+				printf("\n\t\tOperation: Start Measure\n");
+				Start(CAN_socket_num,Broadcast);
+				flags.stop_meas = 0;
+			}
+			logstat_json(logstat_path,&stats);
+			//bellow will removed is only for debugging
 			printf("\t\tOperation: Clean Up\n");
 			printf("Conflicts = %d\n",stats.conflicts);
 			printf("SDAQ_list:\n");
@@ -290,6 +308,7 @@ int main(int argc, char *argv[])
 			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
 			msg_cnt = 0;
 			flags.calc_util = 0;
+			//transfer to opc_ua this info, bellow will removed
 			logstat_json(logstat_path,&stats);
 		}
 	}
@@ -381,7 +400,7 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	}
 }
 
-//Logbook read and write from file; 
+//Logbook read and write from file;
 void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append)
 {
 	FILE *fp;
@@ -568,28 +587,20 @@ void printf_SDAQentry(gpointer node, gpointer arg_pass)
 	}
 }
 
-/*return a list with all the SDAQs nodes (from head) that have Parking address, sort by Serial number*/
-GSList* find_SDAQs_inParking(GSList *head)
+//Function that find and return the amount of incomplete (with out all info and dates) nodes.
+int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
-	GSList *t_lst = head, *ret_list=NULL;
-	for(int i=g_slist_length(head);i;i--)//Run for all head nodes.
+	unsigned int incomp_amount=0;
+	GSList *list_SDAQs = stats->list_SDAQs;
+	struct SDAQ_info_entry *node_data;
+	while(list_SDAQs)
 	{
-		if(t_lst)
-		{
-			//look at the list t_lst (aka head, at first) for entrance with parking address
-			t_lst = g_slist_find_custom(t_lst,(gconstpointer) &Parking_address, SDAQ_info_entry_find_address);
-			if(t_lst)
-			{
-				ret_list = g_slist_insert_sorted(ret_list, (gpointer) t_lst->data, SDAQ_info_entry_cmp);//sort by serial number
-				t_lst = t_lst->next; //goto next node
-			}
-			else
-				break; //Break the for loop if no Parking_address node found.
-		}
-		else
-			break;  //Break the for loop if end of list is reached.
+		node_data = list_SDAQs->data;
+		if(!node_data->info_complete)
+			incomp_amount++;
+		list_SDAQs = list_SDAQs->next;
 	}
-	return ret_list;
+	return incomp_amount;
 }
 
 short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
@@ -602,11 +613,11 @@ short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
 /*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
+	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
-	if (list_SDAQs)
+	if (stats->list_SDAQs)
 	{
-		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
+		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
@@ -637,13 +648,12 @@ gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
 /*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL, *date_list_node = NULL;
+	GSList *list_node = NULL, *date_list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	struct Channel_date_entry *sdaq_Channels_cal_dates_node;
-
-	if (list_SDAQs)
+	if (stats->list_SDAQs)
 	{
-		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
+		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
@@ -671,6 +681,9 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 				}
 			}
 			time(&(sdaq_node->last_seen));
+			if(channel == sdaq_node->SDAQ_info.num_of_ch)//if is the last calibration date message, mark entry as "info complete"
+				sdaq_node->info_complete=1;
+
 		}
 		else
 			return EXIT_FAILURE;
@@ -680,11 +693,11 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	GSList *list_SDAQs = stats->list_SDAQs, *list_node = NULL;
+	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
-	if (list_SDAQs)
+	if (stats->list_SDAQs)
 	{
-		list_node = g_slist_find_custom(list_SDAQs, &address, SDAQ_info_entry_find_address);
+		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
@@ -697,13 +710,13 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 	return EXIT_SUCCESS;
 }
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM
-int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats)
+struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
 	unsigned char address_test;
 	struct SDAQ_info_entry *list_SDAQ_node_data;
 	struct LogBook_entry *LogBook_node_data;
 	GSList *check_is_in_list_SDAQ = NULL, *check_is_in_LogBook =NULL;
-	
+
 	check_is_in_LogBook = g_slist_find_custom(stats->LogBook, &(status_dec->dev_sn), LogBook_entry_find_serial_number);
 	check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
 	if(check_is_in_list_SDAQ)//SDAQ is in list_SDAQ
@@ -712,13 +725,13 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 		time(&(list_SDAQ_node_data->last_seen));//update last_seen for the SDAQ entry
 		if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//if TRUE, set back to the node_data->SDAQ_address
 			SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
-		return list_SDAQ_node_data->SDAQ_address;
+		return list_SDAQ_node_data;
 	}
 	else if(check_is_in_LogBook)//SDAQ is not in list_SDAQ, but is recorded in LogBook (Old Known entry)
 	{
 		LogBook_node_data = check_is_in_LogBook->data;
 		check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(LogBook_node_data->SDAQ_address), SDAQ_info_entry_find_address);
-		if(!check_is_in_list_SDAQ)//If TRUE, make new entry to list_SDAQ with address from LogBook and then configured SDAQ 
+		if(!check_is_in_list_SDAQ)//If TRUE, make new entry to list_SDAQ with address from LogBook and then configured SDAQ
 		{
 			//Make new entry to list_SDAQ with address from LogBook
 			list_SDAQ_node_data = new_SDAQ_info_entry();
@@ -731,12 +744,12 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 				stats->detected_SDAQs++;
 				//Configure SDAQ with Address from LogBook
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, LogBook_node_data->SDAQ_address);
-				return LogBook_node_data->SDAQ_address;
+				return list_SDAQ_node_data;
 			}
 			else
 			{
 				fprintf(stderr,"Memory error!\n");
-				exit(EXIT_FAILURE);					
+				exit(EXIT_FAILURE);
 			}
 		}
 		else //Address from recorded on LogBook is currently used
@@ -759,7 +772,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 						SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
 						LogBook_file(stats, "w");
 						stats->detected_SDAQs++;
-						return address_test;
+						return list_SDAQ_node_data;
 					}
 					else
 					{
@@ -771,10 +784,10 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 			//if not any address available set SDAQ to park
 			if(sdaq_id_dec->device_addr != Parking_address)
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
-			return 0;
-		}			
+			return NULL;
+		}
 	}
-	else //completely unknown SDAQ 
+	else //completely unknown SDAQ
 	{
 		//check if the current address of the SDAQ is not conflict with any other in list_SDAQ, if not use it as it's pre addressed
 		address_test = sdaq_id_dec->device_addr;
@@ -803,7 +816,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 							LogBook_file(stats, "a");
 							SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
 							stats->detected_SDAQs++;
-							return address_test;
+							return list_SDAQ_node_data;
 						}
 						else
 						{
@@ -836,7 +849,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 				LogBook_file(stats, "a");
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
 				stats->detected_SDAQs++;
-				return address_test;
+				return list_SDAQ_node_data;
 			}
 			else
 			{
