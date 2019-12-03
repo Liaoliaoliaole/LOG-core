@@ -73,7 +73,8 @@ void print_usage(char *prog_name);//print the usage manual
 //Error Warning Leds controlling function
 void led_init();
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
-
+//Logbook read and write from file; 
+void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append);
 //Function to clean-up list_SDAQs from non active SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function that returns the amount of detected conflicts in list_SDAQ
@@ -96,11 +97,9 @@ void printf_SDAQentry(gpointer node, gpointer arg_pass);
 
 int main(int argc, char *argv[])
 {
-	//Directory and files pointer variables
+	//Directory pointer variables
 	DIR *dir;
-	FILE *fp;
 	//Operational variables
-	char LogBook_file_path[100];
 	char *logstat_path = argv[2];
 	unsigned long msg_cnt=0;
 	unsigned char SDAQ_addr;
@@ -201,14 +200,8 @@ int main(int argc, char *argv[])
 	led_init(stats.CAN_IF_name);
 
 	//Load the LogBook file to LogBook List
-	sprintf(LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
-	fp=fopen(LogBook_file_path,"r");
-	if(fp)
-	{
-		fclose(fp);
-	}
-	else
-		fprintf(stderr,"LogBook File does not found!!!");
+	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
+	LogBook_file(&stats, "r");
 	
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
@@ -388,6 +381,36 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	}
 }
 
+//Logbook read and write from file; 
+void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append)
+{
+	FILE *fp;
+	if(!strcmp(read_write_or_append, "r"))
+	{
+		fp=fopen(stats->LogBook_file_path,read_write_or_append);
+		if(fp)
+		{
+			fclose(fp);
+		}
+	}
+	else if(!strcmp(read_write_or_append, "w"))
+	{
+		fp=fopen(stats->LogBook_file_path,read_write_or_append);
+		if(fp)
+		{
+			fclose(fp);
+		}
+	}
+	else if(!strcmp(read_write_or_append, "a"))
+	{
+		fp=fopen(stats->LogBook_file_path,read_write_or_append);
+		if(fp)
+		{
+			fclose(fp);
+		}
+	}
+}
+
 inline void quit_signal_handler(int signum)
 {
 	flags.run = 0;
@@ -531,15 +554,18 @@ void printf_SDAQentry(gpointer node, gpointer arg_pass)
 {
 	struct SDAQ_info_entry *node_dec = node;
 	char str_address[12];
-	if(node_dec->SDAQ_address!=Parking_address)
-		sprintf(str_address,"%d",node_dec->SDAQ_address);
-	else
-		sprintf(str_address,"in_Park");
-	printf("%13s with S/N: %010d at Address: %2s last_seen  %7.3f sec ago\n",
-												  dev_type_str[node_dec->SDAQ_status.dev_type],
-												  node_dec->SDAQ_status.dev_sn,
-												  str_address,
-												  difftime(time(NULL), node_dec->last_seen));
+	if(node)
+	{
+		if(node_dec->SDAQ_address!=Parking_address)
+			sprintf(str_address,"%d",node_dec->SDAQ_address);
+		else
+			sprintf(str_address,"in_Park");
+		printf("%13s with S/N: %010d at Address: %2s last_seen  %7.3f sec ago\n",
+													  dev_type_str[node_dec->SDAQ_status.dev_type],
+													  node_dec->SDAQ_status.dev_sn,
+													  str_address,
+													  difftime(time(NULL), node_dec->last_seen));
+	}
 }
 
 /*return a list with all the SDAQs nodes (from head) that have Parking address, sort by Serial number*/
@@ -774,6 +800,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 						//Update LogBook with new address
 						LogBook_node_data->SDAQ_address = address_test;
 						SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
+						LogBook_file(stats, "w");
 						stats->detected_SDAQs++;
 						return address_test;
 					}
@@ -794,7 +821,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 	{
 		//check if the current address of the SDAQ is not conflict with any other in list_SDAQ, if not use it as it's pre addressed
 		address_test = sdaq_id_dec->device_addr;
-		if(g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address)||address_test==Parking_address)
+		if(g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address) || address_test==Parking_address)
 		{
 			if(g_slist_length(stats->list_SDAQs)<Parking_address)
 			{
@@ -816,6 +843,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 							LogBook_node_data->SDAQ_address = address_test;
 							LogBook_node_data->SDAQ_sn = status_dec->dev_sn;
 							stats->LogBook = g_slist_append(stats->LogBook, LogBook_node_data);
+							LogBook_file(stats, "a");
 							SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
 							stats->detected_SDAQs++;
 							return address_test;
@@ -837,7 +865,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 		{
 			list_SDAQ_node_data = new_SDAQ_info_entry();
 			LogBook_node_data = new_LogBook_entry();
-			if(list_SDAQ_node_data)
+			if(list_SDAQ_node_data && LogBook_node_data)
 			{
 				//Load SDAQ data on new list_SDAQ entry
 				list_SDAQ_node_data->SDAQ_address = address_test;
@@ -848,6 +876,7 @@ int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_s
 				LogBook_node_data->SDAQ_address = address_test;
 				LogBook_node_data->SDAQ_sn = status_dec->dev_sn;
 				stats->LogBook = g_slist_append(stats->LogBook, LogBook_node_data);
+				LogBook_file(stats, "a");
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
 				stats->detected_SDAQs++;
 				return address_test;

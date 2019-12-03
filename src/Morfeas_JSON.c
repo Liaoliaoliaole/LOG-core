@@ -34,7 +34,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
 {
 	if(!logstat_path)
 		return 1;
-	struct Morfeas_SDAQ_if_stats *stats = (struct Morfeas_SDAQ_if_stats *) stats_arg;
+	struct Morfeas_SDAQ_if_stats *stats = stats_arg;
 	FILE * pFile;
 	char *logstat_path_and_name, *slash, date[STR_LEN];
 	//make time_t variable and get unix time
