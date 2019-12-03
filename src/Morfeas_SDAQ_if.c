@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define YELLOW_LED 19
 #define RED_LED 13
-
+#define LogBooks_dir "/var/tmp/Morfeas_LogBooks/"
 #define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
@@ -55,6 +55,7 @@ static struct Morfeas_SDAQ_if_flags{
 	unsigned led_existent :1;
 	unsigned Clean_flag :1;
 	unsigned calc_util :1;
+	unsigned stop_meas :1;
 }flags = {.run=1,0};
 
 //Global variables
@@ -75,14 +76,10 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 
 //Function to clean-up list_SDAQs from non active SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
-//Function for handle detection of new SDAQ.
+//Function that returns the amount of detected conflicts in list_SDAQ
+unsigned char update_conflicts(struct Morfeas_SDAQ_if_stats *stats); 
+//Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM
 int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
-
-// Function for handle detection of new SDAQ on park. Return the new_address of the SDAQ or -1 in failure
-int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
-/*Function for handle detection of new SDAQ with non parking address or to update status of already existed. Used in FSM*/
-int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
-
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats);
 /*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
@@ -93,14 +90,20 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
 void free_LogBook_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list LogBook
+
+//print only for debugging
 void printf_SDAQentry(gpointer node, gpointer arg_pass);
 
 int main(int argc, char *argv[])
 {
+	//Directory and files pointer variables
+	DIR *dir;
+	FILE *fp;
 	//Operational variables
+	char LogBook_file_path[100];
 	char *logstat_path = argv[2];
 	unsigned long msg_cnt=0;
-	unsigned char new_SDAQ_addr, Stop_flag=0;//this used to block the Stop message spamming in case of conflict.
+	unsigned char SDAQ_addr;
 	//Variables for Socket CAN
 	int RX_bytes;
 	struct timeval tv;
@@ -129,7 +132,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
 	else
 	{
-		DIR* dir = opendir(logstat_path);
+		dir = opendir(logstat_path);
 		if (dir)
 			closedir(dir);
 		else
@@ -137,6 +140,16 @@ int main(int argc, char *argv[])
 			fprintf(stderr,"logstat_path is invalid!\n");
 			return EXIT_FAILURE;
 		}
+	}
+	
+	//Check the existence of the LogBooks directory
+	dir = opendir(LogBooks_dir);
+	if (dir)
+		closedir(dir);
+	else
+	{
+		printf("Making LogBooks_dir \n");
+		mkdir(LogBooks_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
 	}
 	//CAN Socket Opening
 	if((CAN_socket_num = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
@@ -188,8 +201,15 @@ int main(int argc, char *argv[])
 	led_init(stats.CAN_IF_name);
 
 	//Load the LogBook file to LogBook List
-	/*TO-DO: Code for this here*/
-
+	sprintf(LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
+	fp=fopen(LogBook_file_path,"r");
+	if(fp)
+	{
+		fclose(fp);
+	}
+	else
+		fprintf(stderr,"LogBook File does not found!!!");
+	
 		/*Actions on the bus*/
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num, Broadcast);
@@ -218,63 +238,29 @@ int main(int argc, char *argv[])
 					break;
 				case Device_status:
 					clean_up_list_SDAQs(&stats);//clean up dead SDAQs
-					if(sdaq_id_dec->device_addr == Parking_address) // message from parked SDAQ
+					SDAQ_addr = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats);
+					if(SDAQ_addr>0)
 					{
-						new_SDAQ_addr = autoconfig_new_SDAQ(CAN_socket_num, status_dec, &stats);
-						if(!stats.conflicts)
+						if(!(status_dec->status & 1<<State)) //SDAQ of sdaq_id_dec->device_addr not measure
 						{
-							Stop_flag = 0;
-							if(new_SDAQ_addr && new_SDAQ_addr < Parking_address)
-							{
-								Start(CAN_socket_num,new_SDAQ_addr);
-								QueryDeviceInfo(CAN_socket_num, new_SDAQ_addr);
-							}
-						}
-						else
-						{
-							Stop_flag = 1;
-							Stop(CAN_socket_num,Broadcast);
-						}
-						led_stat(&stats);
-						logstat_json(logstat_path,&stats);
-
-						printf("\n\t\tOperation: Register new SDAQ with S/N : %u\n",status_dec->dev_sn);
-						printf("New SDAQ_list:\n");
-						g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
-						printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
-						printf("\n\n");
-					}
-					else //message from pre-addressed SDAQ
-					{
-						if(!add_or_refresh_list_SDAQs(CAN_socket_num, sdaq_id_dec->device_addr, status_dec, &stats)) // Answer 0 if no conflict
-						{
-							if(!(status_dec->status & 1<<State)) //SDAQ of sdaq_id_dec->device_addr not measure
-							{
-								Start(CAN_socket_num,sdaq_id_dec->device_addr); // put SDAQ of sdaq_id_dec->device_addr on measure
-								QueryDeviceInfo(CAN_socket_num, sdaq_id_dec->device_addr);
-								Stop_flag = 0;
-							}
-							led_stat(&stats);
-							logstat_json(logstat_path,&stats);
-						}
-						else// conflict detected
-						{
-							if(!Stop_flag)
-							{
-								Stop(CAN_socket_num,Broadcast);
-								Stop_flag = 1;
-
-								printf("\t\tOperation: Stop measure due to address conflict\n");
-								printf("Conflicts = %d\n",stats.conflicts);
-								printf("SDAQ_list:\n");
-								g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
-								printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
-								printf("\n\n");
-							}
-							led_stat(&stats);
-							logstat_json(logstat_path,&stats);
+							Start(CAN_socket_num,SDAQ_addr);
+							//this is only for debugging
+							printf("\n\t\tOperation: Register new SDAQ with S/N : %u\n",status_dec->dev_sn);
+							printf("New SDAQ_list:\n");
+							g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
+							printf("Amount of SDAQ in list SDAQ %d\n",stats.detected_SDAQs);
+							printf("\n\n");
 						}
 					}
+					else
+						printf("\n\t\tMaximum amount of address is reached \n");
+					if(update_conflicts(&stats))
+					{
+						printf("\n\t\tOperation: Stop measuring Due Address Conflict\n");
+						Stop(CAN_socket_num,Broadcast);
+					}
+					led_stat(&stats);
+					logstat_json(logstat_path,&stats);
 					break;
 				case Sync_Info:
 					if(!update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats))
@@ -302,7 +288,7 @@ int main(int argc, char *argv[])
 			printf("Conflicts = %d\n",stats.conflicts);
 			printf("SDAQ_list:\n");
 			g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
-			printf("Amount of in list SDAQ %d\n",stats.detected_SDAQs);
+			printf("Amount of SDAQ in list SDAQ %d\n",stats.detected_SDAQs);
 			printf("\n\n");
 		}
 		if(flags.calc_util)
@@ -317,6 +303,7 @@ int main(int argc, char *argv[])
 	printf("\nExiting...\n");
 	//free all lists
 	g_slist_free_full(stats.list_SDAQs, free_SDAQ_info_entry);
+	//TO-DO save LogBook list to a file before destroy it
 	g_slist_free_full(stats.LogBook, free_LogBook_entry);
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
@@ -542,14 +529,13 @@ gint SDAQ_info_entry_cmp (gconstpointer a, gconstpointer b)
 //This function will be removed is only for debugging
 void printf_SDAQentry(gpointer node, gpointer arg_pass)
 {
-	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
+	struct SDAQ_info_entry *node_dec = node;
 	char str_address[12];
 	if(node_dec->SDAQ_address!=Parking_address)
 		sprintf(str_address,"%d",node_dec->SDAQ_address);
 	else
 		sprintf(str_address,"in_Park");
-	if(node)
-		printf("%13s with S/N: %010d at Address: %2s last_seen  %7.3f sec ago\n",
+	printf("%13s with S/N: %010d at Address: %2s last_seen  %7.3f sec ago\n",
 												  dev_type_str[node_dec->SDAQ_status.dev_type],
 												  node_dec->SDAQ_status.dev_sn,
 												  str_address,
@@ -727,134 +713,171 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 	}
 	return EXIT_SUCCESS;
 }
-
-// autoconfigure a new_SDAQ
-int autoconfig_new_SDAQ(int socket_fd, sdaq_status *status_dec ,struct Morfeas_SDAQ_if_stats *stats)
-{
-	struct SDAQ_info_entry *sdaq_node;
-	GSList *t_lst = NULL, *conflict_lst =NULL, *check_node = NULL;
-	// The bellow code check the list_SDAQs for node with node_dec->SDAQ_status.dev_sn == serial_number, (result on t_lst)
-	t_lst = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
-	if(t_lst && !stats->conflicts)//If SDAQ is in the list : configure it with the previous and update last_seen
-	{
-		sdaq_node = t_lst->data;
-		time(&(sdaq_node->last_seen));
-		SetDeviceAddress(socket_fd, status_dec->dev_sn, sdaq_node->SDAQ_address);
-	}
-	else // Otherwise, find a available number, configure it and add it to the list.
-	{
-		conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
-		if(t_lst && stats->conflicts)
-		{
-			check_node = g_slist_find_custom(conflict_lst, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
-			if(check_node)
-			{
-				stats->detected_SDAQs--;
-				stats->list_SDAQs = g_slist_delete_link(stats->list_SDAQs, g_slist_find(stats->list_SDAQs, check_node->data));
-				free_SDAQ_info_entry(check_node->data);
-				conflict_lst = g_slist_delete_link(conflict_lst, check_node);
-			}
-		}
-		for(unsigned char addr_t=1;addr_t<Parking_address;addr_t++)
-		{
-			if(!g_slist_find_custom(stats->list_SDAQs, &addr_t, SDAQ_info_entry_find_address))
-			{
-				// set SDAQ info data
-				sdaq_node = new_SDAQ_info_entry();
-				if(sdaq_node)
-				{
-					sdaq_node->SDAQ_address = addr_t;
-					memcpy(&(sdaq_node->SDAQ_status), status_dec, sizeof(sdaq_status));
-					time(&(sdaq_node->last_seen));
-					stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, sdaq_node, SDAQ_info_entry_cmp);
-					SetDeviceAddress(socket_fd, status_dec->dev_sn, addr_t);
-					stats->detected_SDAQs++;
-					//update number of conflict
-					stats->conflicts = g_slist_length(conflict_lst);
-					g_slist_free(conflict_lst);
-					return addr_t;
-				}
-				else
-				{
-					fprintf(stderr,"Memory error!\n");
-					exit(EXIT_FAILURE);
-				}
-			}
-		}
-	}
-	g_slist_free(conflict_lst);
-	return -1;
-}
-
-int add_or_refresh_list_SDAQs(int socket_fd, unsigned char address, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats)
-{
-	GSList *t_lst = NULL, *conflict_lst =NULL;
-	struct SDAQ_info_entry *sdaq_node;
-	//printf("SDAQ_report (S/N:%d)(Addr:%d)\n",status_dec->dev_sn ,address);
-	/*Check if SDAQ is in the list*/
-	t_lst = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
-	if(t_lst) // if SDAQ is in the list, act accordingly.
-	{
-		sdaq_node = t_lst->data;
-		if(sdaq_node->SDAQ_address != address) // in case that have different address.
-			SetDeviceAddress(socket_fd, sdaq_node->SDAQ_status.dev_sn, sdaq_node->SDAQ_address); //restore it to the previous from list
-			//printf("Force addressing!!!! (S/N:%d)(old_Addr:%d)(new_addr:%d)\n",sdaq_node->SDAQ_status.dev_sn ,address ,sdaq_node->SDAQ_address);
-		time(&(sdaq_node->last_seen));
-	}
-	else // If SDAQ is not in to the list : New entry
-	{
-		stats->detected_SDAQs++;
-		// set SDAQ info data
-		sdaq_node = new_SDAQ_info_entry();
-		sdaq_node->SDAQ_address = address;
-		memcpy(&(sdaq_node->SDAQ_status), status_dec, sizeof(sdaq_status));
-		time(&(sdaq_node->last_seen));
-		stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, sdaq_node, SDAQ_info_entry_cmp);
-	}
-	conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
-	stats->conflicts = g_slist_length(conflict_lst);
-	g_slist_free(conflict_lst);
-	return !stats->conflicts ? EXIT_SUCCESS : EXIT_FAILURE;
-}
-
+//Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM
 int add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
+	unsigned char address_test;
 	struct SDAQ_info_entry *list_SDAQ_node_data;
 	struct LogBook_entry *LogBook_node_data;
 	GSList *check_is_in_list_SDAQ = NULL, *check_is_in_LogBook =NULL;
-
-	if(sdaq_id_dec->device_addr != Parking_address) //message from pre-addressed SDAQ
+	
+	check_is_in_LogBook = g_slist_find_custom(stats->LogBook, &(status_dec->dev_sn), LogBook_entry_find_serial_number);
+	check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
+	if(check_is_in_list_SDAQ)//SDAQ is in list_SDAQ
 	{
-		check_is_in_LogBook = g_slist_find_custom(stats->LogBook, &(status_dec->dev_sn), LogBook_entry_find_serial_number);
-		check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
-		if(check_is_in_list_SDAQ)//SDAQ is in list_SDAQ
+		list_SDAQ_node_data = check_is_in_list_SDAQ->data;
+		time(&(list_SDAQ_node_data->last_seen));//update last_seen for the SDAQ entry
+		if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//if TRUE, set back to the node_data->SDAQ_address
+			SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
+		return list_SDAQ_node_data->SDAQ_address;
+	}
+	else if(check_is_in_LogBook)//SDAQ is not in list_SDAQ, but is recorded in LogBook (Old Known entry)
+	{
+		LogBook_node_data = check_is_in_LogBook->data;
+		check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(LogBook_node_data->SDAQ_address), SDAQ_info_entry_find_address);
+		if(!check_is_in_list_SDAQ)//If TRUE, make new entry to list_SDAQ with address from LogBook and then configured SDAQ 
 		{
-			list_SDAQ_node_data = check_is_in_list_SDAQ->data;
-			if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//if TRUE, set back to the node_data->SDAQ_address
-				SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
-			time(&(list_SDAQ_node_data->last_seen));//update last_seen for the SDAQ entry
-			return EXIT_SUCCESS;
-		}
-		if(check_is_in_LogBook)//SDAQ is not in list_SDAQ, but is in LogBook (Old Known)
-		{
-			LogBook_node_data = check_is_in_LogBook->data;
-			check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(LogBook_node_data->SDAQ_address), SDAQ_info_entry_find_address);
-			if(!check_is_in_list_SDAQ)//Not the same address in list_SDAQs
+			//Make new entry to list_SDAQ with address from LogBook
+			list_SDAQ_node_data = new_SDAQ_info_entry();
+			if(list_SDAQ_node_data)
 			{
-
+				list_SDAQ_node_data->SDAQ_address = LogBook_node_data->SDAQ_address;
+				memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
+				time(&(list_SDAQ_node_data->last_seen));
+				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
+				stats->detected_SDAQs++;
+				//Configure SDAQ with Address from LogBook
+				SetDeviceAddress(socket_fd, status_dec->dev_sn, LogBook_node_data->SDAQ_address);
+				return LogBook_node_data->SDAQ_address;
+			}
+			else
+			{
+				fprintf(stderr,"Memory error!\n");
+				exit(EXIT_FAILURE);					
+			}
+		}
+		else //Address from recorded on LogBook is currently used
+		{
+			//Try to find an available address
+			for(address_test=1;address_test<Parking_address;address_test++)
+			{
+				if(!g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address))
+				{
+					list_SDAQ_node_data = new_SDAQ_info_entry();
+					if(list_SDAQ_node_data)
+					{
+						//Load SDAQ data on new list_SDAQ entry
+						list_SDAQ_node_data->SDAQ_address = address_test;
+						memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
+						time(&(list_SDAQ_node_data->last_seen));
+						stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
+						//Update LogBook with new address
+						LogBook_node_data->SDAQ_address = address_test;
+						SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
+						stats->detected_SDAQs++;
+						return address_test;
+					}
+					else
+					{
+						fprintf(stderr,"Memory error!\n");
+						exit(EXIT_FAILURE);
+					}
+				}
+			}
+			//if not any address available set SDAQ to park
+			if(sdaq_id_dec->device_addr != Parking_address)
+				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
+			return 0;
+		}			
+	}
+	else //completely unknown SDAQ 
+	{
+		//check if the current address of the SDAQ is not conflict with any other in list_SDAQ, if not use it as it's pre addressed
+		address_test = sdaq_id_dec->device_addr;
+		if(g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address)||address_test==Parking_address)
+		{
+			if(g_slist_length(stats->list_SDAQs)<Parking_address)
+			{
+				//Try to find an available address
+				for(address_test=1;address_test<Parking_address;address_test++)
+				{
+					if(!g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address))
+					{
+						list_SDAQ_node_data = new_SDAQ_info_entry();
+						LogBook_node_data = new_LogBook_entry();
+						if(list_SDAQ_node_data)
+						{
+							//Load SDAQ data on new list_SDAQ entry
+							list_SDAQ_node_data->SDAQ_address = address_test;
+							memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
+							time(&(list_SDAQ_node_data->last_seen));
+							stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
+							//Update LogBook with new address
+							LogBook_node_data->SDAQ_address = address_test;
+							LogBook_node_data->SDAQ_sn = status_dec->dev_sn;
+							stats->LogBook = g_slist_append(stats->LogBook, LogBook_node_data);
+							SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
+							stats->detected_SDAQs++;
+							return address_test;
+						}
+						else
+						{
+							fprintf(stderr,"Memory error!\n");
+							exit(EXIT_FAILURE);
+						}
+					}
+				}
+			}
+			//if not any address available set SDAQ to park
+			if(sdaq_id_dec->device_addr != Parking_address)
+				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
+			return 0;
+		}
+		else //register the pre-address SDAQ as it is
+		{
+			list_SDAQ_node_data = new_SDAQ_info_entry();
+			LogBook_node_data = new_LogBook_entry();
+			if(list_SDAQ_node_data)
+			{
+				//Load SDAQ data on new list_SDAQ entry
+				list_SDAQ_node_data->SDAQ_address = address_test;
+				memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
+				time(&(list_SDAQ_node_data->last_seen));
+				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
+				//Update LogBook with new address
+				LogBook_node_data->SDAQ_address = address_test;
+				LogBook_node_data->SDAQ_sn = status_dec->dev_sn;
+				stats->LogBook = g_slist_append(stats->LogBook, LogBook_node_data);
+				SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
+				stats->detected_SDAQs++;
+				return address_test;
+			}
+			else
+			{
+				fprintf(stderr,"Memory error!\n");
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
-	else // message from parked SDAQ
-	{
+}
 
+unsigned char update_conflicts(struct Morfeas_SDAQ_if_stats *stats)
+{
+	GSList *conflict_lst=NULL;
+	//Check for conflicts
+	if(stats->detected_SDAQs)
+	{
+		conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
+		stats->conflicts = g_slist_length(conflict_lst);
+		g_slist_free(conflict_lst);
+		return stats->conflicts;
 	}
-	return EXIT_FAILURE;
+	return 0;
 }
 
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
-	GSList *check_node = NULL, *conflict_lst =NULL;
+	GSList *check_node = NULL;
 	time_t now=time(NULL), last_seen;
 	if(stats->list_SDAQs)//check if list_SDAQs have elements
 	{
@@ -876,13 +899,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		}
 		//Delete empty nodes from the list
 		stats->list_SDAQs = g_slist_remove_all(stats->list_SDAQs, NULL);
-		//Check for conflicts
-		if(stats->detected_SDAQs)
-		{
-			conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
-			stats->conflicts = g_slist_length(conflict_lst);
-			g_slist_free(conflict_lst);
-		}
+		update_conflicts(stats);
 	}
 	return !stats->conflicts ? EXIT_SUCCESS : EXIT_FAILURE;
 }

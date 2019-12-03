@@ -49,5 +49,4 @@ struct Channel_date_entry{
 struct LogBook_entry{
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
-	time_t fisrt_seen;
 };
