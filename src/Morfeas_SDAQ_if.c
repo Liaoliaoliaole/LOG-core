@@ -148,7 +148,11 @@ int main(int argc, char *argv[])
 	else
 	{
 		printf("Making LogBooks_dir \n");
-		mkdir(LogBooks_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+		if(mkdir(LogBooks_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))
+		{
+			perror("mkdir: Error");
+			exit(EXIT_FAILURE);
+		}
 	}
 	//CAN Socket Opening
 	if((CAN_socket_num = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
