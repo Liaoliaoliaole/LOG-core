@@ -55,7 +55,6 @@ static struct Morfeas_SDAQ_if_flags{
 	unsigned led_existent :1;
 	unsigned Clean_flag :1;
 	unsigned calc_util :1;
-	unsigned stop_meas :1;
 }flags = {.run=1,0};
 
 //Global variables
@@ -102,6 +101,7 @@ int main(int argc, char *argv[])
 	//Directory pointer variables
 	DIR *dir;
 	//Operational variables
+	unsigned char Amount_of_info_incomplete_SDAQs;
 	char *logstat_path = argv[2];
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
@@ -205,10 +205,6 @@ int main(int argc, char *argv[])
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
 
-		/*Actions on the bus*/
-	//Stop any measuring activity on the bus
-	Stop(CAN_socket_num, Broadcast);
-
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -220,9 +216,11 @@ int main(int argc, char *argv[])
 	//start timer
 	setitimer(ITIMER_REAL, &timer, NULL);
 
-	//FSM of Morfeas_SDAQ_if
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
-	while(flags.run)
+		/*Actions on the bus*/
+	//Stop any measuring activity on the bus
+	Stop(CAN_socket_num, Broadcast);
+	while(flags.run)//FSM of Morfeas_SDAQ_if
 	{
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
 		if(RX_bytes==sizeof(frame_rx))
@@ -236,46 +234,48 @@ int main(int argc, char *argv[])
 						logstat_json(logstat_path,&stats);
 					break;
 				case Device_status:
-					clean_up_list_SDAQs(&stats);//clean up dead SDAQs
+					//clean_up_list_SDAQs(&stats);//clean up dead SDAQs
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
-						if(!SDAQ_data->info_complete)
+						if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
 						{
-							if(!flags.stop_meas)
+							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
+							if(SDAQ_data->info_collection_status<3)
 							{
-								Stop(CAN_socket_num,Broadcast);
-								flags.stop_meas = 1;
+								printf("Send \"Info Request\" for SDAQ with addr: %d\n",SDAQ_data->SDAQ_address);
+								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+								SDAQ_data->info_collection_status = 1;
 							}
-							QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+							else if(SDAQ_data->info_collection_status == 3 && !Amount_of_info_incomplete_SDAQs)
+							{
+								Start(CAN_socket_num, sdaq_id_dec->device_addr);
+								logstat_json(logstat_path,&stats);
+							}
 						}
-						else if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
+					}
+					else
+						printf("\n\t\tMaximum amount of address is reached\n");
+					led_stat(&stats);
+					break;
+				case Device_info:
+					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
+					break;
+				case Calibration_Date:
+					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
+					{
+						printf("Info req for SDAQ with addr: %d Completed\n",sdaq_id_dec->device_addr);
+						Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
+						if(!Amount_of_info_incomplete_SDAQs)
 						{
+							printf("Info req for All SDAQ on bus Completed\n");
 							//this is only for debugging
-							printf("\n\t\tOperation: Register new SDAQ with S/N : %u\n",status_dec->dev_sn);
 							printf("New SDAQ_list:\n");
 							g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
 							printf("Amount of SDAQ in list SDAQ %d\n",stats.detected_SDAQs);
 							printf("\n\n");
 						}
-					}
-					else
-						printf("\n\t\tMaximum amount of address is reached \n");
-					led_stat(&stats);
-					logstat_json(logstat_path,&stats);
-					break;
-				case Device_info:
-					if(!update_info(sdaq_id_dec->device_addr, info_dec, &stats))
-						logstat_json(logstat_path,&stats);
-					break;
-				case Calibration_Date:
-					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
-					{
-						if(!incomplete_SDAQs(&stats))
-						{
-							Start(CAN_socket_num, Broadcast);
-							flags.stop_meas = 0;
-						}
-						logstat_json(logstat_path,&stats);
+						else
+							printf("%d remaining \n",Amount_of_info_incomplete_SDAQs);
 					}
 					break;
 			}
@@ -283,17 +283,18 @@ int main(int argc, char *argv[])
 		}
 		if(flags.Clean_flag)
 		{
-
 			clean_up_list_SDAQs(&stats);
 			led_stat(&stats);
-			flags.Clean_flag = 0;
-			if(update_conflicts(&stats))
+			/*
+			if(stats.conflicts)
 			{
 				printf("\n\t\tOperation: Stop measuring Due to Address Conflict\n");
 				Stop(CAN_socket_num,Broadcast);
 				flags.stop_meas = 1;
 			}
+			*/
 			logstat_json(logstat_path,&stats);
+			flags.Clean_flag = 0;
 			//bellow will removed is only for debugging
 			printf("\t\tOperation: Clean Up\n");
 			printf("Conflicts = %d\n",stats.conflicts);
@@ -309,7 +310,7 @@ int main(int argc, char *argv[])
 			msg_cnt = 0;
 			flags.calc_util = 0;
 			//transfer to opc_ua this info, bellow will removed
-			logstat_json(logstat_path,&stats);
+			//logstat_json(logstat_path,&stats);
 		}
 	}
 	printf("\nExiting...\n");
@@ -587,7 +588,7 @@ void printf_SDAQentry(gpointer node, gpointer arg_pass)
 	}
 }
 
-//Function that find and return the amount of incomplete (with out all info and dates) nodes.
+//Function that find and return the amount of incomplete (incomplete info and/or dates) nodes.
 int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
 	unsigned int incomp_amount=0;
@@ -596,7 +597,7 @@ int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 	while(list_SDAQs)
 	{
 		node_data = list_SDAQs->data;
-		if(!node_data->info_complete)
+		if(node_data->info_collection_status<3)
 			incomp_amount++;
 		list_SDAQs = list_SDAQs->next;
 	}
@@ -682,13 +683,15 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			}
 			time(&(sdaq_node->last_seen));
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)//if is the last calibration date message, mark entry as "info complete"
-				sdaq_node->info_complete=1;
-
+			{	
+				sdaq_node->info_collection_status = 3;
+				return EXIT_SUCCESS;
+			}
 		}
 		else
 			return EXIT_FAILURE;
 	}
-	return EXIT_SUCCESS;
+	return EXIT_FAILURE;
 }
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
@@ -703,6 +706,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			sdaq_node = list_node->data;
 			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
 			time(&(sdaq_node->last_seen));
+			sdaq_node->info_collection_status = 2;
 		}
 		else
 			return EXIT_FAILURE;
