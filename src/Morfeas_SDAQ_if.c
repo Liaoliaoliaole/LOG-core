@@ -202,7 +202,6 @@ int main(int argc, char *argv[])
 	//Load the LogBook file to LogBook List
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
-
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -301,9 +300,10 @@ int main(int argc, char *argv[])
 		}
 	}
 	printf("\nExiting...\n");
+	// save LogBook list to a file before destroy it
+	LogBook_file(&stats,"w");
 	//free all lists
 	g_slist_free_full(stats.list_SDAQs, free_SDAQ_info_entry);
-	//TO-DO save LogBook list to a file before destroy it
 	g_slist_free_full(stats.LogBook, free_LogBook_entry);
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
@@ -385,36 +385,6 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 			stats->Bus_util>95.0 ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
 		else if(!strcmp(stats->CAN_IF_name,"can1"))
 			stats->Bus_util>95.0 ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
-	}
-}
-
-//Logbook read and write from file;
-void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append)
-{
-	FILE *fp;
-	if(!strcmp(read_write_or_append, "r"))
-	{
-		fp=fopen(stats->LogBook_file_path,read_write_or_append);
-		if(fp)
-		{
-			fclose(fp);
-		}
-	}
-	else if(!strcmp(read_write_or_append, "w"))
-	{
-		fp=fopen(stats->LogBook_file_path,read_write_or_append);
-		if(fp)
-		{
-			fclose(fp);
-		}
-	}
-	else if(!strcmp(read_write_or_append, "a"))
-	{
-		fp=fopen(stats->LogBook_file_path,read_write_or_append);
-		if(fp)
-		{
-			fclose(fp);
-		}
 	}
 }
 
@@ -556,6 +526,69 @@ gint SDAQ_info_entry_cmp (gconstpointer a, gconstpointer b)
 		return (((struct SDAQ_info_entry *)a)->SDAQ_status.dev_sn <= ((struct SDAQ_info_entry *)b)->SDAQ_status.dev_sn) ?  0 : 1;
 }
 
+//Logbook read and write from file;
+void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append)
+{
+	FILE *fp;
+	GSList *LogBook_node = stats->LogBook;
+	struct LogBook_entry *node_data;
+	size_t read_bytes = sizeof(struct LogBook_entry);
+	if(!strcmp(read_write_or_append, "r"))
+	{
+		fp=fopen(stats->LogBook_file_path,read_write_or_append);
+		if(fp)
+		{
+			while(read_bytes == sizeof(struct LogBook_entry))
+			{
+				if(!(node_data = new_LogBook_entry()))
+				{
+					fprintf(stderr,"Memory Error!!!\n");
+					exit(EXIT_FAILURE);
+				}
+				read_bytes = fread(node_data, 1, sizeof(struct LogBook_entry), fp);
+				if(read_bytes == sizeof(struct LogBook_entry))
+					stats->LogBook = g_slist_append(stats->LogBook, node_data);
+			}
+			fclose(fp);
+		}
+	}
+	else if(!strcmp(read_write_or_append, "w"))
+	{
+		if(LogBook_node)//check if list LogBook have elements
+		{
+			fp=fopen(stats->LogBook_file_path,read_write_or_append);
+			if(fp)
+			{
+				//Store all the nodes of list LogBook in file
+				while(LogBook_node)
+				{
+					node_data = LogBook_node->data;
+					if(node_data)
+						fwrite (node_data, 1, sizeof(struct LogBook_entry), fp);
+					LogBook_node = LogBook_node -> next;//next node
+				}
+				fclose(fp);
+			}
+		}
+	}
+	else if(!strcmp(read_write_or_append, "a"))
+	{
+		if(stats->list_SDAQs)//check if list_SDAQs have elements
+		{
+			while(LogBook_node->next)
+				LogBook_node = LogBook_node -> next;//next node
+			fp=fopen(stats->LogBook_file_path,read_write_or_append);
+			if(fp)
+			{
+				node_data = LogBook_node->data;
+				//Store last node of list LogBook in file
+				fwrite (node_data, 1, sizeof(struct LogBook_entry), fp);
+				fclose(fp);
+			}
+		}
+	}
+}
+
 //This function will be removed is only for debugging
 void printf_SDAQentry(gpointer node, gpointer arg_pass)
 {
@@ -690,7 +723,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			}
 			time(&(sdaq_node->last_seen));
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)//if is the last calibration date message, mark entry as "info complete"
-			{	
+			{
 				sdaq_node->info_collection_status = 3;
 				return EXIT_SUCCESS;
 			}

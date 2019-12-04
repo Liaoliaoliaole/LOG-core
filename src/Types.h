@@ -37,7 +37,7 @@ struct SDAQ_info_entry{
 	sdaq_info SDAQ_info;
 	GSList *SDAQ_Channels_cal_dates;
 	time_t last_seen;
-	unsigned info_collection_status : 2;//3=all info collected, 2=only Dev_info collected, 1=Dev_info requested 0= nothing has been collected 
+	unsigned info_collection_status : 2;//3=all info collected, 2=only Dev_info collected, 1=Dev_info requested 0= nothing has been collected
 };
 
 // Data of a SDAQ_cal_dates node
@@ -50,4 +50,4 @@ struct Channel_date_entry{
 struct LogBook_entry{
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
-};
+}__attribute__((packed, aligned(1)));
