@@ -26,7 +26,6 @@ struct Morfeas_SDAQ_if_stats{
 	char *CAN_IF_name;
 	float Bus_util;
 	unsigned char detected_SDAQs;// Amount of online SDAQ.
-	unsigned char conflicts;// Amount of SDAQ with conflict addresses
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
 };

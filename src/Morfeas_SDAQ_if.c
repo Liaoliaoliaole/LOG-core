@@ -76,8 +76,6 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append);
 //Function to clean-up list_SDAQs from non active SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
-//Function that returns the amount of detected conflicts in list_SDAQ
-unsigned char update_conflicts(struct Morfeas_SDAQ_if_stats *stats);
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, Return the data of node or NULL. Used in FSM
 struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating "Device Info" of a SDAQ. Used in FSM
@@ -230,8 +228,7 @@ int main(int argc, char *argv[])
 				case Measurement_value:
 					break;
 				case Sync_Info:
-					if(!update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats))
-						logstat_json(logstat_path,&stats);
+					update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
 					break;
 				case Device_status:
 					//clean_up_list_SDAQs(&stats);//clean up dead SDAQs
@@ -262,13 +259,12 @@ int main(int argc, char *argv[])
 					break;
 				case Calibration_Date:
 					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
-					{
+					{	//this is only for debugging
 						printf("Info req for SDAQ with addr: %d Completed\n",sdaq_id_dec->device_addr);
 						Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
 						if(!Amount_of_info_incomplete_SDAQs)
 						{
 							printf("Info req for All SDAQ on bus Completed\n");
-							//this is only for debugging
 							printf("New SDAQ_list:\n");
 							g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
 							printf("Amount of SDAQ in list SDAQ %d\n",stats.detected_SDAQs);
@@ -285,19 +281,10 @@ int main(int argc, char *argv[])
 		{
 			clean_up_list_SDAQs(&stats);
 			led_stat(&stats);
-			/*
-			if(stats.conflicts)
-			{
-				printf("\n\t\tOperation: Stop measuring Due to Address Conflict\n");
-				Stop(CAN_socket_num,Broadcast);
-				flags.stop_meas = 1;
-			}
-			*/
 			logstat_json(logstat_path,&stats);
 			flags.Clean_flag = 0;
 			//bellow will removed is only for debugging
 			printf("\t\tOperation: Clean Up\n");
-			printf("Conflicts = %d\n",stats.conflicts);
 			printf("SDAQ_list:\n");
 			g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
 			printf("Amount of SDAQ in list SDAQ %d\n",stats.detected_SDAQs);
@@ -395,9 +382,9 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	if(flags.led_existent)
 	{
 		if(!strcmp(stats->CAN_IF_name,"can0"))
-			!stats->conflicts ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
+			stats->Bus_util>95.0 ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
 		else if(!strcmp(stats->CAN_IF_name,"can1"))
-			!stats->conflicts ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
+			stats->Bus_util>95.0 ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
 	}
 }
 
@@ -646,6 +633,26 @@ gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
 {
 	return (((struct Channel_date_entry *)a)->Channel <= ((struct Channel_date_entry *)b)->Channel) ?  0 : 1;
 }
+/*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
+int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
+{
+	GSList *list_node = NULL;
+	struct SDAQ_info_entry *sdaq_node;
+	if (stats->list_SDAQs)
+	{
+		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
+		if(list_node)
+		{
+			sdaq_node = list_node->data;
+			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
+			time(&(sdaq_node->last_seen));
+			sdaq_node->info_collection_status = 2;
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
 /*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
@@ -692,26 +699,6 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			return EXIT_FAILURE;
 	}
 	return EXIT_FAILURE;
-}
-/*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
-int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
-{
-	GSList *list_node = NULL;
-	struct SDAQ_info_entry *sdaq_node;
-	if (stats->list_SDAQs)
-	{
-		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
-		if(list_node)
-		{
-			sdaq_node = list_node->data;
-			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
-			time(&(sdaq_node->last_seen));
-			sdaq_node->info_collection_status = 2;
-		}
-		else
-			return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
 }
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM
 struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats)
@@ -863,62 +850,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 		}
 	}
 }
-
-/*return a list with all the SDAQs nodes (from head) that have same address (aka conflict)*/
-GSList * find_SDAQs_Conflicts(GSList * head)
-{
-	GSList *ret_list=NULL; // function's return pointer
-	volatile GSList *look_ptr, *start_ptr = head; //start_ptr pointer pointing the first node on list.
-	unsigned char cur_address=0;
-	if(g_slist_length(head)>1)
-	{
-		//Place start_ptr pointer at first SDAQ list node that does not have parking address
-		while(start_ptr->next && ((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==Parking_address))
-			start_ptr = start_ptr->next; //move start_ptr to then next node
-		while(start_ptr->next)//Run until start_ptr pointer be at the end node of the list.
-		{
-			ret_list = g_slist_append (ret_list, (gpointer) start_ptr->data); //append node that looked by start pointer in ret_list, as a possible conflict.
-			look_ptr = start_ptr->next;//look_ptr pointer pointing the next node after the start_ptr
-			while(look_ptr)//Run until look_ptr pointer be NULL. aka, pass from the last node.
-			{
-				//Check if the address field of the start_ptr node is the same with the node that point the look_ptr. aka if true, conflict found.
-				if(((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address == ((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address)
-				{
-					ret_list = g_slist_append(ret_list, look_ptr->data);
-					cur_address = (((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address);
-				}
-				//Avoid, look_ptr points nodes with Parking address
-				do{
-					look_ptr = look_ptr->next; //move look_ptr pointer to next node
-				}while(look_ptr && (((struct SDAQ_info_entry *)(look_ptr->data))->SDAQ_address)==Parking_address);
-			}
-			//delete last appending on ret_list if does not have conflict address. aka above check with look_ptr give false.
-			if(g_slist_last(ret_list)->data == start_ptr->data)
-				ret_list = g_slist_delete_link(ret_list,g_slist_last(ret_list));
-			//Avoid, start_ptr points nodes with already checked address and nodes with Parking address
-			do{
-				start_ptr = start_ptr->next;//move start_ptr to then next node
-			}while(start_ptr->next && (((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==cur_address)
-							   ||  ((((struct SDAQ_info_entry *)(start_ptr->data))->SDAQ_address)==Parking_address)));
-		}
-	}
-	return ret_list;
-}
-
-unsigned char update_conflicts(struct Morfeas_SDAQ_if_stats *stats)
-{
-	GSList *conflict_lst=NULL;
-	//Check for conflicts
-	if(stats->detected_SDAQs)
-	{
-		conflict_lst = find_SDAQs_Conflicts(stats->list_SDAQs);
-		stats->conflicts = g_slist_length(conflict_lst);
-		g_slist_free(conflict_lst);
-		return stats->conflicts;
-	}
-	return 0;
-}
-
+//Function thet cleaning the list_SDAQ from dead entries
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
 	GSList *check_node = NULL;
@@ -943,7 +875,6 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		}
 		//Delete empty nodes from the list
 		stats->list_SDAQs = g_slist_remove_all(stats->list_SDAQs, NULL);
-		update_conflicts(stats);
 	}
-	return !stats->conflicts ? EXIT_SUCCESS : EXIT_FAILURE;
+	return EXIT_SUCCESS;
 }

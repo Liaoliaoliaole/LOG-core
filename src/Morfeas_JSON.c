@@ -57,7 +57,6 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
-	cJSON_AddNumberToObject(root, "Address_Conflicts", stats->conflicts);
 	cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
 	g_slist_foreach(stats->list_SDAQs, extract_list_SDAQnode_data, logstat);
 
@@ -79,7 +78,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
 
 void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 {
-	char date[STR_LEN], unit[STR_LEN];
+	char date[STR_LEN];
 	struct Channel_date_entry *node_dec = node;
 	struct tm cal_date = {0};
 	cJSON *list_SDAQs = arg_pass;
@@ -87,11 +86,9 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 	if(node)
 	{
 		node_data = cJSON_CreateObject();
-		sprintf(unit,"%s%s",unit_str[node_dec->CH_date.cal_units]
-						   ,node_dec->CH_date.cal_units<20?"(UNCAL)":"");// 20 sizeof base unit code region
 		cal_date.tm_year = node_dec->CH_date.year + 100;//100 = 2000 - 1900
-		cal_date.tm_mon = node_dec->CH_date.month - 1;
-		cal_date.tm_mday = node_dec->CH_date.day;
+		cal_date.tm_mon = node_dec->CH_date.month?node_dec->CH_date.month-1:0;
+		cal_date.tm_mday = node_dec->CH_date.day?node_dec->CH_date.day:1;
 		//format time
 		strftime(date,STR_LEN,"%Y/%m/%d",&cal_date);
 		cJSON_AddNumberToObject(node_data, "Channel", node_dec->Channel);
@@ -99,7 +96,8 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 		cJSON_AddNumberToObject(node_data, "Calibration_date_UNIX", mktime(&cal_date));
 		cJSON_AddNumberToObject(node_data, "Calibration_period", node_dec->CH_date.period);
 		cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
-		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit));
+		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->CH_date.cal_units]));
+		cJSON_AddItemToObject(node_data, "Is_calibrated", cJSON_CreateBool(node_dec->CH_date.cal_units>20));// 20 sizeof base unit code region
 		cJSON_AddNumberToObject(node_data, "Unit_code", node_dec->CH_date.cal_units);
 		cJSON_AddItemToObject(list_SDAQs, "Calibration_Data", node_data);
 	}
