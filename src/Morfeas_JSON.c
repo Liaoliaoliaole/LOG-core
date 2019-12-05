@@ -97,7 +97,7 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 		cJSON_AddNumberToObject(node_data, "Calibration_period", node_dec->CH_date.period);
 		cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
 		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->CH_date.cal_units]));
-		cJSON_AddItemToObject(node_data, "Is_calibrated", cJSON_CreateBool(node_dec->CH_date.cal_units>20));// 20 sizeof base unit code region
+		cJSON_AddItemToObject(node_data, "Is_calibrated", cJSON_CreateBool(node_dec->CH_date.cal_units>Unit_code_base_region_size));
 		cJSON_AddNumberToObject(node_data, "Unit_code", node_dec->CH_date.cal_units);
 		cJSON_AddItemToObject(list_SDAQs, "Calibration_Data", node_data);
 	}
