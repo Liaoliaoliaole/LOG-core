@@ -28,9 +28,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <time.h>
 #include <math.h>
 #include <ctype.h>
-#include <signal.h>
 #include <dirent.h>
 #include <errno.h>
+#include <signal.h>
+#include <pthread.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -76,6 +77,8 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append);
 //Function to clean-up list_SDAQs from non active SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
+//Function that found and return the status of a node from the list_SDAQ with SDAQ_address == address. Used in FSM
+sdaq_status * find_SDAQ_status(unsigned char address, struct Morfeas_SDAQ_if_stats *stats);
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, Return the data of node or NULL. Used in FSM
 struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating "Device Info" of a SDAQ. Used in FSM
@@ -100,7 +103,9 @@ int main(int argc, char *argv[])
 	DIR *dir;
 	//Operational variables
 	unsigned char Amount_of_info_incomplete_SDAQs;
-	char *logstat_path = argv[2];
+	char *logstat_path = argv[2], *path_to_fifo=NULL, anchor_str[20];
+	int fifo_fd;
+	size_t sizeof_sdaq_meas;
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
 	//Variables for Socket CAN
@@ -111,11 +116,11 @@ int main(int argc, char *argv[])
 	struct can_frame frame_rx;
 	struct can_filter RX_filter;
 	sdaq_can_id *sdaq_id_dec;
-	sdaq_status *status_dec = (sdaq_status *)frame_rx.data;
+	sdaq_status *status_dec = (sdaq_status *)frame_rx.data, *ret_SDAQ_status;
 	sdaq_info *info_dec = (sdaq_info *)frame_rx.data;
 	sdaq_sync_debug_data *ts_dec = (sdaq_sync_debug_data *)frame_rx.data;
 	sdaq_calibration_date *date_dec = (sdaq_calibration_date *)frame_rx.data;
-	//sdaq_meas *meas_dec = (sdaq_meas *)frame_rx.data;
+	sdaq_meas *meas_dec = (sdaq_meas *)frame_rx.data;
 
 	//data_and stats of the Morfeas-SDAQ_IF
 	struct Morfeas_SDAQ_if_stats stats = {0};
@@ -127,19 +132,6 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(1);
 	}
-	if(argv[2]==NULL)
-		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
-	else
-	{
-		dir = opendir(logstat_path);
-		if (dir)
-			closedir(dir);
-		else
-		{
-			fprintf(stderr,"logstat_path is invalid!\n");
-			return EXIT_FAILURE;
-		}
-	}
 
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
@@ -150,7 +142,7 @@ int main(int argc, char *argv[])
 		printf("Making LogBooks_dir \n");
 		if(mkdir(LogBooks_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))
 		{
-			perror("mkdir: Error");
+			perror("Error at LogBook file creation!!!");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -168,6 +160,26 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	stats.CAN_IF_name = argv[1];
+	//Logstat.json and FIFO path	
+	if(!logstat_path)
+		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
+	else
+	{
+		path_to_fifo = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/FIFO_") + strlen(stats.CAN_IF_name) + 1);
+		sprintf(path_to_fifo,"%s%sFIFO_%s", logstat_path,
+										    logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/",
+										    stats.CAN_IF_name);
+		mkfifo(path_to_fifo, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+		dir = opendir(logstat_path);
+		if (dir)
+			closedir(dir);
+		else
+		{
+			fprintf(stderr,"logstat_path is invalid!\n");
+			return EXIT_FAILURE;
+		}
+	}
+	
 	/*Filter for CAN messages	-- SocketCAN Filters act as: <received_can_id> & mask == can_id & mask*/
 	//load filter's can_id member
 	sdaq_id_dec = (sdaq_can_id *)&RX_filter.can_id;//Set encoder to filter.can_id
@@ -229,12 +241,26 @@ int main(int argc, char *argv[])
 			switch(sdaq_id_dec->payload_type)
 			{
 				case Measurement_value:
+					if(path_to_fifo)
+					{
+						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
+						{
+							sprintf(anchor_str,"%010u.CH%02hhu",ret_SDAQ_status->dev_sn,sdaq_id_dec->channel_num); 
+							if((fifo_fd=open(path_to_fifo, O_WRONLY | O_NONBLOCK | O_SYNC ))>0)
+							{
+								sizeof_sdaq_meas = sizeof(sdaq_meas) + strlen(anchor_str) + 1;
+								write(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t)); 
+								write(fifo_fd, anchor_str, strlen(anchor_str) + 1);
+								write(fifo_fd, meas_dec, sizeof(sdaq_meas));
+								close(fifo_fd);//Close FIFO
+							}
+						}
+					}
 					break;
 				case Sync_Info:
 					update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
 					break;
 				case Device_status:
-					//clean_up_list_SDAQs(&stats);//clean up dead SDAQs
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
 						if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
@@ -311,7 +337,9 @@ int main(int argc, char *argv[])
 	g_slist_free_full(stats.LogBook, free_LogBook_entry);
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
-	close(CAN_socket_num);
+	close(CAN_socket_num);//Close CAN_socket
+	if(path_to_fifo)
+		free(path_to_fifo);
 	return EXIT_SUCCESS;
 }
 
@@ -386,9 +414,9 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	if(flags.led_existent)
 	{
 		if(!strcmp(stats->CAN_IF_name,"can0"))
-			stats->Bus_util>95.0 ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
+			stats->Bus_util<95.0 ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
 		else if(!strcmp(stats->CAN_IF_name,"can1"))
-			stats->Bus_util>95.0 ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
+			stats->Bus_util<95.0 ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
 	}
 }
 
@@ -689,6 +717,18 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
+}
+//Function that found and return the status of a node from the list_SDAQ with SDAQ_address == address, Used in FSM
+sdaq_status * find_SDAQ_status(unsigned char address, struct Morfeas_SDAQ_if_stats *stats)
+{
+	GSList *list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
+	struct SDAQ_info_entry *node_data; 
+	if(list_node)
+	{
+		node_data = list_node->data;
+		return &(node_data->SDAQ_status);
+	}
+	return NULL;
 }
 /*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats)

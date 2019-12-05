@@ -21,7 +21,7 @@ Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir)\
 
 all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if
 
-$(BUILD_dir)/Morfeas_opc_ua: $(WORK_dir)/Morfeas_opc_ua.o 
+$(BUILD_dir)/Morfeas_opc_ua: $(WORK_dir)/Morfeas_opc_ua.o $(WORK_dir)/SDAQ_drv.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 	
 $(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP)

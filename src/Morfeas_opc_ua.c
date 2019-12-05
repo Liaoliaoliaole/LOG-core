@@ -17,6 +17,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define CPU_temp_sysfs_file "/sys/class/thermal/thermal_zone0/temp"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+#include <math.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <fcntl.h> 
+#include <sys/stat.h> 
+#include <sys/types.h> 
+
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
@@ -28,19 +40,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <glibtop/mem.h>
 #include <glibtop/fsusage.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <math.h>
-#include <signal.h>
-#include <sys/time.h>
+//Include Functions implementation header
+#include "Types.h"
 
 //OPC_UA local Functions
 void RPi_stat_Define(UA_Server *server);
 void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type); 
-
+//FIFO reader, Thread function.
+void* FIFO_Reader(void *varg_pt);
+//Timer Handler Function 
+void timer_handler(int sign);
 
 //Global variables
 static volatile UA_Boolean running = true;
@@ -51,6 +60,115 @@ static void stopHandler(int sign)
     if(sign==SIGINT)
 		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
 	running = false;
+}
+
+int main(int argc, char *argv[]) 
+{
+	struct sigaction tim_sa,stop_sa;
+	struct itimerval timer;
+	UA_StatusCode retval;
+	//variables for threads
+	pthread_t *Threads_ids;
+	unsigned int i, amount_of_threads = 1; //amount_of_threads loaded from the Configuration
+	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
+    memset (&stop_sa, 0, sizeof (stop_sa));
+	stop_sa.sa_handler = &stopHandler;
+	sigaction (SIGINT, &stop_sa, NULL);
+    sigaction (SIGTERM, &stop_sa, NULL);
+
+		
+	if(!argv[1])
+	{
+		fprintf(stderr,"No argument for path to FIFO\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	//Install timer_handler as the signal handler for SIGALRM.
+	memset (&tim_sa, 0, sizeof (tim_sa));
+	tim_sa.sa_handler = &timer_handler;
+	sigaction (SIGALRM, &tim_sa, NULL);
+
+	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //allocate memory for the threads tags
+	//Start threads for the FIFO readers
+	for(i=0; i<amount_of_threads; i++)
+		pthread_create(&Threads_ids[i], NULL, FIFO_Reader, argv[1]);
+
+	// Configure the timer to repeat every 500ms 
+	timer.it_value.tv_sec = 0;
+	timer.it_value.tv_usec = 500000;
+	timer.it_interval.tv_sec = 0;
+	timer.it_interval.tv_usec = 500000;
+	// Start a timer 
+	setitimer (ITIMER_REAL, &timer, NULL);
+	
+	//Init OPC_UA Server
+	server = UA_Server_new();
+    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
+	RPi_stat_Define(server);
+		
+	//Start OPC_UA Server
+    retval = UA_Server_run(server, &running);
+	
+	for(i=0; i<amount_of_threads; i++)
+		pthread_join(Threads_ids[i], NULL);// wait threads to finish
+    UA_Server_delete(server);
+	free(Threads_ids);
+    return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+//FIFO reader, Thread function.
+void* FIFO_Reader(void *varg_pt)
+{
+	sdaq_meas meas_dec;
+	char anchor_str[20];
+	int fifo_fd, select_ret;
+	fd_set readCheck;
+    fd_set errCheck;
+    struct timeval timeout;
+	size_t sizeof_sdaq_meas;
+	char *path_to_FIFO = varg_pt;
+	
+	mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    fifo_fd = open(path_to_FIFO, O_RDONLY | O_SYNC);
+
+    FD_ZERO(&readCheck);
+    FD_ZERO(&errCheck);
+
+    while (running) 
+	{
+        FD_SET(fifo_fd, &readCheck);
+        FD_SET(fifo_fd, &errCheck);
+
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;
+
+        select_ret = select(fifo_fd+1, &readCheck, NULL, &errCheck, &timeout);
+        if (select_ret < 0) 
+		{
+            printf("Select failed\r\n");
+			break;
+        }
+        else if (FD_ISSET(fifo_fd, &errCheck)) 
+            printf("FD error\r\n");
+        else if (FD_ISSET(fifo_fd, &readCheck)) 
+		{
+           if(read(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t))==sizeof(size_t))
+			{
+				if(read(fifo_fd, anchor_str, 16)==16)
+				{
+					sizeof_sdaq_meas -= 16;
+					if(read(fifo_fd, &meas_dec, sizeof_sdaq_meas)==sizeof_sdaq_meas) 
+					{	
+						printf("\nReceived from Anchor:%s\n",anchor_str);
+						printf("\tValue=%9.3f %s\n",meas_dec.meas, unit_str[meas_dec.unit]);
+						printf("\tTimestamp=%hu\n",meas_dec.timestamp);
+					}
+				}
+			}
+        }
+    }
+    close(fifo_fd);
+	return NULL;	
 }
 
 void timer_handler (int sign)
@@ -97,43 +215,6 @@ void timer_handler (int sign)
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
-}
-
-int main(void) 
-{
-	struct sigaction tim_sa,stop_sa;
-	struct itimerval timer;
-	
-	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
-    memset (&stop_sa, 0, sizeof (stop_sa));
-	stop_sa.sa_handler = &stopHandler;
-	sigaction (SIGINT, &stop_sa, NULL);
-    sigaction (SIGTERM, &stop_sa, NULL);
-
-	//Install timer_handler as the signal handler for SIGALRM.
-	memset (&tim_sa, 0, sizeof (tim_sa));
-	tim_sa.sa_handler = &timer_handler;
-	sigaction (SIGALRM, &tim_sa, NULL);
-
-	// Configure the timer to repeat every 500ms 
-	timer.it_value.tv_sec = 0;
-	timer.it_value.tv_usec = 500000;
-	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 500000;
-	// Start a timer 
-	setitimer (ITIMER_REAL, &timer, NULL);
-	
-	//Init OPC_UA Server
-    //UA_Server *server = UA_Server_new();
-	server = UA_Server_new();
-    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
-	RPi_stat_Define(server);
-		
-	//Start OPC_UA Server
-    UA_StatusCode retval = UA_Server_run(server, &running);
-
-    UA_Server_delete(server);
-    return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 void RPi_stat_Define(UA_Server *server_ptr) 

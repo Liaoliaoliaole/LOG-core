@@ -39,13 +39,11 @@ struct SDAQ_info_entry{
 	time_t last_seen;
 	unsigned info_collection_status : 2;//3=all info collected, 2=only Dev_info collected, 1=Dev_info requested 0= nothing has been collected
 };
-
 // Data of a SDAQ_cal_dates node
 struct Channel_date_entry{
 	unsigned char Channel;
 	sdaq_calibration_date CH_date;
 };
-
 // Data of a list_SDAQs node
 struct LogBook_entry{
 	unsigned int SDAQ_sn;
