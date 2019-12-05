@@ -105,6 +105,7 @@ int main(int argc, char *argv[])
 	//Init OPC_UA Server
 	server = UA_Server_new();
     UA_ServerConfig_setDefault(UA_Server_getConfig(server));
+	//UA_ServerConfig_setCustomHostname(UA_Server_getConfig(server), UA_String_fromChars("Morfeas-OPC-UA Server (open62541)"));
 	RPi_stat_Define(server);
 		
 	//Start OPC_UA Server
@@ -130,7 +131,7 @@ void* FIFO_Reader(void *varg_pt)
 	char *path_to_FIFO = varg_pt;
 	
 	mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
-    fifo_fd = open(path_to_FIFO, O_RDONLY | O_SYNC);
+    fifo_fd = open(path_to_FIFO, O_RDONLY | O_NONBLOCK | O_SYNC);
 
     FD_ZERO(&readCheck);
     FD_ZERO(&errCheck);
