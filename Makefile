@@ -12,12 +12,6 @@ Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir)\
 					  $(WORK_dir)/Morfeas_JSON.o\
 					  $(WORK_dir)/SDAQ_drv.o\
 					  $(SRC_dir)/*.h
-#CANif_DEP=$(CANif_DEP_dir)/SDAQ_drv.o\
-		  #$(CANif_DEP_dir)/Discover_and_autoconfig.o\
-		  #$(CANif_DEP_dir)/Measure.o\
-		  #$(CANif_DEP_dir)/Logging.o\
-		  #$(CANif_DEP_dir)/info.o\
-		  #$(CANif_DEP_dir)/SDAQ_xml.o
 
 all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if
 

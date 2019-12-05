@@ -268,7 +268,6 @@ int main(int argc, char *argv[])
 							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
 							if(SDAQ_data->info_collection_status<3)
 							{
-								printf("Send \"Info Request\" for SDAQ with addr: %d\n",SDAQ_data->SDAQ_address);
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
 							}
