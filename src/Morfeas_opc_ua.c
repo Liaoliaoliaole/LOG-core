@@ -54,6 +54,7 @@ void timer_handler(int sign);
 //Global variables
 static volatile UA_Boolean running = true;
 UA_Server *server;
+pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 
 static void stopHandler(int sign) 
 {
@@ -208,13 +209,14 @@ void timer_handler (int sign)
 	}
 	else
 		CPU_temp = NAN;
-	
 	//Update health_values to OPC_UA mem space
-	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
-	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
-	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
-	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
-	Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
+	pthread_mutex_lock(&OPC_UA_NODESET_access);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
+	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
 void RPi_stat_Define(UA_Server *server_ptr) 
