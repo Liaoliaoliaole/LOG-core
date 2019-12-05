@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 					{
 						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
 						{
-							sprintf(anchor_str,"%010u.CH%02hhu",ret_SDAQ_status->dev_sn,sdaq_id_dec->channel_num); 
+							sprintf(anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num); 
 							if((fifo_fd=open(path_to_fifo, O_WRONLY | O_NONBLOCK | O_SYNC ))>0)
 							{
 								sizeof_sdaq_meas = sizeof(sdaq_meas) + strlen(anchor_str) + 1;
