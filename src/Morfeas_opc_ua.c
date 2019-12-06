@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 
 	//Start OPC_UA Server
     retval = UA_Server_run(server, &running);
-
+	//Wait until all thread is ended
 	for(i=0; i<amount_of_threads; i++)
 		pthread_join(Threads_ids[i], NULL);// wait threads to finish
     UA_Server_delete(server);
@@ -133,7 +133,6 @@ void* FIFO_Reader(void *varg_pt)
 			mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
     FD_ZERO(&readCheck);
     FD_ZERO(&errCheck);
-    //fifo_fd = open(path_to_FIFO, O_RDONLY | O_NONBLOCK);
     while (running)
 	{
 		fifo_fd = open(path_to_FIFO, O_RDWR | O_NONBLOCK);
@@ -153,15 +152,15 @@ void* FIFO_Reader(void *varg_pt)
 			sizeof_sdaq_meas -= read(fifo_fd, &meas_dec, sizeof_sdaq_meas);
 			if(!sizeof_sdaq_meas)
 			{
-				printf("\nReceived from Anchor:%s\n",anchor_str);
-				printf("\tValue=%9.3f %s\n",meas_dec.meas, unit_str[meas_dec.unit]);
-				printf("\tTimestamp=%hu\n",meas_dec.timestamp);
+				pthread_mutex_lock(&OPC_UA_NODESET_access);
+					printf("\nReceived from Anchor:%s\n",anchor_str);
+					printf("\tValue=%9.3f %s\n",meas_dec.meas, unit_str[meas_dec.unit]);
+					printf("\tTimestamp=%hu\n",meas_dec.timestamp);
+				pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			}
 		}
 		close(fifo_fd);
     }
-    //unlink(path_to_FIFO);
-    close(fifo_fd);
 	return NULL;
 }
 
