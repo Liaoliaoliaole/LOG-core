@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     retval = UA_Server_run(server, &running);
 	//Wait until all thread is ended
 	for(i=0; i<amount_of_threads; i++)
-		pthread_join(Threads_ids[i], NULL);// wait threads to finish
+		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
     UA_Server_delete(server);
 	free(Threads_ids);
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
