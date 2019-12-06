@@ -25,9 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <math.h>
 #include <signal.h>
 #include <sys/time.h>
-#include <fcntl.h> 
-#include <sys/stat.h> 
-#include <sys/types.h> 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
@@ -45,10 +45,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //OPC_UA local Functions
 void RPi_stat_Define(UA_Server *server);
-void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type); 
+void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type);
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt);
-//Timer Handler Function 
+//Timer Handler Function
 void timer_handler(int sign);
 
 //Global variables
@@ -56,14 +56,14 @@ static volatile UA_Boolean running = true;
 UA_Server *server;
 pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 
-static void stopHandler(int sign) 
+static void stopHandler(int sign)
 {
     if(sign==SIGINT)
 		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
 	running = false;
 }
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
 	struct sigaction tim_sa,stop_sa;
 	struct itimerval timer;
@@ -77,13 +77,13 @@ int main(int argc, char *argv[])
 	sigaction (SIGINT, &stop_sa, NULL);
     sigaction (SIGTERM, &stop_sa, NULL);
 
-		
+
 	if(!argv[1])
 	{
 		fprintf(stderr,"No argument for path to FIFO\n");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	//Install timer_handler as the signal handler for SIGALRM.
 	memset (&tim_sa, 0, sizeof (tim_sa));
 	tim_sa.sa_handler = &timer_handler;
@@ -94,23 +94,22 @@ int main(int argc, char *argv[])
 	for(i=0; i<amount_of_threads; i++)
 		pthread_create(&Threads_ids[i], NULL, FIFO_Reader, argv[1]);
 
-	// Configure the timer to repeat every 500ms 
+	// Configure the timer to repeat every 500ms
 	timer.it_value.tv_sec = 0;
 	timer.it_value.tv_usec = 500000;
 	timer.it_interval.tv_sec = 0;
 	timer.it_interval.tv_usec = 500000;
-	// Start a timer 
+	// Start a timer
 	setitimer (ITIMER_REAL, &timer, NULL);
-	
+
 	//Init OPC_UA Server
 	server = UA_Server_new();
     UA_ServerConfig_setDefault(UA_Server_getConfig(server));
-	//UA_ServerConfig_setCustomHostname(UA_Server_getConfig(server), UA_String_fromChars("Morfeas-OPC-UA Server (open62541)"));
 	RPi_stat_Define(server);
-		
+
 	//Start OPC_UA Server
     retval = UA_Server_run(server, &running);
-	
+
 	for(i=0; i<amount_of_threads; i++)
 		pthread_join(Threads_ids[i], NULL);// wait threads to finish
     UA_Server_delete(server);
@@ -129,48 +128,41 @@ void* FIFO_Reader(void *varg_pt)
     struct timeval timeout;
 	size_t sizeof_sdaq_meas;
 	char *path_to_FIFO = varg_pt;
-	
-	mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
-    fifo_fd = open(path_to_FIFO, O_RDONLY | O_NONBLOCK | O_SYNC);
 
+	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
+			mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
     FD_ZERO(&readCheck);
     FD_ZERO(&errCheck);
-
-    while (running) 
+    //fifo_fd = open(path_to_FIFO, O_RDONLY | O_NONBLOCK);
+    while (running)
 	{
-        FD_SET(fifo_fd, &readCheck);
-        FD_SET(fifo_fd, &errCheck);
-
-        timeout.tv_sec = 0;
-        timeout.tv_usec = 100000;
-
-        select_ret = select(fifo_fd+1, &readCheck, NULL, &errCheck, &timeout);
-        if (select_ret < 0) 
+		fifo_fd = open(path_to_FIFO, O_RDWR | O_NONBLOCK);
+		FD_SET(fifo_fd, &readCheck);
+		FD_SET(fifo_fd, &errCheck);
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		select_ret = select(fifo_fd+1, &readCheck, NULL, &errCheck, &timeout);
+		if (select_ret < 0)
+		    perror("Select failed");
+		else if (FD_ISSET(fifo_fd, &errCheck))
+		    perror("FD error");
+		else if (FD_ISSET(fifo_fd, &readCheck))
 		{
-            printf("Select failed\r\n");
-			break;
-        }
-        else if (FD_ISSET(fifo_fd, &errCheck)) 
-            printf("FD error\r\n");
-        else if (FD_ISSET(fifo_fd, &readCheck)) 
-		{
-           if(read(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t))==sizeof(size_t))
+			read(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
+			sizeof_sdaq_meas -= read(fifo_fd, anchor_str, 16);
+			sizeof_sdaq_meas -= read(fifo_fd, &meas_dec, sizeof_sdaq_meas);
+			if(!sizeof_sdaq_meas)
 			{
-				if(read(fifo_fd, anchor_str, 16)==16)
-				{
-					sizeof_sdaq_meas -= 16;
-					if(read(fifo_fd, &meas_dec, sizeof_sdaq_meas)==sizeof_sdaq_meas) 
-					{	
-						printf("\nReceived from Anchor:%s\n",anchor_str);
-						printf("\tValue=%9.3f %s\n",meas_dec.meas, unit_str[meas_dec.unit]);
-						printf("\tTimestamp=%hu\n",meas_dec.timestamp);
-					}
-				}
+				printf("\nReceived from Anchor:%s\n",anchor_str);
+				printf("\tValue=%9.3f %s\n",meas_dec.meas, unit_str[meas_dec.unit]);
+				printf("\tTimestamp=%hu\n",meas_dec.timestamp);
 			}
-        }
+		}
+		close(fifo_fd);
     }
+    //unlink(path_to_FIFO);
     close(fifo_fd);
-	return NULL;	
+	return NULL;
 }
 
 void timer_handler (int sign)
@@ -184,7 +176,7 @@ void timer_handler (int sign)
 	glibtop_uptime buff_uptime;
 	glibtop_mem buff_ram;
 	glibtop_fsusage buff_disk;
-	
+
 	//Read values
 	glibtop_get_uptime (&buff_uptime);//get computer's Up_time
 	glibtop_get_mem (&buff_ram);//get ram util
@@ -220,7 +212,7 @@ void timer_handler (int sign)
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
-void RPi_stat_Define(UA_Server *server_ptr) 
+void RPi_stat_Define(UA_Server *server_ptr)
 {
     //Root of the object
 	UA_NodeId Health_status; /* get the nodeid assigned by the server */
@@ -231,17 +223,17 @@ void RPi_stat_Define(UA_Server *server_ptr)
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                             UA_QUALIFIEDNAME(1, "Health_status"), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
                             oAttr, NULL, &Health_status);
-	//add UpTime property 
+	//add UpTime property
     UA_VariableAttributes UpT_Attr = UA_VariableAttributes_default;
 	UA_Int64 Up_time=0;
     UA_Variant_setScalar(&UpT_Attr.value, &Up_time, &UA_TYPES[UA_TYPES_UINT32]);
     UpT_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Up_time (sec)");
 	UpT_Attr.dataType = UA_TYPES[UA_TYPES_UINT32].typeId;
-    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "Up_time"), Health_status, 
+    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "Up_time"), Health_status,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "Up_time"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), UpT_Attr, NULL, NULL);
-	//add CPU utilization property  
+	//add CPU utilization property
     UA_VariableAttributes CPU_util_Attr = UA_VariableAttributes_default;
     UA_Float CPU_util = 0;
     UA_Variant_setScalar(&CPU_util_Attr.value, &CPU_util, &UA_TYPES[UA_TYPES_FLOAT]);
@@ -251,8 +243,8 @@ void RPi_stat_Define(UA_Server *server_ptr)
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "CPU_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_util_Attr, NULL, NULL);
-	
-	//add RAM utilization property  
+
+	//add RAM utilization property
     UA_VariableAttributes RAM_util_Attr = UA_VariableAttributes_default;
     UA_Float RAM_util = 0;
     UA_Variant_setScalar(&RAM_util_Attr.value, &RAM_util, &UA_TYPES[UA_TYPES_FLOAT]);
@@ -262,7 +254,7 @@ void RPi_stat_Define(UA_Server *server_ptr)
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "RAM_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), RAM_util_Attr, NULL, NULL);
-	//add Disk utilization property  
+	//add Disk utilization property
     UA_VariableAttributes Disk_Util_Attr = UA_VariableAttributes_default;
     UA_Float Disk_Util = 0;
     UA_Variant_setScalar(&Disk_Util_Attr.value, &Disk_Util, &UA_TYPES[UA_TYPES_FLOAT]);
@@ -272,9 +264,9 @@ void RPi_stat_Define(UA_Server *server_ptr)
                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                               UA_QUALIFIEDNAME(1, "Disk_Util"),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), Disk_Util_Attr, NULL, NULL);
-	//add CPU Temp property  
+	//add CPU Temp property
     UA_VariableAttributes CPU_temp_Attr = UA_VariableAttributes_default;
-    UA_Float CPU_temp = 0; 
+    UA_Float CPU_temp = 0;
     UA_Variant_setScalar(&CPU_temp_Attr.value, &CPU_temp, &UA_TYPES[UA_TYPES_FLOAT]);
     CPU_temp_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_temp (°C)");
 	CPU_temp_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
@@ -285,7 +277,7 @@ void RPi_stat_Define(UA_Server *server_ptr)
 
 }
 
-inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, void *value, int _UA_Type) 
+inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, void *value, int _UA_Type)
 {
 	UA_Variant temp_value;
     UA_Variant_setScalar(&temp_value, value, &UA_TYPES[_UA_Type]);

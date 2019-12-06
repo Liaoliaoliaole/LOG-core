@@ -160,16 +160,16 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	stats.CAN_IF_name = argv[1];
-	//Logstat.json and FIFO path	
+	//Logstat.json and FIFO path
 	if(!logstat_path)
 		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
 	else
 	{
-		path_to_fifo = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/FIFO_") + strlen(stats.CAN_IF_name) + 1);
-		sprintf(path_to_fifo,"%s%sFIFO_%s", logstat_path,
-										    logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/",
-										    stats.CAN_IF_name);
-		mkfifo(path_to_fifo, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+		path_to_fifo = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/FIFO") + 1);
+		sprintf(path_to_fifo,"%s%sFIFO", logstat_path,
+										 logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/");
+		if( access( path_to_fifo, F_OK ) == -1 )
+			mkfifo(path_to_fifo, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 		dir = opendir(logstat_path);
 		if (dir)
 			closedir(dir);
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	}
-	
+
 	/*Filter for CAN messages	-- SocketCAN Filters act as: <received_can_id> & mask == can_id & mask*/
 	//load filter's can_id member
 	sdaq_id_dec = (sdaq_can_id *)&RX_filter.can_id;//Set encoder to filter.can_id
@@ -245,14 +245,16 @@ int main(int argc, char *argv[])
 					{
 						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
 						{
-							sprintf(anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num); 
-							if((fifo_fd=open(path_to_fifo, O_WRONLY | O_NONBLOCK | O_SYNC ))>0)
+							sprintf(anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num);
 							{
 								sizeof_sdaq_meas = sizeof(sdaq_meas) + strlen(anchor_str) + 1;
-								write(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t)); 
-								write(fifo_fd, anchor_str, strlen(anchor_str) + 1);
-								write(fifo_fd, meas_dec, sizeof(sdaq_meas));
-								close(fifo_fd);//Close FIFO
+								if((fifo_fd = open(path_to_fifo, O_RDWR | O_NONBLOCK))!=-1)//| O_NONBLOCK
+								{
+									write(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
+									write(fifo_fd, anchor_str, strlen(anchor_str) + 1);
+									write(fifo_fd, meas_dec, sizeof(sdaq_meas));
+									close(fifo_fd);//Close FIFO
+								}
 							}
 						}
 					}
@@ -338,7 +340,10 @@ int main(int argc, char *argv[])
 	Stop(CAN_socket_num,Broadcast);
 	close(CAN_socket_num);//Close CAN_socket
 	if(path_to_fifo)
+	{
+		//unlink(path_to_fifo);
 		free(path_to_fifo);
+	}
 	return EXIT_SUCCESS;
 }
 
@@ -421,7 +426,8 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 
 inline void quit_signal_handler(int signum)
 {
-	flags.run = 0;
+	if(signum == SIGINT)
+		flags.run = 0;
 	return;
 }
 
@@ -721,7 +727,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 sdaq_status * find_SDAQ_status(unsigned char address, struct Morfeas_SDAQ_if_stats *stats)
 {
 	GSList *list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
-	struct SDAQ_info_entry *node_data; 
+	struct SDAQ_info_entry *node_data;
 	if(list_node)
 	{
 		node_data = list_node->data;
