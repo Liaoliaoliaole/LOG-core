@@ -165,8 +165,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
 	else
 	{
-		path_to_fifo = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/FIFO") + 1);
-		sprintf(path_to_fifo,"%s%sFIFO", logstat_path,
+		path_to_fifo = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/Morfeas_FIFO") + 1);
+		sprintf(path_to_fifo,"%s%sMorfeas_FIFO", logstat_path,
 										 logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/");
 		if( access( path_to_fifo, F_OK ) == -1 )
 			mkfifo(path_to_fifo, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
