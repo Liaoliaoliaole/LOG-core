@@ -60,8 +60,8 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
 	g_slist_foreach(stats->list_SDAQs, extract_list_SDAQnode_data, logstat);
 
-	JSON_str = cJSON_Print(root);
-	//JSON_str = cJSON_PrintUnformatted(root);
+	//JSON_str = cJSON_Print(root);
+	JSON_str = cJSON_PrintUnformatted(root);
 	pFile = fopen (logstat_path_and_name, "w");
 	if(pFile)
 	{
@@ -87,8 +87,8 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 	{
 		node_data = cJSON_CreateObject();
 		cal_date.tm_year = node_dec->CH_date.year + 100;//100 = 2000 - 1900
-		cal_date.tm_mon = node_dec->CH_date.month?node_dec->CH_date.month-1:0;
-		cal_date.tm_mday = node_dec->CH_date.day?node_dec->CH_date.day:1;
+		cal_date.tm_mon = node_dec->CH_date.month - 1;
+		cal_date.tm_mday = node_dec->CH_date.day;
 		//format time
 		strftime(date,STR_LEN,"%Y/%m/%d",&cal_date);
 		cJSON_AddNumberToObject(node_data, "Channel", node_dec->Channel);

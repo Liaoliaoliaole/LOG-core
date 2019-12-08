@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 						if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
 						{
 							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
-							if(!SDAQ_data->info_collection_status)
+							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
 						}
 					}
 					else
-						printf("\n\t\tMaximum amount of address is reached\n");
+						printf("\n\t\tMaximum amount of addresses is reached\n");
 					led_stat(&stats);
 					break;
 				case Device_info:
