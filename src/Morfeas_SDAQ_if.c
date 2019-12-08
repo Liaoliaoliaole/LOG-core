@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 						if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
 						{
 							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
-							if(SDAQ_data->info_collection_status<3)
+							if(!SDAQ_data->info_collection_status)
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
