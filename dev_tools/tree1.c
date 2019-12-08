@@ -11,6 +11,7 @@
  */
 #include <stdio.h>
 #include <libxml/parser.h>
+#include <libxml/xmlmemory.h>
 #include <libxml/tree.h>
 
 /**
@@ -24,9 +25,9 @@ void print_element_names(xmlNode * a_node)
 {
     xmlNode *cur_node = NULL;
 
-    for (cur_node = a_node; cur_node; cur_node = cur_node->next) 
+    for (cur_node = a_node; cur_node; cur_node = cur_node->next)
 	{
-        if (cur_node->type == XML_ELEMENT_NODE) 
+        if (cur_node->type == XML_ELEMENT_NODE)
 		{
 			printf("node type: Element, name: %s\n", cur_node->name);
 			if(cur_node->children->content)
@@ -37,8 +38,8 @@ void print_element_names(xmlNode * a_node)
 }
 
 /**
- * Simple example to parse a file called "file.xml", 
- * walk down the DOM, and print the name of the 
+ * Simple example to parse a file called "file.xml",
+ * walk down the DOM, and print the name of the
  * xml elements nodes.
  */
 int main(int argc, char **argv)
@@ -55,12 +56,21 @@ int main(int argc, char **argv)
      * library used.
      */
 
-    /*parse the file and get the DOM */
+    doc = xmlParseFile(argv[1]);
+
+	if (doc == NULL )
+	{
+		xmlParserError(xmlGetLastError(), "test");
+		//fprintf(stderr,"Document not parsed successfully. \n");
+		return 1;
+	}
+
+    /*parse the file and get the DOM
     doc = xmlReadFile(argv[1], NULL, 0);
-    if (doc == NULL) 
+    if (doc == NULL)
 	{
         printf("error: could not parse file %s\n", argv[1]);
-    }
+    }*/
 
     /*Get the root element node */
     root_element = xmlDocGetRootElement(doc);

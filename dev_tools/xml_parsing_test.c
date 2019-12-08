@@ -8,9 +8,9 @@ int parseSearch (xmlDocPtr doc, xmlNodePtr cur, const xmlChar *search_Node, cons
 
 	xmlChar *key;
 	cur = cur->xmlChildrenNode;
-	while (cur != NULL) 
+	while (cur != NULL)
 	{
-	    if (!xmlStrcmp(cur->name, search_Node)) 
+	    if (!xmlStrcmp(cur->name, search_Node))
 		{
 		    key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 		    if(!xmlStrcmp(key, search))//printf("keyword: %s\n", key);
@@ -28,7 +28,7 @@ void print_node_elements(xmlDocPtr doc, xmlNodePtr cur)
 {
 	xmlChar *Node_value;
 	cur = cur->xmlChildrenNode;
-	while (cur != NULL) 
+	while (cur != NULL)
 	{
 		Node_value = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 		if(Node_value)
@@ -47,22 +47,24 @@ static void parseDoc(char *docname, char* search_node,char* search) {
 	xmlNodePtr cur;
 
 	doc = xmlParseFile(docname);
-	
-	if (doc == NULL ) {
+
+	if (doc == NULL )
+	{
+		xmlParserError();
 		fprintf(stderr,"Document not parsed successfully. \n");
 		return;
 	}
-	
+
 	cur = xmlDocGetRootElement(doc);
-	
+
 	if (cur == NULL) {
 		fprintf(stderr,"empty document\n");
 		xmlFreeDoc(doc);
 		return;
 	}
-	
+
 	cur = cur->xmlChildrenNode;
-	while (cur != NULL) 
+	while (cur != NULL)
 	{
 		if (!parseSearch (doc, cur, (const xmlChar *) search_node, (const xmlChar *) search))
 		{
@@ -77,7 +79,7 @@ static void parseDoc(char *docname, char* search_node,char* search) {
 
 int
 main(int argc, char **argv) {
-		
+
 	if (argc != 4) {
 		printf("Usage: %s docname Search_Node search_key\n", argv[0]);
 		return(0);
