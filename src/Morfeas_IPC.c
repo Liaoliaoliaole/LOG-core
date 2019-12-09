@@ -1,5 +1,5 @@
 /*
-Program: Morfeas_IPC.h, Implementation of functions for IPC.
+File: Morfeas_IPC.h, Implementation of functions for IPC.
 Copyright (C) 12019-12020  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify

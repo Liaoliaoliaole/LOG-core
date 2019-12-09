@@ -41,7 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <glibtop/fsusage.h>
 
 //Include Functions implementation header
-#include "Types.h"
+#include "Morfeas_IPC.h"//<-#include "Types.h"
 
 //OPC_UA local Functions
 void RPi_stat_Define(UA_Server *server);
@@ -135,7 +135,7 @@ void* FIFO_Reader(void *varg_pt)
     FD_ZERO(&errCheck);
     while (running)
 	{
-		fifo_fd = open(path_to_FIFO, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+		fifo_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK
 		FD_SET(fifo_fd, &readCheck);
 		FD_SET(fifo_fd, &errCheck);
 		timeout.tv_sec = 1;
@@ -147,21 +147,24 @@ void* FIFO_Reader(void *varg_pt)
 		    perror("FD error");
 		else if (FD_ISSET(fifo_fd, &readCheck))
 		{
-			read(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
-			sizeof_sdaq_meas -= read(fifo_fd, anchor_str, 16);
-			sizeof_sdaq_meas -= read(fifo_fd, &meas_dec, sizeof_sdaq_meas);
+				read(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
+				sizeof_sdaq_meas -= read(fifo_fd, anchor_str, 16);
+				sizeof_sdaq_meas -= read(fifo_fd, &meas_dec, sizeof_sdaq_meas);
+		}
+		else
+		{
+			printf("Timeout!!!\n");
+			sizeof_sdaq_meas = -1;
+		}
+		close(fifo_fd);
+		pthread_mutex_lock(&OPC_UA_NODESET_access);
 			if(!sizeof_sdaq_meas)
 			{
-				pthread_mutex_lock(&OPC_UA_NODESET_access);
 					printf("\nReceived from Anchor:%s\n",anchor_str);
 					printf("\tValue=%9.3f %s\n",meas_dec.meas, unit_str[meas_dec.unit]);
 					printf("\tTimestamp=%hu\n",meas_dec.timestamp);
-				pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			}
-			else
-				printf("Size mismatch!!!\n");
-		}
-		close(fifo_fd);
+		pthread_mutex_unlock(&OPC_UA_NODESET_access);
     }
 	return NULL;
 }

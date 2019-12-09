@@ -48,8 +48,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <fcntl.h>
 
 //Include Functions implementation header
-#include "Types.h"
 #include "Morfeas_JSON.h"
+#include "Morfeas_IPC.h"//<-#include "Types.h"
 
 static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
@@ -248,15 +248,15 @@ int main(int argc, char *argv[])
 							sprintf(anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num);
 							{
 								sizeof_sdaq_meas = sizeof(sdaq_meas) + strlen(anchor_str) + 1;
-								if((fifo_fd = open(path_to_fifo, O_RDWR | O_NONBLOCK | O_CLOEXEC))!=-1)
+								if((fifo_fd = open(path_to_fifo, O_RDWR | O_NONBLOCK))!=-1)
 								{
 									write(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
 									write(fifo_fd, anchor_str, strlen(anchor_str) + 1);
 									write(fifo_fd, meas_dec, sizeof(sdaq_meas));
-									close(fifo_fd);//Close FIFO
 								}
 								else
 									printf("Open FIFO error!!!\n");
+								close(fifo_fd);//Close FIFO
 							}
 						}
 					}
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
 						if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
 						{
 							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
-							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
+							if(SDAQ_data->info_collection_status<3)//set QueryDeviceInfo on entries without filled info
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
