@@ -120,51 +120,28 @@ int main(int argc, char *argv[])
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt)
 {
-	sdaq_meas meas_dec;
-	char anchor_str[20];
-	int fifo_fd, select_ret;
-	fd_set readCheck;
-    fd_set errCheck;
-    struct timeval timeout;
-	size_t sizeof_sdaq_meas;
+	//Morfeas IPC msg dec
+	unsigned char type;
+	IPC_msg IPC_msg_dec;
 	char *path_to_FIFO = varg_pt;
-
-	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
-			mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-    FD_ZERO(&readCheck);
-    FD_ZERO(&errCheck);
     while (running)
 	{
-		fifo_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK
-		FD_SET(fifo_fd, &readCheck);
-		FD_SET(fifo_fd, &errCheck);
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		select_ret = select(fifo_fd+1, &readCheck, NULL, &errCheck, &timeout);
-		if (select_ret < 0)
-		    perror("Select failed");
-		else if (FD_ISSET(fifo_fd, &errCheck))
-		    perror("FD error");
-		else if (FD_ISSET(fifo_fd, &readCheck))
+		if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
 		{
-				read(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
-				sizeof_sdaq_meas -= read(fifo_fd, anchor_str, 16);
-				sizeof_sdaq_meas -= read(fifo_fd, &meas_dec, sizeof_sdaq_meas);
-		}
-		else
-		{
-			printf("Timeout!!!\n");
-			sizeof_sdaq_meas = -1;
-		}
-		close(fifo_fd);
-		pthread_mutex_lock(&OPC_UA_NODESET_access);
-			if(!sizeof_sdaq_meas)
+			printf("Received msg with type %d\n",type);
+			switch(type)
 			{
-					printf("\nReceived from Anchor:%s\n",anchor_str);
-					printf("\tValue=%9.3f %s\n",meas_dec.meas, unit_str[meas_dec.unit]);
-					printf("\tTimestamp=%hu\n",meas_dec.timestamp);
+				case IPC_SDAQ_meas:
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
+						printf("\tAnchor:%s\n",IPC_msg_dec.SDAQ_meas.anchor_str);
+						printf("\tValue=%9.3f %s\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas,
+												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
+						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					break;
 			}
-		pthread_mutex_unlock(&OPC_UA_NODESET_access);
+		}
     }
 	return NULL;
 }

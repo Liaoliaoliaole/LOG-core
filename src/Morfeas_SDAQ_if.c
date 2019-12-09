@@ -103,12 +103,12 @@ int main(int argc, char *argv[])
 	DIR *dir;
 	//Operational variables
 	unsigned char Amount_of_info_incomplete_SDAQs;
-	char *logstat_path = argv[2], *path_to_fifo=NULL, anchor_str[20];
-	int fifo_fd;
-	size_t sizeof_sdaq_meas;
+	char *logstat_path = argv[2], *path_to_FIFO=NULL;
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
-	//Variables for Socket CAN
+	//Variables for IPC
+	IPC_msg IPC_msg;
+	//Variables for Socket CAN and SDAQ_decoders
 	int RX_bytes;
 	struct timeval tv;
 	struct ifreq ifr;
@@ -165,11 +165,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
 	else
 	{
-		path_to_fifo = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/Morfeas_FIFO") + 1);
-		sprintf(path_to_fifo,"%s%sMorfeas_FIFO", logstat_path,
+		path_to_FIFO = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/Morfeas_FIFO") + 1);
+		sprintf(path_to_FIFO,"%s%sMorfeas_FIFO", logstat_path,
 										 logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/");
-		if( access( path_to_fifo, F_OK ) == -1 )
-			mkfifo(path_to_fifo, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+		if( access(path_to_FIFO, F_OK ) == -1 )
+			mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 		dir = opendir(logstat_path);
 		if (dir)
 			closedir(dir);
@@ -241,23 +241,14 @@ int main(int argc, char *argv[])
 			switch(sdaq_id_dec->payload_type)
 			{
 				case Measurement_value:
-					if(path_to_fifo)
+					if(path_to_FIFO)
 					{
 						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
 						{
-							sprintf(anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num);
-							{
-								sizeof_sdaq_meas = sizeof(sdaq_meas) + strlen(anchor_str) + 1;
-								if((fifo_fd = open(path_to_fifo, O_RDWR | O_NONBLOCK))!=-1)
-								{
-									write(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
-									write(fifo_fd, anchor_str, strlen(anchor_str) + 1);
-									write(fifo_fd, meas_dec, sizeof(sdaq_meas));
-								}
-								else
-									printf("Open FIFO error!!!\n");
-								close(fifo_fd);//Close FIFO
-							}
+							sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",ifr.ifr_name);
+							sprintf(IPC_msg.SDAQ_meas.anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num);
+							memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
+							IPC_msg_TX(path_to_FIFO, &IPC_msg, IPC_SDAQ_meas);
 						}
 					}
 					break;
@@ -341,11 +332,8 @@ int main(int argc, char *argv[])
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
 	close(CAN_socket_num);//Close CAN_socket
-	if(path_to_fifo)
-	{
-		//unlink(path_to_fifo);
-		free(path_to_fifo);
-	}
+	if(path_to_FIFO)
+		free(path_to_FIFO);
 	return EXIT_SUCCESS;
 }
 

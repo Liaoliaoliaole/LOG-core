@@ -11,6 +11,7 @@ Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir)\
 					  $(WORK_dir)/Morfeas_SDAQ_if.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
 					  $(WORK_dir)/SDAQ_drv.o \
+					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(SRC_dir)/*.h
 					  
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \

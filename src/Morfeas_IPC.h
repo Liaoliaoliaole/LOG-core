@@ -17,19 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Types.h"
 
 enum Morfeas_IPC_msg_type{
-	Handler_register = 1, 
-	Handler_unregister = 2, 
+	IPC_Handler_register = 1, 
+	IPC_Handler_unregister = 2, 
 	//SDAQ_related IPC messages//
-	SDAQ_register = 3,
-	SDAQ_clean_up = 4,
-	SDAQ_info = 5,
-	SDAQ_timediff = 6,
-	SDAQ_meas = 7
+	IPC_SDAQ_register = 3,
+	IPC_SDAQ_clean_up = 4,
+	IPC_SDAQ_info = 5,
+	IPC_SDAQ_timediff = 6,
+	IPC_SDAQ_meas = 7
 };
 
 enum Morfeas_IPC_handler_type{
 	SDAQ,
-	//future implementation 
+	//For future implementation 
 	MDAQ,
 	IOBOX,
 	MTI //Mobile Telemetry Interface
@@ -82,3 +82,11 @@ typedef union{
 	SDAQ_timediff_msg SDAQ_timediff;
 	SDAQ_meas_msg SDAQ_meas;
 }IPC_msg;
+
+extern size_t Morfeas_IPC_msg_size[];	
+
+	//----RX/TX Functions----//
+//function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
+int IPC_msg_TX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type);
+//function for RX, return the type of the received message or 0 in failure
+int IPC_msg_RX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr);
