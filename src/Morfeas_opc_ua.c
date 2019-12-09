@@ -128,7 +128,6 @@ void* FIFO_Reader(void *varg_pt)
 	{
 		if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
 		{
-			printf("Received msg with type %d\n",type);
 			switch(type)
 			{
 				case IPC_SDAQ_meas:
