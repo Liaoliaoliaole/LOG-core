@@ -245,6 +245,7 @@ int main(int argc, char *argv[])
 					{
 						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
 						{
+							//Send measurement through IPC
 							sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",ifr.ifr_name);
 							sprintf(IPC_msg.SDAQ_meas.anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num);
 							memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
@@ -266,7 +267,7 @@ int main(int argc, char *argv[])
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
 							}
-							else if(SDAQ_data->info_collection_status == 3 && !Amount_of_info_incomplete_SDAQs)
+							else if(SDAQ_data->info_collection_status == 3)//&& !Amount_of_info_incomplete_SDAQs
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 								logstat_json(logstat_path,&stats);

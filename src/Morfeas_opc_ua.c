@@ -120,9 +120,9 @@ int main(int argc, char *argv[])
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt)
 {
-	//Morfeas IPC msg dec
-	unsigned char type;
+	//Morfeas IPC msg decoder
 	IPC_msg IPC_msg_dec;
+	unsigned char type;//type of received IPC_msg
 	char *path_to_FIFO = varg_pt;
     while (running)
 	{

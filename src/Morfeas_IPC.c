@@ -71,8 +71,6 @@ int IPC_msg_TX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type)
 			writen_bytes = write(FIFO_fd, IPC_msg_ptr, writen_bytes);
 		}
 	}
-	else
-		printf("Timeout!!!\n");
 	close(FIFO_fd);
 	return writen_bytes;
 }
@@ -109,12 +107,9 @@ int IPC_msg_RX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 		if(type)
 		{
 			read_bytes = Morfeas_IPC_msg_size[type - 1];
-			printf("Type = %d\nRead_bytes=%d\n",type,read_bytes);
 			read_bytes -= read(FIFO_fd, IPC_msg_ptr, read_bytes);
 		}
 	}
-	else
-		printf("Timeout!!!\n");
 	close(FIFO_fd);
 	if(!read_bytes)
 		return type;
