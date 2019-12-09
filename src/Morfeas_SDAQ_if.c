@@ -248,13 +248,15 @@ int main(int argc, char *argv[])
 							sprintf(anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num);
 							{
 								sizeof_sdaq_meas = sizeof(sdaq_meas) + strlen(anchor_str) + 1;
-								if((fifo_fd = open(path_to_fifo, O_RDWR | O_NONBLOCK))!=-1)
+								if((fifo_fd = open(path_to_fifo, O_RDWR | O_NONBLOCK | O_CLOEXEC))!=-1)
 								{
 									write(fifo_fd, &sizeof_sdaq_meas, sizeof(size_t));
 									write(fifo_fd, anchor_str, strlen(anchor_str) + 1);
 									write(fifo_fd, meas_dec, sizeof(sdaq_meas));
 									close(fifo_fd);//Close FIFO
 								}
+								else
+									printf("Open FIFO error!!!\n");
 							}
 						}
 					}

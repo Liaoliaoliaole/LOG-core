@@ -135,7 +135,7 @@ void* FIFO_Reader(void *varg_pt)
     FD_ZERO(&errCheck);
     while (running)
 	{
-		fifo_fd = open(path_to_FIFO, O_RDWR | O_NONBLOCK);
+		fifo_fd = open(path_to_FIFO, O_RDWR | O_NONBLOCK | O_CLOEXEC);
 		FD_SET(fifo_fd, &readCheck);
 		FD_SET(fifo_fd, &errCheck);
 		timeout.tv_sec = 1;
@@ -158,6 +158,8 @@ void* FIFO_Reader(void *varg_pt)
 					printf("\tTimestamp=%hu\n",meas_dec.timestamp);
 				pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			}
+			else
+				printf("Size mismatch!!!\n");
 		}
 		close(fifo_fd);
     }
