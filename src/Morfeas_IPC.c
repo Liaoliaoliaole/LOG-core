@@ -37,7 +37,7 @@ size_t Morfeas_IPC_msg_size[]={
 
 	//----RX/TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
-int IPC_msg_TX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type)
+int IPC_msg_TX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type)
 {
 	fd_set writeCheck;
     fd_set errCheck;
@@ -75,7 +75,7 @@ int IPC_msg_TX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type)
 	return writen_bytes;
 }
 //function for RX, return the type of the received message or 0 in failure
-int IPC_msg_RX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
+int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 {
 	fd_set readCheck;
     fd_set errCheck;

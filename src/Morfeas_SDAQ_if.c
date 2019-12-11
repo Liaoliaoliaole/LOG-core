@@ -103,7 +103,8 @@ int main(int argc, char *argv[])
 	DIR *dir;
 	//Operational variables
 	unsigned char Amount_of_info_incomplete_SDAQs;
-	char *logstat_path = argv[2], *path_to_FIFO=NULL;
+	char *logstat_path = argv[2];
+	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
 	//Variables for IPC
@@ -160,16 +161,11 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	stats.CAN_IF_name = argv[1];
-	//Logstat.json and FIFO path
+	//Logstat.json
 	if(!logstat_path)
 		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
 	else
 	{
-		path_to_FIFO = (char*) malloc(sizeof(char) * strlen(logstat_path) + strlen("/Morfeas_FIFO") + 1);
-		sprintf(path_to_FIFO,"%s%sMorfeas_FIFO", logstat_path,
-										 logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/");
-		if( access(path_to_FIFO, F_OK ) == -1 )
-			mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 		dir = opendir(logstat_path);
 		if (dir)
 			closedir(dir);
@@ -179,6 +175,9 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	}
+	//FIFO
+	if( access(path_to_FIFO, F_OK ) == -1 )
+		mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
 	/*Filter for CAN messages	-- SocketCAN Filters act as: <received_can_id> & mask == can_id & mask*/
 	//load filter's can_id member
@@ -247,7 +246,8 @@ int main(int argc, char *argv[])
 						{
 							//Send measurement through IPC
 							sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",ifr.ifr_name);
-							sprintf(IPC_msg.SDAQ_meas.anchor_str,"%010u.CH%02hhu", ret_SDAQ_status->dev_sn, sdaq_id_dec->channel_num);
+							IPC_msg.SDAQ_meas.serial_number = ret_SDAQ_status->dev_sn;
+							IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
 							memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
 							IPC_msg_TX(path_to_FIFO, &IPC_msg, IPC_SDAQ_meas);
 						}
@@ -333,8 +333,6 @@ int main(int argc, char *argv[])
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
 	close(CAN_socket_num);//Close CAN_socket
-	if(path_to_FIFO)
-		free(path_to_FIFO);
 	return EXIT_SUCCESS;
 }
 

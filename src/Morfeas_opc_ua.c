@@ -77,13 +77,6 @@ int main(int argc, char *argv[])
 	sigaction (SIGINT, &stop_sa, NULL);
     sigaction (SIGTERM, &stop_sa, NULL);
 
-
-	if(!argv[1])
-	{
-		fprintf(stderr,"No argument for path to FIFO\n");
-		exit(EXIT_FAILURE);
-	}
-
 	//Install timer_handler as the signal handler for SIGALRM.
 	memset (&tim_sa, 0, sizeof (tim_sa));
 	tim_sa.sa_handler = &timer_handler;
@@ -123,7 +116,7 @@ void* FIFO_Reader(void *varg_pt)
 	//Morfeas IPC msg decoder
 	IPC_msg IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
-	char *path_to_FIFO = varg_pt;
+	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
     while (running)
 	{
 		if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
@@ -133,7 +126,7 @@ void* FIFO_Reader(void *varg_pt)
 				case IPC_SDAQ_meas:
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
-						printf("\tAnchor:%10u.CH%02u\n",IPC_msg_dec.SDAQ_meas.serial_number, IPC_msg_dec.SDAQ_meas.channel);
+						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.serial_number, IPC_msg_dec.SDAQ_meas.channel);
 						printf("\tValue=%9.3f %s\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas,
 												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
 						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
