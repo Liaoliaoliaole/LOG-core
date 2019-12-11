@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
 					{
 						//Send measurement through IPC
 						sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",stats.CAN_IF_name);
-						IPC_msg.SDAQ_meas.serial_number = ret_SDAQ_status->dev_sn;
+						IPC_msg.SDAQ_meas.SDAQ_serial_number = ret_SDAQ_status->dev_sn;
 						IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
 						memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
 						IPC_msg_TX(stats.path_to_FIFO, &IPC_msg, IPC_SDAQ_meas);
@@ -254,7 +254,6 @@ int main(int argc, char *argv[])
 					break;
 				case Sync_Info:
 					update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
-
 					break;
 				case Device_status:
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
@@ -675,6 +674,7 @@ short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
 /*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
+	IPC_msg IPC_msg;
 	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (stats->list_SDAQs)
@@ -685,6 +685,10 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 			sdaq_node = list_node->data;
 			sdaq_node->Timediff = time_diff_cal(ts_dec->dev_time, ts_dec->ref_time);
 			time(&(sdaq_node->last_seen));
+			sprintf(IPC_msg.SDAQ_timediff.connected_to_BUS,"%s",stats->CAN_IF_name);
+			IPC_msg.SDAQ_timediff.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
+			IPC_msg.SDAQ_timediff.Timediff = sdaq_node->Timediff;
+			IPC_msg_TX(stats->path_to_FIFO, &IPC_msg, IPC_SDAQ_timediff);
 		}
 		else
 			return EXIT_FAILURE;

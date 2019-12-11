@@ -122,19 +122,45 @@ void* FIFO_Reader(void *varg_pt)
 	IPC_msg IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
 	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
-	char BUS_info_ID[30];
+	char Node_ID_str[30];
     while (running)
 	{
 		if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
 		{
 			switch(type)
 			{
+				case IPC_SDAQ_meas:
+				/*
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
+						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.serial_number, IPC_msg_dec.SDAQ_meas.channel);
+						printf("\tValue=%9.3f %s\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas,
+												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
+						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+				*/
+					break;
 				case IPC_CAN_BUS_info:
-					sprintf(BUS_info_ID, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,BUS_info_ID), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+					sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+					break;
+				case IPC_SDAQ_register_or_update:
+					//printf("Enter:IPC_SDAQ_register_or_update\n");
+					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);
+					break;
+				case IPC_SDAQ_clean_up:
+					printf("Enter:IPC_SDAQ_clean_up\n");
+					break;
+				case IPC_SDAQ_info:
+					printf("Enter:IPC_SDAQ_info\n");
+					break;
+				case IPC_SDAQ_timediff:
+					//printf("Enter:IPC_SDAQ_timediff\n");
+					sprintf(Node_ID_str, "%s.%d.TimeDiff", IPC_msg_dec.SDAQ_timediff.connected_to_BUS, IPC_msg_dec.SDAQ_timediff.SDAQ_serial_number);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
 					break;
 				case IPC_Handler_register:
-					printf("Enter:IPC_Handler_register ");
+					//printf("Enter:IPC_Handler_register ");
 					switch(IPC_msg_dec.Handler_reg.handler_type)
 					{
 						case SDAQ:
@@ -149,31 +175,10 @@ void* FIFO_Reader(void *varg_pt)
 					}
 					break;
 				case IPC_Handler_unregister:
-					printf("Enter:IPC_Handler_unregister\n");
+					//printf("Enter:IPC_Handler_unregister\n");
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
-				case IPC_SDAQ_register_or_update:
-					printf("Enter:IPC_SDAQ_register_or_update\n");
-					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);
-					break;
-				case IPC_SDAQ_clean_up:
-					printf("Enter:IPC_SDAQ_clean_up\n");
-					break;
-				case IPC_SDAQ_info:
-					printf("Enter:IPC_SDAQ_info\n");
-					break;
-				case IPC_SDAQ_meas:
-				/*
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
-						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.serial_number, IPC_msg_dec.SDAQ_meas.channel);
-						printf("\tValue=%9.3f %s\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas,
-												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
-						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-				*/
 					break;
 			}
 		}
@@ -242,6 +247,8 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "S/N", UA_TYPES_UINT32);
 			sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "Address", UA_TYPES_BYTE);
+			sprintf(tmp_str,"%s.TimeDiff",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "TimeDiff", UA_TYPES_UINT16);
 			sprintf(tmp_str2,"%s.Status",SDAQ_anchor_str);
 			oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "SDAQ_Status");
 			UA_Server_addObjectNode(server_ptr,

@@ -71,7 +71,7 @@ typedef struct SDAQ_timediff_msg_struct{
 
 typedef struct SDAQ_measure_msg_struct{
 	char connected_to_BUS[10];
-	unsigned int serial_number;
+	unsigned int SDAQ_serial_number;
 	unsigned char channel;
 	sdaq_meas SDAQ_channel_meas;
 }SDAQ_meas_msg;
