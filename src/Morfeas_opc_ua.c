@@ -122,12 +122,17 @@ void* FIFO_Reader(void *varg_pt)
 	IPC_msg IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
 	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
+	char BUS_info_ID[30];
     while (running)
 	{
 		if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
 		{
 			switch(type)
 			{
+				case IPC_CAN_BUS_info:
+					sprintf(BUS_info_ID, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,BUS_info_ID), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+					break;
 				case IPC_Handler_register:
 					printf("Enter:IPC_Handler_register ");
 					switch(IPC_msg_dec.Handler_reg.handler_type)
@@ -181,33 +186,33 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 	UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 	char tmp_buff[30];
-	sprintf(tmp_buff, "%s (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
-	printf("%s\n",tmp_buff);
+	sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		oAttr.displayName = UA_LOCALIZEDTEXT("en-US", tmp_buff);
 		UA_Server_addObjectNode(server_ptr,
 								UA_NODEID_STRING(1, connected_to_BUS),
 								UA_NODEID_STRING(1, "Morfeas_Handlers"),
-								UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+								UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 								UA_QUALIFIEDNAME(1, connected_to_BUS),
 								UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
 								oAttr, NULL, NULL);
-		oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Devices");
+		oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "SDAQnet");
 		sprintf(tmp_buff, "Dev_on_%s", connected_to_BUS);
 		UA_Server_addObjectNode(server_ptr,
 								UA_NODEID_STRING(1, tmp_buff),
 								UA_NODEID_STRING(1, connected_to_BUS),
-								UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+								UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 								UA_QUALIFIEDNAME(1, tmp_buff),
 								UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
 								oAttr, NULL, NULL);
 		vAttr.displayName = UA_LOCALIZEDTEXT("en-US", "BUS Utilization (%)");
 		vAttr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
+		sprintf(tmp_buff, "%s.BUS_util", connected_to_BUS);
 		UA_Server_addVariableNode(server_ptr,
-								  UA_NODEID_STRING(1,"BUS_util"),
+								  UA_NODEID_STRING(1,tmp_buff),
 								  UA_NODEID_STRING(1, connected_to_BUS),
 		                          UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-		                          UA_QUALIFIEDNAME(1, "BUS_util"),
+		                          UA_QUALIFIEDNAME(1, tmp_buff),
 		                          UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
 		                          vAttr, NULL, NULL);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
@@ -215,48 +220,58 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 
 void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr)
 {
-	char Serial_number_str[15], tmp_str[50];
+	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50];
 	UA_NodeId out;
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-	sprintf(Serial_number_str,"%d",ptr->SDAQ_status.dev_sn);
+	sprintf(SDAQ_anchor_str,"%s.%d",ptr->connected_to_BUS,ptr->SDAQ_status.dev_sn);
 	sprintf(tmp_str,"Dev_on_%s",ptr->connected_to_BUS);
 	UA_NodeId_init(&out);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, Serial_number_str), &out))
+		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &out))
 		{
-			printf("Device %s with S/N:%s is not registered!!!\n", tmp_str, Serial_number_str);
+			//printf("Device %s with S/N:%s is not registered!!!\n", tmp_str, SDAQ_anchor_str);
 			oAttr.displayName = UA_LOCALIZEDTEXT("en-US", (char *)dev_type_str[ptr->SDAQ_status.dev_type]);
 			UA_Server_addObjectNode(server_ptr,
-									UA_NODEID_STRING(1, Serial_number_str),
+									UA_NODEID_STRING(1, SDAQ_anchor_str),
 									UA_NODEID_STRING(1, tmp_str),
-									UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-									UA_QUALIFIEDNAME(1, Serial_number_str),
+									UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+									UA_QUALIFIEDNAME(1, SDAQ_anchor_str),
 									UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
 									oAttr, NULL, NULL);
-			sprintf(tmp_str,"%s.%s.S/N",ptr->connected_to_BUS,Serial_number_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "S/N", UA_TYPES_UINT32);
-			sprintf(tmp_str,"%s.%s.Address",ptr->connected_to_BUS,Serial_number_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "Address", UA_TYPES_BYTE);
-			sprintf(tmp_str,"%s.%s.State",ptr->connected_to_BUS,Serial_number_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "State", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.%s.inSync",ptr->connected_to_BUS,Serial_number_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "inSync", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.%s.Error",ptr->connected_to_BUS,Serial_number_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "Error", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.%s.Mode",ptr->connected_to_BUS,Serial_number_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "Mode", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "S/N", UA_TYPES_UINT32);
+			sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "Address", UA_TYPES_BYTE);
+			sprintf(tmp_str2,"%s.Status",SDAQ_anchor_str);
+			oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "SDAQ_Status");
+			UA_Server_addObjectNode(server_ptr,
+									UA_NODEID_STRING(1, tmp_str2),
+									UA_NODEID_STRING(1, SDAQ_anchor_str),
+									UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+									UA_QUALIFIEDNAME(1, tmp_str2),
+									UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+									oAttr, NULL, NULL);
+
+			sprintf(tmp_str,"%s.State",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "State", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.inSync",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "inSync", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.Error",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Error", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.Mode",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
 		}
-		sprintf(tmp_str,"%s.%s.S/N",ptr->connected_to_BUS,Serial_number_str);
+		sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_status.dev_sn), UA_TYPES_UINT32);
-		sprintf(tmp_str,"%s.%s.Address",ptr->connected_to_BUS,Serial_number_str);
+		sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->address), UA_TYPES_BYTE);
-		sprintf(tmp_str,"%s.%s.State",ptr->connected_to_BUS,Serial_number_str);
+		sprintf(tmp_str,"%s.State",SDAQ_anchor_str);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, State), UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.%s.inSync",ptr->connected_to_BUS,Serial_number_str);
+		sprintf(tmp_str,"%s.inSync",SDAQ_anchor_str);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, In_sync), UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.%s.Error",ptr->connected_to_BUS,Serial_number_str);
+		sprintf(tmp_str,"%s.Error",SDAQ_anchor_str);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Error), UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.%s.Mode",ptr->connected_to_BUS,Serial_number_str);
+		sprintf(tmp_str,"%s.Mode",SDAQ_anchor_str);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }

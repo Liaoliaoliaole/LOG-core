@@ -26,7 +26,8 @@ enum Morfeas_IPC_msg_type{
 	IPC_SDAQ_clean_up = 4,
 	IPC_SDAQ_info = 5,
 	IPC_SDAQ_timediff = 6,
-	IPC_SDAQ_meas = 7
+	IPC_SDAQ_meas = 7,
+	IPC_CAN_BUS_info = 8
 };
 
 enum Morfeas_IPC_handler_type{
@@ -75,6 +76,11 @@ typedef struct SDAQ_measure_msg_struct{
 	sdaq_meas SDAQ_channel_meas;
 }SDAQ_meas_msg;
 
+typedef struct CAN_BUS_info_msg_struct{
+	char connected_to_BUS[10];
+	float BUS_utilization;
+}CAN_BUS_info_msg;
+
 typedef union{
 	Handler_reg_op_msg Handler_reg;
 	SDAQ_reg_update_msg SDAQ_reg_update;
@@ -82,6 +88,7 @@ typedef union{
 	SDAQ_info_msg SDAQ_info;
 	SDAQ_timediff_msg SDAQ_timediff;
 	SDAQ_meas_msg SDAQ_meas;
+	CAN_BUS_info_msg BUS_info;
 }IPC_msg;
 #pragma pack(pop)//Disable packing
 

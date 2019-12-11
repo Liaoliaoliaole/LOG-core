@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Morfeas_SDAQ-if stats struct
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
+	char *path_to_FIFO;
 	char *CAN_IF_name;
 	float Bus_util;
 	unsigned char detected_SDAQs;// Amount of online SDAQ.
