@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stddef.h>
 #include <unistd.h>
- 
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -33,7 +33,7 @@ size_t Morfeas_IPC_msg_size[]={
 	sizeof(SDAQ_info_msg),
 	sizeof(SDAQ_timediff_msg),
 	sizeof(SDAQ_meas_msg)
-};	
+};
 
 	//----RX/TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
@@ -44,7 +44,7 @@ int IPC_msg_TX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type)
     struct timeval timeout;
 	int FIFO_fd, select_ret;
 	ssize_t writen_bytes = 0;
-	
+
 	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
 	{
 		mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
@@ -80,10 +80,10 @@ int IPC_msg_RX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 	fd_set readCheck;
     fd_set errCheck;
     struct timeval timeout;
-	unsigned char type; 
+	unsigned char type;
 	int FIFO_fd, select_ret;
 	ssize_t read_bytes = -1;
-	
+
 	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
 	{
 		mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
@@ -114,5 +114,5 @@ int IPC_msg_RX(char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 	if(!read_bytes)
 		return type;
 	else
-		return 0;	
+		return 0;
 }

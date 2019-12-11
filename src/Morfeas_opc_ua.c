@@ -44,7 +44,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Morfeas_IPC.h"//<-#include "Types.h"
 
 //OPC_UA local Functions
-void RPi_stat_Define(UA_Server *server);
+void Morfeas_opc_ua_nodeset_Define(UA_Server *server);
 void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type);
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt);
@@ -89,6 +89,11 @@ int main(int argc, char *argv[])
 	tim_sa.sa_handler = &timer_handler;
 	sigaction (SIGALRM, &tim_sa, NULL);
 
+	//Init OPC_UA Server
+	server = UA_Server_new();
+    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
+	Morfeas_opc_ua_nodeset_Define(server);
+
 	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //allocate memory for the threads tags
 	//Start threads for the FIFO readers
 	for(i=0; i<amount_of_threads; i++)
@@ -101,11 +106,6 @@ int main(int argc, char *argv[])
 	timer.it_interval.tv_usec = 500000;
 	// Start a timer
 	setitimer (ITIMER_REAL, &timer, NULL);
-
-	//Init OPC_UA Server
-	server = UA_Server_new();
-    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
-	RPi_stat_Define(server);
 
 	//Start OPC_UA Server
     retval = UA_Server_run(server, &running);
@@ -133,7 +133,7 @@ void* FIFO_Reader(void *varg_pt)
 				case IPC_SDAQ_meas:
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
-						printf("\tAnchor:%s\n",IPC_msg_dec.SDAQ_meas.anchor_str);
+						printf("\tAnchor:%10u.CH%02u\n",IPC_msg_dec.SDAQ_meas.serial_number, IPC_msg_dec.SDAQ_meas.channel);
 						printf("\tValue=%9.3f %s\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas,
 												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
 						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
@@ -192,69 +192,61 @@ void timer_handler (int sign)
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
-void RPi_stat_Define(UA_Server *server_ptr)
+void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
 {
-    //Root of the object
-	UA_NodeId Health_status; /* get the nodeid assigned by the server */
     UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Health_status");
-    UA_Server_addObjectNode(server_ptr, UA_NODEID_NULL,
+    UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+    //Root of the object "ISO_Channels"
+	UA_NodeId ISO_Channels;
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ISO Channels");
+    UA_Server_addObjectNode(server_ptr,
+    						UA_NODEID_STRING(1, "ISO_Channels"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                            UA_QUALIFIEDNAME(1, "Health_status"), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+                            UA_QUALIFIEDNAME(1, "ISO_Channels"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+                            oAttr, NULL, &ISO_Channels);
+
+    //Root of the object "Morfeas_Handlers"
+	UA_NodeId Morfeas_Handlers;
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Morfeas Handlers");
+    UA_Server_addObjectNode(server_ptr,
+    						UA_NODEID_STRING(1, "Morfeas_Handlers"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                            UA_QUALIFIEDNAME(1, "Morfeas_Handlers"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+                            oAttr, NULL, &Morfeas_Handlers);
+
+    //Root of the object "Rpi Health Status"
+	UA_NodeId Health_status;
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "RPi Health status");
+    UA_Server_addObjectNode(server_ptr,
+    						UA_NODEID_STRING(1, "Health_status"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                            UA_QUALIFIEDNAME(1, "Health_status"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
                             oAttr, NULL, &Health_status);
-	//add UpTime property
-    UA_VariableAttributes UpT_Attr = UA_VariableAttributes_default;
-	UA_Int64 Up_time=0;
-    UA_Variant_setScalar(&UpT_Attr.value, &Up_time, &UA_TYPES[UA_TYPES_UINT32]);
-    UpT_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Up_time (sec)");
-	UpT_Attr.dataType = UA_TYPES[UA_TYPES_UINT32].typeId;
-    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "Up_time"), Health_status,
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                              UA_QUALIFIEDNAME(1, "Up_time"),
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), UpT_Attr, NULL, NULL);
-	//add CPU utilization property
-    UA_VariableAttributes CPU_util_Attr = UA_VariableAttributes_default;
-    UA_Float CPU_util = 0;
-    UA_Variant_setScalar(&CPU_util_Attr.value, &CPU_util, &UA_TYPES[UA_TYPES_FLOAT]);
-    CPU_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_Util (%)");
-	CPU_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "CPU_Util"), Health_status,
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                              UA_QUALIFIEDNAME(1, "CPU_Util"),
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_util_Attr, NULL, NULL);
 
-	//add RAM utilization property
-    UA_VariableAttributes RAM_util_Attr = UA_VariableAttributes_default;
-    UA_Float RAM_util = 0;
-    UA_Variant_setScalar(&RAM_util_Attr.value, &RAM_util, &UA_TYPES[UA_TYPES_FLOAT]);
-    RAM_util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "RAM_Util (%)");
-	RAM_util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "RAM_Util"), Health_status,
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                              UA_QUALIFIEDNAME(1, "RAM_Util"),
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), RAM_util_Attr, NULL, NULL);
-	//add Disk utilization property
-    UA_VariableAttributes Disk_Util_Attr = UA_VariableAttributes_default;
-    UA_Float Disk_Util = 0;
-    UA_Variant_setScalar(&Disk_Util_Attr.value, &Disk_Util, &UA_TYPES[UA_TYPES_FLOAT]);
-    Disk_Util_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "Disk_Util (%)");
-	Disk_Util_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "Disk_Util"), Health_status,
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                              UA_QUALIFIEDNAME(1, "Disk_Util"),
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), Disk_Util_Attr, NULL, NULL);
-	//add CPU Temp property
-    UA_VariableAttributes CPU_temp_Attr = UA_VariableAttributes_default;
-    UA_Float CPU_temp = 0;
-    UA_Variant_setScalar(&CPU_temp_Attr.value, &CPU_temp, &UA_TYPES[UA_TYPES_FLOAT]);
-    CPU_temp_Attr.displayName = UA_LOCALIZEDTEXT("en-US", "CPU_temp (°C)");
-	CPU_temp_Attr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
-    UA_Server_addVariableNode(server_ptr, UA_NODEID_STRING(1, "CPU_temp"), Health_status,
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                              UA_QUALIFIEDNAME(1, "CPU_temp"),
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), CPU_temp_Attr, NULL, NULL);
+	const char *health_status_str[][5]={
+		{"Up_time (sec)","CPU_Util (%)","RAM_Util (%)","Disk_Util (%)","CPU_temp (°C)"},
+		{"Up_time","CPU_Util","RAM_Util","Disk_Util","CPU_temp"}
+	};
 
+	//loop that adding CPU_Temp, UpTime and CPU, RAM and Disk utilization properties;
+	for(int i=0; i<5; i++)
+	{
+		vAttr.displayName = UA_LOCALIZEDTEXT("en-US", (char *)health_status_str[0][i]);
+		vAttr.dataType = i==0?UA_TYPES[UA_TYPES_UINT32].typeId:UA_TYPES[UA_TYPES_FLOAT].typeId;
+		UA_Server_addVariableNode(server_ptr,
+								  UA_NODEID_STRING(1, (char *)health_status_str[1][i]),
+								  UA_NODEID_STRING(1, "Health_status"),//Health_status,
+		                          UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+		                          UA_QUALIFIEDNAME(1, (char *)health_status_str[1][i]),
+		                          UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+		                          vAttr, NULL, NULL);
+	}
 }
 
 inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, void *value, int _UA_Type)

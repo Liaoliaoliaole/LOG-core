@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Types.h"
 
 enum Morfeas_IPC_msg_type{
-	IPC_Handler_register = 1, 
-	IPC_Handler_unregister = 2, 
+	IPC_Handler_register = 1,
+	IPC_Handler_unregister = 2,
 	//SDAQ_related IPC messages//
 	IPC_SDAQ_register = 3,
 	IPC_SDAQ_clean_up = 4,
@@ -29,7 +29,7 @@ enum Morfeas_IPC_msg_type{
 
 enum Morfeas_IPC_handler_type{
 	SDAQ,
-	//For future implementation 
+	//For future implementation
 	MDAQ,
 	IOBOX,
 	MTI //Mobile Telemetry Interface
@@ -37,9 +37,9 @@ enum Morfeas_IPC_handler_type{
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
 	//---Bus Handlers related---//
-typedef struct Handler_register_unregister_struct{
+typedef struct Handler_register_struct{
 	unsigned char handler_type;
-	char handling_BUS_name[20];
+	char connected_to_BUS[10];
 	unsigned unreg : 1;
 }Handler_reg_op_msg;
 
@@ -69,9 +69,11 @@ typedef struct SDAQ_timediff_msg_struct{
 
 typedef struct SDAQ_measure_msg_struct{
 	char connected_to_BUS[10];
-	char anchor_str[20];
+	unsigned int serial_number;
+	unsigned char channel;
 	sdaq_meas SDAQ_channel_meas;
 }SDAQ_meas_msg;
+
 #pragma pack(pop)//Disable packing
 
 typedef union{
@@ -83,7 +85,8 @@ typedef union{
 	SDAQ_meas_msg SDAQ_meas;
 }IPC_msg;
 
-extern size_t Morfeas_IPC_msg_size[];	
+extern size_t Morfeas_IPC_msg_size[];
+
 
 	//----RX/TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
