@@ -48,9 +48,12 @@ void* FIFO_Reader(void *varg_pt);
 //Timer Handler Function
 void timer_handler(int sign);
 //OPC_UA local Functions
-void Morfeas_opc_ua_nodeset_Define(UA_Server *server);
-void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type);
+void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
+void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, int _UA_Type);
+void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, const void * value, int _UA_Type);
+	//----Morfeas BUS Handlers----//
 //SDAQ's Handler related
+void SDAQ_handler_reg(UA_Server *server, char *connected_to_BUS);
 void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr);
 
 //Global variables
@@ -87,7 +90,7 @@ int main(int argc, char *argv[])
 	//Init OPC_UA Server
 	server = UA_Server_new();
     UA_ServerConfig_setDefault(UA_Server_getConfig(server));
-	Morfeas_opc_ua_nodeset_Define(server);
+	Morfeas_opc_ua_root_nodeset_Define(server);
 
 	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //allocate memory for the threads tags
 	//Start threads for the FIFO readers
@@ -115,8 +118,6 @@ int main(int argc, char *argv[])
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt)
 {
-	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-	char tmp_buff[50];
 	//Morfeas IPC msg decoder
 	IPC_msg IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
@@ -129,19 +130,18 @@ void* FIFO_Reader(void *varg_pt)
 			{
 				case IPC_Handler_register:
 					printf("Enter:IPC_Handler_register ");
-					sprintf(tmp_buff, "%s (%s)", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
-												 IPC_msg_dec.Handler_reg.connected_to_BUS);
-					printf("%s\n",tmp_buff);
-					oAttr.displayName = UA_LOCALIZEDTEXT("en-US", tmp_buff);
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						UA_Server_addObjectNode(server,
-												UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS),
-												UA_NODEID_STRING(1, "Morfeas_Handlers"),
-												UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-												UA_QUALIFIEDNAME(1, IPC_msg_dec.Handler_reg.connected_to_BUS),
-												UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
-												oAttr, NULL, NULL);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					switch(IPC_msg_dec.Handler_reg.handler_type)
+					{
+						case SDAQ:
+							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);
+							break;
+						case MDAQ:
+							break;
+						case IOBOX:
+							break;
+						case MTI:
+							break;
+					}
 					break;
 				case IPC_Handler_unregister:
 					printf("Enter:IPC_Handler_unregister\n");
@@ -151,25 +151,13 @@ void* FIFO_Reader(void *varg_pt)
 					break;
 				case IPC_SDAQ_register_or_update:
 					printf("Enter:IPC_SDAQ_register_or_update\n");
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);
 					break;
 				case IPC_SDAQ_clean_up:
 					printf("Enter:IPC_SDAQ_clean_up\n");
-					/*
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS), 1);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					*/
 					break;
 				case IPC_SDAQ_info:
 					printf("Enter:IPC_SDAQ_info\n");
-					/*
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS), 1);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					*/
 					break;
 				case IPC_SDAQ_meas:
 				/*
@@ -188,11 +176,102 @@ void* FIFO_Reader(void *varg_pt)
 	return NULL;
 }
 
-void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr)
+void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 {
-	
+	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+	UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+	char tmp_buff[30];
+	sprintf(tmp_buff, "%s (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
+	printf("%s\n",tmp_buff);
+	pthread_mutex_lock(&OPC_UA_NODESET_access);
+		oAttr.displayName = UA_LOCALIZEDTEXT("en-US", tmp_buff);
+		UA_Server_addObjectNode(server_ptr,
+								UA_NODEID_STRING(1, connected_to_BUS),
+								UA_NODEID_STRING(1, "Morfeas_Handlers"),
+								UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+								UA_QUALIFIEDNAME(1, connected_to_BUS),
+								UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+								oAttr, NULL, NULL);
+		oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Devices");
+		sprintf(tmp_buff, "Dev_on_%s", connected_to_BUS);
+		UA_Server_addObjectNode(server_ptr,
+								UA_NODEID_STRING(1, tmp_buff),
+								UA_NODEID_STRING(1, connected_to_BUS),
+								UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+								UA_QUALIFIEDNAME(1, tmp_buff),
+								UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+								oAttr, NULL, NULL);
+		vAttr.displayName = UA_LOCALIZEDTEXT("en-US", "BUS Utilization (%)");
+		vAttr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
+		UA_Server_addVariableNode(server_ptr,
+								  UA_NODEID_STRING(1,"BUS_util"),
+								  UA_NODEID_STRING(1, connected_to_BUS),
+		                          UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+		                          UA_QUALIFIEDNAME(1, "BUS_util"),
+		                          UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+		                          vAttr, NULL, NULL);
+	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
+void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr)
+{
+	char Serial_number_str[15], tmp_str[50];
+	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+	sprintf(Serial_number_str,"%d",ptr->SDAQ_status.dev_sn);
+	sprintf(tmp_str,"Dev_on_%s",ptr->connected_to_BUS);
+	pthread_mutex_lock(&OPC_UA_NODESET_access);
+		printf("Enter\n");
+		//if(UA_Server_getNodeContext(server_ptr, UA_NODEID_STRING(1, Serial_number_str), NULL))
+		{
+			printf("Device %s with S/N:%s is not registered!!!\n", tmp_str, Serial_number_str);
+			oAttr.displayName = UA_LOCALIZEDTEXT("en-US", (char *)dev_type_str[ptr->SDAQ_status.dev_type]);
+			UA_Server_addObjectNode(server_ptr,
+									UA_NODEID_STRING(1, Serial_number_str),
+									UA_NODEID_STRING(1, tmp_str),
+									UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+									UA_QUALIFIEDNAME(1, Serial_number_str),
+									UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+									oAttr, NULL, NULL);
+			sprintf(tmp_str,"%s.%s.S/N",ptr->connected_to_BUS,Serial_number_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "S/N", UA_TYPES_UINT32);
+			sprintf(tmp_str,"%s.%s.Address",ptr->connected_to_BUS,Serial_number_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "Address", UA_TYPES_BYTE);
+			sprintf(tmp_str,"%s.%s.State",ptr->connected_to_BUS,Serial_number_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "State", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.%s.inSync",ptr->connected_to_BUS,Serial_number_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "inSync", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.%s.Error",ptr->connected_to_BUS,Serial_number_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "Error", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.%s.Mode",ptr->connected_to_BUS,Serial_number_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Serial_number_str, tmp_str, "Mode", UA_TYPES_STRING);			
+		}
+		sprintf(tmp_str,"%s.%s.S/N",ptr->connected_to_BUS,Serial_number_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_status.dev_sn), UA_TYPES_UINT32);
+		sprintf(tmp_str,"%s.%s.Address",ptr->connected_to_BUS,Serial_number_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->address), UA_TYPES_BYTE);
+		sprintf(tmp_str,"%s.%s.State",ptr->connected_to_BUS,Serial_number_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, State), UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.%s.inSync",ptr->connected_to_BUS,Serial_number_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, In_sync), UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.%s.Error",ptr->connected_to_BUS,Serial_number_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Error), UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.%s.Mode",ptr->connected_to_BUS,Serial_number_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
+	pthread_mutex_unlock(&OPC_UA_NODESET_access);
+}
+void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, int _UA_Type)
+{
+	UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+	vAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
+			vAttr.dataType = UA_TYPES[_UA_Type].typeId;
+			UA_Server_addVariableNode(server_ptr,
+									  UA_NODEID_STRING(1, Node_id),
+									  UA_NODEID_STRING(1, Parent_id),
+									  UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+									  UA_QUALIFIEDNAME(1, Node_id),
+									  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+									  vAttr, NULL, NULL);
+}
 void timer_handler (int sign)
 {
 	FILE *CPU_temp_fp;
@@ -240,10 +319,9 @@ void timer_handler (int sign)
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
-void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
+void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 {
     UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-    UA_VariableAttributes vAttr = UA_VariableAttributes_default;
     //Root of the object "ISO_Channels"
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ISO Channels");
     UA_Server_addObjectNode(server_ptr,
@@ -274,30 +352,26 @@ void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
                             oAttr, NULL, NULL);
 
-	const char *health_status_str[][5]={
+	char *health_status_str[][5]={
 		{"Up_time (sec)","CPU_Util (%)","RAM_Util (%)","Disk_Util (%)","CPU_temp (°C)"},
 		{"Up_time","CPU_Util","RAM_Util","Disk_Util","CPU_temp"}
 	};
-
 	//loop that adding CPU_Temp, UpTime and CPU, RAM and Disk utilization properties;
 	for(int i=0; i<5; i++)
-	{
-		vAttr.displayName = UA_LOCALIZEDTEXT("en-US", (char *)health_status_str[0][i]);
-		vAttr.dataType = i==0?UA_TYPES[UA_TYPES_UINT32].typeId:UA_TYPES[UA_TYPES_FLOAT].typeId;
-		UA_Server_addVariableNode(server_ptr,
-								  UA_NODEID_STRING(1, (char *)health_status_str[1][i]),
-								  UA_NODEID_STRING(1, "Health_status"),
-		                          UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-		                          UA_QUALIFIEDNAME(1, (char *)health_status_str[1][i]),
-		                          UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-		                          vAttr, NULL, NULL);
-	}
+		Morfeas_opc_ua_add_variable_node(server_ptr, "Health_status", health_status_str[1][i], health_status_str[0][i], !i?UA_TYPES_UINT32:UA_TYPES_FLOAT);
 }
 
-inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, void *value, int _UA_Type)
+inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, const void *value, int _UA_Type)
 {
 	UA_Variant temp_value;
-    UA_Variant_setScalar(&temp_value, value, &UA_TYPES[_UA_Type]);
-    UA_Server_writeValue(server_ptr, Node_to_update, temp_value);
+	if(_UA_Type!=UA_TYPES_STRING)
+		UA_Variant_setScalar(&temp_value, (void *) value, &UA_TYPES[_UA_Type]);
+		
+	else
+	{
+		UA_String str = UA_STRING((char*) value);
+		UA_Variant_setScalar(&temp_value, &str, &UA_TYPES[UA_TYPES_STRING]);
+    }
+	UA_Server_writeValue(server_ptr, Node_to_update, temp_value);
 }
 

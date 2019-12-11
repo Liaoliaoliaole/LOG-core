@@ -63,9 +63,9 @@ int IPC_msg_TX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char typ
 	timeout.tv_usec = 0;
 	select_ret = select(FIFO_fd+1, NULL, &writeCheck, &errCheck, &timeout);
 	if (select_ret < 0)
-		perror("Select failed!!!");
+		perror("TX -> Select failed ");
 	else if (FD_ISSET(FIFO_fd, &errCheck))
-		perror("FD error!!!");
+		perror("TX -> FD error ");
 	else if (FD_ISSET(FIFO_fd, &writeCheck))
 	{
 		write(FIFO_fd, &type, sizeof(unsigned char));
@@ -112,16 +112,16 @@ int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 	}
 	FD_ZERO(&readCheck);
     FD_ZERO(&errCheck);
-	FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK
+	FIFO_fd = open(path_to_FIFO, O_RDWR | O_RSYNC );//O_NONBLOCK
 	FD_SET(FIFO_fd, &readCheck);
 	FD_SET(FIFO_fd, &errCheck);
 	timeout.tv_sec = 1;
 	timeout.tv_usec = 0;
 	select_ret = select(FIFO_fd+1, &readCheck, NULL, &errCheck, &timeout);
 	if (select_ret < 0)
-		perror("Select failed!!!");
+		perror("RX -> Select failed ");
 	else if (FD_ISSET(FIFO_fd, &errCheck))
-		perror("FD error!!!");
+		perror("RX -> FD error ");
 	else if (FD_ISSET(FIFO_fd, &readCheck))
 	{
 		read(FIFO_fd, &type, sizeof(unsigned char));

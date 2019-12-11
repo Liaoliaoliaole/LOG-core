@@ -254,13 +254,14 @@ int main(int argc, char *argv[])
 					break;
 				case Sync_Info:
 					update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
+					
 					break;
 				case Device_status:
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
 						if(!(status_dec->status & ((1<<State)|(1<<Mode)|(1<<Error))))//SDAQ of sdaq_id_dec->device_addr not measure and normal mode
 						{
-							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
+							//Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
 							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);

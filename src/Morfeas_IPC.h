@@ -48,6 +48,7 @@ typedef struct SDAQ_register_msg_struct{
 	char connected_to_BUS[10];
 	unsigned char address;
 	sdaq_status SDAQ_status;
+	unsigned char reg;
 }SDAQ_reg_update_msg;
 
 typedef struct SDAQ_clean_registeration_msg_struct{
