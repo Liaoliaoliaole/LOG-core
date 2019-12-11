@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 	setitimer(ITIMER_REAL, &timer, NULL);
 
 	//Register handler to Morfeas_OPC-UA Server
-	Handler_reg_op(path_to_FIFO, SDAQ, stats.CAN_IF_name, 0);
+	IPC_Handler_reg_op(path_to_FIFO, SDAQ, stats.CAN_IF_name, 0);
 		/*Actions on the bus*/
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
 	//Stop any measuring activity on the bus
@@ -242,17 +242,14 @@ int main(int argc, char *argv[])
 			switch(sdaq_id_dec->payload_type)
 			{
 				case Measurement_value:
-					if(path_to_FIFO)
+					if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
 					{
-						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
-						{
-							//Send measurement through IPC
-							sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",stats.CAN_IF_name);
-							IPC_msg.SDAQ_meas.serial_number = ret_SDAQ_status->dev_sn;
-							IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
-							memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
-							IPC_msg_TX(path_to_FIFO, &IPC_msg, IPC_SDAQ_meas);
-						}
+						//Send measurement through IPC
+						sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",stats.CAN_IF_name);
+						IPC_msg.SDAQ_meas.serial_number = ret_SDAQ_status->dev_sn;
+						IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
+						memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
+						IPC_msg_TX(path_to_FIFO, &IPC_msg, IPC_SDAQ_meas);
 					}
 					break;
 				case Sync_Info:
@@ -261,15 +258,15 @@ int main(int argc, char *argv[])
 				case Device_status:
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
-						if(!(status_dec->status & (1<<State)))//SDAQ of sdaq_id_dec->device_addr not measure
+						if(!(status_dec->status & ((1<<State)|(1<<Mode)|(1<<Error))))//SDAQ of sdaq_id_dec->device_addr not measure and normal mode
 						{
 							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
-							if(SDAQ_data->info_collection_status<3)//set QueryDeviceInfo on entries without filled info
+							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
 							}
-							else if(SDAQ_data->info_collection_status == 3)//&& !Amount_of_info_incomplete_SDAQs
+							else if(SDAQ_data->info_collection_status == 3)//&& !Amount_of_info_incomplete_SDAQs)
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 								logstat_json(logstat_path,&stats);
@@ -278,10 +275,21 @@ int main(int argc, char *argv[])
 					}
 					else
 						printf("\n\t\tMaximum amount of addresses is reached\n");
+					IPC_SDAQ_reg_update(path_to_FIFO, stats.CAN_IF_name, sdaq_id_dec->device_addr, status_dec);
 					led_stat(&stats);
 					break;
 				case Device_info:
-					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
+					if(!update_info(sdaq_id_dec->device_addr, info_dec, &stats))
+					{
+						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
+						{
+							//Send info through IPC
+							sprintf(IPC_msg.SDAQ_info.connected_to_BUS,"%s",stats.CAN_IF_name);
+							IPC_msg.SDAQ_info.SDAQ_serial_number = ret_SDAQ_status->dev_sn;
+							memcpy(&(IPC_msg.SDAQ_info.SDAQ_info), info_dec, sizeof(sdaq_info));
+							IPC_msg_TX(path_to_FIFO, &IPC_msg, IPC_SDAQ_info);
+						}
+					}
 					break;
 				case Calibration_Date:
 					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
@@ -336,7 +344,7 @@ int main(int argc, char *argv[])
 	Stop(CAN_socket_num,Broadcast);
 	close(CAN_socket_num);//Close CAN_socket
 	//Remove Registeration handler to Morfeas_OPC_UA Server
-	Handler_reg_op(path_to_FIFO, SDAQ, stats.CAN_IF_name, 1);
+	IPC_Handler_reg_op(path_to_FIFO, SDAQ, stats.CAN_IF_name, 1);
 	return EXIT_SUCCESS;
 }
 

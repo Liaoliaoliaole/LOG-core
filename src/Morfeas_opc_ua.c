@@ -43,13 +43,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "Morfeas_IPC.h"//<-#include "Types.h"
 
-//OPC_UA local Functions
-void Morfeas_opc_ua_nodeset_Define(UA_Server *server);
-void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type);
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt);
 //Timer Handler Function
 void timer_handler(int sign);
+//OPC_UA local Functions
+void Morfeas_opc_ua_nodeset_Define(UA_Server *server);
+void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, void * value, int _UA_Type);
+//SDAQ's Handler related
+void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr);
 
 //Global variables
 static volatile UA_Boolean running = true;
@@ -114,6 +116,7 @@ int main(int argc, char *argv[])
 void* FIFO_Reader(void *varg_pt)
 {
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+	char tmp_buff[50];
 	//Morfeas IPC msg decoder
 	IPC_msg IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
@@ -125,21 +128,48 @@ void* FIFO_Reader(void *varg_pt)
 			switch(type)
 			{
 				case IPC_Handler_register:
+					printf("Enter:IPC_Handler_register ");
+					sprintf(tmp_buff, "%s (%s)", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
+												 IPC_msg_dec.Handler_reg.connected_to_BUS);
+					printf("%s\n",tmp_buff);
+					oAttr.displayName = UA_LOCALIZEDTEXT("en-US", tmp_buff);
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
-					    	oAttr.displayName = UA_LOCALIZEDTEXT("en-US", IPC_msg_dec.SDAQ_meas.connected_to_BUS);
-   							UA_Server_addObjectNode(server,
-													UA_NODEID_STRING(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS),
-												    UA_NODEID_STRING(1, "Morfeas_Handlers"),
-												    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-												    UA_QUALIFIEDNAME(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS),
-												    UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
-												    oAttr, NULL, NULL);
+						UA_Server_addObjectNode(server,
+												UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS),
+												UA_NODEID_STRING(1, "Morfeas_Handlers"),
+												UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+												UA_QUALIFIEDNAME(1, IPC_msg_dec.Handler_reg.connected_to_BUS),
+												UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+												oAttr, NULL, NULL);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_Handler_unregister:
+					printf("Enter:IPC_Handler_unregister\n");
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					break;
+				case IPC_SDAQ_register_or_update:
+					printf("Enter:IPC_SDAQ_register_or_update\n");
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					break;
+				case IPC_SDAQ_clean_up:
+					printf("Enter:IPC_SDAQ_clean_up\n");
+					/*
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS), 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					*/
+					break;
+				case IPC_SDAQ_info:
+					printf("Enter:IPC_SDAQ_info\n");
+					/*
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS), 1);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					*/
 					break;
 				case IPC_SDAQ_meas:
 				/*
@@ -156,6 +186,11 @@ void* FIFO_Reader(void *varg_pt)
 		}
     }
 	return NULL;
+}
+
+void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr)
+{
+	
 }
 
 void timer_handler (int sign)
