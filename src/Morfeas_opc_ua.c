@@ -216,12 +216,13 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr)
 {
 	char Serial_number_str[15], tmp_str[50];
+	UA_Variant out;
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 	sprintf(Serial_number_str,"%d",ptr->SDAQ_status.dev_sn);
 	sprintf(tmp_str,"Dev_on_%s",ptr->connected_to_BUS);
+	UA_Variant_init(&out);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		printf("Enter\n");
-		//if(UA_Server_getNodeContext(server_ptr, UA_NODEID_STRING(1, Serial_number_str), NULL))
+		if(UA_Server_readValue(server_ptr, UA_NODEID_STRING(1, Serial_number_str), &out))
 		{
 			printf("Device %s with S/N:%s is not registered!!!\n", tmp_str, Serial_number_str);
 			oAttr.displayName = UA_LOCALIZEDTEXT("en-US", (char *)dev_type_str[ptr->SDAQ_status.dev_type]);
