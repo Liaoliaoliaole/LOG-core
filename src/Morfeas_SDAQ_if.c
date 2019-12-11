@@ -228,8 +228,10 @@ int main(int argc, char *argv[])
 	//start timer
 	setitimer(ITIMER_REAL, &timer, NULL);
 
-	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
+	//Register handler to Morfeas_OPC-UA Server
+	Handler_reg_op(path_to_FIFO, SDAQ, stats.CAN_IF_name, 0);
 		/*Actions on the bus*/
+	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num, Broadcast);
 	while(flags.run)//FSM of Morfeas_SDAQ_if
@@ -245,7 +247,7 @@ int main(int argc, char *argv[])
 						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
 						{
 							//Send measurement through IPC
-							sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",ifr.ifr_name);
+							sprintf(IPC_msg.SDAQ_meas.connected_to_BUS,"%s",stats.CAN_IF_name);
 							IPC_msg.SDAQ_meas.serial_number = ret_SDAQ_status->dev_sn;
 							IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
 							memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
@@ -333,6 +335,8 @@ int main(int argc, char *argv[])
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num,Broadcast);
 	close(CAN_socket_num);//Close CAN_socket
+	//Remove Registeration handler to Morfeas_OPC_UA Server
+	Handler_reg_op(path_to_FIFO, SDAQ, stats.CAN_IF_name, 1);
 	return EXIT_SUCCESS;
 }
 

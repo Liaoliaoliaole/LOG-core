@@ -38,9 +38,8 @@ enum Morfeas_IPC_handler_type{
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
 	//---Bus Handlers related---//
 typedef struct Handler_register_struct{
-	unsigned char handler_type;
 	char connected_to_BUS[10];
-	unsigned unreg : 1;
+	unsigned char handler_type;
 }Handler_reg_op_msg;
 
 	//------SDAQ related------//
@@ -74,8 +73,6 @@ typedef struct SDAQ_measure_msg_struct{
 	sdaq_meas SDAQ_channel_meas;
 }SDAQ_meas_msg;
 
-#pragma pack(pop)//Disable packing
-
 typedef union{
 	Handler_reg_op_msg handler_reg;
 	SDAQ_register_msg SDAQ_reg;
@@ -84,12 +81,16 @@ typedef union{
 	SDAQ_timediff_msg SDAQ_timediff;
 	SDAQ_meas_msg SDAQ_meas;
 }IPC_msg;
+#pragma pack(pop)//Disable packing
 
 extern size_t Morfeas_IPC_msg_size[];
 
 
-	//----RX/TX Functions----//
+	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
 int IPC_msg_TX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type);
+//Function for construction of message for registration of a Handler
+int Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char connected_to_BUS[10], unsigned char unreg);
+	//----RX Functions----//
 //function for RX, return the type of the received message or 0 in failure
 int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr);

@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt)
 {
+	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 	//Morfeas IPC msg decoder
 	IPC_msg IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
@@ -123,7 +124,25 @@ void* FIFO_Reader(void *varg_pt)
 		{
 			switch(type)
 			{
+				case IPC_Handler_register:
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+					    	oAttr.displayName = UA_LOCALIZEDTEXT("en-US", IPC_msg_dec.SDAQ_meas.connected_to_BUS);
+   							UA_Server_addObjectNode(server,
+													UA_NODEID_STRING(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS),
+												    UA_NODEID_STRING(1, "Morfeas_Handlers"),
+												    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+												    UA_QUALIFIEDNAME(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS),
+												    UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+												    oAttr, NULL, NULL);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					break;
+				case IPC_Handler_unregister:
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.SDAQ_meas.connected_to_BUS), 1);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					break;
 				case IPC_SDAQ_meas:
+				/*
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
 						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.serial_number, IPC_msg_dec.SDAQ_meas.channel);
@@ -131,6 +150,7 @@ void* FIFO_Reader(void *varg_pt)
 												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
 						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+				*/
 					break;
 			}
 		}
@@ -190,7 +210,6 @@ void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
     UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
     UA_VariableAttributes vAttr = UA_VariableAttributes_default;
     //Root of the object "ISO_Channels"
-	UA_NodeId ISO_Channels;
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ISO Channels");
     UA_Server_addObjectNode(server_ptr,
     						UA_NODEID_STRING(1, "ISO_Channels"),
@@ -198,10 +217,9 @@ void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                             UA_QUALIFIEDNAME(1, "ISO_Channels"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
-                            oAttr, NULL, &ISO_Channels);
+                            oAttr, NULL, NULL);
 
     //Root of the object "Morfeas_Handlers"
-	UA_NodeId Morfeas_Handlers;
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Morfeas Handlers");
     UA_Server_addObjectNode(server_ptr,
     						UA_NODEID_STRING(1, "Morfeas_Handlers"),
@@ -209,10 +227,9 @@ void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                             UA_QUALIFIEDNAME(1, "Morfeas_Handlers"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
-                            oAttr, NULL, &Morfeas_Handlers);
+                            oAttr, NULL, NULL);
 
     //Root of the object "Rpi Health Status"
-	UA_NodeId Health_status;
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "RPi Health status");
     UA_Server_addObjectNode(server_ptr,
     						UA_NODEID_STRING(1, "Health_status"),
@@ -220,7 +237,7 @@ void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                             UA_QUALIFIEDNAME(1, "Health_status"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
-                            oAttr, NULL, &Health_status);
+                            oAttr, NULL, NULL);
 
 	const char *health_status_str[][5]={
 		{"Up_time (sec)","CPU_Util (%)","RAM_Util (%)","Disk_Util (%)","CPU_temp (°C)"},
@@ -234,7 +251,7 @@ void Morfeas_opc_ua_nodeset_Define(UA_Server *server_ptr)
 		vAttr.dataType = i==0?UA_TYPES[UA_TYPES_UINT32].typeId:UA_TYPES[UA_TYPES_FLOAT].typeId;
 		UA_Server_addVariableNode(server_ptr,
 								  UA_NODEID_STRING(1, (char *)health_status_str[1][i]),
-								  UA_NODEID_STRING(1, "Health_status"),//Health_status,
+								  UA_NODEID_STRING(1, "Health_status"),
 		                          UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 		                          UA_QUALIFIEDNAME(1, (char *)health_status_str[1][i]),
 		                          UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),

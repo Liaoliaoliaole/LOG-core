@@ -74,6 +74,15 @@ int IPC_msg_TX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char typ
 	close(FIFO_fd);
 	return writen_bytes;
 }
+//Function for construction of message for registration of a Handler
+int Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg)
+{
+	IPC_msg IPC_reg_msg;
+	IPC_reg_msg.handler_reg.handler_type = handler_type;
+	memccpy(&(IPC_reg_msg.handler_reg.connected_to_BUS), connected_to_BUS, '\0', 10);
+	IPC_reg_msg.handler_reg.connected_to_BUS[9] = '\0';
+	return IPC_msg_TX(path_to_FIFO, &IPC_reg_msg, unreg?IPC_Handler_unregister:IPC_Handler_register);
+}
 //function for RX, return the type of the received message or 0 in failure
 int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 {
