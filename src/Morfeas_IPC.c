@@ -62,11 +62,7 @@ size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr, unsigned char type)//co
 	else if (FD_ISSET(FIFO_fd, &errCheck))
 		perror("TX -> FD error ");
 	else if (FD_ISSET(FIFO_fd, &writeCheck))
-	{
-		//write(FIFO_fd, &type, sizeof(unsigned char));
-		//writen_bytes = Morfeas_IPC_msg_size[type-1];
 		writen_bytes = write(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
-	}
 	return writen_bytes;
 	/*
 	close(FIFO_fd);
