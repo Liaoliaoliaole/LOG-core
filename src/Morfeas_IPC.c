@@ -42,49 +42,82 @@ char *Morfeas_IPC_handler_type_name[]={
 
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
-size_t IPC_msg_TX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr, unsigned char type)
+size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr, unsigned char type)//const char *path_to_FIFO,
 {
 	fd_set writeCheck;
     fd_set errCheck;
     struct timeval timeout;
-	int FIFO_fd, select_ret;
+	int select_ret;
 	ssize_t writen_bytes = 0;
 
 	FD_ZERO(&writeCheck);
     FD_ZERO(&errCheck);
+	FD_SET(FIFO_fd, &writeCheck);
+	FD_SET(FIFO_fd, &errCheck);
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+	select_ret = select(FIFO_fd+1, NULL, &writeCheck, &errCheck, &timeout);
+	if (select_ret < 0)
+		perror("TX -> Select failed ");
+	else if (FD_ISSET(FIFO_fd, &errCheck))
+		perror("TX -> FD error ");
+	else if (FD_ISSET(FIFO_fd, &writeCheck))
+	{
+		//write(FIFO_fd, &type, sizeof(unsigned char));
+		//writen_bytes = Morfeas_IPC_msg_size[type-1];
+		writen_bytes = write(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
+	}
+	return writen_bytes;
+	/*
+	close(FIFO_fd);
 	if((FIFO_fd = open(path_to_FIFO, O_WRONLY))>0)// O_RDWR | O_NONBLOCK
 	{
-		FD_SET(FIFO_fd, &writeCheck);
-		FD_SET(FIFO_fd, &errCheck);
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		select_ret = select(FIFO_fd+1, NULL, &writeCheck, &errCheck, &timeout);
-		if (select_ret < 0)
-			perror("TX -> Select failed ");
-		else if (FD_ISSET(FIFO_fd, &errCheck))
-			perror("TX -> FD error ");
-		else if (FD_ISSET(FIFO_fd, &writeCheck))
-		{
-			write(FIFO_fd, &type, sizeof(unsigned char));
-			writen_bytes = Morfeas_IPC_msg_size[type-1];
-			writen_bytes = write(FIFO_fd, IPC_msg_ptr, writen_bytes);
-		}
-		close(FIFO_fd);
-		return writen_bytes;
 	}
-		return 0;
+	return 0;
+	*/
 }
 //Function for construction of message for registration of a Handler
-size_t IPC_Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg)
+size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg)//const char *path_to_FIFO,
 {
 	IPC_message IPC_reg_msg;
+	//Construct and send Handler registration msg
+	IPC_reg_msg.Handler_reg.IPC_msg_type = unreg ? IPC_Handler_unregister : IPC_Handler_register;
 	IPC_reg_msg.Handler_reg.handler_type = handler_type;
 	memccpy(&(IPC_reg_msg.Handler_reg.connected_to_BUS), connected_to_BUS, '\0', 10);
 	IPC_reg_msg.Handler_reg.connected_to_BUS[9] = '\0';
-	return IPC_msg_TX(path_to_FIFO, &IPC_reg_msg, unreg?IPC_Handler_unregister:IPC_Handler_register);
+	return IPC_msg_TX(FIFO_fd, &IPC_reg_msg, unreg?IPC_Handler_unregister:IPC_Handler_register);
 }
 	//----RX Function----//
 //function for RX, return the type of the received message or 0 in failure
+unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
+{
+	fd_set readCheck;
+    fd_set errCheck;
+    struct timeval timeout;
+	unsigned char type;
+	int select_ret;
+	ssize_t read_bytes = -1;
+	FD_ZERO(&readCheck);
+    FD_ZERO(&errCheck);
+	FD_SET(FIFO_fd, &readCheck);
+	FD_SET(FIFO_fd, &errCheck);
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+	select_ret = select(FIFO_fd+1, &readCheck, NULL, &errCheck, &timeout);
+	if (select_ret < 0)
+		perror("RX -> Select failed ");
+	else if (FD_ISSET(FIFO_fd, &errCheck))
+		perror("RX -> FD error ");
+	else if (FD_ISSET(FIFO_fd, &readCheck))
+	{
+		read_bytes = read(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
+		if((type = ((unsigned char *)IPC_msg_ptr)[0]) <= Morfeas_IPC_MAX_type)
+			return type;
+	}
+	if(read_bytes != -1)
+		printf("Wrong amount of Bytes!!!\n");
+	return 0;
+}
 /*
 unsigned char IPC_msg_RX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr)
 {
@@ -122,37 +155,3 @@ unsigned char IPC_msg_RX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr)
 	return 0;
 }
 */
-unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
-{
-	fd_set readCheck;
-    fd_set errCheck;
-    struct timeval timeout;
-	unsigned char type;
-	int select_ret;
-	ssize_t read_bytes = -1;
-	FD_ZERO(&readCheck);
-    FD_ZERO(&errCheck);
-	FD_SET(FIFO_fd, &readCheck);
-	FD_SET(FIFO_fd, &errCheck);
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
-	select_ret = select(FIFO_fd+1, &readCheck, NULL, &errCheck, &timeout);
-	if (select_ret < 0)
-		perror("RX -> Select failed ");
-	else if (FD_ISSET(FIFO_fd, &errCheck))
-		perror("RX -> FD error ");
-	else if (FD_ISSET(FIFO_fd, &readCheck))
-	{
-		read(FIFO_fd, &type, sizeof(unsigned char));
-		if(type <= Morfeas_IPC_MAX_type)
-		{
-			read_bytes = Morfeas_IPC_msg_size[type-1];
-			read_bytes -= read(FIFO_fd, IPC_msg_ptr, read_bytes);
-		}
-	}
-	if(!read_bytes)
-		return type;
-	else if(read_bytes != -1)
-		printf("Wrong amount of Bytes!!!\n");
-	return 0;
-}

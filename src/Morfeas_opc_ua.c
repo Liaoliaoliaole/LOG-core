@@ -125,18 +125,20 @@ void* FIFO_Reader(void *varg_pt)
 	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
 	char Node_ID_str[30];
 	int FIFO_fd;
-	//if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
+	//if(access(path_to_FIFO, F_OK) == -1 )// if not exist
+	//Make the Named Pipe(FIFO)
 	mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-    FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC
+    FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
 	while (running)
 	{
 		//if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
-		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))	
+		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
 		{
 			//printf("\t--- Received IPC msg of type %d ---\n",type);
 			switch(type)
 			{
 				case IPC_SDAQ_meas:
+					/*
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
 						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.SDAQ_serial_number, IPC_msg_dec.SDAQ_meas.channel);
@@ -144,16 +146,17 @@ void* FIFO_Reader(void *varg_pt)
 												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
 						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					*/
 					break;
 				case IPC_CAN_BUS_info:
 					sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
-					pthread_mutex_lock(&OPC_UA_NODESET_access);	
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_register_or_update:
 					//printf("Enter:IPC_SDAQ_register_or_update\n");
-					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);//mutexed inside
+					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);//mutex inside
 					break;
 				case IPC_SDAQ_clean_up:
 					printf("Enter:IPC_SDAQ_clean_up\n");
@@ -166,11 +169,12 @@ void* FIFO_Reader(void *varg_pt)
 					break;
 				case IPC_SDAQ_info:
 					printf("Enter:IPC_SDAQ_info from %s.%d\n",IPC_msg_dec.SDAQ_info.connected_to_BUS,IPC_msg_dec.SDAQ_info.SDAQ_serial_number);
+					//SDAQ_add_info();
 					break;
 				case IPC_SDAQ_timediff:
 					//printf("Enter:IPC_SDAQ_timediff\n");
 					sprintf(Node_ID_str, "%s.%d.TimeDiff", IPC_msg_dec.SDAQ_timediff.connected_to_BUS, IPC_msg_dec.SDAQ_timediff.SDAQ_serial_number);
-					pthread_mutex_lock(&OPC_UA_NODESET_access);					
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
@@ -179,7 +183,7 @@ void* FIFO_Reader(void *varg_pt)
 					switch(IPC_msg_dec.Handler_reg.handler_type)
 					{
 						case SDAQ:
-							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);
+							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);//mutex inside
 							break;
 						case MDAQ:
 							break;

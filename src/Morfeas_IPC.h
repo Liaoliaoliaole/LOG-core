@@ -14,6 +14,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define connected_to_BUS_str_size 10
+
 #include "Types.h"
 
 extern size_t Morfeas_IPC_msg_size[];
@@ -43,13 +45,15 @@ enum Morfeas_IPC_handler_type{
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
 	//---Bus Handlers related---//
 typedef struct Handler_register_struct{
-	char connected_to_BUS[10];
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
 	unsigned char handler_type;
 }Handler_reg_op_msg;
 
 	//------SDAQ related------//
 typedef struct SDAQ_register_msg_struct{
-	char connected_to_BUS[10];
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
 	unsigned char address;
 	sdaq_status SDAQ_status;
 	unsigned char reg;
@@ -57,32 +61,37 @@ typedef struct SDAQ_register_msg_struct{
 }SDAQ_reg_update_msg;
 
 typedef struct SDAQ_clean_registeration_msg_struct{
-	char connected_to_BUS[10];
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
 	unsigned int SDAQ_serial_number;
 	unsigned char t_amount;
 }SDAQ_clear_msg;
 
 typedef struct SDAQ_info_msg_struct{
-	char connected_to_BUS[10];
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
 	unsigned int SDAQ_serial_number;
 	sdaq_info SDAQ_info_data;
 }SDAQ_info_msg;
 
 typedef struct SDAQ_timediff_msg_struct{
-	char connected_to_BUS[10];
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
 	unsigned int SDAQ_serial_number;
 	short Timediff;
 }SDAQ_timediff_msg;
 
 typedef struct SDAQ_measure_msg_struct{
-	char connected_to_BUS[10];
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
 	unsigned int SDAQ_serial_number;
 	unsigned char channel;
 	sdaq_meas SDAQ_channel_meas;
 }SDAQ_meas_msg;
 
 typedef struct CAN_BUS_info_msg_struct{
-	char connected_to_BUS[10];
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
 	float BUS_utilization;
 }CAN_BUS_info_msg;
 
@@ -99,9 +108,9 @@ typedef union{
 
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
-size_t IPC_msg_TX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr, unsigned char type);
+size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr, unsigned char type);
 //Function for construction of message for registration of a Handler
-size_t IPC_Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char connected_to_BUS[10], unsigned char unreg);
+size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char connected_to_BUS[10], unsigned char unreg);
 	//----RX Functions----//
 //function for RX, return the type of the received message or 0 in failure
 //unsigned char IPC_msg_RX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr);
