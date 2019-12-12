@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern size_t Morfeas_IPC_msg_size[];
 extern char *Morfeas_IPC_handler_type_name[];
+
 enum Morfeas_IPC_msg_type{
 	IPC_Handler_register = 1,
 	IPC_Handler_unregister = 2,
@@ -50,17 +51,19 @@ typedef struct SDAQ_register_msg_struct{
 	unsigned char address;
 	sdaq_status SDAQ_status;
 	unsigned char reg;
+	unsigned char t_amount;
 }SDAQ_reg_update_msg;
 
 typedef struct SDAQ_clean_registeration_msg_struct{
 	char connected_to_BUS[10];
 	unsigned int SDAQ_serial_number;
+	unsigned char t_amount;
 }SDAQ_clear_msg;
 
 typedef struct SDAQ_info_msg_struct{
 	char connected_to_BUS[10];
 	unsigned int SDAQ_serial_number;
-	sdaq_info SDAQ_info;
+	sdaq_info SDAQ_info_data;
 }SDAQ_info_msg;
 
 typedef struct SDAQ_timediff_msg_struct{
@@ -89,16 +92,15 @@ typedef union{
 	SDAQ_timediff_msg SDAQ_timediff;
 	SDAQ_meas_msg SDAQ_meas;
 	CAN_BUS_info_msg BUS_info;
-}IPC_msg;
+}IPC_message;
 #pragma pack(pop)//Disable packing
 
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
-int IPC_msg_TX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type);
+size_t IPC_msg_TX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr, unsigned char type);
 //Function for construction of message for registration of a Handler
-int IPC_Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char connected_to_BUS[10], unsigned char unreg);
-//Function for construction of message for registration or update of a SDAQ
-int IPC_SDAQ_reg_update(const char *path_to_FIFO, char connected_to_BUS[10], unsigned char address, sdaq_status *SDAQ_status);
+size_t IPC_Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char connected_to_BUS[10], unsigned char unreg);
 	//----RX Functions----//
 //function for RX, return the type of the received message or 0 in failure
-int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr);
+//unsigned char IPC_msg_RX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr);
+unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr);

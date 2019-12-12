@@ -42,7 +42,7 @@ char *Morfeas_IPC_handler_type_name[]={
 
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
-int IPC_msg_TX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char type)
+size_t IPC_msg_TX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr, unsigned char type)
 {
 	fd_set writeCheck;
     fd_set errCheck;
@@ -50,54 +50,43 @@ int IPC_msg_TX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr, unsigned char typ
 	int FIFO_fd, select_ret;
 	ssize_t writen_bytes = 0;
 
-	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
-	{
-		mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-		return 0;
-	}
 	FD_ZERO(&writeCheck);
     FD_ZERO(&errCheck);
-	FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK
-	FD_SET(FIFO_fd, &writeCheck);
-	FD_SET(FIFO_fd, &errCheck);
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
-	select_ret = select(FIFO_fd+1, NULL, &writeCheck, &errCheck, &timeout);
-	if (select_ret < 0)
-		perror("TX -> Select failed ");
-	else if (FD_ISSET(FIFO_fd, &errCheck))
-		perror("TX -> FD error ");
-	else if (FD_ISSET(FIFO_fd, &writeCheck))
+	if((FIFO_fd = open(path_to_FIFO, O_WRONLY | O_NONBLOCK))>0)// O_RDWR | O_NONBLOCK
 	{
-		write(FIFO_fd, &type, sizeof(unsigned char));
-		writen_bytes = Morfeas_IPC_msg_size[type-1];
-		writen_bytes = write(FIFO_fd, IPC_msg_ptr, writen_bytes);
+		FD_SET(FIFO_fd, &writeCheck);
+		FD_SET(FIFO_fd, &errCheck);
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		select_ret = select(FIFO_fd+1, NULL, &writeCheck, &errCheck, &timeout);
+		if (select_ret < 0)
+			perror("TX -> Select failed ");
+		else if (FD_ISSET(FIFO_fd, &errCheck))
+			perror("TX -> FD error ");
+		else if (FD_ISSET(FIFO_fd, &writeCheck))
+		{
+			write(FIFO_fd, &type, sizeof(unsigned char));
+			writen_bytes = Morfeas_IPC_msg_size[type-1];
+			writen_bytes = write(FIFO_fd, IPC_msg_ptr, writen_bytes);
+		}
+		close(FIFO_fd);
+		return writen_bytes;
 	}
-	close(FIFO_fd);
-	return writen_bytes;
+		return 0;
 }
 //Function for construction of message for registration of a Handler
-int IPC_Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg)
+size_t IPC_Handler_reg_op(const char *path_to_FIFO, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg)
 {
-	IPC_msg IPC_reg_msg;
+	IPC_message IPC_reg_msg;
 	IPC_reg_msg.Handler_reg.handler_type = handler_type;
 	memccpy(&(IPC_reg_msg.Handler_reg.connected_to_BUS), connected_to_BUS, '\0', 10);
 	IPC_reg_msg.Handler_reg.connected_to_BUS[9] = '\0';
 	return IPC_msg_TX(path_to_FIFO, &IPC_reg_msg, unreg?IPC_Handler_unregister:IPC_Handler_register);
 }
-//Function for construction of message for registration or update of a SDAQ
-int IPC_SDAQ_reg_update(const char *path_to_FIFO, char connected_to_BUS[10], unsigned char address, sdaq_status *SDAQ_status)
-{
-	IPC_msg IPC_reg_msg;
-	memccpy(&(IPC_reg_msg.SDAQ_reg_update.connected_to_BUS), connected_to_BUS, '\0', 10);
-	IPC_reg_msg.SDAQ_reg_update.connected_to_BUS[9] = '\0';
-	IPC_reg_msg.SDAQ_reg_update.address = address;
-	memcpy(&(IPC_reg_msg.SDAQ_reg_update.SDAQ_status), SDAQ_status,  sizeof(sdaq_status));
-	return IPC_msg_TX(path_to_FIFO, &IPC_reg_msg, IPC_SDAQ_register_or_update);
-}
 	//----RX Function----//
 //function for RX, return the type of the received message or 0 in failure
-int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
+/*
+unsigned char IPC_msg_RX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr)
 {
 	fd_set readCheck;
     fd_set errCheck;
@@ -105,15 +94,11 @@ int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 	unsigned char type;
 	int FIFO_fd, select_ret;
 	ssize_t read_bytes = -1;
-
 	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
-	{
 		mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-		return 0;
-	}
 	FD_ZERO(&readCheck);
     FD_ZERO(&errCheck);
-	FIFO_fd = open(path_to_FIFO, O_RDWR | O_RSYNC );//O_NONBLOCK
+	FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC
 	FD_SET(FIFO_fd, &readCheck);
 	FD_SET(FIFO_fd, &errCheck);
 	timeout.tv_sec = 1;
@@ -132,6 +117,39 @@ int IPC_msg_RX(const char *path_to_FIFO, IPC_msg *IPC_msg_ptr)
 	close(FIFO_fd);
 	if(!read_bytes)
 		return type;
-	else
-		return 0;
+	else if(read_bytes != -1)
+		printf("Wrong amount of Bytes!!!\n");
+	return 0;
+}
+*/
+unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
+{
+	fd_set readCheck;
+    fd_set errCheck;
+    struct timeval timeout;
+	unsigned char type;
+	int select_ret;
+	ssize_t read_bytes = -1;
+	FD_ZERO(&readCheck);
+    FD_ZERO(&errCheck);
+	FD_SET(FIFO_fd, &readCheck);
+	FD_SET(FIFO_fd, &errCheck);
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+	select_ret = select(FIFO_fd+1, &readCheck, NULL, &errCheck, &timeout);
+	if (select_ret < 0)
+		perror("RX -> Select failed ");
+	else if (FD_ISSET(FIFO_fd, &errCheck))
+		perror("RX -> FD error ");
+	else if (FD_ISSET(FIFO_fd, &readCheck))
+	{
+		read(FIFO_fd, &type, sizeof(unsigned char));
+		read_bytes = Morfeas_IPC_msg_size[type-1];
+		read_bytes -= read(FIFO_fd, IPC_msg_ptr, read_bytes);
+	}
+	if(!read_bytes)
+		return type;
+	else if(read_bytes != -1)
+		printf("Wrong amount of Bytes!!!\n");
+	return 0;
 }

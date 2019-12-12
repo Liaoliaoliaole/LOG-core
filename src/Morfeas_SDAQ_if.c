@@ -75,7 +75,7 @@ void led_init();
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 //Logbook read and write from file;
 void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append);
-//Function to clean-up list_SDAQs from non active SDAQ
+//Function to clean-up list_SDAQs from non active SDAQ, also send IPC msg to opc_ua for each dead SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function that found and return the status of a node from the list_SDAQ with SDAQ_address == address. Used in FSM
 sdaq_status * find_SDAQ_status(unsigned char address, struct Morfeas_SDAQ_if_stats *stats);
@@ -87,8 +87,10 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function that find and return the amount of incomplete (with out all info and dates) nodes.
 int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
-//Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM
+//Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM, also send IPC msg t opc_ua.
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats);
+//Function for construction of message for registration or update of a SDAQ
+int IPC_SDAQ_reg_update(const char *path_to_FIFO, char connected_to_BUS[10], unsigned char address, sdaq_status *SDAQ_status, unsigned char amount);
 
 	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
@@ -107,7 +109,7 @@ int main(int argc, char *argv[])
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
 	//Variables for IPC
-	IPC_msg IPC_msg;
+	IPC_message IPC_msg;
 	//Variables for Socket CAN and SDAQ_decoders
 	int RX_bytes;
 	struct timeval tv;
@@ -175,7 +177,7 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	}
-	//FIFO
+	//Make of FIFO file
 	if( access(stats.path_to_FIFO, F_OK ) == -1 )
 		mkfifo(stats.path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
@@ -260,13 +262,13 @@ int main(int argc, char *argv[])
 					{
 						if(!status_dec->status)//SDAQ of sdaq_id_dec->device_addr not measuring, no error and on normal mode
 						{
-							//Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
+							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
 							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
 							}
-							else if(SDAQ_data->info_collection_status == 3)//&& !Amount_of_info_incomplete_SDAQs)
+							else if(SDAQ_data->info_collection_status == 3 && !Amount_of_info_incomplete_SDAQs)
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 								logstat_json(logstat_path,&stats);
@@ -275,16 +277,11 @@ int main(int argc, char *argv[])
 					}
 					else
 						printf("\n\t\tMaximum amount of addresses is reached\n");
-					IPC_SDAQ_reg_update(stats.path_to_FIFO, stats.CAN_IF_name, sdaq_id_dec->device_addr, status_dec);
+					IPC_SDAQ_reg_update(stats.path_to_FIFO, stats.CAN_IF_name, sdaq_id_dec->device_addr, status_dec, stats.detected_SDAQs);
 					led_stat(&stats);
 					break;
 				case Device_info:
-					if(!update_info(sdaq_id_dec->device_addr, info_dec, &stats))
-					{
-						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
-						{
-						}
-					}
+					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
 					break;
 				case Calibration_Date:
 					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
@@ -669,7 +666,7 @@ short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
 /*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	IPC_msg IPC_msg;
+	IPC_message IPC_msg;
 	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (stats->list_SDAQs)
@@ -709,7 +706,7 @@ gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	IPC_msg IPC_msg;
+	IPC_message IPC_msg;
 	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (stats->list_SDAQs)
@@ -724,7 +721,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			//Send info through IPC
 			sprintf(IPC_msg.SDAQ_info.connected_to_BUS,"%s",stats->CAN_IF_name);
 			IPC_msg.SDAQ_info.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
-			memcpy(&(IPC_msg.SDAQ_info.SDAQ_info), info_dec, sizeof(sdaq_info));
+			memcpy(&(IPC_msg.SDAQ_info.SDAQ_info_data), info_dec, sizeof(sdaq_info));
 			IPC_msg_TX(stats->path_to_FIFO, &IPC_msg, IPC_SDAQ_info);
 		}
 		else
@@ -944,8 +941,10 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 //Function thet cleaning the list_SDAQ from dead entries
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
+	IPC_message IPC_msg;
+	struct SDAQ_info_entry *sdaq_node;
 	GSList *check_node = NULL;
-	time_t now=time(NULL), last_seen;
+	time_t now=time(NULL);
 	if(stats->list_SDAQs)//check if list_SDAQs have elements
 	{
 		check_node = stats->list_SDAQs;
@@ -954,10 +953,16 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		{
 			if(check_node->data)
 			{
-				last_seen = ((struct SDAQ_info_entry *)check_node->data)->last_seen;
-				if((now - last_seen) > LIFE_TIME)
+				sdaq_node = check_node->data;
+				if((now - sdaq_node->last_seen) > LIFE_TIME)
 				{
 					stats->detected_SDAQs--;
+					//Send info of the removed SDAQ through IPC
+					sprintf(IPC_msg.SDAQ_clean.connected_to_BUS,"%s",stats->CAN_IF_name);
+					IPC_msg.SDAQ_clean.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
+					IPC_msg.SDAQ_clean.t_amount = stats->detected_SDAQs;
+					IPC_msg_TX(stats->path_to_FIFO, &IPC_msg, IPC_SDAQ_clean_up);
+					//SDAQ free allocated memory operation
 					free_SDAQ_info_entry(check_node->data);
 					check_node->data = NULL;
 				}
@@ -968,4 +973,16 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		stats->list_SDAQs = g_slist_remove_all(stats->list_SDAQs, NULL);
 	}
 	return EXIT_SUCCESS;
+}
+
+//Function for construction of message for registration or update of a SDAQ
+int IPC_SDAQ_reg_update(const char *path_to_FIFO, char connected_to_BUS[10], unsigned char address, sdaq_status *SDAQ_status, unsigned char amount)
+{
+	IPC_message IPC_reg_msg;
+	memccpy(&(IPC_reg_msg.SDAQ_reg_update.connected_to_BUS), connected_to_BUS, '\0', 10);
+	IPC_reg_msg.SDAQ_reg_update.connected_to_BUS[9] = '\0';
+	IPC_reg_msg.SDAQ_reg_update.address = address;
+	memcpy(&(IPC_reg_msg.SDAQ_reg_update.SDAQ_status), SDAQ_status,  sizeof(sdaq_status));
+	IPC_reg_msg.SDAQ_reg_update.t_amount = amount;
+	return IPC_msg_TX(path_to_FIFO, &IPC_reg_msg, IPC_SDAQ_register_or_update);
 }

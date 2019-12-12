@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //allocate memory for the threads tags
 	//Start threads for the FIFO readers
 	for(i=0; i<amount_of_threads; i++)
-		pthread_create(&Threads_ids[i], NULL, FIFO_Reader, argv[1]);
+		pthread_create(&Threads_ids[i], NULL, FIFO_Reader, NULL);
 
 	// Configure the timer to repeat every 500ms
 	timer.it_value.tv_sec = 0;
@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
 		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
     UA_Server_delete(server);
 	free(Threads_ids);
+	unlink("/tmp/.Morfeas_FIFO");
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -119,14 +120,20 @@ int main(int argc, char *argv[])
 void* FIFO_Reader(void *varg_pt)
 {
 	//Morfeas IPC msg decoder
-	IPC_msg IPC_msg_dec;
+	IPC_message IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
 	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
 	char Node_ID_str[30];
-    while (running)
+	int FIFO_fd;
+	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
+		mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+    FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC
+	while (running)
 	{
-		if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
+		//if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
+		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))	
 		{
+			//printf("\t--- Received IPC msg of type %d ---\n",type);
 			switch(type)
 			{
 				case IPC_SDAQ_meas:
@@ -142,22 +149,32 @@ void* FIFO_Reader(void *varg_pt)
 					break;
 				case IPC_CAN_BUS_info:
 					sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+					pthread_mutex_lock(&OPC_UA_NODESET_access);	
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_register_or_update:
 					//printf("Enter:IPC_SDAQ_register_or_update\n");
-					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);
+					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);//mutexed inside
 					break;
 				case IPC_SDAQ_clean_up:
 					printf("Enter:IPC_SDAQ_clean_up\n");
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						sprintf(Node_ID_str,"%s.amount",IPC_msg_dec.SDAQ_clean.connected_to_BUS);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_clean.t_amount), UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.%d", IPC_msg_dec.SDAQ_clean.connected_to_BUS, IPC_msg_dec.SDAQ_clean.SDAQ_serial_number);
+						UA_Server_deleteNode(server, UA_NODEID_STRING(1, Node_ID_str), 1);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_info:
-					printf("Enter:IPC_SDAQ_info\n");
+					printf("Enter:IPC_SDAQ_info from %s.%d\n",IPC_msg_dec.SDAQ_info.connected_to_BUS,IPC_msg_dec.SDAQ_info.SDAQ_serial_number);
 					break;
 				case IPC_SDAQ_timediff:
 					//printf("Enter:IPC_SDAQ_timediff\n");
 					sprintf(Node_ID_str, "%s.%d.TimeDiff", IPC_msg_dec.SDAQ_timediff.connected_to_BUS, IPC_msg_dec.SDAQ_timediff.SDAQ_serial_number);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
+					pthread_mutex_lock(&OPC_UA_NODESET_access);					
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_Handler_register:
 					//printf("Enter:IPC_Handler_register ");
@@ -182,7 +199,13 @@ void* FIFO_Reader(void *varg_pt)
 					break;
 			}
 		}
+		else
+		{
+			close(FIFO_fd);
+			FIFO_fd = open(path_to_FIFO, O_RDWR );
+		}
     }
+	close(FIFO_fd);
 	return NULL;
 }
 
@@ -213,6 +236,16 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		vAttr.displayName = UA_LOCALIZEDTEXT("en-US", "BUS Utilization (%)");
 		vAttr.dataType = UA_TYPES[UA_TYPES_FLOAT].typeId;
 		sprintf(tmp_buff, "%s.BUS_util", connected_to_BUS);
+		UA_Server_addVariableNode(server_ptr,
+								  UA_NODEID_STRING(1,tmp_buff),
+								  UA_NODEID_STRING(1, connected_to_BUS),
+		                          UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+		                          UA_QUALIFIEDNAME(1, tmp_buff),
+		                          UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+		                          vAttr, NULL, NULL);
+		vAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Amount of SDAQs");
+		vAttr.dataType = UA_TYPES[UA_TYPES_BYTE].typeId;
+		sprintf(tmp_buff, "%s.amount", connected_to_BUS);
 		UA_Server_addVariableNode(server_ptr,
 								  UA_NODEID_STRING(1,tmp_buff),
 								  UA_NODEID_STRING(1, connected_to_BUS),
@@ -268,6 +301,8 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			sprintf(tmp_str,"%s.Mode",SDAQ_anchor_str);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
 		}
+		sprintf(tmp_str,"%s.amount",ptr->connected_to_BUS);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->t_amount), UA_TYPES_BYTE);
 		sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_status.dev_sn), UA_TYPES_UINT32);
 		sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
@@ -356,7 +391,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             oAttr, NULL, NULL);
 
     //Root of the object "Morfeas_Handlers"
-    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Morfeas Handlers");
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Interface Handlers");
     UA_Server_addObjectNode(server_ptr,
     						UA_NODEID_STRING(1, "Morfeas_Handlers"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
