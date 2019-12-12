@@ -207,8 +207,9 @@ int main(int argc, char *argv[])
 	}
 	//Link signal SIGALRM to timer's handler
 	signal(SIGALRM, CAN_if_timer_handler);
-	//Link signal SIGINT to quit_signal_handler
+	//Link signal SIGINT and SIGPIPE to quit_signal_handler
 	signal(SIGINT, quit_signal_handler);
+	signal(SIGPIPE, quit_signal_handler);
 	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
 	led_init(stats.CAN_IF_name);
 
@@ -426,8 +427,9 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 
 inline void quit_signal_handler(int signum)
 {
-	if(signum == SIGINT)
-		flags.run = 0;
+	if(signum == SIGPIPE)
+		fprintf(stderr,"IPC: Force Termination!!!\n");
+	flags.run = 0;
 	return;
 }
 

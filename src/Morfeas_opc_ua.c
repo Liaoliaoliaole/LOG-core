@@ -70,22 +70,17 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
-	struct sigaction tim_sa,stop_sa;
 	struct itimerval timer;
 	UA_StatusCode retval;
 	//variables for threads
 	pthread_t *Threads_ids;
 	unsigned int i, amount_of_threads = 1; //amount_of_threads loaded from the Configuration
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
-    memset (&stop_sa, 0, sizeof (stop_sa));
-	stop_sa.sa_handler = &stopHandler;
-	sigaction (SIGINT, &stop_sa, NULL);
-    sigaction (SIGTERM, &stop_sa, NULL);
+	signal(SIGINT, stopHandler);
+    signal(SIGTERM, stopHandler);
 
 	//Install timer_handler as the signal handler for SIGALRM.
-	memset (&tim_sa, 0, sizeof (tim_sa));
-	tim_sa.sa_handler = &timer_handler;
-	sigaction (SIGALRM, &tim_sa, NULL);
+	signal(SIGALRM, timer_handler);
 
 	//Init OPC_UA Server
 	server = UA_Server_new();
