@@ -125,8 +125,8 @@ void* FIFO_Reader(void *varg_pt)
 	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
 	char Node_ID_str[30];
 	int FIFO_fd;
-	if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
-		mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+	//if(access(path_to_FIFO, F_OK) == -1 )//Make the Named Pipe(FIFO) if is not exist
+	mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
     FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC
 	while (running)
 	{

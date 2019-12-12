@@ -52,7 +52,7 @@ size_t IPC_msg_TX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr, unsigned c
 
 	FD_ZERO(&writeCheck);
     FD_ZERO(&errCheck);
-	if((FIFO_fd = open(path_to_FIFO, O_WRONLY | O_NONBLOCK))>0)// O_RDWR | O_NONBLOCK
+	if((FIFO_fd = open(path_to_FIFO, O_WRONLY))>0)// O_RDWR | O_NONBLOCK
 	{
 		FD_SET(FIFO_fd, &writeCheck);
 		FD_SET(FIFO_fd, &errCheck);

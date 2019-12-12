@@ -178,8 +178,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	//Make of FIFO file
-	if( access(stats.path_to_FIFO, F_OK ) == -1 )
-		mkfifo(stats.path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+	//if( access(stats.path_to_FIFO, F_OK ) == -1 )
+	mkfifo(stats.path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
 	/*Filter for CAN messages	-- SocketCAN Filters act as: <received_can_id> & mask == can_id & mask*/
 	//load filter's can_id member
