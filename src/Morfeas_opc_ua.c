@@ -217,7 +217,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 								UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
 								oAttr, NULL, NULL);
 		oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "SDAQnet");
-		sprintf(tmp_buff, "Dev_on_%s", connected_to_BUS);
+		sprintf(tmp_buff, "%s.SDAQnet", connected_to_BUS);
 		UA_Server_addObjectNode(server_ptr,
 								UA_NODEID_STRING(1, tmp_buff),
 								UA_NODEID_STRING(1, connected_to_BUS),
@@ -254,7 +254,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 	UA_NodeId out;
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 	sprintf(SDAQ_anchor_str,"%s.%d",ptr->connected_to_BUS,ptr->SDAQ_status.dev_sn);
-	sprintf(tmp_str,"Dev_on_%s",ptr->connected_to_BUS);
+	sprintf(tmp_str,"%s.SDAQnet",ptr->connected_to_BUS);
 	UA_NodeId_init(&out);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &out))

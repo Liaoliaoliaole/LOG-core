@@ -108,7 +108,7 @@ typedef union{
 
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
-size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr, unsigned char type);
+size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr);
 //Function for construction of message for registration of a Handler
 size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char connected_to_BUS[10], unsigned char unreg);
 	//----RX Functions----//

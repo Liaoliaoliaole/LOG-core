@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
 						IPC_msg.SDAQ_meas.SDAQ_serial_number = SDAQ_data->SDAQ_status.dev_sn;
 						IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
 						memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
-						IPC_msg_TX(stats.FIFO_fd, &IPC_msg, IPC_SDAQ_meas);
+						IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 					}
 					break;
 				case Sync_Info:
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
 			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
 			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
-			IPC_msg_TX(stats.FIFO_fd, &IPC_msg, IPC_CAN_BUS_info);
+			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 		}
 	}
 	printf("\nExiting...\n");
@@ -689,7 +689,7 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 			sprintf(IPC_msg.SDAQ_timediff.connected_to_BUS,"%s",stats->CAN_IF_name);
 			IPC_msg.SDAQ_timediff.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
 			IPC_msg.SDAQ_timediff.Timediff = sdaq_node->Timediff;
-			IPC_msg_TX(stats->FIFO_fd, &IPC_msg, IPC_SDAQ_timediff);
+			IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
 		}
 		else
 			return EXIT_FAILURE;
@@ -732,7 +732,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			sprintf(IPC_msg.SDAQ_info.connected_to_BUS,"%s",stats->CAN_IF_name);
 			IPC_msg.SDAQ_info.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
 			memcpy(&(IPC_msg.SDAQ_info.SDAQ_info_data), info_dec, sizeof(sdaq_info));
-			IPC_msg_TX(stats->FIFO_fd, &IPC_msg, IPC_SDAQ_info);
+			IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
 		}
 		else
 			return EXIT_FAILURE;
@@ -968,7 +968,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 					sprintf(IPC_msg.SDAQ_clean.connected_to_BUS,"%s",stats->CAN_IF_name);
 					IPC_msg.SDAQ_clean.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
 					IPC_msg.SDAQ_clean.t_amount = stats->detected_SDAQs;
-					IPC_msg_TX(stats->FIFO_fd, &IPC_msg, IPC_SDAQ_clean_up);
+					IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
 					//SDAQ free allocated memory operation
 					free_SDAQ_info_entry(check_node->data);
 					check_node->data = NULL;
@@ -993,5 +993,5 @@ int IPC_SDAQ_reg_update(int FIFO_fd, char connected_to_BUS[10], unsigned char ad
 	IPC_reg_msg.SDAQ_reg_update.address = address;
 	memcpy(&(IPC_reg_msg.SDAQ_reg_update.SDAQ_status), SDAQ_status,  sizeof(sdaq_status));
 	IPC_reg_msg.SDAQ_reg_update.t_amount = amount;
-	return IPC_msg_TX(FIFO_fd, &IPC_reg_msg, IPC_SDAQ_register_or_update);
+	return IPC_msg_TX(FIFO_fd, &IPC_reg_msg);
 }
