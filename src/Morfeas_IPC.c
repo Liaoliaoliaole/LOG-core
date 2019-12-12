@@ -144,8 +144,11 @@ unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
 	else if (FD_ISSET(FIFO_fd, &readCheck))
 	{
 		read(FIFO_fd, &type, sizeof(unsigned char));
-		read_bytes = Morfeas_IPC_msg_size[type-1];
-		read_bytes -= read(FIFO_fd, IPC_msg_ptr, read_bytes);
+		if(type <= Morfeas_IPC_MAX_type)
+		{
+			read_bytes = Morfeas_IPC_msg_size[type-1];
+			read_bytes -= read(FIFO_fd, IPC_msg_ptr, read_bytes);
+		}
 	}
 	if(!read_bytes)
 		return type;

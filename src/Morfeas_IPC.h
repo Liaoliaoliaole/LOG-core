@@ -21,21 +21,23 @@ extern char *Morfeas_IPC_handler_type_name[];
 
 enum Morfeas_IPC_msg_type{
 	IPC_Handler_register = 1,
-	IPC_Handler_unregister = 2,
+	IPC_Handler_unregister,
 	//SDAQ_related IPC messages//
-	IPC_SDAQ_register_or_update = 3,
-	IPC_SDAQ_clean_up = 4,
-	IPC_SDAQ_info = 5,
-	IPC_SDAQ_timediff = 6,
-	IPC_SDAQ_meas = 7,
-	IPC_CAN_BUS_info = 8
+	IPC_SDAQ_register_or_update,
+	IPC_SDAQ_clean_up,
+	IPC_SDAQ_info,
+	IPC_SDAQ_timediff,
+	IPC_SDAQ_meas,
+	IPC_CAN_BUS_info,
+	//Set MAX_num_type
+	Morfeas_IPC_MAX_type = IPC_CAN_BUS_info
 };
 
 enum Morfeas_IPC_handler_type{
 	SDAQ = 0,
-	MDAQ = 1,
-	IOBOX = 2,
-	MTI = 3 //Mobile Telemetry Interface
+	MDAQ,
+	IOBOX,
+	MTI //Mobile Telemetry Interface
 };
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)

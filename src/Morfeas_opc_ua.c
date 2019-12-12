@@ -137,15 +137,13 @@ void* FIFO_Reader(void *varg_pt)
 			switch(type)
 			{
 				case IPC_SDAQ_meas:
-				/*
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
-						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.serial_number, IPC_msg_dec.SDAQ_meas.channel);
+						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.SDAQ_serial_number, IPC_msg_dec.SDAQ_meas.channel);
 						printf("\tValue=%9.3f %s\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas,
 												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
 						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-				*/
 					break;
 				case IPC_CAN_BUS_info:
 					sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
@@ -198,11 +196,6 @@ void* FIFO_Reader(void *varg_pt)
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 			}
-		}
-		else
-		{
-			close(FIFO_fd);
-			FIFO_fd = open(path_to_FIFO, O_RDWR );
 		}
     }
 	close(FIFO_fd);
