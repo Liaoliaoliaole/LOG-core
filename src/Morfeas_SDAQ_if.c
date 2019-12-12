@@ -226,9 +226,7 @@ int main(int argc, char *argv[])
 	//start timer
 	setitimer(ITIMER_REAL, &timer, NULL);
 
-
-		//Make of FIFO file
-	//if( access(stats.path_to_FIFO, F_OK ) == -1 )
+	//----Make of FIFO file----//
 	mkfifo("/tmp/.Morfeas_FIFO", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
 	stats.FIFO_fd = open("/tmp/.Morfeas_FIFO", O_WRONLY);
