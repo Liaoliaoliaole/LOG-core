@@ -283,11 +283,6 @@ int main(int argc, char *argv[])
 					{
 						if((ret_SDAQ_status = find_SDAQ_status(sdaq_id_dec->device_addr, &stats)))
 						{
-							//Send info through IPC
-							sprintf(IPC_msg.SDAQ_info.connected_to_BUS,"%s",stats.CAN_IF_name);
-							IPC_msg.SDAQ_info.SDAQ_serial_number = ret_SDAQ_status->dev_sn;
-							memcpy(&(IPC_msg.SDAQ_info.SDAQ_info), info_dec, sizeof(sdaq_info));
-							IPC_msg_TX(stats.path_to_FIFO, &IPC_msg, IPC_SDAQ_info);
 						}
 					}
 					break;
@@ -330,7 +325,7 @@ int main(int argc, char *argv[])
 			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
 			msg_cnt = 0;
 			flags.calc_util = 0;
-			//transfer to opc_ua
+			//transfer bus utilization to opc_ua
 			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg_TX(stats.path_to_FIFO, &IPC_msg, IPC_CAN_BUS_info);
@@ -714,6 +709,7 @@ gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
+	IPC_msg IPC_msg;
 	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (stats->list_SDAQs)
@@ -725,6 +721,11 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
 			time(&(sdaq_node->last_seen));
 			sdaq_node->info_collection_status = 2;
+			//Send info through IPC
+			sprintf(IPC_msg.SDAQ_info.connected_to_BUS,"%s",stats->CAN_IF_name);
+			IPC_msg.SDAQ_info.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
+			memcpy(&(IPC_msg.SDAQ_info.SDAQ_info), info_dec, sizeof(sdaq_info));
+			IPC_msg_TX(stats->path_to_FIFO, &IPC_msg, IPC_SDAQ_info);
 		}
 		else
 			return EXIT_FAILURE;
