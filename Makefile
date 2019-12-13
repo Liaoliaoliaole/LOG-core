@@ -17,6 +17,7 @@ Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir)\
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
+					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
 					  $(SRC_dir)/*.h
 
 all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if
@@ -42,6 +43,9 @@ $(WORK_dir)/Morfeas_JSON.o: $(SRC_dir)/Morfeas_JSON.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_IPC.o: $(SRC_dir)/Morfeas_IPC.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ_nodeset.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 	
 tree: 
