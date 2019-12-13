@@ -1,5 +1,5 @@
 /*
-File: Morfeas_SDAQ_nodeset.c, implementation of OPC-UA server's Nodeset 
+File: Morfeas_SDAQ_nodeset.c, implementation of OPC-UA server's Nodeset
 construction/deconstruction functions for Morfeas SDAQ_handler.
 
 Copyright (C) 12019-12020  Sam harry Tzavaras
@@ -95,7 +95,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 			UA_NodeId_init(&out);
 			sprintf(tmp_str,"%s.Info",SDAQ_anchor_str);
 			if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str), &out))
-			{	
+			{
 				Morfeas_opc_ua_add_abject_node(server_ptr, SDAQ_anchor_str, tmp_str, "Info");
 				sprintf(tmp_str2,"%s.Firm_Rev",SDAQ_anchor_str);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Firm_Rev", UA_TYPES_BYTE);
