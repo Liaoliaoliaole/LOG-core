@@ -47,7 +47,8 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &out))
 		{
 			sprintf(tmp_str,"%s.SDAQnet",ptr->connected_to_BUS);
-			Morfeas_opc_ua_add_abject_node(server_ptr, tmp_str, SDAQ_anchor_str, (char *)dev_type_str[ptr->SDAQ_status.dev_type]);
+			sprintf(tmp_str2,"%s (%02hhu)", (char *)dev_type_str[ptr->SDAQ_status.dev_type], ptr->address);
+			Morfeas_opc_ua_add_abject_node(server_ptr, tmp_str, SDAQ_anchor_str, tmp_str2);
 			sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "S/N", UA_TYPES_UINT32);
 			sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);

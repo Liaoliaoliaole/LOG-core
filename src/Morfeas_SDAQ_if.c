@@ -96,9 +96,6 @@ int IPC_SDAQ_reg_update(int FIFO_fd, char connected_to_BUS[10], unsigned char ad
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
 void free_LogBook_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list LogBook
 
-//print only for debugging
-void printf_SDAQentry(gpointer node, gpointer arg_pass);
-
 int main(int argc, char *argv[])
 {
 	//Directory pointer variables
@@ -289,19 +286,8 @@ int main(int argc, char *argv[])
 					break;
 				case Calibration_Date:
 					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
-					{	//this is only for debugging
-						printf("Info req for SDAQ with addr: %d Completed\n",sdaq_id_dec->device_addr);
-						Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
-						if(!Amount_of_info_incomplete_SDAQs)
-						{
-							printf("Info req for All SDAQ on bus Completed\n");
-							printf("New SDAQ_list:\n");
-							g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
-							printf("Amount of SDAQ in list SDAQ %d\n",stats.detected_SDAQs);
-							printf("\n\n");
-						}
-						else
-							printf("%d remaining \n",Amount_of_info_incomplete_SDAQs);
+					{	
+						//TO-DO send calibration date msg to opc_ua 
 					}
 					break;
 			}
@@ -621,26 +607,6 @@ void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_appen
 		}
 	}
 }
-
-//This function will be removed is only for debugging
-void printf_SDAQentry(gpointer node, gpointer arg_pass)
-{
-	struct SDAQ_info_entry *node_dec = node;
-	char str_address[12];
-	if(node)
-	{
-		if(node_dec->SDAQ_address!=Parking_address)
-			sprintf(str_address,"%d",node_dec->SDAQ_address);
-		else
-			sprintf(str_address,"in_Park");
-		printf("%13s with S/N: %010d at Address: %2s last_seen %.0f sec ago\n",
-													  dev_type_str[node_dec->SDAQ_status.dev_type],
-													  node_dec->SDAQ_status.dev_sn,
-													  str_address,
-													  difftime(time(NULL), node_dec->last_seen));
-	}
-}
-
 //Function that find and return the amount of incomplete (incomplete info and/or dates) nodes.
 int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
