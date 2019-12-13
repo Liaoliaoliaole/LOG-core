@@ -42,7 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //FIFO reader, Thread function.
 void* FIFO_Reader(void *varg_pt);
 //Timer Handler Function
-void timer_handler(int sign);
+void Rpi_health_update(int sign);
 //OPC_UA local Functions
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
 
@@ -59,17 +59,14 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
-	struct itimerval timer;
 	UA_StatusCode retval;
+	UA_UInt16 timeout;
 	//variables for threads
 	pthread_t *Threads_ids;
 	unsigned int i, amount_of_threads = 1; //amount_of_threads loaded from the Configuration
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
-
-	//Install timer_handler as the signal handler for SIGALRM.
-	signal(SIGALRM, timer_handler);
 
 	//Init OPC_UA Server
 	server = UA_Server_new();
@@ -80,18 +77,33 @@ int main(int argc, char *argv[])
 	//Start threads for the FIFO readers
 	for(i=0; i<amount_of_threads; i++)
 		pthread_create(&Threads_ids[i], NULL, FIFO_Reader, NULL);
-
+	/*
 	// Configure the timer to repeat every 500ms
+	struct itimerval timer;
 	timer.it_value.tv_sec = 0;
 	timer.it_value.tv_usec = 500000;
 	timer.it_interval.tv_sec = 0;
 	timer.it_interval.tv_usec = 500000;
+	//Install Rpi_health_update as the signal handler for SIGALRM.
+	signal(SIGALRM, Rpi_health_update);
 	// Start a timer
 	setitimer (ITIMER_REAL, &timer, NULL);
-
+	*/
 	//Start OPC_UA Server
-    retval = UA_Server_run(server, &running);
-	//Wait until all thread is ended
+	retval = UA_Server_run_startup(server);
+    if(retval == UA_STATUSCODE_GOOD)
+	{
+		while(running)
+		{
+			pthread_mutex_lock(&OPC_UA_NODESET_access);
+			 	timeout = UA_Server_run_iterate(server, false);
+			pthread_mutex_unlock(&OPC_UA_NODESET_access);
+			usleep(timeout * 100);
+		}
+		retval = UA_Server_run_shutdown(server);
+	}
+
+	//Wait until all threads ends
 	for(i=0; i<amount_of_threads; i++)
 		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
     UA_Server_delete(server);
@@ -105,6 +117,7 @@ void* FIFO_Reader(void *varg_pt)
 {
 	//Morfeas IPC msg decoder
 	IPC_message IPC_msg_dec;
+	time_t health_update_check=0;
 	unsigned char type;//type of received IPC_msg
 	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
 	char Node_ID_str[60], meas_status_str[60];
@@ -127,13 +140,13 @@ void* FIFO_Reader(void *varg_pt)
 						sprintf(Node_ID_str, "%s.%d.CH%hhu.unit",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
 															     IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
 																 IPC_msg_dec.SDAQ_meas.channel);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), 
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 														   unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit],
 														   UA_TYPES_STRING);
 						sprintf(Node_ID_str, "%s.%d.CH%hhu.timestamp",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
 															     IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
 																 IPC_msg_dec.SDAQ_meas.channel);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), 
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 														   &(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp),
 														   UA_TYPES_UINT16);
 						sprintf(Node_ID_str, "%s.%d.CH%hhu.status",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
@@ -150,7 +163,7 @@ void* FIFO_Reader(void *varg_pt)
 						if(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.status)
 							IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas = NAN;
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   &(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas), 
+														   &(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas),
 														   UA_TYPES_FLOAT);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
@@ -184,7 +197,7 @@ void* FIFO_Reader(void *varg_pt)
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
-				//--- Message type from any handler (Registration to OPC_UA) ---// 
+				//--- Message type from any handler (Registration to OPC_UA) ---//
 				case IPC_Handler_register:
 					//printf("Enter:IPC_Handler_register ");
 					switch(IPC_msg_dec.Handler_reg.handler_type)
@@ -207,6 +220,11 @@ void* FIFO_Reader(void *varg_pt)
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 			}
+		}
+		if((time(NULL) - health_update_check))
+		{
+			Rpi_health_update(0);
+			time(&health_update_check);
 		}
     }
 	close(FIFO_fd);
@@ -240,7 +258,7 @@ void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char
                             oAttr, NULL, NULL);
 }
 
-void timer_handler (int sign)
+void Rpi_health_update (int sign)
 {
 	FILE *CPU_temp_fp;
 	char cpu_temp_str[20];
@@ -301,7 +319,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             oAttr, NULL, NULL);
 
     //Root of the object "Morfeas_Handlers"
-    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Interface Handlers");
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Interface");
     UA_Server_addObjectNode(server_ptr,
     						UA_NODEID_STRING(1, "Morfeas_Handlers"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),

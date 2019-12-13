@@ -275,10 +275,10 @@ int main(int argc, char *argv[])
 								logstat_json(logstat_path,&stats);
 							}
 						}
+						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, sdaq_id_dec->device_addr, status_dec, stats.detected_SDAQs);
 					}
 					else
 						printf("\n\t\tMaximum amount of addresses is reached\n");
-					IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, sdaq_id_dec->device_addr, status_dec, stats.detected_SDAQs);
 					led_stat(&stats);
 					break;
 				case Device_info:
@@ -286,8 +286,8 @@ int main(int argc, char *argv[])
 					break;
 				case Calibration_Date:
 					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
-					{	
-						//TO-DO send calibration date msg to opc_ua 
+					{
+						//TO-DO send calibration date msg to opc_ua
 					}
 					break;
 			}
