@@ -313,12 +313,6 @@ int main(int argc, char *argv[])
 			led_stat(&stats);
 			logstat_json(logstat_path,&stats);
 			flags.Clean_flag = 0;
-			//bellow will removed is only for debugging
-			printf("\t\tOperation: Clean Up\n");
-			printf("SDAQ_list:\n");
-			g_slist_foreach(stats.list_SDAQs, printf_SDAQentry, NULL);
-			printf("Amount of SDAQ in list SDAQ %d\n",stats.detected_SDAQs);
-			printf("\n\n");
 		}
 		if(flags.calc_util)
 		{

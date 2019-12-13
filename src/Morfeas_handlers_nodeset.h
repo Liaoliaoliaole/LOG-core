@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern pthread_mutex_t OPC_UA_NODESET_access;
 
 //Nodeset object, variables, and methods add and update
+void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name);
 void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, int _UA_Type);
 void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, const void * value, int _UA_Type);
 
@@ -45,3 +46,4 @@ void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, con
 //SDAQ's Handler related
 void SDAQ_handler_reg(UA_Server *server, char *connected_to_BUS);
 void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr);
+void SDAQ2OPC_UA_register_update_info(UA_Server *server, SDAQ_info_msg *ptr);

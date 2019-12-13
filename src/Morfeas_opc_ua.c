@@ -46,7 +46,6 @@ void timer_handler(int sign);
 //OPC_UA local Functions
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
 
-
 //Global variables
 static volatile UA_Boolean running = true;
 UA_Server *server;
@@ -108,7 +107,7 @@ void* FIFO_Reader(void *varg_pt)
 	IPC_message IPC_msg_dec;
 	unsigned char type;//type of received IPC_msg
 	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
-	char Node_ID_str[30];
+	char Node_ID_str[60], meas_status_str[60];
 	int FIFO_fd;
 	//if(access(path_to_FIFO, F_OK) == -1 )// if not exist
 	//Make the Named Pipe(FIFO)
@@ -122,16 +121,38 @@ void* FIFO_Reader(void *varg_pt)
 			//printf("\t--- Received IPC msg of type %d ---\n",type);
 			switch(type)
 			{
+				//Msg type from SDAQ_handler
 				case IPC_SDAQ_meas:
-					/*
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						printf("\nMessage from Bus:%s\n",IPC_msg_dec.SDAQ_meas.connected_to_BUS);
-						printf("\tAnchor:%010u.CH%02u\n",IPC_msg_dec.SDAQ_meas.SDAQ_serial_number, IPC_msg_dec.SDAQ_meas.channel);
-						printf("\tValue=%9.3f %s\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas,
-												    unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit]);
-						printf("\tTimestamp=%hu\n",IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp);
+						sprintf(Node_ID_str, "%s.%d.CH%hhu.unit",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
+															     IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+																 IPC_msg_dec.SDAQ_meas.channel);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), 
+														   unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit],
+														   UA_TYPES_STRING);
+						sprintf(Node_ID_str, "%s.%d.CH%hhu.timestamp",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
+															     IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+																 IPC_msg_dec.SDAQ_meas.channel);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), 
+														   &(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp),
+														   UA_TYPES_UINT16);
+						sprintf(Node_ID_str, "%s.%d.CH%hhu.status",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
+																   IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+																   IPC_msg_dec.SDAQ_meas.channel);
+						sprintf(meas_status_str, "%s%s", !IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.status?"Okay":"No Sensor",
+														 IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit<Unit_code_base_region_size ? ", Un-calibrated":"");
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
+														   meas_status_str,
+														   UA_TYPES_STRING);
+						sprintf(Node_ID_str, "%s.%d.CH%hhu.meas",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
+															     IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+																 IPC_msg_dec.SDAQ_meas.channel);
+						if(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.status)
+							IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas = NAN;
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
+														   &(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas), 
+														   UA_TYPES_FLOAT);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					*/
 					break;
 				case IPC_CAN_BUS_info:
 					sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
@@ -144,7 +165,7 @@ void* FIFO_Reader(void *varg_pt)
 					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);//mutex inside
 					break;
 				case IPC_SDAQ_clean_up:
-					printf("Enter:IPC_SDAQ_clean_up\n");
+					//printf("Enter:IPC_SDAQ_clean_up\n");
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						sprintf(Node_ID_str,"%s.amount",IPC_msg_dec.SDAQ_clean.connected_to_BUS);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_clean.t_amount), UA_TYPES_BYTE);
@@ -153,8 +174,8 @@ void* FIFO_Reader(void *varg_pt)
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_info:
-					printf("Enter:IPC_SDAQ_info from %s.%d\n",IPC_msg_dec.SDAQ_info.connected_to_BUS,IPC_msg_dec.SDAQ_info.SDAQ_serial_number);
-					//SDAQ_add_info();
+					//printf("Enter:IPC_SDAQ_info from %s.%d\n",IPC_msg_dec.SDAQ_info.connected_to_BUS,IPC_msg_dec.SDAQ_info.SDAQ_serial_number);
+					SDAQ2OPC_UA_register_update_info(server, (SDAQ_info_msg*)&IPC_msg_dec);//mutex inside
 					break;
 				case IPC_SDAQ_timediff:
 					//printf("Enter:IPC_SDAQ_timediff\n");
@@ -163,6 +184,7 @@ void* FIFO_Reader(void *varg_pt)
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
+				//--- Message type from any handler (Registration to OPC_UA) ---// 
 				case IPC_Handler_register:
 					//printf("Enter:IPC_Handler_register ");
 					switch(IPC_msg_dec.Handler_reg.handler_type)
@@ -204,6 +226,20 @@ void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, ch
 									  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
 									  vAttr, NULL, NULL);
 }
+
+void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
+{
+	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
+    UA_Server_addObjectNode(server_ptr,
+    						UA_NODEID_STRING(1, Node_id),
+                            UA_NODEID_STRING(1, Parent_id),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(1, Node_id),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+                            oAttr, NULL, NULL);
+}
+
 void timer_handler (int sign)
 {
 	FILE *CPU_temp_fp;
