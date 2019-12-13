@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 								logstat_json(logstat_path,&stats);
 							}
 						}
-						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, sdaq_id_dec->device_addr, status_dec, stats.detected_SDAQs);
+						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, stats.detected_SDAQs);
 					}
 					else
 						printf("\n\t\tMaximum amount of addresses is reached\n");
