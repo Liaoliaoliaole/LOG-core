@@ -31,9 +31,9 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		sprintf(tmp_buff, "%s.SDAQnet", connected_to_BUS);
 		Morfeas_opc_ua_add_abject_node(server_ptr, connected_to_BUS, tmp_buff, "SDAQnet");
 		sprintf(tmp_buff, "%s.BUS_util", connected_to_BUS);
-		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "BUS Utilization (%)", UA_TYPES_FLOAT);
+		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff, "%s.amount", connected_to_BUS);
-		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "Amount of SDAQs", UA_TYPES_BYTE);
+		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "SDAQs_on_BUS", UA_TYPES_BYTE);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
@@ -102,7 +102,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 				sprintf(tmp_str2,"%s.Hw_Rev",SDAQ_anchor_str);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Hw_Rev", UA_TYPES_BYTE);
 				sprintf(tmp_str2,"%s.Amount_of_channels",SDAQ_anchor_str);
-				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Amount_of_channels", UA_TYPES_BYTE);
+				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Channels_on_SDAQ", UA_TYPES_BYTE);
 				sprintf(tmp_str2,"%s.Samplerate",SDAQ_anchor_str);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Samplerate", UA_TYPES_BYTE);
 				sprintf(tmp_str2,"%s.Max_cal_points",SDAQ_anchor_str);

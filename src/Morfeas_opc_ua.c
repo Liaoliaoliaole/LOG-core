@@ -40,7 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Morfeas_handlers_nodeset.h"
 
 //FIFO reader, Thread function.
-void* FIFO_Reader(void *varg_pt);
+void* IPC_Receiver(void *varg_pt);
 //Timer Handler Function
 void Rpi_health_update(int sign);
 //OPC_UA local Functions
@@ -66,12 +66,13 @@ int main(int argc, char *argv[])
 	//variables for threads
 	pthread_t *Threads_ids;
 	unsigned int i, amount_of_threads = 1; //amount_of_threads loaded from the Configuration
+
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
 	//Write to Log a welcome message
-	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,"Morfeas OPC-UA Started");
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,"\t------ Morfeas OPC-UA Started ------");
 	//Setup config for Morfeas_OPC_UA Server
 	retval = Morfeas_OPC_UA_config(&conf);
 	//Init OPC_UA Server
@@ -79,10 +80,10 @@ int main(int argc, char *argv[])
 	//Add Morfeas application base node set to server
 	Morfeas_opc_ua_root_nodeset_Define(server);
 
-	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //allocate memory for the threads tags
+	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //Allocate memory for the threads ids
 	//Start threads for the FIFO readers
 	for(i=0; i<amount_of_threads; i++)
-		pthread_create(&Threads_ids[i], NULL, FIFO_Reader, NULL);
+		pthread_create(&Threads_ids[i], NULL, IPC_Receiver, NULL);
 
 	//Start OPC_UA Server
 	retval = UA_Server_run_startup(server);
@@ -108,8 +109,8 @@ int main(int argc, char *argv[])
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-//FIFO reader, Thread function.
-void* FIFO_Reader(void *varg_pt)
+//IPC_Receiver, Thread function.
+void* IPC_Receiver(void *varg_pt)
 {
 	//Morfeas IPC msg decoder
 	IPC_message IPC_msg_dec;
