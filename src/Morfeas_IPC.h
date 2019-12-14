@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define connected_to_BUS_str_size 10
 #define Data_FIFO "/tmp/.Morfeas_handlers_FIFO"
 
-#include "Types.h"
+#include "Morfeas_Types.h"
 
 extern size_t Morfeas_IPC_msg_size[];
 extern char *Morfeas_IPC_handler_type_name[];

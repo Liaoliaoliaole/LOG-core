@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Header for cJSON
 #include <cjson/cJSON.h>
 //Include Functions implementation header
-#include "Types.h"
+#include "Morfeas_Types.h"
 
 //Local functions
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass);
