@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+#define n_threads 1
 #define CPU_temp_sysfs_file "/sys/class/thermal/thermal_zone0/temp"
 
 #include <stdio.h>
@@ -64,15 +64,16 @@ int main(int argc, char *argv[])
 	UA_StatusCode retval;
 	UA_UInt16 timeout;
 	//variables for threads
-	pthread_t *Threads_ids;
-	unsigned int i, amount_of_threads = 1; //amount_of_threads loaded from the Configuration
+	pthread_t Threads_ids[n_threads];
+	unsigned int i; //amount_of_threads loaded from the Configuration
 
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
 	//Write to Log a welcome message
-	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,"\t------ Morfeas OPC-UA Started ------");
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+	"\t------ Morfeas OPC-UA Started ------");
 	//Setup config for Morfeas_OPC_UA Server
 	retval = Morfeas_OPC_UA_config(&conf);
 	//Init OPC_UA Server
@@ -80,10 +81,8 @@ int main(int argc, char *argv[])
 	//Add Morfeas application base node set to server
 	Morfeas_opc_ua_root_nodeset_Define(server);
 
-	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //Allocate memory for the threads ids
-	//Start threads for the FIFO readers
-	for(i=0; i<amount_of_threads; i++)
-		pthread_create(&Threads_ids[i], NULL, IPC_Receiver, NULL);
+	//----Start threads----//
+	pthread_create(&Threads_ids[0], NULL, IPC_Receiver, NULL);
 
 	//Start OPC_UA Server
 	retval = UA_Server_run_startup(server);
@@ -101,10 +100,9 @@ int main(int argc, char *argv[])
 	//Clean server's config
 	//UA_ServerConfig_clean(conf);
 	//Wait until all threads ends
-	for(i=0; i<amount_of_threads; i++)
+	for(i=0; i<n_threads; i++)
 		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
     UA_Server_delete(server);
-	free(Threads_ids);
 	unlink("/tmp/.Morfeas_FIFO");
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
