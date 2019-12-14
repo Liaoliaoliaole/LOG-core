@@ -59,6 +59,8 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
+	//Open62541 OPC-UA variables
+	UA_ServerConfig conf = {0};
 	UA_StatusCode retval;
 	UA_UInt16 timeout;
 	//variables for threads
@@ -68,27 +70,25 @@ int main(int argc, char *argv[])
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
+	//Setup config for Morfeas_OPC_UA Server
+	UA_ServerConfig_setDefault(&conf);
+	/*
+	UA_ServerConfig_setBasics(&conf);
+    conf.applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
+    conf.buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
+    conf.buildInfo.productName = UA_STRING_ALLOC("Morfeas-OPC_UA Server");
+	conf.applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", "Morfeas-OPC_UA(open62541)");
+	*/
 	//Init OPC_UA Server
-	server = UA_Server_new();
-    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
+	server = UA_Server_newWithConfig(&conf);
+	//Add Morfeas application base node set to server
 	Morfeas_opc_ua_root_nodeset_Define(server);
 
 	Threads_ids = malloc(sizeof(Threads_ids)*amount_of_threads); //allocate memory for the threads tags
 	//Start threads for the FIFO readers
 	for(i=0; i<amount_of_threads; i++)
 		pthread_create(&Threads_ids[i], NULL, FIFO_Reader, NULL);
-	/*
-	// Configure the timer to repeat every 500ms
-	struct itimerval timer;
-	timer.it_value.tv_sec = 0;
-	timer.it_value.tv_usec = 500000;
-	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 500000;
-	//Install Rpi_health_update as the signal handler for SIGALRM.
-	signal(SIGALRM, Rpi_health_update);
-	// Start a timer
-	setitimer (ITIMER_REAL, &timer, NULL);
-	*/
+
 	//Start OPC_UA Server
 	retval = UA_Server_run_startup(server);
     if(retval == UA_STATUSCODE_GOOD)
@@ -102,7 +102,8 @@ int main(int argc, char *argv[])
 		}
 		retval = UA_Server_run_shutdown(server);
 	}
-
+	//Clean server's config
+	//UA_ServerConfig_clean(conf);
 	//Wait until all threads ends
 	for(i=0; i<amount_of_threads; i++)
 		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
@@ -119,16 +120,13 @@ void* FIFO_Reader(void *varg_pt)
 	IPC_message IPC_msg_dec;
 	time_t health_update_check=0;
 	unsigned char type;//type of received IPC_msg
-	const char *path_to_FIFO = "/tmp/.Morfeas_FIFO";
 	char Node_ID_str[60], meas_status_str[60];
 	int FIFO_fd;
-	//if(access(path_to_FIFO, F_OK) == -1 )// if not exist
 	//Make the Named Pipe(FIFO)
-	mkfifo(path_to_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-    FIFO_fd = open(path_to_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
+	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+    FIFO_fd = open(Data_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
 	while (running)
 	{
-		//if((type = IPC_msg_RX(path_to_FIFO, &IPC_msg_dec)))
 		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
 		{
 			//printf("\t--- Received IPC msg of type %d ---\n",type);

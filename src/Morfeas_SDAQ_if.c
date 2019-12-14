@@ -49,7 +49,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Include Functions implementation header
 #include "Morfeas_JSON.h"
-#include "Morfeas_IPC.h"//<-#include "Types.h"
+#include "Morfeas_handlers_nodeset.h"
 
 static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
@@ -101,7 +101,6 @@ int main(int argc, char *argv[])
 	//Directory pointer variables
 	DIR *dir;
 	//Operational variables
-	unsigned char Amount_of_info_incomplete_SDAQs;
 	char *logstat_path = argv[2];
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
@@ -225,9 +224,9 @@ int main(int argc, char *argv[])
 	setitimer(ITIMER_REAL, &timer, NULL);
 
 	//----Make of FIFO file----//
-	mkfifo("/tmp/.Morfeas_FIFO", S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
-	stats.FIFO_fd = open("/tmp/.Morfeas_FIFO", O_WRONLY);
+	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
 		/*Actions on the bus*/
@@ -263,13 +262,12 @@ int main(int argc, char *argv[])
 					{
 						if(!status_dec->status)//SDAQ of sdaq_id_dec->device_addr not measuring, no error and on normal mode
 						{
-							Amount_of_info_incomplete_SDAQs = incomplete_SDAQs(&stats);
 							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
 							}
-							else if(SDAQ_data->info_collection_status == 3 && !Amount_of_info_incomplete_SDAQs)
+							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 								logstat_json(logstat_path,&stats);

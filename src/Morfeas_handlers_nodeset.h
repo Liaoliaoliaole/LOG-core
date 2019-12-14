@@ -1,5 +1,5 @@
 /*
-File: Morfeas_handlers_nodeset.h, Declaration of OPC-UA server's Nodeset 
+File: Morfeas_handlers_nodeset.h, Declaration of OPC-UA server's Nodeset
 construction/deconstruction functions for all the Morfeas handlers.
 
 Copyright (C) 12019-12020  Sam harry Tzavaras
@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+#define Data_FIFO "/tmp/.Morfeas_handlers_FIFO"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,3 +47,5 @@ void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, con
 void SDAQ_handler_reg(UA_Server *server, char *connected_to_BUS);
 void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr);
 void SDAQ2OPC_UA_register_update_info(UA_Server *server, SDAQ_info_msg *ptr);
+
+
