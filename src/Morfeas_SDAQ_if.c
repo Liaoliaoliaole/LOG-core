@@ -49,7 +49,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Include Functions implementation header
 #include "Morfeas_JSON.h"
-#include "Morfeas_handlers_nodeset.h"
+#include "Morfeas_IPC.h"// including -> "Types.h"
 
 static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
