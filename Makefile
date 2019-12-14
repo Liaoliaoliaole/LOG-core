@@ -13,8 +13,9 @@ Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir)\
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(SRC_dir)/*.h
-					  
+
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \
+					  $(WORK_dir)/Morfeas_opc_ua_config.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
@@ -22,17 +23,25 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \
 
 all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if
 
+#Compilation of Morfeas applications
 $(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
-	
+
 $(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
-#Dependences of the Morfeas_opc_ua	
+#Compilation of Morfeas_IPC
+$(WORK_dir)/Morfeas_IPC.o: $(SRC_dir)/Morfeas_IPC.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_opc_ua_config.o: $(SRC_dir)/Morfeas_opc_ua_config.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+#Dependencies of the Morfeas_opc_ua
 $(WORK_dir)/Morfeas_opc_ua.o: $(SRC_dir)/Morfeas_opc_ua.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-#Dependences of the Morfeas_SDAQ_if
+#Dependencies of the Morfeas_SDAQ_if
 $(WORK_dir)/Morfeas_SDAQ_if.o: $(SRC_dir)/Morfeas_SDAQ_if.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
@@ -42,14 +51,11 @@ $(WORK_dir)/SDAQ_drv.o: $(CANif_DEP_SRC_dir)/SDAQ_drv.c
 $(WORK_dir)/Morfeas_JSON.o: $(SRC_dir)/Morfeas_JSON.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_IPC.o: $(SRC_dir)/Morfeas_IPC.c
-	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
-
 $(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ_nodeset.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
-	
-tree: 
-	mkdir -p $(BUILD_dir) $(WORK_dir)  
+
+tree:
+	mkdir -p $(BUILD_dir) $(WORK_dir)
 
 delete-the-tree:
 	rm -f -r $(WORK_dir) $(BUILD_dir)
@@ -57,6 +63,6 @@ delete-the-tree:
 clean:
 	rm -f $(WORK_dir)/* $(BUILD_dir)/*
 
-.PHONY: all clean clean-tree 
+.PHONY: all clean clean-tree
 
 

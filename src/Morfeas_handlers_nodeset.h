@@ -16,25 +16,17 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <math.h>
-#include <signal.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 
-#include "Morfeas_IPC.h"//<-#include "Morfeas_Types.h"
+#include "Morfeas_IPC.h"//<-#include "Types.h"
 
 extern pthread_mutex_t OPC_UA_NODESET_access;
+
+//Assistance function manipulate the Morfeas OPC_UA configuration
+UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config);
 
 //Nodeset object, variables, and methods add and update
 void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name);

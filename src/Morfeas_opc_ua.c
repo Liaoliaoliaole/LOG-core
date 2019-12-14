@@ -70,15 +70,10 @@ int main(int argc, char *argv[])
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
+	//Write to Log a welcome message
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,"Morfeas OPC-UA Started");
 	//Setup config for Morfeas_OPC_UA Server
-	UA_ServerConfig_setDefault(&conf);
-	/*
-	UA_ServerConfig_setBasics(&conf);
-    conf.applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
-    conf.buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
-    conf.buildInfo.productName = UA_STRING_ALLOC("Morfeas-OPC_UA Server");
-	conf.applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", "Morfeas-OPC_UA(open62541)");
-	*/
+	retval = Morfeas_OPC_UA_config(&conf);
 	//Init OPC_UA Server
 	server = UA_Server_newWithConfig(&conf);
 	//Add Morfeas application base node set to server
