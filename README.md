@@ -9,7 +9,7 @@ Morfeas is the Latinisation of of the Greek word "Μορφέας" which translat
 ### Project Description
 The Morfeas project was initially start as an implementation of a software gateway solution system (currently named Morfeas-Proto) that provide (and translate) measurements data from some proprietary devices (SDAQ family) with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
 
-As the Morfeas project developed additional support added for other devices(MDAQ, IOBOX, MTI) with different interfaces (ModBus-TCP, USB).
+As the Morfeas project developed additional support added for other devices (MDAQ, IOBOX, MTI) with different interfaces (ModBus-TCP, USB).
 
 Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web". Thisof, provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
 ### Design Philosophy
