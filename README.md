@@ -14,7 +14,7 @@ As the Morfeas project developed added support for other devices with different 
 Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web". Thisof, provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
 ### Design Philosophy
 The Morfeas-core project designed as a micro-component with supervision system.
-This means that all the components called from a supervisor programs, runs as daemon type processes, and they communicating using messages established from the **Morfeas IPC protocol** that passing through **PIPEs**. All the components was written in ANSI C.   
+This means that all the components called from a supervisor programs, runs as daemon type processes, and they communicating using messages established from the **Morfeas IPC protocol** that passing through **PIPEs**. All the project's components are written in **ANSI C**.   
 #### The Morfeas-core components:
 * **Morfeas**: The supervisor.
 * **Morfeas_opc_ua**: OPC-UA server    
@@ -26,7 +26,7 @@ This means that all the components called from a supervisor programs, runs as da
 
 **MTI**: Mobile Telemetry Interface.
 
-### Prerequisites
+### Requirements
 For compilation of this project the following dependencies required.
 * [GCC](https://gcc.gnu.org/) - The GNU Compilers Collection
 * [GNU Make](https://www.gnu.org/software/make/) - GNU make utility
@@ -86,7 +86,7 @@ $ sudo make install
 $ make tree
 $ make -j$(nproc)
 ```
-The executable binary files located under the ./build directory.
+The executable binaries located under the **./build** directory.
 
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
