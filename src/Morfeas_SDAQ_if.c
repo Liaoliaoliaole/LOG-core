@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
-		/*Actions on the bus*/
+	//-----Actions on the bus-----//
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
 	//Stop any measuring activity on the bus
 	Stop(CAN_socket_num, Broadcast);
