@@ -87,7 +87,6 @@ $ sudo make install
 ```
 $ make tree
 $ make -j$(nproc)
-$ sudo make install
 ```
 The executable binary files located under the ./build directory.
 
