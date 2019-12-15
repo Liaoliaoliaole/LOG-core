@@ -277,7 +277,6 @@ int main(int argc, char *argv[])
 					}
 					else
 						printf("\n\t\tMaximum amount of addresses is reached\n");
-					led_stat(&stats);
 					break;
 				case Device_info:
 					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
@@ -294,7 +293,6 @@ int main(int argc, char *argv[])
 		if(flags.Clean_flag)
 		{
 			clean_up_list_SDAQs(&stats);
-			led_stat(&stats);
 			logstat_json(logstat_path,&stats);
 			flags.Clean_flag = 0;
 		}
@@ -310,6 +308,7 @@ int main(int argc, char *argv[])
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 		}
+		led_stat(&stats);
 	}
 	printf("\nExiting...\n");
 	// save LogBook list to a file before destroy it
