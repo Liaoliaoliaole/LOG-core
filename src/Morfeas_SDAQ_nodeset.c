@@ -113,20 +113,26 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 			sprintf(tmp_str,"%s.Channels",SDAQ_anchor_str);
 			for(unsigned char i=1; i <= ptr->SDAQ_info_data.num_of_ch; i++)
 			{
-				sprintf(tmp_str2,"%s.CH%hhu", SDAQ_anchor_str, i);
 				UA_NodeId_init(&out);
+				sprintf(tmp_str2,"%s.CH%hhu", SDAQ_anchor_str, i);
 				if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str2), &out))
 				{
 					sprintf(tmp_str3,"CH%02hhu", i);
 					Morfeas_opc_ua_add_abject_node(server_ptr, tmp_str, tmp_str2, tmp_str3);
 					sprintf(tmp_str3,"%s.meas", tmp_str2);
-					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Measure", UA_TYPES_FLOAT);
+					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Value", UA_TYPES_FLOAT);
 					sprintf(tmp_str3,"%s.timestamp", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Timestamp", UA_TYPES_UINT16);
 					sprintf(tmp_str3,"%s.status", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Status", UA_TYPES_STRING);
 					sprintf(tmp_str3,"%s.unit", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Unit", UA_TYPES_STRING);
+					sprintf(tmp_str3,"%s.dates",tmp_str2);
+					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Calibration Dates", UA_TYPES_DATETIME);
+					sprintf(tmp_str3,"%s.period",tmp_str2);
+					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Period (Months)", UA_TYPES_BYTE);
+					sprintf(tmp_str3,"%s.points",tmp_str2);
+					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Calibration Points", UA_TYPES_BYTE);
 				}
 			}
 			sprintf(tmp_str,"%s.Firm_Rev",SDAQ_anchor_str);

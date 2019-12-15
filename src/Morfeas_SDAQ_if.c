@@ -282,10 +282,7 @@ int main(int argc, char *argv[])
 					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
 					break;
 				case Calibration_Date:
-					if(!add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats))
-					{
-						//TO-DO send calibration date msg to opc_ua
-					}
+					add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats);
 					break;
 			}
 			msg_cnt++;//increase message counter
@@ -707,6 +704,7 @@ struct SDAQ_info_entry * find_SDAQ(unsigned char address, struct Morfeas_SDAQ_if
 /*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
+	IPC_message IPC_msg;
 	GSList *list_node = NULL, *date_list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	struct Channel_date_entry *sdaq_Channels_cal_dates_node;
@@ -740,7 +738,15 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 				}
 			}
 			time(&(sdaq_node->last_seen));
-			if(channel == sdaq_node->SDAQ_info.num_of_ch)//if is the last calibration date message, mark entry as "info complete"
+			//Send calibration data via IPC
+			IPC_msg.SDAQ_cal_date.IPC_msg_type = IPC_SDAQ_cal_date;
+			sprintf(IPC_msg.SDAQ_cal_date.connected_to_BUS,"%s",stats->CAN_IF_name);
+			IPC_msg.SDAQ_cal_date.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
+			IPC_msg.SDAQ_cal_date.channel = channel;
+			memcpy(&(IPC_msg.SDAQ_cal_date.SDAQ_cal_date), date_dec, sizeof(sdaq_calibration_date));
+			IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
+			//if this is the last calibration date message, mark entry as "info complete"
+			if(channel == sdaq_node->SDAQ_info.num_of_ch)
 			{
 				sdaq_node->info_collection_status = 3;
 				return EXIT_SUCCESS;

@@ -97,8 +97,6 @@ int main(int argc, char *argv[])
 		}
 		retval = UA_Server_run_shutdown(server);
 	}
-	//Clean server's config
-	//UA_ServerConfig_clean(conf);
 	//Wait until all threads ends
 	for(i=0; i<n_threads; i++)
 		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
@@ -110,6 +108,8 @@ int main(int argc, char *argv[])
 //IPC_Receiver, Thread function.
 void* IPC_Receiver(void *varg_pt)
 {
+	UA_DateTime cal_time;
+	UA_DateTimeStruct calibration_date = {0};
 	//Morfeas IPC msg decoder
 	IPC_message IPC_msg_dec;
 	time_t health_update_check=0;
@@ -181,6 +181,33 @@ void* IPC_Receiver(void *varg_pt)
 				case IPC_SDAQ_info:
 					//printf("Enter:IPC_SDAQ_info from %s.%d\n",IPC_msg_dec.SDAQ_info.connected_to_BUS,IPC_msg_dec.SDAQ_info.SDAQ_serial_number);
 					SDAQ2OPC_UA_register_update_info(server, (SDAQ_info_msg*)&IPC_msg_dec);//mutex inside
+					break;
+				case IPC_SDAQ_cal_date:
+					//printf("Cal date received!!!\n");
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						sprintf(Node_ID_str, "%s.%d.CH%hhu.dates",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
+															     IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+																 IPC_msg_dec.SDAQ_meas.channel);
+						calibration_date.day = !IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.day?1:IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.day;
+						calibration_date.month = !IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.month?1:IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.month;
+						calibration_date.year = IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.year + 2000;
+						cal_time = UA_DateTime_fromStruct(calibration_date);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
+														   &cal_time,
+														   UA_TYPES_DATETIME);
+						sprintf(Node_ID_str, "%s.%d.CH%hhu.period",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
+															     IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+																 IPC_msg_dec.SDAQ_meas.channel);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
+														   &(IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.period),
+														   UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.%d.CH%hhu.points",IPC_msg_dec.SDAQ_meas.connected_to_BUS,
+																   IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+																   IPC_msg_dec.SDAQ_meas.channel);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
+														   &(IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.amount_of_points),
+														   UA_TYPES_BYTE);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_timediff:
 					//printf("Enter:IPC_SDAQ_timediff\n");

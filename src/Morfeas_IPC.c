@@ -29,11 +29,12 @@ size_t Morfeas_IPC_msg_size[]={
 	sizeof(Handler_reg_op_msg),
 	sizeof(Handler_reg_op_msg),
 	sizeof(SDAQ_reg_update_msg),
+	sizeof(CAN_BUS_info_msg),
 	sizeof(SDAQ_clear_msg),
 	sizeof(SDAQ_info_msg),
+	sizeof(SDAQ_cal_date_msg),
 	sizeof(SDAQ_timediff_msg),
-	sizeof(SDAQ_meas_msg),
-	sizeof(CAN_BUS_info_msg)
+	sizeof(SDAQ_meas_msg)
 };
 
 char *Morfeas_IPC_handler_type_name[]={

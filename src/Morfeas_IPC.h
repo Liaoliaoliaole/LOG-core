@@ -27,13 +27,14 @@ enum Morfeas_IPC_msg_type{
 	IPC_Handler_unregister,
 	//SDAQ_related IPC messages//
 	IPC_SDAQ_register_or_update,
+	IPC_CAN_BUS_info,
 	IPC_SDAQ_clean_up,
 	IPC_SDAQ_info,
+	IPC_SDAQ_cal_date,
 	IPC_SDAQ_timediff,
 	IPC_SDAQ_meas,
-	IPC_CAN_BUS_info,
 	//Set MAX_num_type
-	Morfeas_IPC_MAX_type = IPC_CAN_BUS_info
+	Morfeas_IPC_MAX_type = IPC_SDAQ_meas
 };
 
 enum Morfeas_IPC_handler_type{
@@ -75,6 +76,14 @@ typedef struct SDAQ_info_msg_struct{
 	sdaq_info SDAQ_info_data;
 }SDAQ_info_msg;
 
+typedef struct SDAQ_cal_date_msg_struct{
+	unsigned char IPC_msg_type;
+	char connected_to_BUS[connected_to_BUS_str_size];
+	unsigned int SDAQ_serial_number;
+	unsigned char channel;
+	sdaq_calibration_date SDAQ_cal_date;
+}SDAQ_cal_date_msg;
+
 typedef struct SDAQ_timediff_msg_struct{
 	unsigned char IPC_msg_type;
 	char connected_to_BUS[connected_to_BUS_str_size];
@@ -101,6 +110,7 @@ typedef union{
 	SDAQ_reg_update_msg SDAQ_reg_update;
 	SDAQ_clear_msg SDAQ_clean;
 	SDAQ_info_msg SDAQ_info;
+	SDAQ_cal_date_msg SDAQ_cal_date;
 	SDAQ_timediff_msg SDAQ_timediff;
 	SDAQ_meas_msg SDAQ_meas;
 	CAN_BUS_info_msg BUS_info;
