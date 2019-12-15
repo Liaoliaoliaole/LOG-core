@@ -9,7 +9,7 @@ Morfeas is the Latinisation of of the Greek word "Μορφέας" which translat
 ### Project Description
 The Morfeas project was initially start as an implementation of a software gateway solution system (currently named Morfeas-Proto) that provide (and translate) measurements data from some proprietary devices (SDAQ family) with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
 
-As the Morfeas project developed additional support added for other devices (MDAQ, IOBOX, MTI) with different interfaces (ModBus-TCP, USB).
+As the Morfeas project developed additional support added for other devices (MDAQ, IO-BOX, MTI) with different interfaces (ModBus-TCP, USB).
 
 Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web". Thisof, provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
 ### Design Philosophy
@@ -20,9 +20,9 @@ This means that all the components called from a supervisor programs, runs as da
 * **Morfeas_opc_ua**: OPC-UA server    
 * Driver/Handler for each supported interface:
   * **Morfeas_SDAQ_if**: SDAQ_net handler
-  * **Morfeas_MDAQ_if**: Modbus-TCP handler for MDAQs
-  * **Morfeas_IOBOX_if**: Modbus-TCP handler for IOBOXs
-  * **Morfeas_MTI_if**: Modbus-TCP and USB  handler for MTIs
+  * **Morfeas_MDAQ_if**: ModBus-TCP handler for MDAQs
+  * **Morfeas_IOBOX_if**: ModBus-TCP handler for IOBOXs
+  * **Morfeas_MTI_if**: ModBus-TCP and USB  handler for MTIs
 
 **MTI**: Mobile Telemetry Interface.
 
@@ -36,7 +36,7 @@ For compilation of this project the following dependencies required.
 * [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data
 * [libxml2](http://xmlsoft.org/) -  Library for parsing XML documents
 * [libusb](https://libusb.info/) - A ANSI C library that provides generic access to USB devices.
-* [libmodbus](https://www.libmodbus.org/) - A free software library for communication via Modbus protocol.
+* [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 
 ##### Optionally
 * [CAN-Utils](https://elinux.org/Can-utils) - CANBus utilities
