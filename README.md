@@ -21,7 +21,7 @@ This means that all the components called from a supervisor programs, runs as da
 * Driver/Handler for each supported interface:
   * **Morfeas_SDAQ_if**: SDAQ_net handler
   * **Morfeas_MDAQ_if**: ModBus-TCP handler for MDAQs
-  * **Morfeas_IOBOX_if**: ModBus-TCP handler for IOBOXs
+  * **Morfeas_IOBOX_if**: ModBus-TCP handler for IO-BOXes
   * **Morfeas_MTI_if**: ModBus-TCP and USB  handler for MTIs
 
 **MTI**: Mobile Telemetry Interface.
