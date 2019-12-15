@@ -50,12 +50,10 @@ The source of the Morfeas-core project have the following submodules:
 ### Get the Source
 ```
 $ # Clone the project's source code
-$ git clone https://gitlab.com/fantomsam/morfeas_project Morfeas_core
+$ git clone https://gitlab.com/fantomsam/morfeas_project.git Morfeas_core
 $ cd Morfeas_core
 $ # Get Source of the submodules
-$ git submodule update --init --recursive
-$ git submodule foreach --recursive git fetch
-$ git submodule foreach git pull --ff-only origin master
+$ git submodule update --init --recursive --remote --merge
 ```
 ### Compilation of the submodules
 #### cJSON
