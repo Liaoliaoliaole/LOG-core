@@ -85,7 +85,6 @@ $ sudo make install
 ```
 ### Compilation of the Morfeas-core Project
 ```
-$ cd src/sdaq_worker
 $ make tree
 $ make -j$(nproc)
 $ sudo make install
