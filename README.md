@@ -4,7 +4,7 @@
 This repository related to Morfeas core where is a sub-project of the Morfeas Project.
 
 ### The name "Morfeas"
-Morfeas is the Latinisation of of the Greek word "Μορφέας" which translate as: Him that can give or change form (or shape). The name "Morfeas" describe the design [Philosophy](#design-Philosophy) of the project, Many small building blocks that change the form of the information from one protocol to the other.    
+Morfeas is the Latinisation of of the Greek word "Μορφέας" which translate as: Him that can give or change form (or shape). The name "Morfeas" describe the design [Philosophy](#design-philosophy) of the project, Many small building blocks that change the form of the information from one protocol to the other.    
 
 ### Project Description
 The Morfeas project was initially start as an implementation of a software gateway solution system (currently named Morfeas-Proto) that provide (and translate) measurements data from some proprietary devices (SDAQ family) with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
