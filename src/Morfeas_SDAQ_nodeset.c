@@ -33,7 +33,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		sprintf(tmp_buff, "%s.BUS_util", connected_to_BUS);
 		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff, "%s.amount", connected_to_BUS);
-		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "SDAQs_on_BUS", UA_TYPES_BYTE);
+		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "Dev_on_BUS", UA_TYPES_BYTE);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
@@ -128,7 +128,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 					sprintf(tmp_str3,"%s.unit", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Unit", UA_TYPES_STRING);
 					sprintf(tmp_str3,"%s.dates",tmp_str2);
-					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Calibration Dates", UA_TYPES_DATETIME);
+					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Calibration Date", UA_TYPES_DATETIME);
 					sprintf(tmp_str3,"%s.period",tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Period (Months)", UA_TYPES_BYTE);
 					sprintf(tmp_str3,"%s.points",tmp_str2);

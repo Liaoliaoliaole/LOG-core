@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern pthread_mutex_t OPC_UA_NODESET_access;
 
 //Assistance function manipulate the Morfeas OPC_UA configuration
-UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config);
+UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version);
 
 //Nodeset object, variables, and methods add and update
 void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name);

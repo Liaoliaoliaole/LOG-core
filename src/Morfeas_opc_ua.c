@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define VERSION "0.9.5 beta" /*Release Version of Morfeas_opc_ua*/
 #define n_threads 1
 #define CPU_temp_sysfs_file "/sys/class/thermal/thermal_zone0/temp"
 
@@ -39,6 +40,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "Morfeas_handlers_nodeset.h"
 
+//print the Usage manual
+void print_usage(char *prog_name);
 //FIFO reader, Thread function.
 void* IPC_Receiver(void *varg_pt);
 //Timer Handler Function
@@ -59,13 +62,36 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
+	char *app_name=NULL, *ns_config=NULL;
 	//Open62541 OPC-UA variables
 	UA_ServerConfig conf = {0};
 	UA_StatusCode retval;
 	UA_UInt16 timeout;
 	//variables for threads
 	pthread_t Threads_ids[n_threads];
-	unsigned int i; //amount_of_threads loaded from the Configuration
+	int c;
+	//Get options 
+	while ((c = getopt (argc, argv, "hVc:a:")) != -1)
+	{
+		switch (c)
+		{
+			case 'h'://help
+				print_usage(argv[0]);
+				exit(EXIT_SUCCESS);
+			case 'V'://Version
+				printf(VERSION"\n");
+				exit(EXIT_SUCCESS);
+			case 'c'://nodeset config XML file
+				ns_config = optarg;
+				break;
+			case 'a'://OPC-UA application name
+				app_name = optarg;
+				break;
+			case '?':
+				print_usage(argv[0]);
+				exit(EXIT_FAILURE);
+		}
+	}
 
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
@@ -75,7 +101,7 @@ int main(int argc, char *argv[])
 	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
 	"\t------ Morfeas OPC-UA Started ------");
 	//Setup config for Morfeas_OPC_UA Server
-	retval = Morfeas_OPC_UA_config(&conf);
+	retval = Morfeas_OPC_UA_config(&conf, app_name, VERSION);
 	//Init OPC_UA Server
 	server = UA_Server_newWithConfig(&conf);
 	//Add Morfeas application base node set to server
@@ -98,11 +124,32 @@ int main(int argc, char *argv[])
 		retval = UA_Server_run_shutdown(server);
 	}
 	//Wait until all threads ends
-	for(i=0; i<n_threads; i++)
+	for(int i=0; i<n_threads; i++)
 		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
     UA_Server_delete(server);
 	unlink("/tmp/.Morfeas_FIFO");
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+//print the Usage manual
+void print_usage(char *prog_name)
+{
+	const char preamp[] = {
+	"\tProgram: Morfeas_opc_ua  Copyright (C) 12019-12020  Sam Harry Tzavaras\n"
+    "\tThis program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE.\n"
+    "\tThis is free software, and you are welcome to redistribute it\n"
+    "\tunder certain conditions; for details see LICENSE.\n"
+	};
+	const char manual[] = {
+		"Options:\n"
+		"           -h : Print help.\n"
+		"           -V : Version.\n"
+		"           -c : Path to Nodeset configuration XML file.\n"
+		"           -a : OPC-UA Application Name.\n"
+		"\n"
+	};
+	printf("%s\nUsage: %s [Options]\n\n%s",preamp, prog_name, manual);
+	return;
 }
 
 //IPC_Receiver, Thread function.

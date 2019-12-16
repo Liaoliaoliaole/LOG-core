@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 static const size_t usernamePasswordsSize = 1;
 static UA_UsernamePasswordLogin usernamePasswords[] = {{UA_STRING_STATIC("Morfeas"), UA_STRING_STATIC("Morfeas_password")}};
 
-UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config)
+UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version)
 {
     UA_StatusCode retval;
 
@@ -44,17 +44,19 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config)
     config->applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
     config->buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
     config->buildInfo.productName = UA_STRING_ALLOC("Morfeas-OPC_UA Server (Based on Open62541)");
-	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", "Morfeas default application");
-
+	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", !app_name?"Morfeas default application":app_name);
+	config->buildInfo.softwareVersion = UA_STRING_ALLOC(version);
     retval = UA_ServerConfig_addNetworkLayerTCP(config, 4840, 0, 0);
-    if(retval != UA_STATUSCODE_GOOD) {
+    if(retval != UA_STATUSCODE_GOOD) 
+	{
         UA_ServerConfig_clean(config);
         return retval;
     }
 
     // Allocate the SecurityPolicies
     retval = UA_ServerConfig_addSecurityPolicyNone(config, NULL);// const UA_ByteString *certificate
-    if(retval != UA_STATUSCODE_GOOD) {
+    if(retval != UA_STATUSCODE_GOOD) 
+	{
         UA_ServerConfig_clean(config);
         return retval;
     }
@@ -64,7 +66,8 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config)
     retval = UA_AccessControl_default(config, true,
                 &config->securityPolicies[config->securityPoliciesSize-1].policyUri,
                 usernamePasswordsSize, usernamePasswords);
-    if(retval != UA_STATUSCODE_GOOD) {
+    if(retval != UA_STATUSCODE_GOOD) 
+	{
         UA_ServerConfig_clean(config);
         return retval;
     }
