@@ -159,10 +159,11 @@ void print_usage(char *prog_name)
 //Nodeset config XML reader, Thread Function
 void * Nodeset_XML_reader(void *varg_pt)
 {
-	xmlDocPtr doc = NULL;//XML tree pointer
+	xmlDoc *doc = NULL;//XML tree pointer
+	xmlNode *root_element = NULL, *cur_node; //XML root Node
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
-	if(!ns_config || !access(ns_config, R_OK | W_OK | X_OK))
+	if(!ns_config || access(ns_config, R_OK | F_OK ))
 	{
 		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
 		"Path to Configuration XML file is invalid. Server will run in compatible mode");
@@ -179,7 +180,10 @@ void * Nodeset_XML_reader(void *varg_pt)
 				{
 					time_t now = time(NULL);
 					printf("File update %s\n",ctime(&now));
-					Morfeas_OPC_UA_conf_XML_parser_val(ns_config, doc);
+					if(!Morfeas_OPC_UA_conf_XML_parser_val(ns_config, doc))
+					{
+
+					}
 				}
 				file_last_mod = nsconf_xml_stat.st_mtime;
 			}

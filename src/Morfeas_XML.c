@@ -29,22 +29,41 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+/**
+ * print_element_names:
+ * @a_node: the initial xml node to consider.
+ *
+ * Prints the names of the all the xml elements
+ * that are siblings or children of a given xml node.
+ */
+void print_element_names(xmlNode * a_node)
+{
+    xmlNode *cur_node = NULL;
+
+    for (cur_node = a_node; cur_node; cur_node = cur_node->next)
+	{
+        if (cur_node->type == XML_ELEMENT_NODE)
+		{
+			printf("node type: Element, name: %s\n", cur_node->name);
+			if(cur_node->children->content)
+				printf("\tHave contents: %s\n", cur_node->children->content);
+        }
+		print_element_names(cur_node->children);
+	}
+}
+
 int Morfeas_OPC_UA_conf_XML_parser_val(const char *filename, xmlDocPtr doc)
 {
     xmlParserCtxtPtr ctxt; /* the parser context */
-    //xmlDocPtr doc; /* the resulting document tree */
-
+	xmlNode *root_element = NULL;
     /* create a parser context */
-    ctxt = xmlNewParserCtxt();
-    if (ctxt == NULL)
+    if (!(ctxt = xmlNewParserCtxt()))
     {
         fprintf(stderr, "Failed to allocate parser context\n");
 		return EXIT_FAILURE;
     }
     /* parse the file, activating the DTD validation option */
-    doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID);
-    /* check if parsing succeeded */
-    if (doc == NULL)
+    if (!(doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID)))
     {
         fprintf(stderr, "Failed to parse %s\n", filename);
         return EXIT_FAILURE;
@@ -52,15 +71,16 @@ int Morfeas_OPC_UA_conf_XML_parser_val(const char *filename, xmlDocPtr doc)
     else
     {
 		/* check if validation succeeded */
-		if (!(ctxt->valid))
+		if(!(ctxt->valid))
 		{
         	fprintf(stderr, "Failed to validate %s\n", filename);
         	return EXIT_FAILURE;
         }
-		/* free up the resulting document */
+        /*Get the root element node */
+    	root_element = xmlDocGetRootElement(doc);
+		print_element_names(root_element);
 		xmlFreeDoc(doc);
+		xmlFreeParserCtxt(ctxt);
     }
-    /* free up the parser context */
-    xmlFreeParserCtxt(ctxt);
     return EXIT_SUCCESS;
 }
