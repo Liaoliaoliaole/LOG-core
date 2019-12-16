@@ -160,9 +160,8 @@ void * Nodeset_XML_reader(void *varg_pt)
 {
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
-	time_t now;
 	printf("Path to Nodeset_config_XML = %s\n",ns_config);
-	
+	time_t now;
 	while(running)
 	{
 		time(&now);
@@ -171,7 +170,8 @@ void * Nodeset_XML_reader(void *varg_pt)
 			perror("Error at get of nsconf_xml_stat\n");
 			exit(EXIT_FAILURE);
 		}
-		if(nsconf_xml_stat.st_mtim.tv_sec)
+		if(!(nsconf_xml_stat.st_ctime - now))
+			printf("File update %s\n",ctime(&now));
 		sleep(1);
 	}
 	return NULL;
