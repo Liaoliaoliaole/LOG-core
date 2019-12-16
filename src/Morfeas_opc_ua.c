@@ -161,17 +161,20 @@ void * Nodeset_XML_reader(void *varg_pt)
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
 	printf("Path to Nodeset_config_XML = %s\n",ns_config);
-	time_t now;
+	time_t now, file_last_mod;
 	while(running)
 	{
-		time(&now);
-		if(stat(ns_config, &nsconf_xml_stat))
+		if(!stat(ns_config, &nsconf_xml_stat))
 		{
-			perror("Error at get of nsconf_xml_stat\n");
-			exit(EXIT_FAILURE);
+			if(nsconf_xml_stat.st_mtime - file_last_mod)
+			{
+				time(&now);
+				printf("File update %s\n",ctime(&now));
+			}
+			file_last_mod = nsconf_xml_stat.st_mtime;
 		}
-		if(!(nsconf_xml_stat.st_ctime - now))
-			printf("File update %s\n",ctime(&now));
+		else
+			perror("Error on get stats of nsconf_xml");
 		sleep(1);
 	}
 	return NULL;

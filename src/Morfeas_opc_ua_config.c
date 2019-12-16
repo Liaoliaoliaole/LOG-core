@@ -14,6 +14,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include <open62541/client_config_default.h>
 #include <open62541/network_tcp.h>
@@ -30,7 +33,7 @@ static UA_UsernamePasswordLogin usernamePasswords[] = {{UA_STRING_STATIC("Morfea
 UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version)
 {
     UA_StatusCode retval;
-
+	char buff[512], hostname[256];
     if(!config)
 		return UA_STATUSCODE_BADINVALIDARGUMENT;
 
@@ -40,7 +43,9 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
         UA_ServerConfig_clean(config);
         return retval;
     }
-
+	gethostname(hostname, sizeof(hostname));
+	sprintf(buff,"http://%s",hostname);
+	config->buildInfo.productUri = UA_STRING_ALLOC(buff);
     config->applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
     config->buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
     config->buildInfo.productName = UA_STRING_ALLOC("Morfeas-OPC_UA Server (Based on Open62541)");
