@@ -37,6 +37,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <glibtop/mem.h>
 #include <glibtop/fsusage.h>
 
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
+
 //Include Functions implementation header
 #include "Morfeas_handlers_nodeset.h"
 

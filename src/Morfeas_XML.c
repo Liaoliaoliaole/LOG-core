@@ -27,3 +27,5 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
+
+int Morfeas_OPC_UA_conf_XML()
