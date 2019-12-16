@@ -4,20 +4,27 @@
 This repository related to Morfeas core where is a sub-project of the Morfeas Project.
 
 ### The name "Morfeas"
-Morfeas is the Latinisation of of the Greek word "Μορφέας" which translate as: Him that can give or change form (or shape). The name "Morfeas" describe the design [Philosophy](#design-philosophy) of the project, Many small building blocks that change the form of the information from one protocol to the other.    
+Morfeas is the Latinisation of of the Greek word "Μορφέας" which translate as:
+Him that can give or change form (or shape). The name "Morfeas" describe the design [Philosophy](#design-philosophy)
+of the project, Many small building blocks that change the form of the information from one protocol to other(s).
 
 ### Project Description
-The Morfeas project was initially start as an implementation of a software gateway solution system (currently named Morfeas-Proto) that provide (and translate) measurements data from some proprietary devices (SDAQ family) with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
+The Morfeas project was initially start as an implementation of a software gateway solution system
+(currently named Morfeas-Proto) that provide (and translate) measurements data from some proprietary devices (SDAQ family)
+with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
 
 As the Morfeas project developed additional support added for other devices (MDAQ, IO-BOX, MTI) with different interfaces (ModBus-TCP, USB).
 
-Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web". Thisof, provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
+Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web".
+Thisof, provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
 ### Design Philosophy
 The Morfeas-core project designed as a micro-component with supervision system.
-This means that all the components called from a supervisor programs, runs as daemon type processes, and they communicating using messages established from the **Morfeas IPC protocol** that passing through **PIPEs**. All the project's components are written in **ANSI C**.   
+This means that all the components called from a supervisor programs,
+runs as daemon type processes, and they communicating using messages established from the **Morfeas IPC protocol**
+that passing through **PIPEs**. All the project's components are written in **ANSI C**.
 #### The Morfeas-core components:
 * **Morfeas**: The supervisor.
-* **Morfeas_opc_ua**: OPC-UA server    
+* **Morfeas_opc_ua**: OPC-UA server
 * Driver/Handler for each supported interface:
   * **Morfeas_SDAQ_if**: SDAQ_net handler
   * **Morfeas_MDAQ_if**: ModBus-TCP handler for MDAQs
@@ -44,7 +51,7 @@ For compilation of this project the following dependencies required.
 ## The Source
 The source of the Morfeas-core project have the following submodules:
 * [SDAQ_worker](https://gitlab.com/fantomsam/sdaq-worker) - A libre (free) utilities suite for SDAQ devices.
-* [cJSON](https://github.com/DaveGamble/cJSON) - Ultralightweight open source JSON parser for ANSI C.
+* [cJSON](https://github.com/DaveGamble/cJSON) - An Ultralightweight open source JSON parser for ANSI C.
 * [open62541](https://open62541.org/) - An open source C (C99) implementation of OPC-UA.
 
 ### Get the Source

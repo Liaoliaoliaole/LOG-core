@@ -48,7 +48,7 @@ void print_usage(char *prog_name);
 //IPC_Receiver, Thread function.
 void * IPC_Receiver(void *varg_pt);
 //Nodeset config XML reader, Thread Function
-void * Nodeset_XML_reader(void *varg_pt); 
+void * Nodeset_XML_reader(void *varg_pt);
 //Timer Handler Function
 void Rpi_health_update(int sign);
 //OPC_UA local Functions
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 	//variables for threads
 	pthread_t Threads_ids[n_threads];
 	int c;
-	//Get options 
+	//Get options
 	while ((c = getopt (argc, argv, "hVc:a:")) != -1)
 	{
 		switch (c)
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 	//----Start threads----//
 	pthread_create(&Threads_ids[0], NULL, IPC_Receiver, NULL);//Create Thread for IPC_receiver
 	pthread_create(&Threads_ids[1], NULL, Nodeset_XML_reader, ns_config);//Create Thread for Nodeset_XML_reader
-	
+
 	//Start OPC_UA Server
 	retval = UA_Server_run_startup(server);
     if(retval == UA_STATUSCODE_GOOD)
@@ -163,21 +163,29 @@ void * Nodeset_XML_reader(void *varg_pt)
 {
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
-	printf("Path to Nodeset_config_XML = %s\n",ns_config);
+	if(!ns_config || !access(ns_config, R_OK | W_OK | X_OK))
+	{
+		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+		"Path to Configuration XML file is invalid. Server will run in compatible mode");
+		return NULL;
+	}
 	time_t now, file_last_mod;
 	while(running)
 	{
-		if(!stat(ns_config, &nsconf_xml_stat))
+		if(ns_config)
 		{
-			if(nsconf_xml_stat.st_mtime - file_last_mod)
+			if(!stat(ns_config, &nsconf_xml_stat))
 			{
-				time(&now);
-				printf("File update %s\n",ctime(&now));
+				if(nsconf_xml_stat.st_mtime - file_last_mod)
+				{
+					time(&now);
+					printf("File update %s\n",ctime(&now));
+				}
+				file_last_mod = nsconf_xml_stat.st_mtime;
 			}
-			file_last_mod = nsconf_xml_stat.st_mtime;
+			else
+				perror("Error on get stats of nsconf_xml");
 		}
-		else
-			perror("Error on get stats of nsconf_xml");
 		sleep(1);
 	}
 	return NULL;
