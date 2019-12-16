@@ -27,5 +27,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
+#include <libxml/tree.h>
 
-int Morfeas_OPC_UA_conf_XML()
+int Morfeas_OPC_UA_conf_XML_parser_val(const char *filename, xmlDocPtr doc)
+{
+    xmlParserCtxtPtr ctxt; /* the parser context */
+    //xmlDocPtr doc; /* the resulting document tree */
+
+    /* create a parser context */
+    ctxt = xmlNewParserCtxt();
+    if (ctxt == NULL)
+    {
+        fprintf(stderr, "Failed to allocate parser context\n");
+		return EXIT_FAILURE;
+    }
+    /* parse the file, activating the DTD validation option */
+    doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID);
+    /* check if parsing succeeded */
+    if (doc == NULL)
+    {
+        fprintf(stderr, "Failed to parse %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    else
+    {
+		/* check if validation succeeded */
+		if (!(ctxt->valid))
+		{
+        	fprintf(stderr, "Failed to validate %s\n", filename);
+        	return EXIT_FAILURE;
+        }
+		/* free up the resulting document */
+		xmlFreeDoc(doc);
+    }
+    /* free up the parser context */
+    xmlFreeParserCtxt(ctxt);
+    return EXIT_SUCCESS;
+}

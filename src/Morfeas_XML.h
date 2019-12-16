@@ -14,3 +14,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+//Function that parser and validate the Nodeset configuration XML
+
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+
+int Morfeas_OPC_UA_conf_XML_parser_val(const char *filename, xmlDocPtr doc);

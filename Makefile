@@ -19,6 +19,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
+					  $(WORK_dir)/Morfeas_XML.o \
 					  $(SRC_dir)/*.h
 
 all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if
@@ -39,6 +40,9 @@ $(WORK_dir)/Morfeas_opc_ua_config.o: $(SRC_dir)/Morfeas_opc_ua_config.c
 
 #Dependencies of the Morfeas_opc_ua
 $(WORK_dir)/Morfeas_opc_ua.o: $(SRC_dir)/Morfeas_opc_ua.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Morfeas_XML.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_SDAQ_if

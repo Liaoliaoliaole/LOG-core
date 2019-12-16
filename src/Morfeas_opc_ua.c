@@ -37,11 +37,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <glibtop/mem.h>
 #include <glibtop/fsusage.h>
 
-#include <libxml/xmlmemory.h>
-#include <libxml/parser.h>
-
 //Include Functions implementation header
 #include "Morfeas_handlers_nodeset.h"
+#include "Morfeas_XML.h"
 
 //print the Usage manual
 void print_usage(char *prog_name);
@@ -161,6 +159,7 @@ void print_usage(char *prog_name)
 //Nodeset config XML reader, Thread Function
 void * Nodeset_XML_reader(void *varg_pt)
 {
+	xmlDocPtr doc = NULL;//XML tree pointer
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
 	if(!ns_config || !access(ns_config, R_OK | W_OK | X_OK))
@@ -169,7 +168,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 		"Path to Configuration XML file is invalid. Server will run in compatible mode");
 		return NULL;
 	}
-	time_t now, file_last_mod;
+	time_t file_last_mod;
 	while(running)
 	{
 		if(ns_config)
@@ -178,13 +177,14 @@ void * Nodeset_XML_reader(void *varg_pt)
 			{
 				if(nsconf_xml_stat.st_mtime - file_last_mod)
 				{
-					time(&now);
+					time_t now = time(NULL);
 					printf("File update %s\n",ctime(&now));
+					Morfeas_OPC_UA_conf_XML_parser_val(ns_config, doc);
 				}
 				file_last_mod = nsconf_xml_stat.st_mtime;
 			}
 			else
-				perror("Error on get stats of nsconf_xml");
+				perror("Error on get stats for Nodeset configuration XML");
 		}
 		sleep(1);
 	}

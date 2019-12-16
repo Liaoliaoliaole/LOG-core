@@ -6,7 +6,7 @@ This repository related to Morfeas core where is a sub-project of the Morfeas Pr
 ### The name "Morfeas"
 Morfeas is the Latinisation of of the Greek word "Μορφέας" which translate as:
 Him that can give or change form (or shape). The name "Morfeas" describe the design [Philosophy](#design-philosophy)
-of the project, Many small building blocks that change the form of the information from one protocol to other(s).
+of the project. Many small building blocks that change the form of the information from one protocol to other(s).
 
 ### Project Description
 The Morfeas project was initially start as an implementation of a software gateway solution system
@@ -26,10 +26,10 @@ that passing through **PIPEs**. All the project's components are written in **AN
 * **Morfeas**: The supervisor.
 * **Morfeas_opc_ua**: OPC-UA server
 * Driver/Handler for each supported interface:
-  * **Morfeas_SDAQ_if**: SDAQ_net handler
-  * **Morfeas_MDAQ_if**: ModBus-TCP handler for MDAQs
-  * **Morfeas_IOBOX_if**: ModBus-TCP handler for IO-BOXes
-  * **Morfeas_MTI_if**: ModBus-TCP and USB  handler for MTIs
+  * **Morfeas_SDAQ_if**: SDAQ_net handler.
+  * **Morfeas_MDAQ_if**: ModBus-TCP handler for MDAQs.
+  * **Morfeas_IOBOX_if**: ModBus-TCP handler for IO-BOXes.
+  * **Morfeas_MTI_if**: ModBus-TCP and USB  handler for MTIs.
 
 **MTI**: Mobile Telemetry Interface.
 
@@ -40,8 +40,8 @@ For compilation of this project the following dependencies required.
 * [CMake](https://cmake.org/) - Cross-platform family of open source tools for package build.
 * [NCURSES](https://www.gnu.org/software/ncurses/ncurses.html) - A free (libre) software emulation library of curses.
 * [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
-* [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data
-* [libxml2](http://xmlsoft.org/) -  Library for parsing XML documents
+* [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data.
+* [libxml2](http://xmlsoft.org/) -  Library for parsing XML documents.
 * [libusb](https://libusb.info/) - A ANSI C library that provides generic access to USB devices.
 * [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 
