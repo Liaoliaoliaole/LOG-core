@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.9.5 beta" /*Release Version of Morfeas_opc_ua*/
-#define n_threads 1
+#define n_threads 2
 #define CPU_temp_sysfs_file "/sys/class/thermal/thermal_zone0/temp"
 
 #include <stdio.h>
@@ -42,8 +42,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //print the Usage manual
 void print_usage(char *prog_name);
-//FIFO reader, Thread function.
-void* IPC_Receiver(void *varg_pt);
+//IPC_Receiver, Thread function.
+void * IPC_Receiver(void *varg_pt);
+//Nodeset config XML reader, Thread Function
+void * Nodeset_XML_reader(void *varg_pt); 
 //Timer Handler Function
 void Rpi_health_update(int sign);
 //OPC_UA local Functions
@@ -108,8 +110,9 @@ int main(int argc, char *argv[])
 	Morfeas_opc_ua_root_nodeset_Define(server);
 
 	//----Start threads----//
-	pthread_create(&Threads_ids[0], NULL, IPC_Receiver, NULL);
-
+	pthread_create(&Threads_ids[0], NULL, IPC_Receiver, NULL);//Create Thread for IPC_receiver
+	pthread_create(&Threads_ids[1], NULL, Nodeset_XML_reader, ns_config);//Create Thread for Nodeset_XML_reader
+	
 	//Start OPC_UA Server
 	retval = UA_Server_run_startup(server);
     if(retval == UA_STATUSCODE_GOOD)
@@ -152,6 +155,28 @@ void print_usage(char *prog_name)
 	return;
 }
 
+//Nodeset config XML reader, Thread Function
+void * Nodeset_XML_reader(void *varg_pt)
+{
+	char *ns_config = varg_pt;
+	struct stat nsconf_xml_stat;
+	time_t now;
+	printf("Path to Nodeset_config_XML = %s\n",ns_config);
+	
+	while(running)
+	{
+		time(&now);
+		if(stat(ns_config, &nsconf_xml_stat))
+		{
+			perror("Error at get of nsconf_xml_stat\n");
+			exit(EXIT_FAILURE);
+		}
+		if(nsconf_xml_stat.st_mtim.tv_sec)
+		sleep(1);
+	}
+	return NULL;
+}
+
 //IPC_Receiver, Thread function.
 void* IPC_Receiver(void *varg_pt)
 {
@@ -166,7 +191,7 @@ void* IPC_Receiver(void *varg_pt)
 	//Make the Named Pipe(FIFO)
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
     FIFO_fd = open(Data_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
-	while (running)
+	while(running)
 	{
 		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
 		{
