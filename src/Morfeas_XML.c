@@ -36,7 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  * Prints the names of the all the xml elements
  * that are siblings or children of a given xml node.
  */
-void print_element_names(xmlNode * a_node)
+void print_XML_node(xmlNode * a_node)
 {
     xmlNode *cur_node = NULL;
 
@@ -48,14 +48,14 @@ void print_element_names(xmlNode * a_node)
 			if(cur_node->children->content)
 				printf("\tHave contents: %s\n", cur_node->children->content);
         }
-		print_element_names(cur_node->children);
+		print_XML_node(cur_node->children);
 	}
 }
 
-int Morfeas_OPC_UA_conf_XML_parser_val(const char *filename, xmlDocPtr doc)
+int Morfeas_OPC_UA_conf_XML_parsing_validation(const char *filename, xmlDocPtr *doc)
 {
-    xmlParserCtxtPtr ctxt; /* the parser context */
-	xmlNode *root_element = NULL;
+    static xmlParserCtxtPtr ctxt; /* the parser context */
+	//xmlNode *root_element = NULL;
     /* create a parser context */
     if (!(ctxt = xmlNewParserCtxt()))
     {
@@ -63,7 +63,7 @@ int Morfeas_OPC_UA_conf_XML_parser_val(const char *filename, xmlDocPtr doc)
 		return EXIT_FAILURE;
     }
     /* parse the file, activating the DTD validation option */
-    if (!(doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID)))
+    if (!(*doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID)))
     {
         fprintf(stderr, "Failed to parse %s\n", filename);
         return EXIT_FAILURE;
@@ -74,12 +74,9 @@ int Morfeas_OPC_UA_conf_XML_parser_val(const char *filename, xmlDocPtr doc)
 		if(!(ctxt->valid))
 		{
         	fprintf(stderr, "Failed to validate %s\n", filename);
+        	xmlFreeDoc(*doc);
         	return EXIT_FAILURE;
         }
-        /*Get the root element node */
-    	root_element = xmlDocGetRootElement(doc);
-		print_element_names(root_element);
-		xmlFreeDoc(doc);
 		xmlFreeParserCtxt(ctxt);
     }
     return EXIT_SUCCESS;
