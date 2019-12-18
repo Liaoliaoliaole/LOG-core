@@ -22,3 +22,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 int Morfeas_OPC_UA_conf_XML_parsing_validation(const char *filename, xmlDocPtr *doc);
 void print_XML_node(xmlNode * a_node);
+char * XML_node_get_content(xmlNode *node, const char *node_name);

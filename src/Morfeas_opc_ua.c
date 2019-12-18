@@ -51,6 +51,8 @@ void * Nodeset_XML_reader(void *varg_pt);
 void Rpi_health_update(int sign);
 //OPC_UA local Functions
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
+//Function that adds a child object under the OPC-UA node "ISO_Channels". building according to Wartsila's specification. 
+void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server, xmlNode *node);
 
 //Global variables
 static volatile UA_Boolean running = true;
@@ -160,7 +162,7 @@ void print_usage(char *prog_name)
 void * Nodeset_XML_reader(void *varg_pt)
 {
 	xmlDoc *doc;//XML tree pointer
-	xmlNode *root_element = NULL; //XML root Node
+	xmlNode *root_element; //XML root Node
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
 	if(!ns_config || access(ns_config, R_OK | F_OK ))
@@ -183,8 +185,12 @@ void * Nodeset_XML_reader(void *varg_pt)
 					if(!Morfeas_OPC_UA_conf_XML_parsing_validation(ns_config, &doc))
 					{
 						root_element = xmlDocGetRootElement(doc);
-						print_XML_node(root_element);
-						xmlFreeDoc(doc);
+						pthread_mutex_lock(&OPC_UA_NODESET_access);
+						for(root_element = root_element->children; root_element; root_element = root_element->next)
+							Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
+							//print_XML_node(root_element);
+						pthread_mutex_unlock(&OPC_UA_NODESET_access);
+							xmlFreeDoc(doc);
 					}
 				}
 				file_last_mod = nsconf_xml_stat.st_mtime;
@@ -195,6 +201,64 @@ void * Nodeset_XML_reader(void *varg_pt)
 		sleep(1);
 	}
 	return NULL;
+}
+
+void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
+{
+	char tmp_str[50], *ISO_channel_name, anchor_dec[20];
+	float t_min_max;
+	unsigned int S_N;
+	unsigned char CH;
+	UA_NodeId out;
+	UA_NodeId_init(&out);
+	if(!(ISO_channel_name = XML_node_get_content(node, "ISO_CHANNEL")))
+		return;
+	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
+	{
+		Morfeas_opc_ua_add_abject_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
+		sprintf(tmp_str,"%s.meas",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT);
+		sprintf(tmp_str,"%s.min",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
+		sprintf(tmp_str,"%s.max",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
+		sprintf(tmp_str,"%s.desc",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Description", UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.S/N",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Dev S/N", UA_TYPES_UINT32);
+		sprintf(tmp_str,"%s.Status",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE);
+		sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
+		sprintf(tmp_str,"%s.Cal_period",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period", UA_TYPES_BYTE);
+		sprintf(tmp_str,"%s.Dev_type",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device type", UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.CANBus",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.Address",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE);
+		sprintf(tmp_str,"%s.Channel",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
+	}
+	sprintf(tmp_str,"%s.min",ISO_channel_name);
+	t_min_max = atof(XML_node_get_content(node, "MIN"));
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &t_min_max, UA_TYPES_FLOAT);
+	sprintf(tmp_str,"%s.max",ISO_channel_name);
+	t_min_max = atof(XML_node_get_content(node, "MAX"));
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
+	sprintf(tmp_str,"%s.desc",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
+	
+	memccpy(anchor_dec, XML_node_get_content(node, "ANCHOR"), '\0', sizeof(anchor_dec));
+	S_N = atoi(strtok(anchor_dec, "."));
+	CH = atoi(strtok(NULL, "CH"));
+	sprintf(tmp_str,"%s.S/N",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &S_N, UA_TYPES_UINT32);
+	sprintf(tmp_str,"%s.Channel",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &CH, UA_TYPES_BYTE);
 }
 
 //IPC_Receiver, Thread function.

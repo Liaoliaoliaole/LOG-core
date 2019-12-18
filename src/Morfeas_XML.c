@@ -29,27 +29,39 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
-/**
- * print_element_names:
- * @a_node: the initial xml node to consider.
- *
- * Prints the names of the all the xml elements
- * that are siblings or children of a given xml node.
- */
-void print_XML_node(xmlNode * a_node)
-{
-    xmlNode *cur_node = NULL;
 
-    for (cur_node = a_node; cur_node; cur_node = cur_node->next)
+void print_XML_node(xmlNode * node)
+{
+    xmlNode *cur_node;
+	if (node->type == XML_ELEMENT_NODE)
 	{
-        if (cur_node->type == XML_ELEMENT_NODE)
+		printf("Node name: %s\n", node->name);
+		for (cur_node = node->children; cur_node; cur_node = cur_node->next)
 		{
-			printf("node type: Element, name: %s\n", cur_node->name);
-			if(cur_node->children->content)
-				printf("\tHave contents: %s\n", cur_node->children->content);
-        }
-		print_XML_node(cur_node->children);
+			if (cur_node->type == XML_ELEMENT_NODE)
+			{
+				printf("\tChild Node name: %s\n", cur_node->name);
+				printf("\t\tHave contents: %s\n", cur_node->children->content);
+			}
+		}
 	}
+}
+
+char * XML_node_get_content(xmlNode *node, const char *node_name)
+{
+    xmlNode *cur_node;
+	if (node->type == XML_ELEMENT_NODE)
+	{
+		for (cur_node = node->children; cur_node; cur_node = cur_node->next)
+		{
+			if (cur_node->type == XML_ELEMENT_NODE)
+			{
+				if(!strcmp((char *)(cur_node->name), node_name))
+					return (char *)(cur_node->children->content);
+			}
+		}
+	}
+	return NULL;
 }
 
 int Morfeas_OPC_UA_conf_XML_parsing_validation(const char *filename, xmlDocPtr *doc)
