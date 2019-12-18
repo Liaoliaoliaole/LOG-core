@@ -51,7 +51,7 @@ void * Nodeset_XML_reader(void *varg_pt);
 void Rpi_health_update(int sign);
 //OPC_UA local Functions
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
-//Function that adds a child object under the OPC-UA node "ISO_Channels". building according to Wartsila's specification. 
+//Function that adds a child object under the OPC-UA node "ISO_Channels". building according to Wartsila's specification.
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server, xmlNode *node);
 
 //Global variables
@@ -185,12 +185,18 @@ void * Nodeset_XML_reader(void *varg_pt)
 					if(!Morfeas_OPC_UA_conf_XML_parsing_validation(ns_config, &doc))
 					{
 						root_element = xmlDocGetRootElement(doc);
-						pthread_mutex_lock(&OPC_UA_NODESET_access);
-							for(root_element = root_element->children; root_element; root_element = root_element->next)
-								Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
-								//print_XML_node(root_element);
-						pthread_mutex_unlock(&OPC_UA_NODESET_access);
-							xmlFreeDoc(doc);
+						if(!strcmp((char *)(root_element->name), "NODESet"))
+						{
+							pthread_mutex_lock(&OPC_UA_NODESET_access);
+								for(root_element = root_element->children; root_element; root_element = root_element->next)
+									Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
+									//print_XML_node(root_element);
+							pthread_mutex_unlock(&OPC_UA_NODESET_access);
+						}
+						else
+							UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+							"Configuration XML file is invalid. Does not Contain \"NODESet\"");
+						xmlFreeDoc(doc);
 					}
 				}
 				file_last_mod = nsconf_xml_stat.st_mtime;
@@ -203,9 +209,36 @@ void * Nodeset_XML_reader(void *varg_pt)
 	return NULL;
 }
 
+static UA_NodeId registerRefType(char * forwName, char * invName, UA_Server * server)
+{
+	UA_NodeId outNodeId;
+	UA_QualifiedName browseName;
+	browseName.namespaceIndex = 1;
+	browseName.name = UA_STRING_ALLOC(forwName);
+	// setup new ref type attributes
+	UA_ReferenceTypeAttributes refattr = UA_ReferenceTypeAttributes_default;
+	refattr.displayName = UA_LOCALIZEDTEXT((char*)(""), forwName);
+	refattr.inverseName = UA_LOCALIZEDTEXT((char*)(""), invName );
+	if(UA_Server_addReferenceTypeNode(
+		server,
+		UA_NODEID_NULL,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_NONHIERARCHICALREFERENCES),
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+		browseName,
+		refattr,
+		NULL,
+		&outNodeId
+	))
+		printf("Error on register of ref type!!!\n");
+	// clean up
+	UA_QualifiedName_clear(&browseName);
+	return outNodeId;
+}
+
+
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50], *ISO_channel_name, anchor_dec[20];
+	char tmp_str[50], tmp_str1[50], *ISO_channel_name, anchor_dec[20];
 	float t_min_max;
 	unsigned int S_N;
 	unsigned char CH;
@@ -216,8 +249,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
 	{
 		Morfeas_opc_ua_add_abject_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
-		sprintf(tmp_str,"%s.meas",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.min",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
@@ -242,6 +273,18 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE);
 		sprintf(tmp_str,"%s.Channel",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
+		sprintf(tmp_str,"%s.meas",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT);
+
+		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
+		UA_ExpandedNodeId targetExpId;
+		targetExpId.nodeId       = UA_NODEID_STRING(1,tmp_str);
+		targetExpId.namespaceUri = UA_STRING_NULL;
+		targetExpId.serverIndex  = 0;
+		sprintf(tmp_str1,"%s.max",ISO_channel_name);
+		UA_NodeId ref1TypeId = registerRefType("HasRef1", "IsRefOf1", server);
+		if(UA_Server_addReference(server, UA_NODEID_STRING(1,tmp_str1), ref1TypeId, targetExpId, true))
+			printf("Error!!!!\n");
 	}
 	sprintf(tmp_str,"%s.min",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MIN"));
