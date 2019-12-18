@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
 							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
-								logstat_json(logstat_path,&stats);
+								//logstat_json(logstat_path,&stats);
 							}
 						}
 						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, stats.detected_SDAQs);
@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 		if(flags.Clean_flag)
 		{
 			clean_up_list_SDAQs(&stats);
-			logstat_json(logstat_path,&stats);
+			//logstat_json(logstat_path,&stats);
 			flags.Clean_flag = 0;
 		}
 		if(flags.bus_info)
