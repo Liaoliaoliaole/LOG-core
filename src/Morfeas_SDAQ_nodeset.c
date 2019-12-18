@@ -24,7 +24,7 @@ pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 
 void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 {
-	char tmp_buff[30];
+	char tmp_buff[30], tmp_buff_1[30];
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
 		Morfeas_opc_ua_add_abject_node(server_ptr,"Morfeas_Handlers", connected_to_BUS, tmp_buff);
@@ -34,6 +34,13 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff, "%s.amount", connected_to_BUS);
 		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "Dev_on_BUS", UA_TYPES_BYTE);
+		//Object with electric status of a SDAQnet port
+		sprintf(tmp_buff, "%s.Electrics", connected_to_BUS);
+		Morfeas_opc_ua_add_abject_node(server_ptr, connected_to_BUS, tmp_buff, "Electric");
+		sprintf(tmp_buff_1, "%s.volts", connected_to_BUS);
+		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage", UA_TYPES_FLOAT);
+		sprintf(tmp_buff_1, "%s.amps", connected_to_BUS);
+		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Amperage", UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 

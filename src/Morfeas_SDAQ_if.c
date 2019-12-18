@@ -55,7 +55,7 @@ static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
 	unsigned led_existent :1;
 	unsigned Clean_flag :1;
-	unsigned calc_util :1;
+	unsigned bus_info :1;
 }flags = {.run=1,0};
 
 //Global variables
@@ -293,16 +293,18 @@ int main(int argc, char *argv[])
 			logstat_json(logstat_path,&stats);
 			flags.Clean_flag = 0;
 		}
-		if(flags.calc_util)
+		if(flags.bus_info)
 		{
 			//Calculate CANBus utilization
 			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
 			msg_cnt = 0;
-			flags.calc_util = 0;
+			flags.bus_info = 0;
 			//transfer bus utilization to opc_ua
 			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
 			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
+			IPC_msg.BUS_info.voltage = 0.0;
+			IPC_msg.BUS_info.amperage = 0.0;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 		}
 		led_stat(&stats);
@@ -431,7 +433,7 @@ inline void CAN_if_timer_handler (int signum)
 		Sync(CAN_socket_num, time_seed);
 		timer_ring_cnt = SYNC_INTERVAL;//reset timer_ring_cnt
 	}
-	flags.calc_util = 1;
+	flags.bus_info = 1;
 	return;
 }
 

@@ -251,8 +251,9 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
 	sprintf(tmp_str,"%s.desc",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
-	
+	//copy the anchor from the XML_doc tree to a buff
 	memccpy(anchor_dec, XML_node_get_content(node, "ANCHOR"), '\0', sizeof(anchor_dec));
+	//Split the anchor string by token
 	S_N = atoi(strtok(anchor_dec, "."));
 	CH = atoi(strtok(NULL, "CH"));
 	sprintf(tmp_str,"%s.S/N",ISO_channel_name);
@@ -319,6 +320,10 @@ void* IPC_Receiver(void *varg_pt)
 					sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+						sprintf(Node_ID_str, "%s.volts", IPC_msg_dec.BUS_info.connected_to_BUS);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.voltage), UA_TYPES_FLOAT);
+						sprintf(Node_ID_str, "%s.amps", IPC_msg_dec.BUS_info.connected_to_BUS);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.amperage), UA_TYPES_FLOAT);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_register_or_update:

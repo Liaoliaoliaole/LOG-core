@@ -103,6 +103,8 @@ typedef struct CAN_BUS_info_msg_struct{
 	unsigned char IPC_msg_type;
 	char connected_to_BUS[connected_to_BUS_str_size];
 	float BUS_utilization;
+	float amperage;
+	float voltage;
 }CAN_BUS_info_msg;
 
 typedef union{
