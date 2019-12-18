@@ -186,9 +186,9 @@ void * Nodeset_XML_reader(void *varg_pt)
 					{
 						root_element = xmlDocGetRootElement(doc);
 						pthread_mutex_lock(&OPC_UA_NODESET_access);
-						for(root_element = root_element->children; root_element; root_element = root_element->next)
-							Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
-							//print_XML_node(root_element);
+							for(root_element = root_element->children; root_element; root_element = root_element->next)
+								Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
+								//print_XML_node(root_element);
 						pthread_mutex_unlock(&OPC_UA_NODESET_access);
 							xmlFreeDoc(doc);
 					}
