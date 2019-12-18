@@ -38,9 +38,9 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		sprintf(tmp_buff, "%s.Electrics", connected_to_BUS);
 		Morfeas_opc_ua_add_abject_node(server_ptr, connected_to_BUS, tmp_buff, "Electric");
 		sprintf(tmp_buff_1, "%s.volts", connected_to_BUS);
-		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage", UA_TYPES_FLOAT);
+		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage (V)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff_1, "%s.amps", connected_to_BUS);
-		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Amperage", UA_TYPES_FLOAT);
+		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Amperage (A)", UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
