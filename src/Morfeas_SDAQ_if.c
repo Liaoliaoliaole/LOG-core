@@ -303,9 +303,10 @@ int main(int argc, char *argv[])
 			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
 			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
-			IPC_msg.BUS_info.voltage = 0.0;
-			IPC_msg.BUS_info.amperage = 0.0;
+			IPC_msg.BUS_info.voltage = stats.Bus_voltage;
+			IPC_msg.BUS_info.amperage = stats.Bus_amperage;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
+			logstat_json(logstat_path,&stats);
 		}
 		led_stat(&stats);
 	}

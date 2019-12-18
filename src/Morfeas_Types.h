@@ -26,6 +26,8 @@ struct Morfeas_SDAQ_if_stats{
 	int FIFO_fd;
 	char *CAN_IF_name;
 	float Bus_util;
+	float Bus_voltage;
+	float Bus_amperage;
 	unsigned char detected_SDAQs;// Amount of online SDAQ.
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file

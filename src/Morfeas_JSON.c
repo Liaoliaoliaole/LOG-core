@@ -56,6 +56,8 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
+	cJSON_AddNumberToObject(root, "BUS_voltage", stats->Bus_voltage);
+	cJSON_AddNumberToObject(root, "BUS_amperage", stats->Bus_amperage);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
 	cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
 	g_slist_foreach(stats->list_SDAQs, extract_list_SDAQnode_data, logstat);
