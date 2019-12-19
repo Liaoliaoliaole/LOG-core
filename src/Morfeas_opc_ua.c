@@ -152,7 +152,6 @@ void print_usage(char *prog_name)
 		"           -V : Version.\n"
 		"           -c : Path to Nodeset configuration XML file.\n"
 		"           -a : OPC-UA Application Name.\n"
-		"\n"
 	};
 	printf("%s\nUsage: %s [Options]\n\n%s",preamp, prog_name, manual);
 	return;
