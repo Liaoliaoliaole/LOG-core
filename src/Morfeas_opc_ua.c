@@ -276,14 +276,12 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.meas",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT);
 
-		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
 		UA_ExpandedNodeId targetExpId;
-		targetExpId.nodeId       = UA_NODEID_STRING(1,tmp_str);
+		targetExpId.nodeId       = UA_NODEID_STRING(1,"TE452.meas");
 		targetExpId.namespaceUri = UA_STRING_NULL;
 		targetExpId.serverIndex  = 0;
-		sprintf(tmp_str1,"%s.max",ISO_channel_name);
 		UA_NodeId ref1TypeId = registerRefType("HasRef1", "IsRefOf1", server);
-		if(UA_Server_addReference(server, UA_NODEID_STRING(1,tmp_str1), ref1TypeId, targetExpId, true))
+		if(UA_Server_addReference(server, UA_NODEID_STRING(1,"TE452.max"), ref1TypeId, targetExpId, true))
 			printf("Error!!!!\n");
 	}
 	sprintf(tmp_str,"%s.min",ISO_channel_name);
