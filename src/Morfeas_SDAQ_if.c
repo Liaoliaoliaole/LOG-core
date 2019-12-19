@@ -390,12 +390,36 @@ static int GPIOWrite(int pin, int value)
 
 void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 {
+	static struct{
+		unsigned Bus_util : 1;
+		unsigned Max_dev_num : 1;
+	}leds_status = {0};
 	if(flags.led_existent)
 	{
 		if(stats->Bus_util>95.0)
+		{
 			GPIOWrite(YELLOW_LED, 1);
+			leds_status.Bus_util = 1;
+		}
+		else if(stats->Bus_util<=80.0 && leds_status.Bus_util)
+		{
+			GPIOWrite(YELLOW_LED, 0);
+			leds_status.Bus_util = 0;
+		}
+
 		if(stats->detected_SDAQs>=60)
+		{
 			GPIOWrite(RED_LED, 1);
+			leds_status.Max_dev_num = 1;
+		}
+		else
+		{
+			if(leds_status.Max_dev_num)
+			{
+				GPIOWrite(RED_LED, 0);
+				leds_status.Max_dev_num = 0;
+			}
+		}
 	}
 }
 
