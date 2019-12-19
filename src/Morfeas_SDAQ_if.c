@@ -268,10 +268,7 @@ int main(int argc, char *argv[])
 								SDAQ_data->info_collection_status = 1;
 							}
 							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
-							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
-								//logstat_json(logstat_path,&stats);
-							}
 						}
 						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, stats.detected_SDAQs);
 					}
@@ -395,10 +392,10 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 {
 	if(flags.led_existent)
 	{
-		if(!strcmp(stats->CAN_IF_name,"can0"))
-			stats->Bus_util<95.0 ? GPIOWrite(RED_LED, 0) : GPIOWrite(RED_LED, 1);
-		else if(!strcmp(stats->CAN_IF_name,"can1"))
-			stats->Bus_util<95.0 ? GPIOWrite(YELLOW_LED, 0) : GPIOWrite(YELLOW_LED, 1);
+		if(stats->Bus_util>95.0)
+			GPIOWrite(YELLOW_LED, 1);
+		if(stats->detected_SDAQs>=60)
+			GPIOWrite(RED_LED, 1);
 	}
 }
 
