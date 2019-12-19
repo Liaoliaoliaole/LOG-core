@@ -209,7 +209,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 	return NULL;
 }
 
-
+//Function used onRead of DataSourceVariables  
 UA_StatusCode update_value(UA_Server *server,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
