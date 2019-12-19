@@ -158,7 +158,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
-static UA_NodeId find_SDAQ_node_by_anchor(UA_Server *server_ptr, const UA_NodeId sourceId, const UA_NodeId refTypeId)
+UA_NodeId find_SDAQ_NodeId_by_anchor(UA_Server *server_ptr, const char * anchor)
 {
 	UA_NodeId outNodeId = UA_NODEID_NULL;
 	// make ua browse
@@ -167,20 +167,22 @@ static UA_NodeId find_SDAQ_node_by_anchor(UA_Server *server_ptr, const UA_NodeId
 	bDesc->nodeId = UA_NODEID_STRING(1,"SDAQ-ifs");
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD;//isForward ? UA_BROWSEDIRECTION_FORWARD : UA_BROWSEDIRECTION_INVERSE;
 	bDesc->includeSubtypes = true;
-	bDesc->resultMask = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	bDesc->resultMask = UA_BROWSERESULTMASK_NONE;
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server_ptr, 0, bDesc);
-	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	//assert(bRes.statusCode == UA_STATUSCODE_GOOD);
 	while (bRes.referencesSize > 0)
 	{
 		for (size_t i = 0; i < bRes.referencesSize; i++)
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
+			/*
 			if (UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId))
 			{
 				outNodeId = rDesc.nodeId.nodeId;
 				break;
 			}
+			*/
 		}
 		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(server_ptr, true, &bRes.continuationPoint);

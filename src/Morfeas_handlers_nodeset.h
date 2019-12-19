@@ -31,6 +31,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 //Nodeset object, variables, and methods add and update
 void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name);
 void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, int _UA_Type);
+void Morfeas_opc_ua_add_variable_node_with_callback_onRead(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, int _UA_Type, void *call_func);
 void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, const void * value, int _UA_Type);
 
 	//----Morfeas BUS Handlers----//

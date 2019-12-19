@@ -48,7 +48,7 @@ void * IPC_Receiver(void *varg_pt);
 //Nodeset config XML reader, Thread Function
 void * Nodeset_XML_reader(void *varg_pt);
 //Timer Handler Function
-void Rpi_health_update(int sign);
+void Rpi_health_update(void);
 //OPC_UA local Functions
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
 //Function that adds a child object under the OPC-UA node "ISO_Channels". building according to Wartsila's specification.
@@ -209,33 +209,20 @@ void * Nodeset_XML_reader(void *varg_pt)
 	return NULL;
 }
 
-/*
-static UA_NodeId registerRefType(char * forwName, char * invName, UA_Server * server)
+
+UA_StatusCode update_value(UA_Server *server,
+						  const UA_NodeId *sessionId, void *sessionContext,
+						  const UA_NodeId *nodeId, void *nodeContext,
+						  UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
+						  UA_DataValue *dataValue) 
 {
-	UA_NodeId outNodeId;
-	UA_QualifiedName browseName;
-	browseName.namespaceIndex = 1;
-	browseName.name = UA_STRING_ALLOC(forwName);
-	// setup new ref type attributes
-	UA_ReferenceTypeAttributes refattr = UA_ReferenceTypeAttributes_default;
-	refattr.displayName = UA_LOCALIZEDTEXT((char*)(""), forwName);
-	refattr.inverseName = UA_LOCALIZEDTEXT((char*)(""), invName );
-	if(UA_Server_addReferenceTypeNode(
-		server,
-		UA_NODEID_NULL,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_NONHIERARCHICALREFERENCES),
-		UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-		browseName,
-		refattr,
-		NULL,
-		&outNodeId
-	))
-		printf("Error on register of ref type!!!\n");
-	// clean up
-	UA_QualifiedName_clear(&browseName);
-	return outNodeId;
+	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
+	{
+		//UA_Server_readValue(server, *nodeId, &(dataValue->value));
+		dataValue->hasValue = true;
+	}
+	return UA_STATUSCODE_GOOD;
 }
-*/
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
@@ -250,50 +237,46 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
 	{
 		Morfeas_opc_ua_add_abject_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
+		//Variables with update from Morfeas_ifs
+		sprintf(tmp_str,"%s.Status",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, update_value);
+		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, update_value);
+		sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME, update_value);
+		sprintf(tmp_str,"%s.Cal_period",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Period", UA_TYPES_BYTE, update_value);
+		sprintf(tmp_str,"%s.CANBus",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING, update_value);
+		sprintf(tmp_str,"%s.meas",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT, update_value);
+		sprintf(tmp_str,"%s.Address",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, update_value);
+		
+		//Regular variables
+		sprintf(tmp_str,"%s.desc",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Description", UA_TYPES_STRING);
 		sprintf(tmp_str,"%s.min",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
-		sprintf(tmp_str,"%s.desc",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Description", UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.S/N",ISO_channel_name);
+		sprintf(tmp_str,"%s.s/n",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Dev S/N", UA_TYPES_UINT32);
-		sprintf(tmp_str,"%s.Status",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE);
-		sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
-		sprintf(tmp_str,"%s.Cal_period",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period", UA_TYPES_BYTE);
-		sprintf(tmp_str,"%s.Dev_type",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device type", UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.CANBus",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.Address",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE);
-		sprintf(tmp_str,"%s.Channel",ISO_channel_name);
+		sprintf(tmp_str,"%s.channel",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
-		sprintf(tmp_str,"%s.meas",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT);
-		/*
-		UA_ExpandedNodeId targetExpId;
-		targetExpId.nodeId       = UA_NODEID_STRING(1,"TE452.meas");
-		targetExpId.namespaceUri = UA_STRING_NULL;
-		targetExpId.serverIndex  = 0;
-		UA_NodeId ref1TypeId = registerRefType("HasRefTE452.max", "IsRefOfTE452.max", server);
-		if(UA_Server_addReference(server, UA_NODEID_STRING(1,"TE452.max"), ref1TypeId, targetExpId, true))
-			printf("Error!!!!\n");
-		*/
+		sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING);
 	}
+	sprintf(tmp_str,"%s.desc",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
 	sprintf(tmp_str,"%s.min",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MIN"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &t_min_max, UA_TYPES_FLOAT);
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
-	sprintf(tmp_str,"%s.desc",ISO_channel_name);
-	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
+	sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "INTERFACE_TYPE"), UA_TYPES_STRING);
 	//copy the anchor from the XML_doc tree to a buff
 	memccpy(anchor_dec, XML_node_get_content(node, "ANCHOR"), '\0', sizeof(anchor_dec));
 	//Split the anchor string by token
@@ -450,12 +433,25 @@ void* IPC_Receiver(void *varg_pt)
 		}
 		if((time(NULL) - health_update_check))
 		{
-			Rpi_health_update(0);
+			Rpi_health_update();
 			time(&health_update_check);
 		}
     }
 	close(FIFO_fd);
 	return NULL;
+}
+
+void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
+{
+	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
+    UA_Server_addObjectNode(server_ptr,
+    						UA_NODEID_STRING(1, Node_id),
+                            UA_NODEID_STRING(1, Parent_id),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(1, Node_id),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+                            oAttr, NULL, NULL);
 }
 
 void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, int _UA_Type)
@@ -472,64 +468,36 @@ void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, ch
 							  vAttr, NULL, NULL);
 }
 
-void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
+void Morfeas_opc_ua_add_variable_node_with_callback_onRead(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, int _UA_Type, void *call_func)
 {
-	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
-    UA_Server_addObjectNode(server_ptr,
-    						UA_NODEID_STRING(1, Node_id),
-                            UA_NODEID_STRING(1, Parent_id),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                            UA_QUALIFIEDNAME(1, Node_id),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
-                            oAttr, NULL, NULL);
+	UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+	vAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
+	vAttr.accessLevel = UA_ACCESSLEVELMASK_READ;
+	vAttr.dataType = UA_TYPES[_UA_Type].typeId;
+	UA_DataSource DataSource;
+	DataSource.read = call_func;
+	UA_Server_addDataSourceVariableNode(
+							  server_ptr,
+							  UA_NODEID_STRING(1, Node_id),
+							  UA_NODEID_STRING(1, Parent_id),
+							  UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+							  UA_QUALIFIEDNAME(1, Node_id),
+							  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+							  vAttr, DataSource, NULL, NULL);
 }
 
-void Rpi_health_update (int sign)
+inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, const void *value, int _UA_Type)
 {
-	FILE *CPU_temp_fp;
-	char cpu_temp_str[20];
-	unsigned int Up_time;
-	float CPU_Util,RAM_Util,CPU_temp,Disk_Util;
-	static glibtop_cpu buff_cpuload_before={0};
-	glibtop_cpu buff_cpuload_after={0};
-	glibtop_uptime buff_uptime;
-	glibtop_mem buff_ram;
-	glibtop_fsusage buff_disk;
+	UA_Variant temp_value;
+	if(_UA_Type!=UA_TYPES_STRING)
+		UA_Variant_setScalarCopy(&temp_value, value, &UA_TYPES[_UA_Type]);
 
-	//Read values
-	glibtop_get_uptime (&buff_uptime);//get computer's Up_time
-	glibtop_get_mem (&buff_ram);//get ram util
-	glibtop_get_cpu (&buff_cpuload_after);//get cpu util
-	glibtop_get_fsusage (&buff_disk,"/");
-	//Calc CPU Utilization. Using current and old sample
-	CPU_Util=100.0*(buff_cpuload_after.user-buff_cpuload_before.user);
-	CPU_Util/=(buff_cpuload_after.total-buff_cpuload_before.total);
-	//store current CPU stat sample to old
-	memcpy(&buff_cpuload_before,&buff_cpuload_after,sizeof(glibtop_cpu));
-	//Calc ram utilization
-	RAM_Util=(buff_ram.used - buff_ram.buffer - buff_ram.cached) * 100.0 / buff_ram.total;
-	Up_time=buff_uptime.uptime;
-	//Calc Disk Utilization
-	Disk_Util=(buff_disk.blocks - buff_disk.bavail) * 100.0 / buff_disk.blocks;
-	//Read CPU Temp from sysfs
-	CPU_temp_fp = fopen(CPU_temp_sysfs_file, "r");
-	if(CPU_temp_fp!=NULL)
-	{
-		fscanf(CPU_temp_fp, "%s", cpu_temp_str);
-		fclose(CPU_temp_fp);
-		CPU_temp = atof(cpu_temp_str) / 1E3;
-	}
 	else
-		CPU_temp = NAN;
-	//Update health_values to OPC_UA mem space
-	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
-	pthread_mutex_unlock(&OPC_UA_NODESET_access);
+	{
+		UA_String str = UA_STRING((char*) value);
+		UA_Variant_setScalar(&temp_value, &str, &UA_TYPES[UA_TYPES_STRING]);
+    }
+	UA_Server_writeValue(server_ptr, Node_to_update, temp_value);
 }
 
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
@@ -581,17 +549,50 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 		Morfeas_opc_ua_add_variable_node(server_ptr, "Health_status", health_status_str[1][i], health_status_str[0][i], !i?UA_TYPES_UINT32:UA_TYPES_FLOAT);
 }
 
-inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, const void *value, int _UA_Type)
+void Rpi_health_update (void)
 {
-	UA_Variant temp_value;
-	if(_UA_Type!=UA_TYPES_STRING)
-		UA_Variant_setScalarCopy(&temp_value, value, &UA_TYPES[_UA_Type]);
+	FILE *CPU_temp_fp;
+	char cpu_temp_str[20];
+	unsigned int Up_time;
+	float CPU_Util,RAM_Util,CPU_temp,Disk_Util;
+	static glibtop_cpu buff_cpuload_before={0};
+	glibtop_cpu buff_cpuload_after={0};
+	glibtop_uptime buff_uptime;
+	glibtop_mem buff_ram;
+	glibtop_fsusage buff_disk;
 
-	else
+	//Read values
+	glibtop_get_uptime (&buff_uptime);//get computer's Up_time
+	glibtop_get_mem (&buff_ram);//get ram util
+	glibtop_get_cpu (&buff_cpuload_after);//get cpu util
+	glibtop_get_fsusage (&buff_disk,"/");
+	//Calc CPU Utilization. Using current and old sample
+	CPU_Util=100.0*(buff_cpuload_after.user-buff_cpuload_before.user);
+	CPU_Util/=(buff_cpuload_after.total-buff_cpuload_before.total);
+	//store current CPU stat sample to old
+	memcpy(&buff_cpuload_before,&buff_cpuload_after,sizeof(glibtop_cpu));
+	//Calc ram utilization
+	RAM_Util=(buff_ram.used - buff_ram.buffer - buff_ram.cached) * 100.0 / buff_ram.total;
+	Up_time=buff_uptime.uptime;
+	//Calc Disk Utilization
+	Disk_Util=(buff_disk.blocks - buff_disk.bavail) * 100.0 / buff_disk.blocks;
+	//Read CPU Temp from sysfs
+	CPU_temp_fp = fopen(CPU_temp_sysfs_file, "r");
+	if(CPU_temp_fp!=NULL)
 	{
-		UA_String str = UA_STRING((char*) value);
-		UA_Variant_setScalar(&temp_value, &str, &UA_TYPES[UA_TYPES_STRING]);
-    }
-	UA_Server_writeValue(server_ptr, Node_to_update, temp_value);
+		fscanf(CPU_temp_fp, "%s", cpu_temp_str);
+		fclose(CPU_temp_fp);
+		CPU_temp = atof(cpu_temp_str) / 1E3;
+	}
+	else
+		CPU_temp = NAN;
+	//Update health_values to OPC_UA mem space
+	pthread_mutex_lock(&OPC_UA_NODESET_access);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
+	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
