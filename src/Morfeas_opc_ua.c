@@ -209,6 +209,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 	return NULL;
 }
 
+/*
 static UA_NodeId registerRefType(char * forwName, char * invName, UA_Server * server)
 {
 	UA_NodeId outNodeId;
@@ -234,11 +235,11 @@ static UA_NodeId registerRefType(char * forwName, char * invName, UA_Server * se
 	UA_QualifiedName_clear(&browseName);
 	return outNodeId;
 }
-
+*/
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50], tmp_str1[50], *ISO_channel_name, anchor_dec[20];
+	char tmp_str[50], *ISO_channel_name, anchor_dec[20];
 	float t_min_max;
 	unsigned int S_N;
 	unsigned char CH;
@@ -275,14 +276,15 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
 		sprintf(tmp_str,"%s.meas",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT);
-
+		/*
 		UA_ExpandedNodeId targetExpId;
 		targetExpId.nodeId       = UA_NODEID_STRING(1,"TE452.meas");
 		targetExpId.namespaceUri = UA_STRING_NULL;
 		targetExpId.serverIndex  = 0;
-		UA_NodeId ref1TypeId = registerRefType("HasRef1", "IsRefOf1", server);
+		UA_NodeId ref1TypeId = registerRefType("HasRefTE452.max", "IsRefOfTE452.max", server);
 		if(UA_Server_addReference(server, UA_NODEID_STRING(1,"TE452.max"), ref1TypeId, targetExpId, true))
 			printf("Error!!!!\n");
+		*/
 	}
 	sprintf(tmp_str,"%s.min",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MIN"));
@@ -306,6 +308,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 //IPC_Receiver, Thread function.
 void* IPC_Receiver(void *varg_pt)
 {
+	UA_NodeId NodeId;
 	UA_DateTime cal_time;
 	UA_DateTimeStruct calibration_date = {0};
 	//Morfeas IPC msg decoder
@@ -376,8 +379,11 @@ void* IPC_Receiver(void *varg_pt)
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						sprintf(Node_ID_str,"%s.amount",IPC_msg_dec.SDAQ_clean.connected_to_BUS);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_clean.t_amount), UA_TYPES_BYTE);
+						UA_NodeId_init(&NodeId);
 						sprintf(Node_ID_str, "%s.%d", IPC_msg_dec.SDAQ_clean.connected_to_BUS, IPC_msg_dec.SDAQ_clean.SDAQ_serial_number);
-						UA_Server_deleteNode(server, UA_NODEID_STRING(1, Node_ID_str), 1);
+						//check if the node is removed already
+						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+							UA_Server_deleteNode(server, NodeId, 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_info:
@@ -456,14 +462,14 @@ void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, ch
 {
 	UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 	vAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
-			vAttr.dataType = UA_TYPES[_UA_Type].typeId;
-			UA_Server_addVariableNode(server_ptr,
-									  UA_NODEID_STRING(1, Node_id),
-									  UA_NODEID_STRING(1, Parent_id),
-									  UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-									  UA_QUALIFIEDNAME(1, Node_id),
-									  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-									  vAttr, NULL, NULL);
+	vAttr.dataType = UA_TYPES[_UA_Type].typeId;
+	UA_Server_addVariableNode(server_ptr,
+							  UA_NODEID_STRING(1, Node_id),
+							  UA_NODEID_STRING(1, Parent_id),
+							  UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+							  UA_QUALIFIEDNAME(1, Node_id),
+							  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+							  vAttr, NULL, NULL);
 }
 
 void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
@@ -540,7 +546,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             oAttr, NULL, NULL);
 
     //Root of the object "Morfeas_Handlers"
-    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Interface");
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Interfaces");
     UA_Server_addObjectNode(server_ptr,
     						UA_NODEID_STRING(1, "Morfeas_Handlers"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
@@ -548,7 +554,14 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             UA_QUALIFIEDNAME(1, "Morfeas_Handlers"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
                             oAttr, NULL, NULL);
-
+	//Add SDAQ-if object node under Morfeas_Handlers
+	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "SDAQ-ifs", "SDAQ-ifs");
+	//Add MDAQ-if object node under Morfeas_Handlers
+	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "MDAQ-ifs", "MDAQ-ifs");
+	//Add IOBOX-if object node under Morfeas_Handlers
+	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "IOBOX-ifs", "IOBOX-ifs");
+	//Add MTI-if object node under Morfeas_Handlers
+	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "MTI-ifs", "MTI-ifs");
     //Root of the object "Rpi Health Status"
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "RPi Health status");
     UA_Server_addObjectNode(server_ptr,
@@ -572,7 +585,7 @@ inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_
 {
 	UA_Variant temp_value;
 	if(_UA_Type!=UA_TYPES_STRING)
-		UA_Variant_setScalar(&temp_value, (void *) value, &UA_TYPES[_UA_Type]);
+		UA_Variant_setScalarCopy(&temp_value, value, &UA_TYPES[_UA_Type]);
 
 	else
 	{

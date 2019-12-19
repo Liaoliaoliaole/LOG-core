@@ -27,7 +27,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 	char tmp_buff[30], tmp_buff_1[30];
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
-		Morfeas_opc_ua_add_abject_node(server_ptr,"Morfeas_Handlers", connected_to_BUS, tmp_buff);
+		Morfeas_opc_ua_add_abject_node(server_ptr, "SDAQ-ifs", connected_to_BUS, tmp_buff);
 		sprintf(tmp_buff, "%s.SDAQnet", connected_to_BUS);
 		Morfeas_opc_ua_add_abject_node(server_ptr, connected_to_BUS, tmp_buff, "SDAQnet");
 		sprintf(tmp_buff, "%s.BUS_util", connected_to_BUS);
@@ -41,52 +41,6 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage (V)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff_1, "%s.amps", connected_to_BUS);
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Amperage (A)", UA_TYPES_FLOAT);
-	pthread_mutex_unlock(&OPC_UA_NODESET_access);
-}
-
-void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr)
-{
-	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50];
-	UA_NodeId out;
-	UA_NodeId_init(&out);
-	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		sprintf(SDAQ_anchor_str,"%s.%d",ptr->connected_to_BUS,ptr->SDAQ_status.dev_sn);
-		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &out))
-		{
-			sprintf(tmp_str,"%s.SDAQnet",ptr->connected_to_BUS);
-			sprintf(tmp_str2,"%s (%02hhu)", (char *)dev_type_str[ptr->SDAQ_status.dev_type], ptr->address);
-			Morfeas_opc_ua_add_abject_node(server_ptr, tmp_str, SDAQ_anchor_str, tmp_str2);
-			sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "S/N", UA_TYPES_UINT32);
-			sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "Address", UA_TYPES_BYTE);
-			sprintf(tmp_str,"%s.TimeDiff",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "TimeDiff", UA_TYPES_UINT16);
-			sprintf(tmp_str2,"%s.Status",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_abject_node(server_ptr, SDAQ_anchor_str, tmp_str2, "Status");
-			sprintf(tmp_str,"%s.State",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "State", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.inSync",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "inSync", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.Error",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Error", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.Mode",SDAQ_anchor_str);
-			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
-		}
-		sprintf(tmp_str,"%s.amount",ptr->connected_to_BUS);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->t_amount), UA_TYPES_BYTE);
-		sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_status.dev_sn), UA_TYPES_UINT32);
-		sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->address), UA_TYPES_BYTE);
-		sprintf(tmp_str,"%s.State",SDAQ_anchor_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, State), UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.inSync",SDAQ_anchor_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, In_sync), UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.Error",SDAQ_anchor_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Error), UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.Mode",SDAQ_anchor_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
@@ -154,4 +108,87 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.max_cal_point), UA_TYPES_BYTE);
 		}
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
+}
+
+void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr)
+{
+	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50];
+	UA_NodeId Node_Id;
+	UA_NodeId_init(&Node_Id);
+	pthread_mutex_lock(&OPC_UA_NODESET_access);
+		
+		//Check if the Node with the SDAQ's data is already exist, if no add it else only update data
+		sprintf(SDAQ_anchor_str,"%s.%d",ptr->connected_to_BUS,ptr->SDAQ_status.dev_sn);
+		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &Node_Id))
+		{
+			sprintf(tmp_str,"%s.SDAQnet",ptr->connected_to_BUS);
+			sprintf(tmp_str2,"%s (%02hhu)", (char *)dev_type_str[ptr->SDAQ_status.dev_type], ptr->address);
+			Morfeas_opc_ua_add_abject_node(server_ptr, tmp_str, SDAQ_anchor_str, tmp_str2);
+			sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "S/N", UA_TYPES_UINT32);
+			sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "Address", UA_TYPES_BYTE);
+			sprintf(tmp_str,"%s.TimeDiff",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "TimeDiff", UA_TYPES_UINT16);
+			sprintf(tmp_str2,"%s.Status",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_abject_node(server_ptr, SDAQ_anchor_str, tmp_str2, "Status");
+			sprintf(tmp_str,"%s.State",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "State", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.inSync",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "inSync", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.Error",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Error", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.Mode",SDAQ_anchor_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
+		}
+		sprintf(tmp_str,"%s.amount",ptr->connected_to_BUS);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->t_amount), UA_TYPES_BYTE);
+		sprintf(tmp_str,"%s.S/N",SDAQ_anchor_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_status.dev_sn), UA_TYPES_UINT32);
+		sprintf(tmp_str,"%s.Address",SDAQ_anchor_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->address), UA_TYPES_BYTE);
+		sprintf(tmp_str,"%s.State",SDAQ_anchor_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, State), UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.inSync",SDAQ_anchor_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, In_sync), UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.Error",SDAQ_anchor_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Error), UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.Mode",SDAQ_anchor_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
+	pthread_mutex_unlock(&OPC_UA_NODESET_access);
+}
+
+static UA_NodeId find_SDAQ_node_by_anchor(UA_Server *server_ptr, const UA_NodeId sourceId, const UA_NodeId refTypeId)
+{
+	UA_NodeId outNodeId = UA_NODEID_NULL;
+	// make ua browse
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	//UA_NodeId_copy(&sourceId, &bDesc->nodeId);
+	bDesc->nodeId = UA_NODEID_STRING(1,"SDAQ-ifs");
+	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD;//isForward ? UA_BROWSEDIRECTION_FORWARD : UA_BROWSEDIRECTION_INVERSE;
+	bDesc->includeSubtypes = true;
+	bDesc->resultMask = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(server_ptr, 0, bDesc);
+	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	while (bRes.referencesSize > 0)
+	{
+		for (size_t i = 0; i < bRes.referencesSize; i++)
+		{
+			UA_ReferenceDescription rDesc = bRes.references[i];
+			if (UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId))
+			{
+				outNodeId = rDesc.nodeId.nodeId;
+				break;
+			}
+		}
+		UA_BrowseResult_deleteMembers(&bRes);
+		bRes = UA_Server_browseNext(server_ptr, true, &bRes.continuationPoint);
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	return outNodeId;
 }
