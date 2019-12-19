@@ -165,6 +165,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
+/*
 UA_NodeId find_SDAQ_NodeId_by_anchor(UA_Server *server_ptr, const char * anchor)
 {
 	UA_NodeId outNodeId = UA_NODEID_NULL;
@@ -183,13 +184,11 @@ UA_NodeId find_SDAQ_NodeId_by_anchor(UA_Server *server_ptr, const char * anchor)
 		for (size_t i = 0; i < bRes.referencesSize; i++)
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
-			/*
 			if (UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId))
 			{
 				outNodeId = rDesc.nodeId.nodeId;
 				break;
 			}
-			*/
 		}
 		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(server_ptr, true, &bRes.continuationPoint);
@@ -201,3 +200,4 @@ UA_NodeId find_SDAQ_NodeId_by_anchor(UA_Server *server_ptr, const char * anchor)
 	// return
 	return outNodeId;
 }
+*/

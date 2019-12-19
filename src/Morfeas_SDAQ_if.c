@@ -352,7 +352,7 @@ void led_init(char *CAN_IF_name)
 			sysfs_fd = open(path, O_WRONLY);
 			if(sysfs_fd < 0)
 			{
-				fprintf(stderr, "LEDs are Not supported! (direction)\n");
+				fprintf(stderr, "LEDs are Not supported! (Direction File Error!!!)\n");
 				return;
 			}
 			if (write(sysfs_fd, "out", 3)<0)
