@@ -324,7 +324,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.s/n",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Dev S/N", UA_TYPES_UINT32);
 		sprintf(tmp_str,"%s.channel",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "SDAQ Channel", UA_TYPES_BYTE);
 		sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING);
 	}
