@@ -179,21 +179,14 @@ void * Nodeset_XML_reader(void *varg_pt)
 			{
 				if(nsconf_xml_stat.st_mtime - file_last_mod)
 				{
-					time_t now = time(NULL);
-					printf("File update %s\n",ctime(&now));
+					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Configuration XML File Updated!!!!");
 					if(!Morfeas_OPC_UA_conf_XML_parsing_validation(ns_config, &doc))
 					{
 						root_element = xmlDocGetRootElement(doc);
-						if(!strcmp((char *)(root_element->name), "NODESet"))
-						{
-							pthread_mutex_lock(&OPC_UA_NODESET_access);
-								for(root_element = root_element->children; root_element; root_element = root_element->next)
-									Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
-							pthread_mutex_unlock(&OPC_UA_NODESET_access);
-						}
-						else
-							UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-							"Configuration XML file is invalid. Does not Contain \"NODESet\"");
+						pthread_mutex_lock(&OPC_UA_NODESET_access);
+							for(root_element = root_element->children; root_element; root_element = root_element->next)
+								Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
+						pthread_mutex_unlock(&OPC_UA_NODESET_access);
 						xmlFreeDoc(doc);
 					}
 				}
@@ -202,6 +195,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 			else
 				perror("Error on get stats for Nodeset configuration XML");
 		}
+		//Check for file update after 1 sec
 		sleep(1);
 	}
 	return NULL;
@@ -230,7 +224,7 @@ UA_StatusCode CH_update_value(UA_Server *server,
 	UA_NodeId src_NodeId;
 	unsigned int sn=0;
 	unsigned char ch=0;
-	char *ISO_Channel, *req_value, src_NodeId_str[70];
+	char *ISO_Channel, *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
@@ -243,7 +237,7 @@ UA_StatusCode CH_update_value(UA_Server *server,
 		sprintf(src_NodeId_str, "%s.channel", ISO_Channel);
 		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
 			return UA_STATUSCODE_GOOD;
-		ch = *((unsigned int *)(outValue.data));
+		ch = *((unsigned char *)(outValue.data));
 		//check if the source node exist
 		sprintf(src_NodeId_str, "%u.CH%hhu.%s", sn, ch, req_value);
 		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
@@ -263,7 +257,7 @@ UA_StatusCode Dev_update_value(UA_Server *server,
 	UA_Variant outValue;
 	UA_NodeId src_NodeId;
 	unsigned int sn=0;
-	char *ISO_Channel, *req_value, src_NodeId_str[70];
+	char *ISO_Channel, *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
@@ -275,7 +269,7 @@ UA_StatusCode Dev_update_value(UA_Server *server,
 		//check if the source node exist
 		sprintf(src_NodeId_str, "%u.%s", sn, req_value);
 		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
-			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
+			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
 		dataValue->hasValue = true;
 	}
 	return UA_STATUSCODE_GOOD;
@@ -297,8 +291,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		//Variables with update from Morfeas_ifs
 		//sprintf(tmp_str,"%s.Status",ISO_channel_name);
 		//Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, update_value);
-		//sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
-		//Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, update_value);
 		//Channel related
 		sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME, CH_update_value);
@@ -313,6 +305,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, Dev_update_value);
 		sprintf(tmp_str,"%s.onBus",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING, Dev_update_value);
+		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, Dev_update_value);
 
 		//Regular variables
 		sprintf(tmp_str,"%s.desc",ISO_channel_name);
@@ -324,7 +318,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.s/n",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Dev S/N", UA_TYPES_UINT32);
 		sprintf(tmp_str,"%s.channel",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "SDAQ Channel", UA_TYPES_BYTE);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
 		sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING);
 	}

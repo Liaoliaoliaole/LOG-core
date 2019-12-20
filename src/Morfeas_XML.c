@@ -66,30 +66,34 @@ char * XML_node_get_content(xmlNode *node, const char *node_name)
 
 int Morfeas_OPC_UA_conf_XML_parsing_validation(const char *filename, xmlDocPtr *doc)
 {
-    static xmlParserCtxtPtr ctxt; /* the parser context */
+    xmlParserCtxtPtr ctxt;
 	//xmlNode *root_element = NULL;
-    /* create a parser context */
+    //--- create a parser context ---//
     if (!(ctxt = xmlNewParserCtxt()))
     {
         fprintf(stderr, "Failed to allocate parser context\n");
 		return EXIT_FAILURE;
     }
-    /* parse the file, activating the DTD validation option */
+    //--- parse the file, activating the DTD validation option ---//
     if (!(*doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID)))
     {
         fprintf(stderr, "Failed to parse %s\n", filename);
+        xmlFreeParserCtxt(ctxt);
         return EXIT_FAILURE;
     }
     else
     {
-		/* check if validation succeeded */
+		//check if validation succeeded
 		if(!(ctxt->valid))
 		{
         	fprintf(stderr, "Failed to validate %s\n", filename);
+        	xmlFreeParserCtxt(ctxt);
         	xmlFreeDoc(*doc);
         	return EXIT_FAILURE;
         }
 		xmlFreeParserCtxt(ctxt);
+
+
     }
     return EXIT_SUCCESS;
 }
