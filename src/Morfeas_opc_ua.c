@@ -207,16 +207,75 @@ void * Nodeset_XML_reader(void *varg_pt)
 	return NULL;
 }
 
-//Function used onRead of DataSourceVariables
-UA_StatusCode update_value(UA_Server *server,
+void Morfeas_ISO_Channels_request_dec(const UA_NodeId *nodeId, char **ISO_Channel, char **req_value)
+{
+	static char NodeID_str[60];
+	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
+	{
+		memcpy(NodeID_str, nodeId->identifier.string.data, nodeId->identifier.string.length+1);
+		NodeID_str[nodeId->identifier.string.length] = '\0';
+		*ISO_Channel = strtok(NodeID_str, ".");
+		*req_value = strtok(NULL, ".");
+	}
+}
+
+//Function used onRead of DataSourceVariables, Channel related
+UA_StatusCode CH_update_value(UA_Server *server,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
 						  UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
 						  UA_DataValue *dataValue)
 {
+	UA_Variant outValue;
+	UA_NodeId src_NodeId;
+	unsigned int sn=0;
+	unsigned char ch=0; 
+	char *ISO_Channel, *req_value, src_NodeId_str[70]; 
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
-		//UA_Server_readValue(server, *nodeId, &(dataValue->value));
+		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
+		//Get ISO_Channels's Device Serial Number
+		sprintf(src_NodeId_str, "%s.s/n", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		sn = *((unsigned int *)(outValue.data));
+		//Get ISO_Channels's Device Channel
+		sprintf(src_NodeId_str, "%s.channel", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		ch = *((unsigned int *)(outValue.data));
+		//check if the source node exist
+		sprintf(src_NodeId_str, "%u.CH%hhu.%s", sn, ch, req_value);
+		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
+			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
+		dataValue->hasValue = true;
+	}
+	return UA_STATUSCODE_GOOD;
+}
+
+//Function used onRead of DataSourceVariables, Device related
+UA_StatusCode Dev_update_value(UA_Server *server,
+						  const UA_NodeId *sessionId, void *sessionContext,
+						  const UA_NodeId *nodeId, void *nodeContext,
+						  UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
+						  UA_DataValue *dataValue)
+{
+	UA_Variant outValue;
+	UA_NodeId src_NodeId;
+	unsigned int sn=0;
+	char *ISO_Channel, *req_value, src_NodeId_str[70]; 
+	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
+	{
+		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
+		//Get ISO_Channels's Device Serial Number
+		sprintf(src_NodeId_str, "%s.s/n", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		sn = *((unsigned int *)(outValue.data));
+		//check if the source node exist
+		sprintf(src_NodeId_str, "%u.%s", sn, req_value);
+		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
+			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
 		dataValue->hasValue = true;
 	}
 	return UA_STATUSCODE_GOOD;
@@ -236,20 +295,24 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	{
 		Morfeas_opc_ua_add_abject_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
 		//Variables with update from Morfeas_ifs
-		sprintf(tmp_str,"%s.Status",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, update_value);
-		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, update_value);
+		//sprintf(tmp_str,"%s.Status",ISO_channel_name);
+		//Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, update_value);
+		//sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
+		//Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, update_value);
+		//Channel related
 		sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME, update_value);
-		sprintf(tmp_str,"%s.Cal_period",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Period", UA_TYPES_BYTE, update_value);
-		sprintf(tmp_str,"%s.CANBus",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING, update_value);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME, CH_update_value);
+		sprintf(tmp_str,"%s.period",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE, CH_update_value);
 		sprintf(tmp_str,"%s.meas",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Measurement Value", UA_TYPES_FLOAT, update_value);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Value", UA_TYPES_FLOAT, CH_update_value);
+		sprintf(tmp_str,"%s.unit",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING, CH_update_value);
+		//Device related
 		sprintf(tmp_str,"%s.Address",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, update_value);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, Dev_update_value);
+		sprintf(tmp_str,"%s.onBus",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING, Dev_update_value);
 
 		//Regular variables
 		sprintf(tmp_str,"%s.desc",ISO_channel_name);
@@ -265,6 +328,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING);
 	}
+	//Update values of regular variables with data from Configuration XML 
 	sprintf(tmp_str,"%s.desc",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
 	sprintf(tmp_str,"%s.min",ISO_channel_name);
@@ -280,9 +344,9 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	//Split the anchor string by token
 	S_N = atoi(strtok(anchor_dec, "."));
 	CH = atoi(strtok(NULL, "CH"));
-	sprintf(tmp_str,"%s.S/N",ISO_channel_name);
+	sprintf(tmp_str,"%s.s/n",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &S_N, UA_TYPES_UINT32);
-	sprintf(tmp_str,"%s.Channel",ISO_channel_name);
+	sprintf(tmp_str,"%s.channel",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &CH, UA_TYPES_BYTE);
 }
 
@@ -370,7 +434,7 @@ void* IPC_Receiver(void *varg_pt)
 				case IPC_SDAQ_cal_date:
 					//printf("Cal date received!!!\n");
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						sprintf(Node_ID_str, "%d.CH%hhu.dates", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
+						sprintf(Node_ID_str, "%d.CH%hhu.Cal_date", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
 																IPC_msg_dec.SDAQ_meas.channel);
 						calibration_date.day = !IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.day?1:IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.day;
 						calibration_date.month = !IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.month?1:IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.month;

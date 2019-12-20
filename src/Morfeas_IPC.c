@@ -54,8 +54,8 @@ size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr)//const char *path_to_FI
     FD_ZERO(&errCheck);
 	FD_SET(FIFO_fd, &writeCheck);
 	FD_SET(FIFO_fd, &errCheck);
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 100000;
 	select_ret = select(FIFO_fd+1, NULL, &writeCheck, &errCheck, &timeout);
 	if (select_ret < 0)
 		perror("TX -> Select failed ");
