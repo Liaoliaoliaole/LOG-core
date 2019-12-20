@@ -212,6 +212,14 @@ int main(int argc, char *argv[])
 	//Load the LogBook file to LogBook List
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
+	
+	//----Make of FIFO file----//
+	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+	//Open FIFO for Write
+	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
+	//Register handler to Morfeas_OPC-UA Server
+	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
+	
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -223,12 +231,6 @@ int main(int argc, char *argv[])
 	//start timer
 	setitimer(ITIMER_REAL, &timer, NULL);
 
-	//----Make of FIFO file----//
-	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	//Open FIFO for Write
-	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
-	//Register handler to Morfeas_OPC-UA Server
-	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
 	//-----Actions on the bus-----//
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
 	//Stop any measuring activity on the bus

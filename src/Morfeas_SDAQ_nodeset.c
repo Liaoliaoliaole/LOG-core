@@ -24,7 +24,7 @@ pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 
 void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 {
-	char tmp_buff[30], tmp_buff_1[30];
+	char tmp_buff[30], tmp_buff_1[30], zero=0;
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
 		Morfeas_opc_ua_add_abject_node(server_ptr, "SDAQ-ifs", connected_to_BUS, tmp_buff);
@@ -34,6 +34,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff, "%s.amount", connected_to_BUS);
 		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "Dev_on_BUS", UA_TYPES_BYTE);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_buff), &zero, UA_TYPES_BYTE);
 		//Object with electric status of a SDAQnet port
 		sprintf(tmp_buff, "%s.Electrics", connected_to_BUS);
 		Morfeas_opc_ua_add_abject_node(server_ptr, connected_to_BUS, tmp_buff, "Electric");
@@ -54,7 +55,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 		if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &out))
 		{
 			UA_NodeId_init(&out);
-			sprintf(tmp_str,"%s.Info",SDAQ_anchor_str);
+			sprintf(tmp_str,"%d.Info",ptr->SDAQ_serial_number);
 			if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str), &out))
 			{
 				Morfeas_opc_ua_add_abject_node(server_ptr, SDAQ_anchor_str, tmp_str, "Info");
@@ -110,15 +111,46 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
+// Function that find if an SDAQ is registered on a SDAQnet handler other than the on_Bus. Returns: the name string of the Bus or NULL if it's not find or if SDAQ registered on on_Bus 
+char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int serial_number, const char * on_Bus)
+{
+	char Node_id_str[50], *retval;
+	UA_Variant res_Value;
+	UA_String *Value, UA_str_on_bus = UA_String_fromChars(on_Bus);
+	sprintf(Node_id_str, "%d.onBus", serial_number);
+	//Return NULL, because the SDAQ is not registered. 
+	if(UA_Server_readValue(server_ptr,  UA_NODEID_STRING(1, Node_id_str), &res_Value))
+		return NULL;
+	if(res_Value.type->typeIndex == UA_DATATYPEKIND_STRING)
+	{
+		Value = res_Value.data;
+		if(!UA_String_equal(Value, &UA_str_on_bus))
+		{
+			retval = calloc(Value->length+1, sizeof(char)); 
+			memcpy(retval, Value->data, Value->length);
+			retval[Value->length] = '\0';
+			return retval;
+		}
+	}
+	return NULL;
+}
+
 void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr)
 {
-	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50];
+	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50], *pre_reg_on_bus;
 	UA_NodeId Node_Id;
 	UA_NodeId_init(&Node_Id);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-
-		//Check if the Node with the SDAQ's data is already exist, if no add it, elsewhere update data only
+		//Build SDAQ_anchor
 		sprintf(SDAQ_anchor_str,"%s.%d",ptr->connected_to_BUS,ptr->SDAQ_status.dev_sn);
+		//Check if SDAQ is pre-register on other bus
+		if((pre_reg_on_bus = find_if_SDAQ_is_registered(server_ptr, ptr->SDAQ_status.dev_sn, ptr->connected_to_BUS)))
+		{
+			sprintf(tmp_str,"%s.%d", pre_reg_on_bus, ptr->SDAQ_status.dev_sn);
+			UA_Server_deleteNode(server_ptr, UA_NODEID_STRING(1, tmp_str), 1);
+			free(pre_reg_on_bus);
+		}
+		//Check if the Node with the SDAQ's data is already exist, if no add it, elsewhere update data only
 		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &Node_Id))
 		{
 			//SDAQ's object
@@ -164,40 +196,3 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
-
-/*
-UA_NodeId find_SDAQ_NodeId_by_anchor(UA_Server *server_ptr, const char * anchor)
-{
-	UA_NodeId outNodeId = UA_NODEID_NULL;
-	// make ua browse
-	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
-	//UA_NodeId_copy(&sourceId, &bDesc->nodeId);
-	bDesc->nodeId = UA_NODEID_STRING(1,"SDAQ-ifs");
-	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD;//isForward ? UA_BROWSEDIRECTION_FORWARD : UA_BROWSEDIRECTION_INVERSE;
-	bDesc->includeSubtypes = true;
-	bDesc->resultMask = UA_BROWSERESULTMASK_NONE;
-	// browse
-	UA_BrowseResult bRes = UA_Server_browse(server_ptr, 0, bDesc);
-	//assert(bRes.statusCode == UA_STATUSCODE_GOOD);
-	while (bRes.referencesSize > 0)
-	{
-		for (size_t i = 0; i < bRes.referencesSize; i++)
-		{
-			UA_ReferenceDescription rDesc = bRes.references[i];
-			if (UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId))
-			{
-				outNodeId = rDesc.nodeId.nodeId;
-				break;
-			}
-		}
-		UA_BrowseResult_deleteMembers(&bRes);
-		bRes = UA_Server_browseNext(server_ptr, true, &bRes.continuationPoint);
-	}
-	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
-	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
-	// return
-	return outNodeId;
-}
-*/
