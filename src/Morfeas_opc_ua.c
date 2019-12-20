@@ -229,8 +229,8 @@ UA_StatusCode CH_update_value(UA_Server *server,
 	UA_Variant outValue;
 	UA_NodeId src_NodeId;
 	unsigned int sn=0;
-	unsigned char ch=0; 
-	char *ISO_Channel, *req_value, src_NodeId_str[70]; 
+	unsigned char ch=0;
+	char *ISO_Channel, *req_value, src_NodeId_str[70];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
@@ -263,7 +263,7 @@ UA_StatusCode Dev_update_value(UA_Server *server,
 	UA_Variant outValue;
 	UA_NodeId src_NodeId;
 	unsigned int sn=0;
-	char *ISO_Channel, *req_value, src_NodeId_str[70]; 
+	char *ISO_Channel, *req_value, src_NodeId_str[70];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
@@ -328,7 +328,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING);
 	}
-	//Update values of regular variables with data from Configuration XML 
+	//Update values of regular variables with data from Configuration XML
 	sprintf(tmp_str,"%s.desc",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
 	sprintf(tmp_str,"%s.min",ISO_channel_name);
@@ -409,6 +409,8 @@ void* IPC_Receiver(void *varg_pt)
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.voltage), UA_TYPES_FLOAT);
 						sprintf(Node_ID_str, "%s.amps", IPC_msg_dec.BUS_info.connected_to_BUS);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.amperage), UA_TYPES_FLOAT);
+						sprintf(Node_ID_str, "%s.shunt", IPC_msg_dec.BUS_info.connected_to_BUS);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.shunt_temp), UA_TYPES_FLOAT);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_register_or_update:

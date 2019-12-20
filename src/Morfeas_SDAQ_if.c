@@ -212,14 +212,14 @@ int main(int argc, char *argv[])
 	//Load the LogBook file to LogBook List
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
-	
+
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
-	
+
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -304,6 +304,7 @@ int main(int argc, char *argv[])
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg.BUS_info.voltage = stats.Bus_voltage;
 			IPC_msg.BUS_info.amperage = stats.Bus_amperage;
+			IPC_msg.BUS_info.shunt_temp = stats.Shunt_temp;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 			logstat_json(logstat_path,&stats);
 		}

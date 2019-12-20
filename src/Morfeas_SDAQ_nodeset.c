@@ -42,6 +42,8 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage (V)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff_1, "%s.amps", connected_to_BUS);
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Amperage (A)", UA_TYPES_FLOAT);
+		sprintf(tmp_buff_1, "%s.shunt", connected_to_BUS);
+		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Shunt Temp (°C)", UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
@@ -115,14 +117,14 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
-// Function that find if an SDAQ is registered on a SDAQnet handler other than the on_Bus. Returns: the name string of the Bus or NULL if it's not find or if SDAQ registered on on_Bus 
+// Function that find if an SDAQ is registered on a SDAQnet handler other than the on_Bus. Returns: the name string of the Bus or NULL if it's not find or if SDAQ registered on on_Bus
 char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int serial_number, const char * on_Bus)
 {
 	char Node_id_str[50], *retval;
 	UA_Variant res_Value;
 	UA_String *Value, UA_str_on_bus = UA_String_fromChars(on_Bus);
 	sprintf(Node_id_str, "%d.onBus", serial_number);
-	//Return NULL, because the SDAQ is not registered. 
+	//Return NULL, because the SDAQ is not registered.
 	if(UA_Server_readValue(server_ptr,  UA_NODEID_STRING(1, Node_id_str), &res_Value))
 		return NULL;
 	if(res_Value.type->typeIndex == UA_DATATYPEKIND_STRING)
@@ -130,7 +132,7 @@ char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int seri
 		Value = res_Value.data;
 		if(!UA_String_equal(Value, &UA_str_on_bus))
 		{
-			retval = calloc(Value->length+1, sizeof(char)); 
+			retval = calloc(Value->length+1, sizeof(char));
 			memcpy(retval, Value->data, Value->length);
 			retval[Value->length] = '\0';
 			return retval;

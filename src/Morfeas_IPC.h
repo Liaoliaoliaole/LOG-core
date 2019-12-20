@@ -104,6 +104,7 @@ typedef struct CAN_BUS_info_msg_struct{
 	float BUS_utilization;
 	float amperage;
 	float voltage;
+	float shunt_temp;
 }CAN_BUS_info_msg;
 
 typedef union{
