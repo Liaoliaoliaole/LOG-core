@@ -180,13 +180,20 @@ void * Nodeset_XML_reader(void *varg_pt)
 				if(nsconf_xml_stat.st_mtime - file_last_mod)
 				{
 					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Configuration XML File Updated!!!!");
-					if(!Morfeas_OPC_UA_conf_XML_parsing_validation(ns_config, &doc))
+					if(!Morfeas_XML_parsing(ns_config, &doc))
 					{
 						root_element = xmlDocGetRootElement(doc);
-						pthread_mutex_lock(&OPC_UA_NODESET_access);
-							for(root_element = root_element->children; root_element; root_element = root_element->next)
-								Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
-						pthread_mutex_unlock(&OPC_UA_NODESET_access);
+						if(!Morfeas_opc_ua_config_valid(root_element))
+						{
+
+							pthread_mutex_lock(&OPC_UA_NODESET_access);
+								for(root_element = root_element->children; root_element; root_element = root_element->next)
+									Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
+							pthread_mutex_unlock(&OPC_UA_NODESET_access);
+						}
+						else
+							UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+							"Data Validation of The OPC-UA Nodest configuration XML file failed!!!");
 						xmlFreeDoc(doc);
 					}
 				}
@@ -327,7 +334,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		return;
 	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
 	{
-		Morfeas_opc_ua_add_abject_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
 			//---Variables with update from Morfeas_ifs---//
 		//Status
 		sprintf(tmp_str,"%s.status",ISO_channel_name);
@@ -528,7 +535,7 @@ void* IPC_Receiver(void *varg_pt)
 	return NULL;
 }
 
-void Morfeas_opc_ua_add_abject_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
+void Morfeas_opc_ua_add_object_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
 {
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
@@ -609,13 +616,13 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
                             oAttr, NULL, NULL);
 	//Add SDAQ-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "SDAQ-ifs", "SDAQ-ifs");
+	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "SDAQ-ifs", "SDAQ-ifs");
 	//Add MDAQ-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "MDAQ-ifs", "MDAQ-ifs");
+	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "MDAQ-ifs", "MDAQ-ifs");
 	//Add IOBOX-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "IOBOX-ifs", "IOBOX-ifs");
+	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "IOBOX-ifs", "IOBOX-ifs");
 	//Add MTI-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_abject_node(server_ptr, "Morfeas_Handlers", "MTI-ifs", "MTI-ifs");
+	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "MTI-ifs", "MTI-ifs");
     //Root of the object "Rpi Health Status"
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "RPi Health status");
     UA_Server_addObjectNode(server_ptr,

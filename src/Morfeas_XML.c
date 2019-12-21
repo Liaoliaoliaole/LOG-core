@@ -64,7 +64,7 @@ char * XML_node_get_content(xmlNode *node, const char *node_name)
 	return NULL;
 }
 
-int Morfeas_OPC_UA_conf_XML_parsing_validation(const char *filename, xmlDocPtr *doc)
+int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 {
     xmlParserCtxtPtr ctxt;
 	//xmlNode *root_element = NULL;
@@ -92,8 +92,44 @@ int Morfeas_OPC_UA_conf_XML_parsing_validation(const char *filename, xmlDocPtr *
         	return EXIT_FAILURE;
         }
 		xmlFreeParserCtxt(ctxt);
-
-
     }
     return EXIT_SUCCESS;
 }
+
+int Morfeas_opc_ua_config_valid(xmlNode *root_element)
+{
+	xmlNode *check_element;
+	char *content, *anchor_arg1, *anchor_arg2, *iso_channel;
+	char anchor_check[100], arg_check[2][100];
+	int arg1_to_int, arg2_to_int;
+	for(check_element = root_element->children; check_element; check_element = check_element->next)
+	{
+		if((content = XML_node_get_content(check_element, "ANCHOR")))
+		{
+			iso_channel = XML_node_get_content(check_element, "ISO_CHANNEL");
+			strcpy(anchor_check, content);
+			anchor_arg1 = strtok(anchor_check, ".");
+			anchor_arg2 = strtok(NULL, ".CH");
+			arg1_to_int = atoi(anchor_arg1);
+			arg2_to_int = atoi(anchor_arg2);
+			sprintf(arg_check[0], "%u", arg1_to_int);
+			sprintf(arg_check[1], "%u", arg2_to_int);
+			if((!arg1_to_int || strcmp(arg_check[0], anchor_arg1)) || (!arg2_to_int || arg2_to_int>62 || strcmp(arg_check[1], anchor_arg2)))
+			{
+				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+

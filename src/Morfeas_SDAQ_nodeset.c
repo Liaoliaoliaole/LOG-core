@@ -27,9 +27,9 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 	char tmp_buff[30], tmp_buff_1[30], zero=0;
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
-		Morfeas_opc_ua_add_abject_node(server_ptr, "SDAQ-ifs", connected_to_BUS, tmp_buff);
+		Morfeas_opc_ua_add_object_node(server_ptr, "SDAQ-ifs", connected_to_BUS, tmp_buff);
 		sprintf(tmp_buff, "%s.SDAQnet", connected_to_BUS);
-		Morfeas_opc_ua_add_abject_node(server_ptr, connected_to_BUS, tmp_buff, "SDAQnet");
+		Morfeas_opc_ua_add_object_node(server_ptr, connected_to_BUS, tmp_buff, "SDAQnet");
 		sprintf(tmp_buff, "%s.BUS_util", connected_to_BUS);
 		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff, "%s.amount", connected_to_BUS);
@@ -37,7 +37,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_buff), &zero, UA_TYPES_BYTE);
 		//Object with electric status of a SDAQnet port
 		sprintf(tmp_buff, "%s.Electrics", connected_to_BUS);
-		Morfeas_opc_ua_add_abject_node(server_ptr, connected_to_BUS, tmp_buff, "Electric");
+		Morfeas_opc_ua_add_object_node(server_ptr, connected_to_BUS, tmp_buff, "Electric");
 		sprintf(tmp_buff_1, "%s.volts", connected_to_BUS);
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage (V)", UA_TYPES_FLOAT);
 		sprintf(tmp_buff_1, "%s.amps", connected_to_BUS);
@@ -60,7 +60,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 			sprintf(tmp_str,"%d.Info",ptr->SDAQ_serial_number);
 			if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str), &out))
 			{
-				Morfeas_opc_ua_add_abject_node(server_ptr, SDAQ_anchor_str, tmp_str, "Info");
+				Morfeas_opc_ua_add_object_node(server_ptr, SDAQ_anchor_str, tmp_str, "Info");
 				sprintf(tmp_str2,"%d.Type",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Type", UA_TYPES_STRING);
 				sprintf(tmp_str2,"%d.Firm_Rev",ptr->SDAQ_serial_number);
@@ -74,7 +74,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 				sprintf(tmp_str2,"%d.Max_cal_points",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Max_cal_points", UA_TYPES_BYTE);
 				sprintf(tmp_str,"%d.Channels",ptr->SDAQ_serial_number);
-				Morfeas_opc_ua_add_abject_node(server_ptr, SDAQ_anchor_str, tmp_str, "Channels");
+				Morfeas_opc_ua_add_object_node(server_ptr, SDAQ_anchor_str, tmp_str, "Channels");
 			}
 			sprintf(tmp_str,"%d.Channels",ptr->SDAQ_serial_number);
 			for(unsigned char i=1; i <= ptr->SDAQ_info_data.num_of_ch; i++)
@@ -84,7 +84,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 				if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str2), &out))
 				{
 					sprintf(tmp_str3,"CH%02hhu", i);
-					Morfeas_opc_ua_add_abject_node(server_ptr, tmp_str, tmp_str2, tmp_str3);
+					Morfeas_opc_ua_add_object_node(server_ptr, tmp_str, tmp_str2, tmp_str3);
 					sprintf(tmp_str3,"%s.meas", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Value", UA_TYPES_FLOAT);
 					sprintf(tmp_str3,"%s.timestamp", tmp_str2);
@@ -162,7 +162,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			//SDAQ's object
 			sprintf(tmp_str,"%s.SDAQnet",ptr->connected_to_BUS);
 			sprintf(tmp_str2,"%s (%02hhu)", (char *)dev_type_str[ptr->SDAQ_status.dev_type], ptr->address);
-			Morfeas_opc_ua_add_abject_node(server_ptr, tmp_str, SDAQ_anchor_str, tmp_str2);
+			Morfeas_opc_ua_add_object_node(server_ptr, tmp_str, SDAQ_anchor_str, tmp_str2);
 			//SDAQ's SDAQnet info and Timediff
 			sprintf(tmp_str,"%d.onBus",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "Connected on Bus", UA_TYPES_STRING);
@@ -174,7 +174,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "TimeDiff", UA_TYPES_UINT16);
 			//SDAQ's Info object and Info Variables
 			sprintf(tmp_str2,"%d.Status",ptr->SDAQ_status.dev_sn);
-			Morfeas_opc_ua_add_abject_node(server_ptr, SDAQ_anchor_str, tmp_str2, "Status");
+			Morfeas_opc_ua_add_object_node(server_ptr, SDAQ_anchor_str, tmp_str2, "Status");
 			sprintf(tmp_str,"%d.State",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "State", UA_TYPES_STRING);
 			sprintf(tmp_str,"%d.inSync",ptr->SDAQ_status.dev_sn);
