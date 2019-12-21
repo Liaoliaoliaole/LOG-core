@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE NODESet SYSTEM "OPC_UA_Config.dtd">
+<!DOCTYPE NODESet SYSTEM "Global_element_config.dtd">
 <NODESet>
 	<CHANNEL>
 		<ISO_CHANNEL>TE452</ISO_CHANNEL>
@@ -25,7 +25,7 @@
 		<MIN>0</MIN>
 		<MAX>1000</MAX>
 	</CHANNEL>
-<!--	
+<!--
 	<CHANNEL>
 		<ISO_CHANNEL>TE821</ISO_CHANNEL>
 		<INTERFACE_TYPE>SDAQ</INTERFACE_TYPE>
