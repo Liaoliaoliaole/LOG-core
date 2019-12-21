@@ -275,6 +275,46 @@ UA_StatusCode Dev_update_value(UA_Server *server,
 	return UA_STATUSCODE_GOOD;
 }
 
+//Function used onRead of DataSourceVariables, ISO_channel Status
+UA_StatusCode Status_update_value(UA_Server *server,
+						  const UA_NodeId *sessionId, void *sessionContext,
+						  const UA_NodeId *nodeId, void *nodeContext,
+						  UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
+						  UA_DataValue *dataValue)
+{
+	UA_Variant outValue;
+	UA_NodeId src_NodeId;
+	UA_String t_str;
+	unsigned int sn=0;
+	unsigned char ch=0;
+	char *ISO_Channel, *req_value, src_NodeId_str[100];
+	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
+	{
+		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
+		//Get ISO_Channels's Device Serial Number
+		sprintf(src_NodeId_str, "%s.s/n", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		sn = *((unsigned int *)(outValue.data));
+		//Get ISO_Channels's Device Channel
+		sprintf(src_NodeId_str, "%s.channel", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		ch = *((unsigned char *)(outValue.data));
+		//check if the source node exist
+		sprintf(src_NodeId_str, "%u.CH%hhu.status", sn, ch);
+		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
+			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
+		else
+		{
+			t_str = UA_String_fromChars("OFF-Line");
+			UA_Variant_setScalarCopy(&(dataValue->value), &t_str, &UA_TYPES[UA_TYPES_STRING]);
+		}
+		dataValue->hasValue = true;
+	}
+	return UA_STATUSCODE_GOOD;
+}
+
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
 	char tmp_str[50], *ISO_channel_name, anchor_dec[20];
@@ -288,9 +328,11 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
 	{
 		Morfeas_opc_ua_add_abject_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
-		//Variables with update from Morfeas_ifs
-		//sprintf(tmp_str,"%s.Status",ISO_channel_name);
-		//Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, update_value);
+			//---Variables with update from Morfeas_ifs---//
+		//Status
+		sprintf(tmp_str,"%s.status",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, Status_update_value);
+
 		//Channel related
 		sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME, CH_update_value);
@@ -363,7 +405,6 @@ void* IPC_Receiver(void *varg_pt)
 	{
 		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
 		{
-			//printf("\t--- Received IPC msg of type %d ---\n",type);
 			switch(type)
 			{
 				//Msg type from SDAQ_handler
@@ -408,27 +449,23 @@ void* IPC_Receiver(void *varg_pt)
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_register_or_update:
-					//printf("Enter:IPC_SDAQ_register_or_update\n");
 					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);//mutex inside
 					break;
 				case IPC_SDAQ_clean_up:
-					//printf("Enter:IPC_SDAQ_clean_up\n");
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						sprintf(Node_ID_str,"%s.amount",IPC_msg_dec.SDAQ_clean.connected_to_BUS);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_clean.t_amount), UA_TYPES_BYTE);
 						UA_NodeId_init(&NodeId);
 						sprintf(Node_ID_str, "%s.%d", IPC_msg_dec.SDAQ_clean.connected_to_BUS, IPC_msg_dec.SDAQ_clean.SDAQ_serial_number);
-						//check if the node is removed already
+						//check if the node is already removed
 						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 							UA_Server_deleteNode(server, NodeId, 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
-				case IPC_SDAQ_info:
-					//printf("Enter:IPC_SDAQ_info from %s.%d\n",IPC_msg_dec.SDAQ_info.connected_to_BUS,IPC_msg_dec.SDAQ_info.SDAQ_serial_number);
+				case IPC_SDAQ_info:;
 					SDAQ2OPC_UA_register_update_info(server, (SDAQ_info_msg*)&IPC_msg_dec);//mutex inside
 					break;
 				case IPC_SDAQ_cal_date:
-					//printf("Cal date received!!!\n");
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						sprintf(Node_ID_str, "%d.CH%hhu.Cal_date", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
 																IPC_msg_dec.SDAQ_meas.channel);
@@ -452,15 +489,14 @@ void* IPC_Receiver(void *varg_pt)
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 				case IPC_SDAQ_timediff:
-					//printf("Enter:IPC_SDAQ_timediff\n");
 					sprintf(Node_ID_str, "%d.TimeDiff", IPC_msg_dec.SDAQ_timediff.SDAQ_serial_number);
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
+
 				//--- Message type from any handler (Registration to OPC_UA) ---//
 				case IPC_Handler_register:
-					//printf("Enter:IPC_Handler_register ");
 					switch(IPC_msg_dec.Handler_reg.handler_type)
 					{
 						case SDAQ:
@@ -475,13 +511,13 @@ void* IPC_Receiver(void *varg_pt)
 					}
 					break;
 				case IPC_Handler_unregister:
-					//printf("Enter:IPC_Handler_unregister\n");
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
 			}
 		}
+		// Every 1 sec update RPi Health stats
 		if((time(NULL) - health_update_check))
 		{
 			Rpi_health_update();
@@ -542,7 +578,6 @@ inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_
 	UA_Variant temp_value;
 	if(_UA_Type!=UA_TYPES_STRING)
 		UA_Variant_setScalarCopy(&temp_value, value, &UA_TYPES[_UA_Type]);
-
 	else
 	{
 		UA_String str = UA_STRING((char*) value);
