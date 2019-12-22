@@ -51,8 +51,9 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
     config->buildInfo.productName = UA_STRING_ALLOC("Morfeas-OPC_UA Server (Based on Open62541)");
 	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", !app_name?"Morfeas default application":app_name);
 	config->buildInfo.softwareVersion = UA_STRING_ALLOC(version);
+	config->maxSessions = 10;
     retval = UA_ServerConfig_addNetworkLayerTCP(config, 4840, 0, 0);
-    if(retval != UA_STATUSCODE_GOOD) 
+    if(retval != UA_STATUSCODE_GOOD)
 	{
         UA_ServerConfig_clean(config);
         return retval;
@@ -60,7 +61,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 
     // Allocate the SecurityPolicies
     retval = UA_ServerConfig_addSecurityPolicyNone(config, NULL);// const UA_ByteString *certificate
-    if(retval != UA_STATUSCODE_GOOD) 
+    if(retval != UA_STATUSCODE_GOOD)
 	{
         UA_ServerConfig_clean(config);
         return retval;
@@ -71,7 +72,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
     retval = UA_AccessControl_default(config, true,
                 &config->securityPolicies[config->securityPoliciesSize-1].policyUri,
                 usernamePasswordsSize, usernamePasswords);
-    if(retval != UA_STATUSCODE_GOOD) 
+    if(retval != UA_STATUSCODE_GOOD)
 	{
         UA_ServerConfig_clean(config);
         return retval;

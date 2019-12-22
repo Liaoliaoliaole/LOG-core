@@ -102,10 +102,25 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 #define anchor_check_buff_size 100
 int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 {
-	xmlNode *check_element;
+	xmlNode *check_element, *element;
 	char *content, *anchor_arg[max_arg_range], *iso_channel;
 	char anchor_check[anchor_check_buff_size], arg_check[max_arg_range][anchor_check_buff_size];
 	int arg_to_int[max_arg_range]= {1};
+	//Check for duplicate ISO_CHANNEL
+	for(element = root_element->children; element->next; element = element->next)
+	{
+		if((iso_channel = XML_node_get_content(element, "ISO_CHANNEL")))
+			for(check_element = element->next; check_element; check_element = check_element->next)
+			{
+				if((content = XML_node_get_content(check_element, "ISO_CHANNEL")))
+					if(!strcmp(content, iso_channel))
+					{
+						fprintf(stderr, "\nISO_CHANNEL : \"%s\" Found multiple times !!!!\n\n", iso_channel);
+						return EXIT_FAILURE;
+					}
+			}
+	}
+	//Check for invalid ANCHOR
 	for(check_element = root_element->children; check_element; check_element = check_element->next)
 	{
 		if((iso_channel = XML_node_get_content(check_element, "ISO_CHANNEL")))
@@ -113,7 +128,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 			if(strstr(iso_channel,"."))
 			{
 				fprintf(stderr, "\nISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", iso_channel);
-				return 1;
+				return EXIT_FAILURE;
 			}
 		}
 		if((content = XML_node_get_content(check_element, "ANCHOR")))
@@ -130,11 +145,11 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 			|| (!arg_to_int[1] || strcmp(arg_check[1], anchor_arg[1])))
 			{
 				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
-				return 1;
+				return EXIT_FAILURE;
 			}
 		}
 	}
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 //GCompareFunc used in g_slist_find_custom, compare
