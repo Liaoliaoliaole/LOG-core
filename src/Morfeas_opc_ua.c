@@ -417,6 +417,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Value", UA_TYPES_FLOAT, CH_update_value);
 		sprintf(tmp_str,"%s.unit",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING, CH_update_value);
+		sprintf(tmp_str,"%s.status_byte",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status value", UA_TYPES_BYTE, CH_update_value);
 		//Device related
 		sprintf(tmp_str,"%s.Address",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, Dev_update_value);

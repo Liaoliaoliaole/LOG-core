@@ -47,14 +47,20 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 												   UA_TYPES_UINT16);
 				sprintf(Node_ID_str, "%d.CH%hhu.status", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 														 IPC_msg_dec->SDAQ_meas.channel);
-				sprintf(meas_status_str, "%s%s", !IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status?"Okay":"No Sensor",
+				sprintf(meas_status_str, "%s%s", !IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status?"Okay":
+												 Channel_status_byte_dec(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status),
 												 IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.unit<Unit_code_base_region_size ? ", Un-calibrated":"");
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   meas_status_str,
 												   UA_TYPES_STRING);
+				sprintf(Node_ID_str, "%d.CH%hhu.status_byte", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+														 IPC_msg_dec->SDAQ_meas.channel);
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
+												   &(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status),
+												   UA_TYPES_BYTE);
 				sprintf(Node_ID_str, "%d.CH%hhu.meas",IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 													  IPC_msg_dec->SDAQ_meas.channel);
-				if(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status)
+				if(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status&(1<<No_sensor))
 					IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.meas = NAN;
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   &(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.meas),
@@ -149,7 +155,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 
 void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 {
-	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50], tmp_str3[60];
+	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50], tmp_str3[70];
 	UA_NodeId out;
 	//UA_NodeId_init(&out);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
@@ -189,6 +195,8 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Value", UA_TYPES_FLOAT);
 					sprintf(tmp_str3,"%s.timestamp", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Timestamp", UA_TYPES_UINT16);
+					sprintf(tmp_str3,"%s.status_byte", tmp_str2);
+					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Status Value", UA_TYPES_BYTE);
 					sprintf(tmp_str3,"%s.status", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Status", UA_TYPES_STRING);
 					Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str3), "Initializing", UA_TYPES_STRING);

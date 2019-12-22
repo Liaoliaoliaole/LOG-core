@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 				case Device_status:
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
-						if(!status_dec->status)//SDAQ of sdaq_id_dec->device_addr not measuring, no error and on normal mode
+						if(!(status_dec->status&0x85))//SDAQ of sdaq_id_dec->device_addr is: not measuring, no error and on normal mode
 						{
 							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
 							{
