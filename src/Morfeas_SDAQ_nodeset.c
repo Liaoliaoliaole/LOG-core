@@ -87,7 +87,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 					UA_Server_deleteNode(server, NodeId, 1);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
-		case IPC_SDAQ_info:;
+		case IPC_SDAQ_info:
 			SDAQ2OPC_UA_register_update_info(server, (SDAQ_info_msg*)IPC_msg_dec);//mutex inside
 			break;
 		case IPC_SDAQ_cal_date:
@@ -121,8 +121,6 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 			break;
 	}
 }
-
-
 
 void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 {

@@ -408,33 +408,34 @@ void* IPC_Receiver(void *varg_pt)
 	{
 		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
 		{
-			if(type>=Morfeas_IPC_SDAQ_MIN_type && type<=Morfeas_IPC_SDAQ_MAX_type)//Msg type from SDAQ_handler
-				IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);
-			else
+
+			switch(type)
 			{
-				switch(type)
-				{
-					//--- Message type from any handler (Registration to OPC_UA) ---//
-					case IPC_Handler_register:
-						switch(IPC_msg_dec.Handler_reg.handler_type)
-						{
-							case SDAQ:
-								SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);//mutex inside
-								break;
-							case MDAQ:
-								break;
-							case IOBOX:
-								break;
-							case MTI:
-								break;
-						}
-						break;
-					case IPC_Handler_unregister:
-						pthread_mutex_lock(&OPC_UA_NODESET_access);
-							UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
-						pthread_mutex_unlock(&OPC_UA_NODESET_access);
-						break;
-				}
+				//--- Message type from any handler (Registration to OPC_UA) ---//
+				case IPC_Handler_register:
+					switch(IPC_msg_dec.Handler_reg.handler_type)
+					{
+						case SDAQ:
+							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);//mutex inside
+							break;
+						case MDAQ:
+							break;
+						case IOBOX:
+							break;
+						case MTI:
+							break;
+					}
+					break;
+				case IPC_Handler_unregister:
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					break;
+				default://Msg from Handlers
+					if(type>=Morfeas_IPC_SDAQ_MIN_type && type<=Morfeas_IPC_SDAQ_MAX_type)//Msg type from SDAQ_handler
+						IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);
+
+					break;
 			}
 		}
 		// Every 1 sec update RPi Health stats
