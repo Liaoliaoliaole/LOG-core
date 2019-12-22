@@ -25,7 +25,7 @@ extern char *Morfeas_IPC_handler_type_name[];
 enum Morfeas_IPC_msg_type{
 	IPC_Handler_register = 1,
 	IPC_Handler_unregister,
-	//SDAQ_related IPC messages//
+	//SDAQ_related IPC messages
 	IPC_SDAQ_register_or_update,
 	IPC_CAN_BUS_info,
 	IPC_SDAQ_clean_up,
@@ -33,7 +33,10 @@ enum Morfeas_IPC_msg_type{
 	IPC_SDAQ_cal_date,
 	IPC_SDAQ_timediff,
 	IPC_SDAQ_meas,
-	//Set MAX_num_type
+	//Set MIN/MAX_num_type, (Min and Max for each IPC_handler_type)
+	Morfeas_IPC_SDAQ_MIN_type = IPC_SDAQ_register_or_update,
+	Morfeas_IPC_SDAQ_MAX_type = IPC_SDAQ_meas,
+	//MAX number of any type of IPC message
 	Morfeas_IPC_MAX_type = IPC_SDAQ_meas
 };
 
@@ -107,6 +110,7 @@ typedef struct CAN_BUS_info_msg_struct{
 	float shunt_temp;
 }CAN_BUS_info_msg;
 
+//--IPC_MESSAGE--//
 typedef union{
 	Handler_reg_op_msg Handler_reg;
 	SDAQ_reg_update_msg SDAQ_reg_update;

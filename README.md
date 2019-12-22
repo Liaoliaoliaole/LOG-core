@@ -23,8 +23,8 @@ This means that all the components called from a supervisor programs,
 runs as daemon type processes, and they communicating using messages established from the **Morfeas IPC protocol**
 that passing through **PIPEs**. All the project's components are written in **ANSI C**.
 #### The Morfeas-core components:
-* **Morfeas**: The supervisor.
-* **Morfeas_opc_ua**: OPC-UA server
+* **Morfeas_daemon**: The supervisor.
+* **Morfeas_opc_ua**: OPC-UA server.
 * Driver/Handler for each supported interface:
   * **Morfeas_SDAQ_if**: SDAQ_net handler.
   * **Morfeas_MDAQ_if**: ModBus-TCP handler for MDAQs.

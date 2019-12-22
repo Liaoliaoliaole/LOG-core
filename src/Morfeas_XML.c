@@ -123,13 +123,3 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	}
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-

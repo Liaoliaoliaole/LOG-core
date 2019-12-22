@@ -38,7 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <glibtop/fsusage.h>
 
 //Include Functions implementation header
-#include "Morfeas_handlers_nodeset.h"
+#include "Morfeas_handlers_nodeset.h" //<-#include "Morfeas_Types.h"
 #include "Morfeas_XML.h"
 
 //print the Usage manual
@@ -396,14 +396,10 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 //IPC_Receiver, Thread function.
 void* IPC_Receiver(void *varg_pt)
 {
-	UA_NodeId NodeId;
-	UA_DateTime cal_time;
-	UA_DateTimeStruct calibration_date = {0};
 	//Morfeas IPC msg decoder
 	IPC_message IPC_msg_dec;
 	time_t health_update_check=0;
 	unsigned char type;//type of received IPC_msg
-	char Node_ID_str[60], meas_status_str[60];
 	int FIFO_fd;
 	//Make the Named Pipe(FIFO)
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
@@ -412,116 +408,33 @@ void* IPC_Receiver(void *varg_pt)
 	{
 		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
 		{
-			switch(type)
+			if(type>=Morfeas_IPC_SDAQ_MIN_type && type<=Morfeas_IPC_SDAQ_MAX_type)//Msg type from SDAQ_handler
+				IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);
+			else
 			{
-				//Msg type from SDAQ_handler
-				case IPC_SDAQ_meas:
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						sprintf(Node_ID_str, "%d.CH%hhu.unit", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
-															   IPC_msg_dec.SDAQ_meas.channel);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   unit_str[IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit],
-														   UA_TYPES_STRING);
-						sprintf(Node_ID_str, "%d.CH%hhu.timestamp", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
-																 	IPC_msg_dec.SDAQ_meas.channel);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   &(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.timestamp),
-														   UA_TYPES_UINT16);
-						sprintf(Node_ID_str, "%d.CH%hhu.status", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
-																 IPC_msg_dec.SDAQ_meas.channel);
-						sprintf(meas_status_str, "%s%s", !IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.status?"Okay":"No Sensor",
-														 IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.unit<Unit_code_base_region_size ? ", Un-calibrated":"");
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   meas_status_str,
-														   UA_TYPES_STRING);
-						sprintf(Node_ID_str, "%d.CH%hhu.meas",IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
-															  IPC_msg_dec.SDAQ_meas.channel);
-						if(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.status)
-							IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas = NAN;
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   &(IPC_msg_dec.SDAQ_meas.SDAQ_channel_meas.meas),
-														   UA_TYPES_FLOAT);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
-				case IPC_CAN_BUS_info:
-					sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec.BUS_info.connected_to_BUS);
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.BUS_utilization), UA_TYPES_FLOAT);
-						sprintf(Node_ID_str, "%s.volts", IPC_msg_dec.BUS_info.connected_to_BUS);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.voltage), UA_TYPES_FLOAT);
-						sprintf(Node_ID_str, "%s.amps", IPC_msg_dec.BUS_info.connected_to_BUS);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.amperage), UA_TYPES_FLOAT);
-						sprintf(Node_ID_str, "%s.shunt", IPC_msg_dec.BUS_info.connected_to_BUS);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.BUS_info.shunt_temp), UA_TYPES_FLOAT);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
-				case IPC_SDAQ_register_or_update:
-					SDAQ2OPC_UA_register_update(server, (SDAQ_reg_update_msg*)&IPC_msg_dec);//mutex inside
-					break;
-				case IPC_SDAQ_clean_up:
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						sprintf(Node_ID_str,"%s.amount",IPC_msg_dec.SDAQ_clean.connected_to_BUS);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_clean.t_amount), UA_TYPES_BYTE);
-						UA_NodeId_init(&NodeId);
-						sprintf(Node_ID_str, "%s.%d", IPC_msg_dec.SDAQ_clean.connected_to_BUS, IPC_msg_dec.SDAQ_clean.SDAQ_serial_number);
-						//check if the node is already removed
-						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
-							UA_Server_deleteNode(server, NodeId, 1);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
-				case IPC_SDAQ_info:;
-					SDAQ2OPC_UA_register_update_info(server, (SDAQ_info_msg*)&IPC_msg_dec);//mutex inside
-					break;
-				case IPC_SDAQ_cal_date:
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						sprintf(Node_ID_str, "%d.CH%hhu.Cal_date", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
-																IPC_msg_dec.SDAQ_meas.channel);
-						calibration_date.day = !IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.day?1:IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.day;
-						calibration_date.month = !IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.month?1:IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.month;
-						calibration_date.year = IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.year + 2000;
-						cal_time = UA_DateTime_fromStruct(calibration_date);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   &cal_time,
-														   UA_TYPES_DATETIME);
-						sprintf(Node_ID_str, "%d.CH%hhu.period", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
-																 IPC_msg_dec.SDAQ_meas.channel);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   &(IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.period),
-														   UA_TYPES_BYTE);
-						sprintf(Node_ID_str, "%d.CH%hhu.points", IPC_msg_dec.SDAQ_meas.SDAQ_serial_number,
-																 IPC_msg_dec.SDAQ_meas.channel);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-														   &(IPC_msg_dec.SDAQ_cal_date.SDAQ_cal_date.amount_of_points),
-														   UA_TYPES_BYTE);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
-				case IPC_SDAQ_timediff:
-					sprintf(Node_ID_str, "%d.TimeDiff", IPC_msg_dec.SDAQ_timediff.SDAQ_serial_number);
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec.SDAQ_timediff.Timediff), UA_TYPES_UINT16);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
-
-				//--- Message type from any handler (Registration to OPC_UA) ---//
-				case IPC_Handler_register:
-					switch(IPC_msg_dec.Handler_reg.handler_type)
-					{
-						case SDAQ:
-							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);//mutex inside
-							break;
-						case MDAQ:
-							break;
-						case IOBOX:
-							break;
-						case MTI:
-							break;
-					}
-					break;
-				case IPC_Handler_unregister:
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
+				switch(type)
+				{
+					//--- Message type from any handler (Registration to OPC_UA) ---//
+					case IPC_Handler_register:
+						switch(IPC_msg_dec.Handler_reg.handler_type)
+						{
+							case SDAQ:
+								SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);//mutex inside
+								break;
+							case MDAQ:
+								break;
+							case IOBOX:
+								break;
+							case MTI:
+								break;
+						}
+						break;
+					case IPC_Handler_unregister:
+						pthread_mutex_lock(&OPC_UA_NODESET_access);
+							UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
+						pthread_mutex_unlock(&OPC_UA_NODESET_access);
+						break;
+				}
 			}
 		}
 		// Every 1 sec update RPi Health stats
