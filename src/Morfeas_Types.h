@@ -55,6 +55,6 @@ struct LogBook_entry{
 }__attribute__((packed, aligned(1)));
 
 //Data of the List ISO_Channels_names
-struct List_ISO_Channels_names{
-	char ISO_channel_name[20];
+struct ISO_Channel_name{
+	char ISO_channel_name_str[20];
 };

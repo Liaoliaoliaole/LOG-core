@@ -160,8 +160,10 @@ void print_usage(char *prog_name)
 //Nodeset config XML reader, Thread Function
 void * Nodeset_XML_reader(void *varg_pt)
 {
+	struct ISO_Channel_name *list_data;
+	GSList *cur_ISOChannels=NULL, *t_list_ptr;
 	xmlDoc *doc;//XML tree pointer
-	xmlNode *root_element; //XML root Node
+	xmlNode *xml_node, *root_element; //XML root Node
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
 	if(!ns_config || access(ns_config, R_OK | F_OK ))
@@ -185,16 +187,26 @@ void * Nodeset_XML_reader(void *varg_pt)
 						root_element = xmlDocGetRootElement(doc);
 						if(!Morfeas_opc_ua_config_valid(root_element))
 						{
-
+							Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(root_element, &cur_ISOChannels);//Find nodes that going to be remove
+							t_list_ptr = cur_ISOChannels;
 							pthread_mutex_lock(&OPC_UA_NODESET_access);
-								for(root_element = root_element->children; root_element; root_element = root_element->next)
-									Morfeas_OPC_UA_add_update_ISO_Channel_node(server, root_element);
+								//Remove diff nodes from OPC_UA NODESet
+								while(t_list_ptr)
+								{
+									list_data = t_list_ptr->data;
+									UA_Server_deleteNode(server, UA_NODEID_STRING(1, list_data->ISO_channel_name_str), 1);
+									t_list_ptr = t_list_ptr->next;
+								}
+								//Add and/or Update OPC_UA NODESet
+								for(xml_node = root_element->children; xml_node; xml_node = xml_node->next)
+									Morfeas_OPC_UA_add_update_ISO_Channel_node(server, xml_node);
 							pthread_mutex_unlock(&OPC_UA_NODESET_access);
+							XML_doc_to_List_ISO_Channels(root_element, &cur_ISOChannels);//Copy ISO_Channels from xmlDoc to List ISO_Channels
 						}
 						else
 							UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
 							"Data Validation of The OPC-UA Nodest configuration XML file failed!!!");
-						xmlFreeDoc(doc);
+						xmlFreeDoc(doc);//Free XML Doc
 					}
 				}
 				file_last_mod = nsconf_xml_stat.st_mtime;
@@ -205,6 +217,62 @@ void * Nodeset_XML_reader(void *varg_pt)
 		//Check for file update after 1 sec
 		sleep(1);
 	}
+	g_slist_free_full(cur_ISOChannels, free_ISO_Channel_name);//Free List cur_ISOChannels
+	return NULL;
+}
+
+//IPC_Receiver, Thread function.
+void* IPC_Receiver(void *varg_pt)
+{
+	//Morfeas IPC msg decoder
+	IPC_message IPC_msg_dec;
+	time_t last_health_update=0, now;
+	unsigned char type;//type of received IPC_msg
+	int FIFO_fd;
+	//Make the Named Pipe(FIFO)
+	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+    FIFO_fd = open(Data_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
+	while(running)
+	{
+		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
+		{
+			switch(type)
+			{
+				//--- Message type from any handler (Registration to OPC_UA) ---//
+				case IPC_Handler_register:
+					switch(IPC_msg_dec.Handler_reg.handler_type)
+					{
+						case SDAQ:
+							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);//mutex inside
+							break;
+						case MDAQ:
+							break;
+						case IOBOX:
+							break;
+						case MTI:
+							break;
+					}
+					break;
+				case IPC_Handler_unregister:
+					pthread_mutex_lock(&OPC_UA_NODESET_access);
+						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
+					pthread_mutex_unlock(&OPC_UA_NODESET_access);
+					break;
+				default://Msg from Handlers
+					if(type>=Morfeas_IPC_SDAQ_MIN_type && type<=Morfeas_IPC_SDAQ_MAX_type)//Msg type from SDAQ_handler
+						IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
+
+					break;
+			}
+		}
+		// Every 1 sec update RPi Health stats
+		if((time(&now) - last_health_update))
+		{
+			Rpi_health_update();
+			last_health_update = now;
+		}
+    }
+	close(FIFO_fd);
 	return NULL;
 }
 
@@ -391,62 +459,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &S_N, UA_TYPES_UINT32);
 	sprintf(tmp_str,"%s.channel",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &CH, UA_TYPES_BYTE);
-}
-
-//IPC_Receiver, Thread function.
-void* IPC_Receiver(void *varg_pt)
-{
-	//Morfeas IPC msg decoder
-	IPC_message IPC_msg_dec;
-	time_t health_update_check=0;
-	unsigned char type;//type of received IPC_msg
-	int FIFO_fd;
-	//Make the Named Pipe(FIFO)
-	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-    FIFO_fd = open(Data_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
-	while(running)
-	{
-		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
-		{
-
-			switch(type)
-			{
-				//--- Message type from any handler (Registration to OPC_UA) ---//
-				case IPC_Handler_register:
-					switch(IPC_msg_dec.Handler_reg.handler_type)
-					{
-						case SDAQ:
-							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.connected_to_BUS);//mutex inside
-							break;
-						case MDAQ:
-							break;
-						case IOBOX:
-							break;
-						case MTI:
-							break;
-					}
-					break;
-				case IPC_Handler_unregister:
-					pthread_mutex_lock(&OPC_UA_NODESET_access);
-						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
-					pthread_mutex_unlock(&OPC_UA_NODESET_access);
-					break;
-				default://Msg from Handlers
-					if(type>=Morfeas_IPC_SDAQ_MIN_type && type<=Morfeas_IPC_SDAQ_MAX_type)//Msg type from SDAQ_handler
-						IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);
-
-					break;
-			}
-		}
-		// Every 1 sec update RPi Health stats
-		if((time(NULL) - health_update_check))
-		{
-			Rpi_health_update();
-			time(&health_update_check);
-		}
-    }
-	close(FIFO_fd);
-	return NULL;
 }
 
 void Morfeas_opc_ua_add_object_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)

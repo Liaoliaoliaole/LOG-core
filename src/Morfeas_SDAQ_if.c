@@ -289,7 +289,6 @@ int main(int argc, char *argv[])
 		if(flags.Clean_flag)
 		{
 			clean_up_list_SDAQs(&stats);
-			//logstat_json(logstat_path,&stats);
 			flags.Clean_flag = 0;
 		}
 		if(flags.bus_info)
@@ -298,6 +297,8 @@ int main(int argc, char *argv[])
 			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
 			msg_cnt = 0;
 			flags.bus_info = 0;
+			//Get Electrics for BUS port
+				//TO-DO Read ADC, scale readings, Write them to stats.
 			//transfer bus utilization to opc_ua
 			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
 			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);
@@ -306,6 +307,7 @@ int main(int argc, char *argv[])
 			IPC_msg.BUS_info.amperage = stats.Bus_amperage;
 			IPC_msg.BUS_info.shunt_temp = stats.Shunt_temp;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
+			//Write Stats to Logstat JSON file
 			logstat_json(logstat_path,&stats);
 		}
 		led_stat(&stats);
