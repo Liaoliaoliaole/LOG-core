@@ -112,12 +112,19 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		if((iso_channel = XML_node_get_content(element, "ISO_CHANNEL")))
 			for(check_element = element->next; check_element; check_element = check_element->next)
 			{
+				if(!strlen(iso_channel))
+				{
+					fprintf(stderr, "\nISO_CHANNEL : with zero content Found !!!!\n\n");
+					return EXIT_FAILURE;
+				}
 				if((content = XML_node_get_content(check_element, "ISO_CHANNEL")))
+				{
 					if(!strcmp(content, iso_channel))
 					{
 						fprintf(stderr, "\nISO_CHANNEL : \"%s\" Found multiple times !!!!\n\n", iso_channel);
 						return EXIT_FAILURE;
 					}
+				}
 			}
 	}
 	//Check for invalid ANCHOR
