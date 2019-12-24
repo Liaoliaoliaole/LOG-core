@@ -297,24 +297,32 @@ UA_StatusCode CH_update_value(UA_Server *server,
 {
 	UA_Variant outValue;
 	UA_NodeId src_NodeId;
-	unsigned int sn=0;
+	UA_String *dev_type_ua_str;
+	unsigned int id=0;
 	unsigned char ch=0;
-	char *ISO_Channel, *req_value, src_NodeId_str[100];
+	char *ISO_Channel, dev_type[10], *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
 		//Get ISO_Channels's Device Serial Number
-		sprintf(src_NodeId_str, "%s.s/n", ISO_Channel);
+		sprintf(src_NodeId_str, "%s.id", ISO_Channel);
 		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
 			return UA_STATUSCODE_GOOD;
-		sn = *((unsigned int *)(outValue.data));
+		id = *((unsigned int *)(outValue.data));
 		//Get ISO_Channels's Device Channel
 		sprintf(src_NodeId_str, "%s.channel", ISO_Channel);
 		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
 			return UA_STATUSCODE_GOOD;
 		ch = *((unsigned char *)(outValue.data));
+		//Get Dev_type of the ISO_Channel
+		sprintf(src_NodeId_str, "%s.dev_type", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		dev_type_ua_str = outValue.data;
+		memcpy(dev_type, dev_type_ua_str->data, dev_type_ua_str->length+1);
+		dev_type[dev_type_ua_str->length] = '\0';
 		//check if the source node exist
-		sprintf(src_NodeId_str, "%u.CH%hhu.%s", sn, ch, req_value);
+		sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", dev_type, id, ch, req_value);
 		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
 		dataValue->hasValue = true;
@@ -331,18 +339,26 @@ UA_StatusCode Dev_update_value(UA_Server *server,
 {
 	UA_Variant outValue;
 	UA_NodeId src_NodeId;
-	unsigned int sn=0;
-	char *ISO_Channel, *req_value, src_NodeId_str[100];
+	UA_String *dev_type_ua_str;
+	unsigned int id=0;
+	char *ISO_Channel, dev_type[10], *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
 		//Get ISO_Channels's Device Serial Number
-		sprintf(src_NodeId_str, "%s.s/n", ISO_Channel);
+		sprintf(src_NodeId_str, "%s.id", ISO_Channel);
 		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
 			return UA_STATUSCODE_GOOD;
-		sn = *((unsigned int *)(outValue.data));
+		id = *((unsigned int *)(outValue.data));
+		//Get Dev_type of the ISO_Channel
+		sprintf(src_NodeId_str, "%s.dev_type", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		dev_type_ua_str = outValue.data;
+		memcpy(dev_type, dev_type_ua_str->data, dev_type_ua_str->length+1);
+		dev_type[dev_type_ua_str->length] = '\0';
 		//check if the source node exist
-		sprintf(src_NodeId_str, "%u.%s", sn, req_value);
+		sprintf(src_NodeId_str, "%s.%u.%s", dev_type, id, req_value);
 		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
 		dataValue->hasValue = true;
@@ -359,25 +375,32 @@ UA_StatusCode Status_update_value(UA_Server *server,
 {
 	UA_Variant outValue;
 	UA_NodeId src_NodeId;
-	UA_String t_str;
-	unsigned int sn=0;
+	UA_String t_str, *dev_type_ua_str;
+	unsigned int id=0;
 	unsigned char ch=0;
-	char *ISO_Channel, *req_value, src_NodeId_str[100];
+	char *ISO_Channel, dev_type[10], *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
 		//Get ISO_Channels's Device Serial Number
-		sprintf(src_NodeId_str, "%s.s/n", ISO_Channel);
+		sprintf(src_NodeId_str, "%s.id", ISO_Channel);
 		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
 			return UA_STATUSCODE_GOOD;
-		sn = *((unsigned int *)(outValue.data));
+		id = *((unsigned int *)(outValue.data));
 		//Get ISO_Channels's Device Channel
 		sprintf(src_NodeId_str, "%s.channel", ISO_Channel);
 		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
 			return UA_STATUSCODE_GOOD;
 		ch = *((unsigned char *)(outValue.data));
+		//Get Dev_type of the ISO_Channel
+		sprintf(src_NodeId_str, "%s.dev_type", ISO_Channel);
+		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
+			return UA_STATUSCODE_GOOD;
+		dev_type_ua_str = outValue.data;
+		memcpy(dev_type, dev_type_ua_str->data, dev_type_ua_str->length+1);
+		dev_type[dev_type_ua_str->length] = '\0';
 		//check if the source node exist
-		sprintf(src_NodeId_str, "%u.CH%hhu.status", sn, ch);
+		sprintf(src_NodeId_str, "%s.%u.CH%hhu.status", dev_type, id, ch);
 		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
 		else
@@ -394,7 +417,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 {
 	char tmp_str[50], *ISO_channel_name, anchor_dec[20];
 	float t_min_max;
-	unsigned int S_N;
+	unsigned int ID;
 	unsigned char CH;
 	UA_NodeId out;
 	UA_NodeId_init(&out);
@@ -434,8 +457,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
-		sprintf(tmp_str,"%s.s/n",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Dev S/N", UA_TYPES_UINT32);
+		sprintf(tmp_str,"%s.id",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Identifier", UA_TYPES_UINT32);
 		sprintf(tmp_str,"%s.channel",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
 		sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
@@ -455,10 +478,10 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	//copy the anchor from the XML_doc tree to a buff
 	memccpy(anchor_dec, XML_node_get_content(node, "ANCHOR"), '\0', sizeof(anchor_dec));
 	//Split the anchor string by token
-	S_N = atoi(strtok(anchor_dec, "."));
+	ID = atoi(strtok(anchor_dec, "."));
 	CH = atoi(strtok(NULL, "CH"));
-	sprintf(tmp_str,"%s.s/n",ISO_channel_name);
-	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &S_N, UA_TYPES_UINT32);
+	sprintf(tmp_str,"%s.id",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &ID, UA_TYPES_UINT32);
 	sprintf(tmp_str,"%s.channel",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &CH, UA_TYPES_BYTE);
 }

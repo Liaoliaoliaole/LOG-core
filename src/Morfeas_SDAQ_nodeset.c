@@ -35,17 +35,17 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 	{
 		case IPC_SDAQ_meas:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				sprintf(Node_ID_str, "%d.CH%hhu.unit", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.unit", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 													   IPC_msg_dec->SDAQ_meas.channel);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   unit_str[IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.unit],
 												   UA_TYPES_STRING);
-				sprintf(Node_ID_str, "%d.CH%hhu.timestamp", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.timestamp", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 														 	IPC_msg_dec->SDAQ_meas.channel);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   &(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.timestamp),
 												   UA_TYPES_UINT16);
-				sprintf(Node_ID_str, "%d.CH%hhu.status", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.status", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 														 IPC_msg_dec->SDAQ_meas.channel);
 				sprintf(meas_status_str, "%s%s", !IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status?"Okay":
 												 Channel_status_byte_dec(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status),
@@ -53,12 +53,12 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   meas_status_str,
 												   UA_TYPES_STRING);
-				sprintf(Node_ID_str, "%d.CH%hhu.status_byte", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.status_byte", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 														 IPC_msg_dec->SDAQ_meas.channel);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   &(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status),
 												   UA_TYPES_BYTE);
-				sprintf(Node_ID_str, "%d.CH%hhu.meas",IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.meas",IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 													  IPC_msg_dec->SDAQ_meas.channel);
 				if(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.status&(1<<No_sensor))
 					IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas.meas = NAN;
@@ -87,7 +87,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				sprintf(Node_ID_str,"%s.amount",IPC_msg_dec->SDAQ_clean.connected_to_BUS);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_clean.t_amount), UA_TYPES_BYTE);
 				UA_NodeId_init(&NodeId);
-				sprintf(Node_ID_str, "%s.%d", IPC_msg_dec->SDAQ_clean.connected_to_BUS, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
+				sprintf(Node_ID_str, "SDAQ.%s.%d", IPC_msg_dec->SDAQ_clean.connected_to_BUS, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
 				//check if the node is already removed
 				if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 					UA_Server_deleteNode(server, NodeId, 1);
@@ -98,7 +98,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 			break;
 		case IPC_SDAQ_cal_date:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				sprintf(Node_ID_str, "%d.CH%hhu.Cal_date", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.Cal_date", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 														   IPC_msg_dec->SDAQ_meas.channel);
 				calibration_date.day = !IPC_msg_dec->SDAQ_cal_date.SDAQ_cal_date.day?1:IPC_msg_dec->SDAQ_cal_date.SDAQ_cal_date.day;
 				calibration_date.month = !IPC_msg_dec->SDAQ_cal_date.SDAQ_cal_date.month?1:IPC_msg_dec->SDAQ_cal_date.SDAQ_cal_date.month;
@@ -107,12 +107,12 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   &cal_time,
 												   UA_TYPES_DATETIME);
-				sprintf(Node_ID_str, "%d.CH%hhu.period", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.period", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 														 IPC_msg_dec->SDAQ_meas.channel);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   &(IPC_msg_dec->SDAQ_cal_date.SDAQ_cal_date.period),
 												   UA_TYPES_BYTE);
-				sprintf(Node_ID_str, "%d.CH%hhu.points", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
+				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.points", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number,
 														 IPC_msg_dec->SDAQ_meas.channel);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   &(IPC_msg_dec->SDAQ_cal_date.SDAQ_cal_date.amount_of_points),
@@ -120,7 +120,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 		case IPC_SDAQ_timediff:
-			sprintf(Node_ID_str, "%d.TimeDiff", IPC_msg_dec->SDAQ_timediff.SDAQ_serial_number);
+			sprintf(Node_ID_str, "SDAQ.%d.TimeDiff", IPC_msg_dec->SDAQ_timediff.SDAQ_serial_number);
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_timediff.Timediff), UA_TYPES_UINT16);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
@@ -163,30 +163,30 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 		if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &out))
 		{
 			//UA_NodeId_init(&out);
-			sprintf(tmp_str,"%d.Info",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Info",ptr->SDAQ_serial_number);
 			if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str), &out))
 			{
 				Morfeas_opc_ua_add_object_node(server_ptr, SDAQ_anchor_str, tmp_str, "Info");
-				sprintf(tmp_str2,"%d.Type",ptr->SDAQ_serial_number);
+				sprintf(tmp_str2,"SDAQ.%d.Type",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Type", UA_TYPES_STRING);
-				sprintf(tmp_str2,"%d.Firm_Rev",ptr->SDAQ_serial_number);
+				sprintf(tmp_str2,"SDAQ.%d.Firm_Rev",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Firm_Rev", UA_TYPES_BYTE);
-				sprintf(tmp_str2,"%d.Hw_Rev",ptr->SDAQ_serial_number);
+				sprintf(tmp_str2,"SDAQ.%d.Hw_Rev",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Hw_Rev", UA_TYPES_BYTE);
-				sprintf(tmp_str2,"%d.Amount_of_channels",ptr->SDAQ_serial_number);
+				sprintf(tmp_str2,"SDAQ.%d.Amount_of_channels",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Channels_on_SDAQ", UA_TYPES_BYTE);
-				sprintf(tmp_str2,"%d.Samplerate",ptr->SDAQ_serial_number);
+				sprintf(tmp_str2,"SDAQ.%d.Samplerate",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Samplerate", UA_TYPES_BYTE);
-				sprintf(tmp_str2,"%d.Max_cal_points",ptr->SDAQ_serial_number);
+				sprintf(tmp_str2,"SDAQ.%d.Max_cal_points",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Max_cal_points", UA_TYPES_BYTE);
-				sprintf(tmp_str,"%d.Channels",ptr->SDAQ_serial_number);
+				sprintf(tmp_str,"SDAQ.%d.Channels",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_object_node(server_ptr, SDAQ_anchor_str, tmp_str, "Channels");
 			}
-			sprintf(tmp_str,"%d.Channels",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Channels",ptr->SDAQ_serial_number);
 			for(unsigned char i=1; i <= ptr->SDAQ_info_data.num_of_ch; i++)
 			{
 				//UA_NodeId_init(&out);
-				sprintf(tmp_str2,"%d.CH%hhu", ptr->SDAQ_serial_number, i);
+				sprintf(tmp_str2,"SDAQ.%d.CH%hhu", ptr->SDAQ_serial_number, i);
 				if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str2), &out))
 				{
 					sprintf(tmp_str3,"CH%02hhu", i);
@@ -210,17 +210,17 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Calibration Points", UA_TYPES_BYTE);
 				}
 			}
-			sprintf(tmp_str,"%d.Type",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Type",ptr->SDAQ_serial_number);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), (char *)dev_type_str[ptr->SDAQ_info_data.dev_type], UA_TYPES_STRING);
-			sprintf(tmp_str,"%d.Firm_Rev",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Firm_Rev",ptr->SDAQ_serial_number);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.firm_rev), UA_TYPES_BYTE);
-			sprintf(tmp_str,"%d.Hw_Rev",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Hw_Rev",ptr->SDAQ_serial_number);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.hw_rev), UA_TYPES_BYTE);
-			sprintf(tmp_str,"%d.Amount_of_channels",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Amount_of_channels",ptr->SDAQ_serial_number);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.num_of_ch), UA_TYPES_BYTE);
-			sprintf(tmp_str,"%d.Samplerate",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Samplerate",ptr->SDAQ_serial_number);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.sample_rate), UA_TYPES_BYTE);
-			sprintf(tmp_str,"%d.Max_cal_points",ptr->SDAQ_serial_number);
+			sprintf(tmp_str,"SDAQ.%d.Max_cal_points",ptr->SDAQ_serial_number);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.max_cal_point), UA_TYPES_BYTE);
 		}
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
@@ -232,7 +232,7 @@ char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int seri
 	char Node_id_str[50], *retval;
 	UA_Variant res_Value;
 	UA_String *Value, UA_str_on_bus = UA_String_fromChars(on_Bus);
-	sprintf(Node_id_str, "%d.onBus", serial_number);
+	sprintf(Node_id_str, "SDAQ.%d.onBus", serial_number);
 	//Return NULL, because the SDAQ is not registered.
 	if(UA_Server_readValue(server_ptr,  UA_NODEID_STRING(1, Node_id_str), &res_Value))
 		return NULL;
@@ -273,41 +273,41 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			sprintf(tmp_str2,"%s (%02hhu)", (char *)dev_type_str[ptr->SDAQ_status.dev_type], ptr->address);
 			Morfeas_opc_ua_add_object_node(server_ptr, tmp_str, SDAQ_anchor_str, tmp_str2);
 			//SDAQ's SDAQnet info and Timediff
-			sprintf(tmp_str,"%d.onBus",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.onBus",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "Connected on Bus", UA_TYPES_STRING);
-			sprintf(tmp_str,"%d.S/N",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.S/N",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "S/N", UA_TYPES_UINT32);
-			sprintf(tmp_str,"%d.Address",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.Address",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "Address", UA_TYPES_BYTE);
-			sprintf(tmp_str,"%d.TimeDiff",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.TimeDiff",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, SDAQ_anchor_str, tmp_str, "TimeDiff", UA_TYPES_UINT16);
 			//SDAQ's Info object and Info Variables
-			sprintf(tmp_str2,"%d.Status",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str2,"SDAQ.%d.Status",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_object_node(server_ptr, SDAQ_anchor_str, tmp_str2, "Status");
-			sprintf(tmp_str,"%d.State",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.State",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "State", UA_TYPES_STRING);
-			sprintf(tmp_str,"%d.inSync",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.inSync",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "inSync", UA_TYPES_STRING);
-			sprintf(tmp_str,"%d.Error",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.Error",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Error", UA_TYPES_STRING);
-			sprintf(tmp_str,"%d.Mode",ptr->SDAQ_status.dev_sn);
+			sprintf(tmp_str,"SDAQ.%d.Mode",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
 		}
-		sprintf(tmp_str,"%s.amount",ptr->connected_to_BUS);
+		sprintf(tmp_str,"SDAQ.%s.amount",ptr->connected_to_BUS);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->t_amount), UA_TYPES_BYTE);
-		sprintf(tmp_str,"%d.onBus",ptr->SDAQ_status.dev_sn);
+		sprintf(tmp_str,"SDAQ.%d.onBus",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), ptr->connected_to_BUS, UA_TYPES_STRING);
-		sprintf(tmp_str,"%d.S/N",ptr->SDAQ_status.dev_sn);
+		sprintf(tmp_str,"SDAQ.%d.S/N",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_status.dev_sn), UA_TYPES_UINT32);
-		sprintf(tmp_str,"%d.Address",ptr->SDAQ_status.dev_sn);
+		sprintf(tmp_str,"SDAQ.%d.Address",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->address), UA_TYPES_BYTE);
-		sprintf(tmp_str,"%d.State",ptr->SDAQ_status.dev_sn);
+		sprintf(tmp_str,"SDAQ.%d.State",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, State), UA_TYPES_STRING);
-		sprintf(tmp_str,"%d.inSync",ptr->SDAQ_status.dev_sn);
+		sprintf(tmp_str,"SDAQ.%d.inSync",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, In_sync), UA_TYPES_STRING);
-		sprintf(tmp_str,"%d.Error",ptr->SDAQ_status.dev_sn);
+		sprintf(tmp_str,"SDAQ.%d.Error",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Error), UA_TYPES_STRING);
-		sprintf(tmp_str,"%d.Mode",ptr->SDAQ_status.dev_sn);
+		sprintf(tmp_str,"SDAQ.%d.Mode",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
