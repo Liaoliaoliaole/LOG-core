@@ -111,9 +111,9 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 {
 	xmlNode *check_element, *element;
-	char *content, *anchor_arg[max_arg_range], *iso_channel;
+	char *content, *iso_channel, *anchor_arg[max_arg_range] = {NULL};
 	char anchor_check[anchor_check_buff_size], arg_check[max_arg_range][anchor_check_buff_size];
-	unsigned int arg_to_int[max_arg_range]= {1}, if_name_okay;
+	unsigned int arg_to_int[max_arg_range]= {0}, if_name_okay;
 	//Check for Empty XML nodes content and for Invalid Interface_name content
 	for(element = root_element->children; element; element = element->next)
 	{
@@ -179,24 +179,28 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	{
 		if((iso_channel = XML_node_get_content(check_element, "ISO_CHANNEL")))
 		{
-			if(strstr(iso_channel,"."))
+			if(strstr(iso_channel,"."))//'.' is illegal character for the ISO_Channel
 			{
-				fprintf(stderr, "\nISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", iso_channel);
+				fprintf(stderr, "\nISO_CHANNEL : \"%s\" is NOT valid (contains '.') !!!!\n\n", iso_channel);
 				return EXIT_FAILURE;
 			}
 		}
 		if((content = XML_node_get_content(check_element, "ANCHOR")))
 		{
 			strcpy(anchor_check, content);
-			anchor_arg[0] = strtok(anchor_check, ".");
-			anchor_arg[1] = strtok(NULL, "CH");
-			sscanf(content,"%u.CH%u", &arg_to_int[0], &arg_to_int[1]);
-			sprintf(arg_check[0], "%u", arg_to_int[0]);
-			sprintf(arg_check[1], *anchor_arg[1]=='0'?"%02u":"%u", arg_to_int[1]);
-			if((!arg_to_int[0] || strcmp(arg_check[0], anchor_arg[0]))
-			|| (!arg_to_int[1] || strcmp(arg_check[1], anchor_arg[1]))
-			|| !strstr(content,".CH"))
+			if(strstr(content,".CH"))
 			{
+				anchor_arg[0] = strtok(anchor_check, ".");
+				anchor_arg[1] = strtok(NULL, "CH");
+				sscanf(content,"%u.CH%u", &arg_to_int[0], &arg_to_int[1]);
+				sprintf(arg_check[0], "%u", arg_to_int[0]);
+				sprintf(arg_check[1], *anchor_arg[1]=='0'?"%02u":"%u", arg_to_int[1]);
+			}
+			if(!arg_to_int[0] || !arg_to_int[1])
+				goto exit;
+			if(strcmp(arg_check[0], anchor_arg[0]) || strcmp(arg_check[1], anchor_arg[1]))
+			{
+			exit:
 				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
 				return EXIT_FAILURE;
 			}
