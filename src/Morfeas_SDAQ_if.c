@@ -212,14 +212,14 @@ int main(int argc, char *argv[])
 	//Load the LogBook file to LogBook List
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
-
+	printf("Morfeas_SDAQ_if (%s) Read of LogBook file Completed\n",stats.CAN_IF_name);
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
-
+	printf("Morfeas_SDAQ_if (%s) Registered on OPC-UA via IPC\n",stats.CAN_IF_name);
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -262,12 +262,15 @@ int main(int argc, char *argv[])
 				case Device_status:
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
-						if(!(status_dec->status&0x85))//SDAQ of sdaq_id_dec->device_addr is: not measuring, no error and on normal mode
+						if(!(status_dec->status&0x85))//Enter: if SDAQ of sdaq_id_dec->device_addr is: standby, no error and normal mode
 						{
 							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
+								printf("New SDAQ with S/N:%u and type %s Registered with address:%hhu\n", status_dec->dev_sn,
+																									  dev_type_str[status_dec->dev_type],
+																									  SDAQ_data->SDAQ_address);
 							}
 							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
@@ -275,7 +278,7 @@ int main(int argc, char *argv[])
 						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, stats.detected_SDAQs);
 					}
 					else
-						printf("\n\t\tMaximum amount of addresses is reached\n");
+						printf("Maximum amount of addresses is reached!!!!\n");
 					break;
 				case Device_info:
 					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
@@ -312,7 +315,7 @@ int main(int argc, char *argv[])
 		}
 		led_stat(&stats);
 	}
-	printf("\nExiting...\n");
+	printf("Morfeas_SDAQ_if (%s) Exiting...\n",stats.CAN_IF_name);
 	// save LogBook list to a file before destroy it
 	LogBook_file(&stats,"w");
 	//free all lists
@@ -323,6 +326,7 @@ int main(int argc, char *argv[])
 	close(CAN_socket_num);//Close CAN_socket
 	//Remove Registeration handler to Morfeas_OPC_UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 1);
+	printf("Morfeas_SDAQ_if (%s) Removed from OPC-UA via IPC\n",stats.CAN_IF_name);
 	close(stats.FIFO_fd);
 	return EXIT_SUCCESS;
 }
@@ -399,31 +403,37 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 		unsigned Bus_util : 1;
 		unsigned Max_dev_num : 1;
 	}leds_status = {0};
-	if(flags.led_existent)
-	{
-		if(stats->Bus_util>95.0)
-		{
-			GPIOWrite(YELLOW_LED, 1);
-			leds_status.Bus_util = 1;
-		}
-		else if(stats->Bus_util<=80.0 && leds_status.Bus_util)
-		{
-			GPIOWrite(YELLOW_LED, 0);
-			leds_status.Bus_util = 0;
-		}
 
-		if(stats->detected_SDAQs>=60)
-		{
+	if(stats->Bus_util>95.0)
+	{
+		if(flags.led_existent)
+			GPIOWrite(YELLOW_LED, 1);
+		if(!leds_status.Bus_util)
+			printf("Bus Utilization is in High Level(>95%%) !!!!\n");
+		leds_status.Bus_util = 1;
+	}
+	else if(stats->Bus_util<=80.0 && leds_status.Bus_util)
+	{
+		if(flags.led_existent)
+			GPIOWrite(YELLOW_LED, 0);
+		leds_status.Bus_util = 0;
+		printf("Bus Utilization restore to Normal Level(<80%%)!!!!\n");
+	}
+
+	if(stats->detected_SDAQs>=60)
+	{
+		if(flags.led_existent)
 			GPIOWrite(RED_LED, 1);
-			leds_status.Max_dev_num = 1;
-		}
-		else
+		leds_status.Max_dev_num = 1;
+	}
+	else
+	{
+		if(leds_status.Max_dev_num)
 		{
-			if(leds_status.Max_dev_num)
-			{
+			if(flags.led_existent)
 				GPIOWrite(RED_LED, 0);
-				leds_status.Max_dev_num = 0;
-			}
+			leds_status.Max_dev_num = 0;
+			printf("Amount of SDAQs restored to Normal (<60)!!!!\n");
 		}
 	}
 }
@@ -955,6 +965,9 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 				if((now - sdaq_node->last_seen) > LIFE_TIME)
 				{
 					stats->detected_SDAQs--;
+					printf("SDAQ with type %s, S/N:%u and address:%hhu left from the BUS\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
+																					 sdaq_node->SDAQ_status.dev_sn,
+																					 sdaq_node->SDAQ_address);
 					//Send info of the removed SDAQ through IPC
 					IPC_msg.SDAQ_clean.IPC_msg_type = IPC_SDAQ_clean_up;
 					sprintf(IPC_msg.SDAQ_clean.connected_to_BUS,"%s",stats->CAN_IF_name);

@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Morfeas_Types.h"
 
 extern size_t Morfeas_IPC_msg_size[];
-extern char *Morfeas_IPC_handler_type_name[];
 
 enum Morfeas_IPC_msg_type{
 	IPC_Handler_register = 1,

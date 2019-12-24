@@ -160,8 +160,8 @@ void print_usage(char *prog_name)
 //Nodeset config XML reader, Thread Function
 void * Nodeset_XML_reader(void *varg_pt)
 {
+	GSList *t_list_ptr, *cur_ISOChannels=NULL;//List with the current configuration's ISO_Channel names
 	struct ISO_Channel_name *list_data;
-	GSList *cur_ISOChannels=NULL, *t_list_ptr;
 	xmlDoc *doc;//XML tree pointer
 	xmlNode *xml_node, *root_element; //XML root Node
 	char *ns_config = varg_pt;

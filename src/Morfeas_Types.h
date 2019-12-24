@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include SDAQ Driver header
 #include "sdaq-worker/src/SDAQ_drv.h"
 
+//Array with stings of the Supported Interface_names.
+extern char *Morfeas_IPC_handler_type_name[];
+
 //Morfeas_SDAQ-if stats struct
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];

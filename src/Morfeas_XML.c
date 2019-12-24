@@ -30,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libxml/tree.h>
 
 #include "Morfeas_Types.h"
+//#include "Morfeas_IPC.h"
+
 /*
 void print_XML_node(xmlNode * node)
 {
@@ -42,24 +44,31 @@ void print_XML_node(xmlNode * node)
 			if (cur_node->type == XML_ELEMENT_NODE)
 			{
 				printf("\tChild Node name: %s\n", cur_node->name);
-				printf("\t\tHave contents: %s\n", cur_node->children->content);
+				if(cur_node->children)
+					printf("\t\tHave contents: %s\n", cur_node->children->content);
+				else
+					printf("\t\tEmpty\n");
 			}
 		}
 	}
 }
 */
-
 char * XML_node_get_content(xmlNode *node, const char *node_name)
 {
     xmlNode *cur_node;
-	if (node->type == XML_ELEMENT_NODE)
+	if (node)
 	{
 		for (cur_node = node->children; cur_node; cur_node = cur_node->next)
 		{
 			if (cur_node->type == XML_ELEMENT_NODE)
 			{
-				if(!strcmp((const char *)cur_node->name, node_name))
-					return (char *)(cur_node->children->content);
+				if(!strcmp((char *)(cur_node->name), node_name))
+				{
+					if(cur_node->children)
+						return (char *)(cur_node->children->content);
+					else
+						return NULL;
+				}
 			}
 		}
 	}
@@ -69,7 +78,6 @@ char * XML_node_get_content(xmlNode *node, const char *node_name)
 int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 {
     xmlParserCtxtPtr ctxt;
-	//xmlNode *root_element = NULL;
     //--- create a parser context ---//
     if (!(ctxt = xmlNewParserCtxt()))
     {
@@ -105,27 +113,66 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	xmlNode *check_element, *element;
 	char *content, *anchor_arg[max_arg_range], *iso_channel;
 	char anchor_check[anchor_check_buff_size], arg_check[max_arg_range][anchor_check_buff_size];
-	int arg_to_int[max_arg_range]= {1};
-	//Check for duplicate ISO_CHANNEL
-	for(element = root_element->children; element->next; element = element->next)
+	unsigned int arg_to_int[max_arg_range]= {1}, if_name_okay;
+	//Check for Empty XML nodes content and for Invalid Interface_name content
+	for(element = root_element->children; element; element = element->next)
 	{
-		if((iso_channel = XML_node_get_content(element, "ISO_CHANNEL")))
-			for(check_element = element->next; check_element; check_element = check_element->next)
+		if (element->type == XML_ELEMENT_NODE)
+		{
+			for(check_element = element->children; check_element; check_element = check_element->next)
 			{
-				if(!strlen(iso_channel))
+				if (check_element->type == XML_ELEMENT_NODE)
 				{
-					fprintf(stderr, "\nISO_CHANNEL : with zero content Found !!!!\n\n");
-					return EXIT_FAILURE;
-				}
-				if((content = XML_node_get_content(check_element, "ISO_CHANNEL")))
-				{
-					if(!strcmp(content, iso_channel))
+					if(!check_element->children)//Empty Check
 					{
-						fprintf(stderr, "\nISO_CHANNEL : \"%s\" Found multiple times !!!!\n\n", iso_channel);
+						fprintf(stderr, "\nNode: %s (on line: %d) found to have zero content!!!!\n\n", check_element->name, check_element->line);
 						return EXIT_FAILURE;
+					}
+					else if(!strcmp((char *)(check_element->name), "INTERFACE_TYPE"))//Invalid Interface name
+					{
+						if_name_okay = 0;
+						for(int i=0; Morfeas_IPC_handler_type_name[i]; i++)
+							if(!strcmp(Morfeas_IPC_handler_type_name[i], (char *)(check_element->children->content)))
+								if_name_okay = 1;
+						if(!if_name_okay)
+						{
+							fprintf(stderr, "\nContent: \"%s\" of Node: \"INTERFACE_TYPE\" (on line: %d) is Out of Range (",
+								check_element->children->content,
+							    check_element->line);
+							for(int j=0; Morfeas_IPC_handler_type_name[j]; j++)
+							{
+								fprintf(stderr, "%s",Morfeas_IPC_handler_type_name[j]);
+								if(Morfeas_IPC_handler_type_name[j+1])
+									fprintf(stderr,", ");
+							}
+							fprintf(stderr,")!!!!\n\n");
+							return EXIT_FAILURE;
+						}
 					}
 				}
 			}
+		}
+	}
+	//Check for duplicate ISO_CHANNEL
+	for(element = root_element->children; element->next; element = element->next)
+	{   //print_XML_node(element);
+		if (element->type == XML_ELEMENT_NODE)
+		{
+			if((iso_channel = XML_node_get_content(element, "ISO_CHANNEL")))
+			{
+				for(check_element = element->next; check_element; check_element = check_element->next)
+				{
+					if((content = XML_node_get_content(check_element, "ISO_CHANNEL")))
+					{
+						if(!strcmp(content, iso_channel))
+						{
+							fprintf(stderr, "\nISO_CHANNEL: \"%s\" Found multiple times !!!!\n\n", iso_channel);
+							return EXIT_FAILURE;
+						}
+					}
+				}
+			}
+		}
 	}
 	//Check for invalid ANCHOR
 	for(check_element = root_element->children; check_element; check_element = check_element->next)
@@ -143,13 +190,12 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 			strcpy(anchor_check, content);
 			anchor_arg[0] = strtok(anchor_check, ".");
 			anchor_arg[1] = strtok(NULL, "CH");
-			for(int i=0; i<max_arg_range; i++)
-				if(anchor_arg[i])
-					arg_to_int[i] = atoi(anchor_arg[i]);
+			sscanf(content,"%u.CH%u", &arg_to_int[0], &arg_to_int[1]);
 			sprintf(arg_check[0], "%u", arg_to_int[0]);
 			sprintf(arg_check[1], *anchor_arg[1]=='0'?"%02u":"%u", arg_to_int[1]);
 			if((!arg_to_int[0] || strcmp(arg_check[0], anchor_arg[0]))
-			|| (!arg_to_int[1] || strcmp(arg_check[1], anchor_arg[1])))
+			|| (!arg_to_int[1] || strcmp(arg_check[1], anchor_arg[1]))
+			|| !strstr(content,".CH"))
 			{
 				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
 				return EXIT_FAILURE;
@@ -233,18 +279,3 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_ISOChannels
 	}
 	return EXIT_SUCCESS;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
