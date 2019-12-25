@@ -1,33 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE COMPONENTS SYSTEM "Morfeas.dtd">
-<COMPONENTS>
+<!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
+<CONFIG>
+	<LOGGERS_DIR>/mnt/ramdisk</LOGGERS_DIR>
 	<COMPONENT>
-		<NAME>Morfeas_opc_ua</NAME>
-		<OPTIONS>
-			<OPTION>
-				<FLAG>-a</FLAG>
-				<ARGUMENT>Morfeas test application</ARGUMENT>
-			</OPTION>
-			<OPTION>
-				<FLAG>-c</FLAG>
-				<ARGUMENT></ARGUMENT><!-- Absolute path of the NODESet configuration file-->
-			</OPTION>
-		</OPTIONS>
+		<PROGRAM>Morfeas_opc_ua</PROGRAM>
+		<ARGUMENTS>
+			<ARGUMENT>
+				<OPTION>-a</OPTION>
+				<OPT_ARG>Morfeas test application</OPT_ARG>
+			</ARGUMENT>
+			<ARGUMENT>
+				<OPTION>-c</OPTION>
+				<OPT_ARG></OPT_ARG><!-- Absolute path of the NODESet configuration file-->
+			</ARGUMENT>
+		</ARGUMENTS>
 	</COMPONENT>
 	<COMPONENT>
-		<NAME>Morfeas_SDAQ_if</NAME>
-		<OPTIONS>
-			<OPTION>
-				<FLAG>vcan0</FLAG>
-			</OPTION>
-		</OPTIONS>
+		<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
+		<ARGUMENTS>
+			<ARGUMENT>
+				<OPTION>vcan0</OPTION>
+			</ARGUMENT>
+			<ARGUMENT>
+				<OPTION>/mnt/ramdisk</OPTION>
+			</ARGUMENT>
+		</ARGUMENTS>
 	</COMPONENT>
 	<COMPONENT>
-		<NAME>Morfeas_SDAQ_if</NAME>
-		<OPTIONS>
-			<OPTION>
-				<FLAG>vcan1</FLAG>
-			</OPTION>
-		</OPTIONS>
+		<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
+		<ARGUMENTS>
+			<ARGUMENT>
+				<OPTION>vcan1</OPTION>
+			</ARGUMENT>
+			<ARGUMENT>
+				<OPTION>/mnt/ramdisk</OPTION>
+			</ARGUMENT>
+		</ARGUMENTS>
 	</COMPONENT>
-</COMPONENTS>
+</CONFIG>
