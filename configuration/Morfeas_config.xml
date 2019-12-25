@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE COMPONENTS SYSTEM "Morfeas.dtd">
+<COMPONENTS>
+	<COMPONENT>
+		<NAME>Morfeas_opc_ua</NAME>
+		<OPTIONS>
+			<OPTION>
+				<FLAG>-a</FLAG>
+				<ARGUMENT>Morfeas test application</ARGUMENT>
+			</OPTION>
+			<OPTION>
+				<FLAG>-c</FLAG>
+				<ARGUMENT></ARGUMENT><!-- Absolute path of the NODESet configuration file-->
+			</OPTION>
+		</OPTIONS>
+	</COMPONENT>
+	<COMPONENT>
+		<NAME>Morfeas_SDAQ_if</NAME>
+		<OPTIONS>
+			<OPTION>
+				<FLAG>vcan0</FLAG>
+			</OPTION>
+		</OPTIONS>
+	</COMPONENT>
+	<COMPONENT>
+		<NAME>Morfeas_SDAQ_if</NAME>
+		<OPTIONS>
+			<OPTION>
+				<FLAG>vcan1</FLAG>
+			</OPTION>
+		</OPTIONS>
+	</COMPONENT>
+</COMPONENTS>

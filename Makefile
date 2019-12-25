@@ -13,13 +13,6 @@ Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_daemon.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(SRC_dir)/*.h
 
-Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir)\
-					  $(WORK_dir)/Morfeas_SDAQ_if.o \
-					  $(WORK_dir)/Morfeas_JSON.o \
-					  $(WORK_dir)/SDAQ_drv.o \
-					  $(WORK_dir)/Morfeas_IPC.o \
-					  $(SRC_dir)/*.h
-
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \
 					  $(WORK_dir)/Morfeas_opc_ua_config.o \
 					  $(WORK_dir)/SDAQ_drv.o \
@@ -28,7 +21,16 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \
 					  $(WORK_dir)/Morfeas_XML.o \
 					  $(SRC_dir)/*.h
 
-all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if $(BUILD_dir)/Morfeas_daemon
+Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir) \
+					  $(WORK_dir)/Morfeas_SDAQ_if.o \
+					  $(WORK_dir)/Morfeas_JSON.o \
+					  $(WORK_dir)/SDAQ_drv.o \
+					  $(WORK_dir)/Morfeas_IPC.o \
+					  $(SRC_dir)/*.h
+
+all: $(BUILD_dir)/Morfeas_daemon \
+	 $(BUILD_dir)/Morfeas_opc_ua \
+	 $(BUILD_dir)/Morfeas_SDAQ_if
 
 #Compilation of Morfeas applications
 $(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP)
