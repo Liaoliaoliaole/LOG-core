@@ -227,13 +227,13 @@ void free_ISO_Channel_name(gpointer data)
 {
 	g_slice_free(struct ISO_Channel_name, data);
 }
-
+/*
 void print_List (gpointer data, gpointer user_data)
 {
 	struct ISO_Channel_name *node_data = data;
 	printf("List %s, Data of Node = %s\n", (char*)user_data, node_data->ISO_channel_name_str);
 }
-
+*/
 int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList **cur_ISOChannels)
 {
 	xmlNode *check_element;
