@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.9.5 beta" /*Release Version of Morfeas_opc_ua*/
+#define VERSION "1.0" /*Release Version of Morfeas_opc_ua*/
 #define n_threads 2
 #define CPU_temp_sysfs_file "/sys/class/thermal/thermal_zone0/temp"
 

@@ -36,6 +36,7 @@ int logstat_json(char *logstat_path, void *stats_arg)
 		return 1;
 	struct Morfeas_SDAQ_if_stats *stats = stats_arg;
 	FILE * pFile;
+	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash, date[STR_LEN];
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
@@ -70,9 +71,15 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	{
 		fputs(JSON_str, pFile);
 		fclose (pFile);
+		if(write_error)
+			fprintf(stderr,"Write error @ Statlog file Restored\n");
+		write_error = 0;
 	}
-	else
+	else if(!write_error)
+	{
 		fprintf(stderr,"Write error @ Statlog file\n");
+		write_error = -1;
+	}
 	cJSON_Delete(root);
 	free(JSON_str);
 	free(logstat_path_and_name);

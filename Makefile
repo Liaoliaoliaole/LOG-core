@@ -7,6 +7,12 @@ SRC_dir=src
 CANif_DEP_dir = ./src/sdaq-worker/work
 CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src/*.h
 CANif_DEP_SRC_dir = ./src/sdaq-worker/src
+
+Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_daemon.o \
+					  $(WORK_dir)/Morfeas_XML.o \
+					  $(WORK_dir)/Morfeas_IPC.o \
+					  $(SRC_dir)/*.h
+
 Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir)\
 					  $(WORK_dir)/Morfeas_SDAQ_if.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
@@ -22,7 +28,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_opc_ua.o \
 					  $(WORK_dir)/Morfeas_XML.o \
 					  $(SRC_dir)/*.h
 
-all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if
+all: $(BUILD_dir)/Morfeas_opc_ua $(BUILD_dir)/Morfeas_SDAQ_if $(BUILD_dir)/Morfeas_daemon
 
 #Compilation of Morfeas applications
 $(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP)
@@ -31,11 +37,18 @@ $(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP)
 $(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
+$(BUILD_dir)/Morfeas_daemon: $(Morfeas_daemon_DEP)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
 #Compilation of Morfeas_IPC
 $(WORK_dir)/Morfeas_IPC.o: $(SRC_dir)/Morfeas_IPC.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_opc_ua_config.o: $(SRC_dir)/Morfeas_opc_ua_config.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+#Dependencies of the Morfeas_daemon
+$(WORK_dir)/Morfeas_daemon.o: $(SRC_dir)/Morfeas_daemon.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_opc_ua
