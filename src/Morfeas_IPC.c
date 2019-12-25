@@ -38,7 +38,7 @@ size_t Morfeas_IPC_msg_size[]={
 };
 
 char *Morfeas_IPC_handler_type_name[]={
-	"SDAQ","MDAQ","IO-BOX","MTI",NULL
+	"SDAQ","MDAQ","IOBOX","MTI",NULL
 };
 
 	//----TX Functions----//

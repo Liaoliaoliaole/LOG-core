@@ -234,7 +234,8 @@ void* IPC_Receiver(void *varg_pt)
     FIFO_fd = open(Data_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
 	while(running)
 	{
-		if((type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec)))
+		type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec);
+		if(type && type<=Morfeas_IPC_MAX_type)
 		{
 			switch(type)
 			{
