@@ -18,7 +18,7 @@
 		<NAME>Morfeas_SDAQ_if</NAME>
 		<OPTIONS>
 			<OPTION>
-				git <FLAG>vcan0</FLAG>
+				<FLAG>vcan0</FLAG>
 			</OPTION>
 		</OPTIONS>
 	</COMPONENT>
