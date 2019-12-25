@@ -13,4 +13,37 @@ Comment2 ""
 Comment3 "Licence: TAPR Open Hardware License"
 Comment4 "Author: Sam Harry Tzavaras"
 $EndDescr
+$Comp
+L Connector_Generic:Conn_02x20_Odd_Even J?
+U 1 1 5E041881
+P 2150 4000
+F 0 "J?" H 2200 5117 50  0000 C CNN
+F 1 "RPi_header" H 2200 5026 50  0000 C CNN
+F 2 "" H 2150 4000 50  0001 C CNN
+F 3 "~" H 2150 4000 50  0001 C CNN
+	1    2150 4000
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+5V #PWR?
+U 1 1 5E047DD2
+P 2600 3000
+F 0 "#PWR?" H 2600 2850 50  0001 C CNN
+F 1 "+5V" H 2615 3173 50  0000 C CNN
+F 2 "" H 2600 3000 50  0001 C CNN
+F 3 "" H 2600 3000 50  0001 C CNN
+	1    2600 3000
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5E048E34
+P 2950 3800
+F 0 "#PWR?" H 2950 3550 50  0001 C CNN
+F 1 "GND" H 2955 3627 50  0000 C CNN
+F 2 "" H 2950 3800 50  0001 C CNN
+F 3 "" H 2950 3800 50  0001 C CNN
+	1    2950 3800
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

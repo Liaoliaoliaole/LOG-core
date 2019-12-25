@@ -13,4 +13,15 @@ Comment2 ""
 Comment3 "Licence: TAPR Open Hardware License"
 Comment4 "Author: Sam Harry Tzavaras"
 $EndDescr
+$Comp
+L Connector_Generic:Conn_02x20_Odd_Even J?
+U 1 1 5E041881
+P 2150 4000
+F 0 "J?" H 2200 5117 50  0000 C CNN
+F 1 "RPi_header" H 2200 5026 50  0000 C CNN
+F 2 "" H 2150 4000 50  0001 C CNN
+F 3 "~" H 2150 4000 50  0001 C CNN
+	1    2150 4000
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
