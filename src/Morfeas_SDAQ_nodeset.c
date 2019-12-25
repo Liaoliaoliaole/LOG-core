@@ -87,7 +87,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				sprintf(Node_ID_str,"%s.amount",IPC_msg_dec->SDAQ_clean.connected_to_BUS);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_clean.t_amount), UA_TYPES_BYTE);
 				UA_NodeId_init(&NodeId);
-				sprintf(Node_ID_str, "SDAQ.%s.%d", IPC_msg_dec->SDAQ_clean.connected_to_BUS, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
+				sprintf(Node_ID_str, "%s.%d", IPC_msg_dec->SDAQ_clean.connected_to_BUS, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
 				//check if the node is already removed
 				if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 					UA_Server_deleteNode(server, NodeId, 1);
@@ -155,6 +155,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 
 void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 {
+	const char init_val = -1;
 	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50], tmp_str3[70];
 	UA_NodeId out;
 	//UA_NodeId_init(&out);
@@ -197,6 +198,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Timestamp", UA_TYPES_UINT16);
 					sprintf(tmp_str3,"%s.status_byte", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Status Value", UA_TYPES_BYTE);
+					Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str3), &init_val, UA_TYPES_BYTE);
 					sprintf(tmp_str3,"%s.status", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Status", UA_TYPES_STRING);
 					Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str3), "Initializing", UA_TYPES_STRING);
@@ -293,7 +295,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			sprintf(tmp_str,"SDAQ.%d.Mode",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
 		}
-		sprintf(tmp_str,"SDAQ.%s.amount",ptr->connected_to_BUS);
+		sprintf(tmp_str,"%s.amount",ptr->connected_to_BUS);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->t_amount), UA_TYPES_BYTE);
 		sprintf(tmp_str,"SDAQ.%d.onBus",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), ptr->connected_to_BUS, UA_TYPES_STRING);
