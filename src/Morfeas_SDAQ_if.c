@@ -107,12 +107,12 @@ int main(int argc, char *argv[])
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
 	//Variables for IPC
-	IPC_message IPC_msg;
+	IPC_message IPC_msg = {0};
 	//Variables for Socket CAN and SDAQ_decoders
 	int RX_bytes;
 	struct timeval tv;
 	struct ifreq ifr;
-	struct sockaddr_can addr;
+	struct sockaddr_can addr = {0};
 	struct can_frame frame_rx;
 	struct can_filter RX_filter;
 	sdaq_can_id *sdaq_id_dec;
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
 	struct itimerval timer;
 
 	// start the trace
-	mtrace();
+	//mtrace();
 
 	if(argc == 1)
 	{
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 		perror("Error in socket bind");
 		exit(EXIT_FAILURE);
 	}
-		
+
 	//Link signal SIGALRM to timer's handler
 	signal(SIGALRM, CAN_if_timer_handler);
 	//Link signal SIGINT and SIGPIPE to quit_signal_handler
@@ -219,11 +219,12 @@ int main(int argc, char *argv[])
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
 	printf("Morfeas_SDAQ_if (%s) Read of LogBook file Completed\n",stats.CAN_IF_name);
+	printf("Morfeas_SDAQ_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.CAN_IF_name);
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
-	
+
 	//Register handler to Morfeas_OPC-UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
 	printf("Morfeas_SDAQ_if (%s) Registered on OPC-UA via IPC\n",stats.CAN_IF_name);
@@ -500,37 +501,41 @@ void print_usage(char *prog_name)
 //SDAQ_info_entry allocator
 struct SDAQ_info_entry* new_SDAQ_info_entry()
 {
-    struct SDAQ_info_entry *new_node = (struct SDAQ_info_entry *) g_slice_alloc0(sizeof(struct SDAQ_info_entry));
+    struct SDAQ_info_entry *new_node = g_slice_alloc0(sizeof(struct SDAQ_info_entry));
     return new_node;
 }
 //Channel_date_entry allocator
 struct Channel_date_entry* new_SDAQ_Channel_date_entry()
 {
-    struct Channel_date_entry *new_node = (struct Channel_date_entry *) g_slice_alloc0(sizeof(struct Channel_date_entry));
+    struct Channel_date_entry *new_node = g_slice_alloc0(sizeof(struct Channel_date_entry));
     return new_node;
 }
 //LogBook_entry allocator
 struct LogBook_entry* new_LogBook_entry()
 {
-    struct LogBook_entry *new_node = (struct LogBook_entry *) g_slice_alloc0(sizeof(struct LogBook_entry));
+    struct LogBook_entry *new_node = g_slice_alloc0(sizeof(struct LogBook_entry));
     return new_node;
 }
 
 //free a node from list SDAQ_Channels_cal_dates
 void free_channel_cal_dates_entry(gpointer node)
 {
-    g_slice_free(struct Channel_date_entry, node);
+	printf("free_channel_cal_dates_entry!!!\n");
+	g_slice_free(struct Channel_date_entry, node);
 }
 //free a node from list SDAQ_info
 void free_SDAQ_info_entry(gpointer node)
 {
 	struct SDAQ_info_entry *node_dec = node;
+	printf("free_SDAQ_info_entry!!!\n");
 	g_slist_free_full(node_dec->SDAQ_Channels_cal_dates, free_channel_cal_dates_entry);
+	//node_dec->SDAQ_Channels_cal_dates = NULL;
 	g_slice_free(struct SDAQ_info_entry, node);
 }
 //free a node from List LogBook
 void free_LogBook_entry(gpointer node)
 {
+	printf("free_LogBook_entry!!!\n");
 	g_slice_free(struct LogBook_entry, node);
 }
 
@@ -590,24 +595,27 @@ void LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_appen
 {
 	FILE *fp;
 	GSList *LogBook_node = stats->LogBook;
-	struct LogBook_entry *node_data;
-	size_t read_bytes = sizeof(struct LogBook_entry);
+	struct LogBook_entry *node_data, read_data;
+	size_t read_bytes;
 	if(!strcmp(read_write_or_append, "r"))
 	{
 		fp=fopen(stats->LogBook_file_path,read_write_or_append);
 		if(fp)
 		{
-			while(read_bytes == sizeof(struct LogBook_entry))
-			{
-				if(!(node_data = new_LogBook_entry()))
-				{
-					fprintf(stderr,"Memory Error!!!\n");
-					exit(EXIT_FAILURE);
-				}
-				read_bytes = fread(node_data, 1, sizeof(struct LogBook_entry), fp);
+			do{
+				read_bytes = fread(&read_data, 1, sizeof(struct LogBook_entry), fp);
 				if(read_bytes == sizeof(struct LogBook_entry))
+				{
+					node_data = new_LogBook_entry();
+					if(!node_data)
+					{
+						fprintf(stderr,"Memory Error!!!\n");
+						exit(EXIT_FAILURE);
+					}
+					memcpy(node_data, &read_data, read_bytes);
 					stats->LogBook = g_slist_append(stats->LogBook, node_data);
-			}
+				}
+			}while(read_bytes == sizeof(struct LogBook_entry));
 			fclose(fp);
 		}
 	}
@@ -673,7 +681,7 @@ short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
 /*Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM*/
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	IPC_message IPC_msg;
+	IPC_message IPC_msg = {0};
 	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (stats->list_SDAQs)
@@ -715,7 +723,7 @@ gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	IPC_message IPC_msg;
+	IPC_message IPC_msg = {0};
 	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	if (stats->list_SDAQs)
@@ -750,7 +758,7 @@ struct SDAQ_info_entry * find_SDAQ(unsigned char address, struct Morfeas_SDAQ_if
 /*Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM*/
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
-	IPC_message IPC_msg;
+	IPC_message IPC_msg = {0};
 	GSList *list_node = NULL, *date_list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
 	struct Channel_date_entry *sdaq_Channels_cal_dates_node;
@@ -956,7 +964,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 //Function thet cleaning the list_SDAQ from dead entries
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
-	IPC_message IPC_msg;
+	IPC_message IPC_msg = {0};
 	struct SDAQ_info_entry *sdaq_node;
 	GSList *check_node = NULL;
 	time_t now=time(NULL);
@@ -997,7 +1005,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 //Function for construction of message for registration or update of a SDAQ
 int IPC_SDAQ_reg_update(int FIFO_fd, char connected_to_BUS[10], unsigned char address, sdaq_status *SDAQ_status, unsigned char amount)
 {
-	IPC_message IPC_reg_msg;
+	IPC_message IPC_reg_msg = {0};
 	//Send SDAQ registration over IPC
 	IPC_reg_msg.SDAQ_reg_update.IPC_msg_type = IPC_SDAQ_register_or_update;
 	memccpy(&(IPC_reg_msg.SDAQ_reg_update.connected_to_BUS), connected_to_BUS, '\0', 10);

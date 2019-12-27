@@ -37,7 +37,7 @@ $(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP)
-	$(CC) $(CFLAGS) $^ -g -o $@ $(LDLIBS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_dir)/Morfeas_daemon: $(Morfeas_daemon_DEP)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)

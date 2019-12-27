@@ -68,7 +68,7 @@ size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr)//const char *path_to_FI
 //Function for construction of message for registration of a Handler
 size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg)//const char *path_to_FIFO,
 {
-	IPC_message IPC_reg_msg;
+	IPC_message IPC_reg_msg = {0};
 	//Construct and send Handler registration msg
 	IPC_reg_msg.Handler_reg.IPC_msg_type = unreg ? IPC_Handler_unregister : IPC_Handler_register;
 	IPC_reg_msg.Handler_reg.handler_type = handler_type;
