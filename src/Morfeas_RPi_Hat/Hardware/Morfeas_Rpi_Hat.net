@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source /home/sam/Desktop/test/morfeas_project/src/Morfeas_RPi_Hat/Hardware/Morfeas_Rpi_Hat.sch)
-    (date "Fri 27 Dec 2019 05:41:41 AM EET")
+    (date "Fri 27 Dec 2019 05:52:06 AM EET")
     (tool "Eeschema 5.1.5+dfsg1-2")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -43,7 +43,7 @@
       (tstamp 5E05839E))
     (comp (ref BT1)
       (value Battery_Cell)
-      (footprint Battery:BatteryHolder_Keystone_106_1x20mm)
+      (footprint Battery:BatteryHolder_Keystone_103_1x20mm)
       (datasheet ~)
       (libsource (lib Device) (part Battery_Cell) (description "Single-cell battery"))
       (sheetpath (names /) (tstamps /))

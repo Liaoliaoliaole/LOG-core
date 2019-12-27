@@ -148,7 +148,7 @@ U 1 1 5E05C7F6
 P 3450 6600
 F 0 "BT1" H 3568 6696 50  0000 L CNN
 F 1 "Battery_Cell" H 3568 6605 50  0000 L CNN
-F 2 "Battery:BatteryHolder_Keystone_106_1x20mm" V 3450 6660 50  0001 C CNN
+F 2 "Battery:BatteryHolder_Keystone_103_1x20mm" V 3450 6660 50  0001 C CNN
 F 3 "~" V 3450 6660 50  0001 C CNN
 	1    3450 6600
 	1    0    0    -1  
