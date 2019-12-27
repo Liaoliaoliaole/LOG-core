@@ -33,6 +33,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <signal.h>
 #include <pthread.h>
 
+#include <mcheck.h>
+
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
@@ -125,6 +127,9 @@ int main(int argc, char *argv[])
 	//Timers related Variables
 	struct itimerval timer;
 
+	// start the trace
+	mtrace();
+
 	if(argc == 1)
 	{
 		print_usage(argv[0]);
@@ -201,6 +206,7 @@ int main(int argc, char *argv[])
 		perror("Error in socket bind");
 		exit(EXIT_FAILURE);
 	}
+		
 	//Link signal SIGALRM to timer's handler
 	signal(SIGALRM, CAN_if_timer_handler);
 	//Link signal SIGINT and SIGPIPE to quit_signal_handler
@@ -217,6 +223,7 @@ int main(int argc, char *argv[])
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
+	
 	//Register handler to Morfeas_OPC-UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
 	printf("Morfeas_SDAQ_if (%s) Registered on OPC-UA via IPC\n",stats.CAN_IF_name);

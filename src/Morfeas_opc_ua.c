@@ -30,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <mcheck.h>
+
 #include <glib.h>
 #include <glibtop.h>
 #include <glibtop/uptime.h>
@@ -97,7 +99,8 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
-
+	// start the trace
+	//mtrace();
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
@@ -111,7 +114,7 @@ int main(int argc, char *argv[])
 	server = UA_Server_newWithConfig(&conf);
 	//Add Morfeas application base node set to server
 	Morfeas_opc_ua_root_nodeset_Define(server);
-
+	
 	//----Start threads----//
 	pthread_create(&Threads_ids[0], NULL, IPC_Receiver, NULL);//Create Thread for IPC_receiver
 	pthread_create(&Threads_ids[1], NULL, Nodeset_XML_reader, ns_config);//Create Thread for Nodeset_XML_reader
