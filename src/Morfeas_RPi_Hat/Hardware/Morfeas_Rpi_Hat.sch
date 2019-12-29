@@ -1393,7 +1393,7 @@ U 1 1 5E075351
 P 7100 3900
 F 0 "J5" H 7072 3924 50  0000 R CNN
 F 1 "RS_232" H 7072 3833 50  0000 R CNN
-F 2 "Connectors_Molex:Molex_KK-6410-03_03x2.54mm_Straight" H 7100 3900 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Horizontal" H 7100 3900 50  0001 C CNN
 F 3 "~" H 7100 3900 50  0001 C CNN
 	1    7100 3900
 	-1   0    0    -1  

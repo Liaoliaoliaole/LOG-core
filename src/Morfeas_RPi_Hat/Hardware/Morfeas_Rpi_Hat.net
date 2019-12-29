@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source /home/sam/Desktop/test/morfeas_project/src/Morfeas_RPi_Hat/Hardware/Morfeas_Rpi_Hat.sch)
-    (date "Fri 27 Dec 2019 05:54:24 PM EET")
+    (date "Mon 30 Dec 2019 01:32:15 AM EET")
     (tool "Eeschema 5.1.5+dfsg1-2")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -340,7 +340,7 @@
       (tstamp 5E056599))
     (comp (ref J5)
       (value RS_232)
-      (footprint Connectors_Molex:Molex_KK-6410-03_03x2.54mm_Straight)
+      (footprint Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Horizontal)
       (datasheet ~)
       (libsource (lib Connector) (part Conn_01x03_Male) (description "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"))
       (sheetpath (names /) (tstamps /))
