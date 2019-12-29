@@ -271,9 +271,9 @@ int main(int argc, char *argv[])
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
-								Logger("New SDAQ with S/N:%u and type %s Registered with address: %hhu\n", status_dec->dev_sn,
-																									  dev_type_str[status_dec->dev_type],
-																									  SDAQ_data->SDAQ_address);
+								Logger("Register new SDAQ (%s) with S/N: %010u -> %02hhu\n", dev_type_str[status_dec->dev_type],
+																									   status_dec->dev_sn,
+																									   SDAQ_data->SDAQ_address);
 							}
 							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
