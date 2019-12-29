@@ -26,6 +26,7 @@ Morfeas_SDAQ_if_DEP = $(CANif_DEP_HEADERS_dir) \
 					  $(WORK_dir)/Morfeas_JSON.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
+					  $(WORK_dir)/Morfeas_Logger.o \
 					  $(SRC_dir)/*.h
 
 all: $(BUILD_dir)/Morfeas_daemon \
@@ -57,9 +58,6 @@ $(WORK_dir)/Morfeas_daemon.o: $(SRC_dir)/Morfeas_daemon.c
 $(WORK_dir)/Morfeas_opc_ua.o: $(SRC_dir)/Morfeas_opc_ua.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Morfeas_XML.c
-	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
-
 #Dependencies of the Morfeas_SDAQ_if
 $(WORK_dir)/Morfeas_SDAQ_if.o: $(SRC_dir)/Morfeas_SDAQ_if.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
@@ -67,10 +65,17 @@ $(WORK_dir)/Morfeas_SDAQ_if.o: $(SRC_dir)/Morfeas_SDAQ_if.c
 $(WORK_dir)/SDAQ_drv.o: $(CANif_DEP_SRC_dir)/SDAQ_drv.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
+$(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ_nodeset.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+#Supplementary dependencies
+$(WORK_dir)/Morfeas_Logger.o: $(SRC_dir)/Morfeas_Logger.c
+	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
 $(WORK_dir)/Morfeas_JSON.o: $(SRC_dir)/Morfeas_JSON.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ_nodeset.c
+$(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Morfeas_XML.c
 	$(CC) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 tree:
