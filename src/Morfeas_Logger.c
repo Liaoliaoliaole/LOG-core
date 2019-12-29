@@ -17,15 +17,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
+#include <sys/time.h>
 
 void Logger(const char *fmt, ...)
 {
-	time_t now = time(NULL);
+	char time_buff[30];
+	struct timespec now;
 	struct tm * timeinfo;
-	char buffer[100];
-	timeinfo = localtime(&now);
-	strftime(buffer,sizeof(buffer),"%F %a %T",timeinfo);
-	printf("(%s): ", buffer);
+
+	clock_gettime(CLOCK_REALTIME, &now);
+	timeinfo = localtime(&(now.tv_sec));
+	strftime(time_buff,sizeof(time_buff),"%F %a %T",timeinfo);
+	printf("(%s.%04lu): ", time_buff, now.tv_nsec/100000);
 	va_list arg;
     va_start(arg, fmt);
     	vfprintf(stdout, fmt, arg);
