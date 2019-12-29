@@ -158,7 +158,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
 
 void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 {
-	const char init_val = -1;
+	const char init_val = 0x80;
 	char SDAQ_anchor_str[15], tmp_str[50], tmp_str2[50], tmp_str3[70];
 	UA_NodeId out;
 	//UA_NodeId_init(&out);
