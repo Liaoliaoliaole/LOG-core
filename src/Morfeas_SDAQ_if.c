@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(1);
 	}
-
+	Logger("Morfeas_SDAQ_if (%s) Program Start\n",stats.CAN_IF_name);
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
 	if (dir)
