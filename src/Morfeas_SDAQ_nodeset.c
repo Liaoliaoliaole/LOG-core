@@ -233,7 +233,8 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
-// Function that find if an SDAQ is registered on a SDAQnet handler other than the on_Bus. Returns: the name string of the Bus or NULL if it's not find or if SDAQ registered on on_Bus
+// Function that find if an SDAQ is registered on a SDAQnet handler other than on_Bus.
+//Returns: The name of the Bus or NULL if it's not find or if SDAQ registered on on_Bus
 char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int serial_number, const char * on_Bus)
 {
 	static char retval[20];
