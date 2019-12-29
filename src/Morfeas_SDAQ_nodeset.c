@@ -258,8 +258,8 @@ char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int seri
 			return retval;
 		}
 		UA_clear(&UA_str_on_bus, &UA_TYPES[UA_TYPES_STRING]);
-		UA_clear(&res_Value, &UA_TYPES[UA_TYPES_VARIANT]);
 	}
+	UA_clear(&res_Value, &UA_TYPES[UA_TYPES_VARIANT]);
 	return NULL;
 }
 
