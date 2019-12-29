@@ -131,7 +131,6 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(1);
 	}
-	Logger("Morfeas_SDAQ_if (%s) Program Start\n",stats.CAN_IF_name);
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
 	if (dir)
@@ -210,7 +209,7 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, quit_signal_handler);
 	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
 	led_init(stats.CAN_IF_name);
-
+	Logger("Morfeas_SDAQ_if (%s) Program Start\n",stats.CAN_IF_name);
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
