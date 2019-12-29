@@ -28,10 +28,12 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc);
 int Morfeas_opc_ua_config_valid(xmlNode *root_element);
 char * XML_node_get_content(xmlNode *node, const char *node_name);
 //Build list diff with content the ISO_Channels that will be removed
-int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList **cur_ISOChannels);
+int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList **cur_Links);
 //Clean all elements of List "cur_ISOChannels" with Re-Build it with data from xmlDoc doc
-int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_ISOChannels);
-//Deconstructor for Data of Lists with data type "struct ISO_Channel_name"
-void free_ISO_Channel_name(gpointer data);
-//Debugging function Print node from List with data type "struct ISO_Channel_name"
+int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links);
+//GCompareFunc used in g_slist_find_custom
+gint List_Links_cmp (gconstpointer a, gconstpointer b);
+//Deconstructor for Data of Lists with data type "struct Link_entry"
+void free_Link_entry(gpointer data);
+//Debugging function Print node from List with data type "struct Link_entry"
 //void print_List (gpointer data, gpointer user_data);

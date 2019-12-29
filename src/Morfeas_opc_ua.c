@@ -57,8 +57,9 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server, xmlNode *node);
 
 //Global variables
-static volatile UA_Boolean running = true;
-UA_Server *server;
+static UA_Boolean running = true;
+static UA_Server *server = NULL;
+static GSList *Links = NULL;
 
 static void stopHandler(int sign)
 {
@@ -75,7 +76,7 @@ int main(int argc, char *argv[])
 	UA_StatusCode retval;
 	UA_UInt16 timeout;
 	//variables for threads
-	pthread_t Threads_ids[n_threads];
+	pthread_t Threads_ids[n_threads] = {0};
 	int c;
 	//Get options
 	while ((c = getopt (argc, argv, "hVc:a:")) != -1)
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
 	server = UA_Server_newWithConfig(&conf);
 	//Add Morfeas application base node set to server
 	Morfeas_opc_ua_root_nodeset_Define(server);
-	
+
 	//----Start threads----//
 	pthread_create(&Threads_ids[0], NULL, IPC_Receiver, NULL);//Create Thread for IPC_receiver
 	pthread_create(&Threads_ids[1], NULL, Nodeset_XML_reader, ns_config);//Create Thread for Nodeset_XML_reader
@@ -137,6 +138,7 @@ int main(int argc, char *argv[])
 		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
     UA_Server_delete(server);
 	unlink("/tmp/.Morfeas_FIFO");
+
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -163,8 +165,8 @@ void print_usage(char *prog_name)
 //Nodeset config XML reader, Thread Function
 void * Nodeset_XML_reader(void *varg_pt)
 {
-	GSList *t_list_ptr, *cur_ISOChannels=NULL;//List with the current configuration's ISO_Channel names
-	struct ISO_Channel_name *list_data;
+	GSList *t_list_ptr;
+	struct Link_entry *list_data;
 	xmlDoc *doc;//XML tree pointer
 	xmlNode *xml_node, *root_element; //XML root Node
 	char *ns_config = varg_pt;
@@ -175,7 +177,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 		"Path to Configuration XML file is invalid. Server will run in compatible mode");
 		return NULL;
 	}
-	time_t file_last_mod;
+	time_t file_last_mod = 0;
 	while(running)
 	{
 		if(ns_config)
@@ -190,25 +192,27 @@ void * Nodeset_XML_reader(void *varg_pt)
 						root_element = xmlDocGetRootElement(doc);
 						if(!Morfeas_opc_ua_config_valid(root_element))
 						{
-							Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(root_element, &cur_ISOChannels);//Find nodes that going to be remove
-							t_list_ptr = cur_ISOChannels;
 							pthread_mutex_lock(&OPC_UA_NODESET_access);
+								//Find nodes that going to be remove
+								Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(root_element, &Links);
+								t_list_ptr = Links;
 								//Remove diff nodes from OPC_UA NODESet
 								while(t_list_ptr)
 								{
 									list_data = t_list_ptr->data;
-									UA_Server_deleteNode(server, UA_NODEID_STRING(1, list_data->ISO_channel_name_str), 1);
+									UA_Server_deleteNode(server, UA_NODEID_STRING(1, list_data->ISO_channel_name), 1);
 									t_list_ptr = t_list_ptr->next;
 								}
+								//Copy Link's data from xmlDoc to List Links
+								XML_doc_to_List_ISO_Channels(root_element, &Links);
 								//Add and/or Update OPC_UA NODESet
 								for(xml_node = root_element->children; xml_node; xml_node = xml_node->next)
 									Morfeas_OPC_UA_add_update_ISO_Channel_node(server, xml_node);
 							pthread_mutex_unlock(&OPC_UA_NODESET_access);
-							XML_doc_to_List_ISO_Channels(root_element, &cur_ISOChannels);//Copy ISO_Channels from xmlDoc to List ISO_Channels
 						}
 						else
 							UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-							"Data Validation of The OPC-UA Nodest configuration XML file failed!!!");
+							"Data Validation of The OPC-UA Nodeset configuration XML file failed!!!");
 						xmlFreeDoc(doc);//Free XML Doc
 					}
 				}
@@ -220,7 +224,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 		//Check for file update after 1 sec
 		sleep(1);
 	}
-	g_slist_free_full(cur_ISOChannels, free_ISO_Channel_name);//Free List cur_ISOChannels
+	g_slist_free_full(Links, free_Link_entry);//Free List Links
 	return NULL;
 }
 
@@ -262,7 +266,7 @@ void* IPC_Receiver(void *varg_pt)
 						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
 					break;
-				default://Msg from Handlers
+				default://Msg from Handler (nested if to find from which one)
 					if(type>=Morfeas_IPC_SDAQ_MIN_type && type<=Morfeas_IPC_SDAQ_MAX_type)//Msg type from SDAQ_handler
 						IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
 
@@ -280,146 +284,140 @@ void* IPC_Receiver(void *varg_pt)
 	return NULL;
 }
 
-void Morfeas_ISO_Channels_request_dec(const UA_NodeId *nodeId, char **ISO_Channel, char **req_value)
+int Morfeas_ISO_Channels_request_dec(const UA_NodeId *nodeId, char **ISO_Channel, char **req_value)
 {
 	static char NodeID_str[60];
+	size_t str_size;
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
-		memcpy(NodeID_str, nodeId->identifier.string.data, nodeId->identifier.string.length+1);
-		NodeID_str[nodeId->identifier.string.length] = '\0';
-		*ISO_Channel = strtok(NodeID_str, ".");
-		*req_value = strtok(NULL, ".");
+		if(nodeId->identifier.string.data && nodeId->identifier.string.length)
+		{
+			str_size = nodeId->identifier.string.length<sizeof(NodeID_str)?nodeId->identifier.string.length:sizeof(NodeID_str);
+			memcpy(NodeID_str, nodeId->identifier.string.data, str_size);
+			NodeID_str[str_size] = '\0';
+			*ISO_Channel = strtok(NodeID_str, ".");
+			*req_value = strtok(NULL, ".");
+			if(*ISO_Channel && *req_value)
+				return 0;
+		}
 	}
+	return -1;
 }
 
 //Function used onRead of DataSourceVariables, Channel related
-UA_StatusCode CH_update_value(UA_Server *server,
+UA_StatusCode CH_update_value(UA_Server *server_ptr,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
 						  UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
 						  UA_DataValue *dataValue)
 {
-	UA_Variant outValue;
+	GSList *List_Links_Node;
+	struct Link_entry *Node_data;
+	//UA_Variant outValue;
 	UA_NodeId src_NodeId;
-	UA_String *dev_type_ua_str;
-	unsigned int id=0;
-	unsigned char ch=0;
-	char *ISO_Channel, dev_type[10], *req_value, src_NodeId_str[100];
+	char *ISO_Channel, *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
-		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
-		//Get ISO_Channels's Device Serial Number
-		sprintf(src_NodeId_str, "%s.id", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		id = *((unsigned int *)(outValue.data));
-		//Get ISO_Channels's Device Channel
-		sprintf(src_NodeId_str, "%s.channel", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		ch = *((unsigned char *)(outValue.data));
-		//Get Dev_type of the ISO_Channel
-		sprintf(src_NodeId_str, "%s.dev_type", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		dev_type_ua_str = outValue.data;
-		memcpy(dev_type, dev_type_ua_str->data, dev_type_ua_str->length+1);
-		dev_type[dev_type_ua_str->length] = '\0';
-		//check if the source node exist
-		sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", dev_type, id, ch, req_value);
-		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
-			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
-		dataValue->hasValue = true;
+		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
+		{
+			List_Links_Node = g_slist_find_custom(Links, ISO_Channel, List_Links_cmp);
+			if(List_Links_Node)
+			{
+				Node_data = List_Links_Node->data;
+				//check if the source node exist
+				sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type, Node_data->identifier, Node_data->channel, req_value);
+				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
+				{
+					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
+					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+					dataValue->hasValue = true;
+				}
+			}
+			else
+				dataValue->hasValue = false;
+		}
 	}
 	return UA_STATUSCODE_GOOD;
 }
 
 //Function used onRead of DataSourceVariables, Device related
-UA_StatusCode Dev_update_value(UA_Server *server,
+UA_StatusCode Dev_update_value(UA_Server *server_ptr,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
 						  UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
 						  UA_DataValue *dataValue)
 {
-	UA_Variant outValue;
+	GSList *List_Links_Node;
+	struct Link_entry *Node_data;
 	UA_NodeId src_NodeId;
-	UA_String *dev_type_ua_str;
-	unsigned int id=0;
-	char *ISO_Channel, dev_type[10], *req_value, src_NodeId_str[100];
+	char *ISO_Channel, *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
-		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
-		//Get ISO_Channels's Device Serial Number
-		sprintf(src_NodeId_str, "%s.id", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		id = *((unsigned int *)(outValue.data));
-		//Get Dev_type of the ISO_Channel
-		sprintf(src_NodeId_str, "%s.dev_type", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		dev_type_ua_str = outValue.data;
-		memcpy(dev_type, dev_type_ua_str->data, dev_type_ua_str->length+1);
-		dev_type[dev_type_ua_str->length] = '\0';
-		//check if the source node exist
-		sprintf(src_NodeId_str, "%s.%u.%s", dev_type, id, req_value);
-		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
-			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
-		dataValue->hasValue = true;
+		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
+		{
+			List_Links_Node = g_slist_find_custom(Links, ISO_Channel, List_Links_cmp);
+			if(List_Links_Node)
+			{
+				Node_data = List_Links_Node->data;
+				//check if the source node exist
+				sprintf(src_NodeId_str, "%s.%u.%s", Node_data->interface_type, Node_data->identifier, req_value);
+				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
+				{
+					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
+					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+					dataValue->hasValue = true;
+				}
+			}
+			else
+				dataValue->hasValue = false;
+		}
 	}
 	return UA_STATUSCODE_GOOD;
 }
 
 //Function used onRead of DataSourceVariables, ISO_channel Status
-UA_StatusCode Status_update_value(UA_Server *server,
+UA_StatusCode Status_update_value(UA_Server *server_ptr,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
 						  UA_Boolean sourceTimeStamp, const UA_NumericRange *range,
 						  UA_DataValue *dataValue)
 {
-	UA_Variant outValue;
+	GSList *List_Links_Node;
+	struct Link_entry *Node_data;
 	UA_NodeId src_NodeId;
-	UA_String t_str, *dev_type_ua_str;
-	unsigned int id=0;
-	unsigned char ch=0;
-	char *ISO_Channel, dev_type[10], *req_value, src_NodeId_str[100];
+	UA_String t_str;
+	char *ISO_Channel, *req_value, src_NodeId_str[100];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
-		Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value);
-		//Get ISO_Channels's Device Serial Number
-		sprintf(src_NodeId_str, "%s.id", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		id = *((unsigned int *)(outValue.data));
-		//Get ISO_Channels's Device Channel
-		sprintf(src_NodeId_str, "%s.channel", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		ch = *((unsigned char *)(outValue.data));
-		//Get Dev_type of the ISO_Channel
-		sprintf(src_NodeId_str, "%s.dev_type", ISO_Channel);
-		if(UA_Server_readValue(server, UA_NODEID_STRING(1, src_NodeId_str), &outValue))
-			return UA_STATUSCODE_GOOD;
-		dev_type_ua_str = outValue.data;
-		memcpy(dev_type, dev_type_ua_str->data, dev_type_ua_str->length+1);
-		dev_type[dev_type_ua_str->length] = '\0';
-		//check if the source node exist
-		sprintf(src_NodeId_str, "%s.%u.CH%hhu.status", dev_type, id, ch);
-		if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
-			UA_Server_readValue(server, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
-		else
+		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
 		{
-			t_str = UA_String_fromChars("OFF-Line");
-			UA_Variant_setScalarCopy(&(dataValue->value), &t_str, &UA_TYPES[UA_TYPES_STRING]);
+			List_Links_Node = g_slist_find_custom(Links, ISO_Channel, List_Links_cmp);
+			if(List_Links_Node)
+			{
+				Node_data = List_Links_Node->data;
+				//check if the source node exist
+				sprintf(src_NodeId_str, "%s.%u.CH%hhu.status", Node_data->interface_type, Node_data->identifier, Node_data->channel);
+				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
+				{
+					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
+					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+				}
+				else
+				{
+					t_str = UA_String_fromChars("OFF-Line");
+					UA_Variant_setScalarCopy(&(dataValue->value), &t_str, &UA_TYPES[UA_TYPES_STRING]);
+					UA_clear(&t_str, &UA_TYPES[UA_TYPES_STRING]);
+				}
+				dataValue->hasValue = true;
+			}
 		}
-		dataValue->hasValue = true;
 	}
 	return UA_STATUSCODE_GOOD;
 }
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50], *ISO_channel_name, anchor_dec[20];
+	char tmp_str[50], *ISO_channel_name, *anchor_dec;
 	float t_min_max;
 	unsigned int ID;
 	unsigned char CH;
@@ -468,6 +466,11 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING);
 	}
+	else
+		UA_clear(&out, &UA_TYPES[UA_TYPES_NODEID]);
+	//Decode Anchor from the XML_doc tree to it's elements
+	anchor_dec = XML_node_get_content(node, "ANCHOR");
+	sscanf(anchor_dec, "%u.CH%hhu", &ID, &CH);
 	//Update values of regular variables with data from Configuration XML
 	sprintf(tmp_str,"%s.desc",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
@@ -479,11 +482,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
 	sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "INTERFACE_TYPE"), UA_TYPES_STRING);
-	//copy the anchor from the XML_doc tree to a buff
-	memccpy(anchor_dec, XML_node_get_content(node, "ANCHOR"), '\0', sizeof(anchor_dec));
-	//Split the anchor string by token
-	ID = atoi(strtok(anchor_dec, "."));
-	CH = atoi(strtok(NULL, "CH"));
 	sprintf(tmp_str,"%s.id",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &ID, UA_TYPES_UINT32);
 	sprintf(tmp_str,"%s.channel",ISO_channel_name);
@@ -507,6 +505,7 @@ void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, ch
 {
 	UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 	vAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
+	vAttr.accessLevel = UA_ACCESSLEVELMASK_READ;
 	vAttr.dataType = UA_TYPES[_UA_Type].typeId;
 	UA_Server_addVariableNode(server_ptr,
 							  UA_NODEID_STRING(1, Node_id),
@@ -523,7 +522,7 @@ void Morfeas_opc_ua_add_variable_node_with_callback_onRead(UA_Server *server_ptr
 	vAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
 	vAttr.accessLevel = UA_ACCESSLEVELMASK_READ;
 	vAttr.dataType = UA_TYPES[_UA_Type].typeId;
-	UA_DataSource DataSource;
+	UA_DataSource DataSource = {0};
 	DataSource.read = call_func;
 	UA_Server_addDataSourceVariableNode(
 							  server_ptr,
@@ -539,7 +538,7 @@ inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_
 {
 	UA_Variant temp_value;
 	if(_UA_Type!=UA_TYPES_STRING)
-		UA_Variant_setScalarCopy(&temp_value, value, &UA_TYPES[_UA_Type]);
+		UA_Variant_setScalar(&temp_value, (void *)value, &UA_TYPES[_UA_Type]);
 	else
 	{
 		UA_String str = UA_STRING((char*) value);

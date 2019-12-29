@@ -57,7 +57,10 @@ struct LogBook_entry{
 	unsigned char SDAQ_address;
 }__attribute__((packed, aligned(1)));
 
-//Data of the List ISO_Channels_names
-struct ISO_Channel_name{
-	char ISO_channel_name_str[20];
+//Data of the List Links
+struct Link_entry{
+	char ISO_channel_name[20];
+	char interface_type[10];
+	unsigned int identifier;
+	unsigned char channel;
 };

@@ -216,18 +216,17 @@ int main(int argc, char *argv[])
 	led_init(stats.CAN_IF_name);
 
 	//Load the LogBook file to LogBook List
+	printf("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
 	LogBook_file(&stats, "r");
-	printf("Morfeas_SDAQ_if (%s) Read of LogBook file Completed\n",stats.CAN_IF_name);
-	printf("Morfeas_SDAQ_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.CAN_IF_name);
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
-
 	//Register handler to Morfeas_OPC-UA Server
+	printf("Morfeas_SDAQ_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.CAN_IF_name);
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
-	printf("Morfeas_SDAQ_if (%s) Registered on OPC-UA via IPC\n",stats.CAN_IF_name);
+	printf("Morfeas_SDAQ_if (%s) Registered on OPC-UA\n",stats.CAN_IF_name);
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -325,16 +324,19 @@ int main(int argc, char *argv[])
 	}
 	printf("Morfeas_SDAQ_if (%s) Exiting...\n",stats.CAN_IF_name);
 	// save LogBook list to a file before destroy it
+	printf("Save LogBook list to LogBook file\n");
 	LogBook_file(&stats,"w");
 	//free all lists
+	printf("Free allocated memory...\n");
 	g_slist_free_full(stats.list_SDAQs, free_SDAQ_info_entry);
 	g_slist_free_full(stats.LogBook, free_LogBook_entry);
 	//Stop any measuring activity on the bus
+	printf("Send Stop measure to SDAQs...\n");
 	Stop(CAN_socket_num,Broadcast);
 	close(CAN_socket_num);//Close CAN_socket
 	//Remove Registeration handler to Morfeas_OPC_UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 1);
-	printf("Morfeas_SDAQ_if (%s) Removed from OPC-UA via IPC\n",stats.CAN_IF_name);
+	printf("Morfeas_SDAQ_if (%s) Removed from OPC-UA\n",stats.CAN_IF_name);
 	close(stats.FIFO_fd);
 	return EXIT_SUCCESS;
 }
@@ -501,33 +503,31 @@ void print_usage(char *prog_name)
 //SDAQ_info_entry allocator
 struct SDAQ_info_entry* new_SDAQ_info_entry()
 {
-    struct SDAQ_info_entry *new_node = g_slice_alloc0(sizeof(struct SDAQ_info_entry));
+    struct SDAQ_info_entry *new_node = g_slice_new0(struct SDAQ_info_entry);
     return new_node;
 }
 //Channel_date_entry allocator
 struct Channel_date_entry* new_SDAQ_Channel_date_entry()
 {
-    struct Channel_date_entry *new_node = g_slice_alloc0(sizeof(struct Channel_date_entry));
+    struct Channel_date_entry *new_node = g_slice_new0(struct Channel_date_entry);
     return new_node;
 }
 //LogBook_entry allocator
 struct LogBook_entry* new_LogBook_entry()
 {
-    struct LogBook_entry *new_node = g_slice_alloc0(sizeof(struct LogBook_entry));
+    struct LogBook_entry *new_node = g_slice_new0(struct LogBook_entry);
     return new_node;
 }
 
 //free a node from list SDAQ_Channels_cal_dates
 void free_channel_cal_dates_entry(gpointer node)
 {
-	printf("free_channel_cal_dates_entry!!!\n");
 	g_slice_free(struct Channel_date_entry, node);
 }
 //free a node from list SDAQ_info
 void free_SDAQ_info_entry(gpointer node)
 {
 	struct SDAQ_info_entry *node_dec = node;
-	printf("free_SDAQ_info_entry!!!\n");
 	g_slist_free_full(node_dec->SDAQ_Channels_cal_dates, free_channel_cal_dates_entry);
 	//node_dec->SDAQ_Channels_cal_dates = NULL;
 	g_slice_free(struct SDAQ_info_entry, node);
@@ -535,7 +535,6 @@ void free_SDAQ_info_entry(gpointer node)
 //free a node from List LogBook
 void free_LogBook_entry(gpointer node)
 {
-	printf("free_LogBook_entry!!!\n");
 	g_slice_free(struct LogBook_entry, node);
 }
 

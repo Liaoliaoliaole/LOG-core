@@ -32,7 +32,7 @@ static UA_UsernamePasswordLogin usernamePasswords[] = {{UA_STRING_STATIC("Morfea
 
 UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version)
 {
-    UA_StatusCode retval;
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
 	char buff[512], hostname[256];
     if(!config)
 		return UA_STATUSCODE_BADINVALIDARGUMENT;
@@ -43,6 +43,15 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
         UA_ServerConfig_clean(config);
         return retval;
     }
+	//--Delete default Contents--//
+	UA_clear(&(config->buildInfo.productUri), &UA_TYPES[UA_TYPES_STRING]);
+	UA_clear(&(config->applicationDescription.applicationUri), &UA_TYPES[UA_TYPES_STRING]);
+	UA_clear(&(config->buildInfo.manufacturerName), &UA_TYPES[UA_TYPES_STRING]);
+	UA_clear(&(config->buildInfo.productName), &UA_TYPES[UA_TYPES_STRING]);
+	UA_clear(&(config->applicationDescription.applicationName.locale), &UA_TYPES[UA_TYPES_STRING]);
+	UA_clear(&(config->applicationDescription.applicationName.text), &UA_TYPES[UA_TYPES_STRING]);
+	UA_clear(&(config->buildInfo.softwareVersion), &UA_TYPES[UA_TYPES_STRING]);
+	//--Load Application's Configuration Contents--//
 	gethostname(hostname, sizeof(hostname));
 	sprintf(buff,"http://%s",hostname);
 	config->buildInfo.productUri = UA_STRING_ALLOC(buff);

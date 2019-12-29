@@ -85,7 +85,7 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 		return EXIT_FAILURE;
     }
     //--- parse the file, activating the DTD validation option ---//
-    if (!(*doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID)))
+    if (!(*doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID | XML_PARSE_NOBLANKS)))
     {
         fprintf(stderr, "Failed to parse %s\n", filename);
         xmlFreeParserCtxt(ctxt);
@@ -209,46 +209,51 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	return EXIT_SUCCESS;
 }
 
-//GCompareFunc used in g_slist_find_custom, compare
-gint ISO_Channel_cmp (gconstpointer a, gconstpointer b)
+//GCompareFunc used in g_slist_find_custom
+gint List_Links_cmp (gconstpointer a, gconstpointer b)
 {
-	const char *node_data = ((struct ISO_Channel_name*)a)->ISO_channel_name_str, *ISO_Channel_name_str = b;
-	return strcmp(node_data, ISO_Channel_name_str);
+	const char *node_data = ((struct Link_entry*)a)->ISO_channel_name, *ISO_Channel_name = b;
+	return strcmp(node_data, ISO_Channel_name);
 }
-//Constructor of Entry for List with data type "struct ISO_Channel_name"
-struct ISO_Channel_name* new_ISO_Channel_entry()
+
+//Constructor of Entry for List with data type "struct Link_entry"
+struct Link_entry* new_Link_entry()
 {
-    struct ISO_Channel_name *new_node = (struct ISO_Channel_name *) g_slice_alloc0(sizeof(struct ISO_Channel_name));
+    struct Link_entry *new_node = g_slice_new0(struct Link_entry);
     return new_node;
 }
 
-//Deconstructor for Data of Lists with data type "struct ISO_Channel_name"
-void free_ISO_Channel_name(gpointer data)
+//Deconstructor for Data of Lists with data type "struct Link_entry"
+void free_Link_entry(gpointer data)
 {
-	g_slice_free(struct ISO_Channel_name, data);
+	g_slice_free(struct Link_entry, data);
 }
 /*
 void print_List (gpointer data, gpointer user_data)
 {
-	struct ISO_Channel_name *node_data = data;
-	printf("List %s, Data of Node = %s\n", (char*)user_data, node_data->ISO_channel_name_str);
+	struct Link_entry *node_data = data;
+	printf("Data of Node :\n");
+	printf("\tISO_channel_name: %s\n", node_data->ISO_channel_name);
+	printf("\tInterface_type: %s\n", node_data->interface_type);
+	printf("\tIdentifier: %u\n", node_data->identifier);
+	printf("\tChannel: %hhu\n", node_data->channel);
 }
 */
-int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList **cur_ISOChannels)
+int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList **cur_Links)
 {
 	xmlNode *check_element;
 	GSList *node;
 	char *iso_channel;
-	if(cur_ISOChannels)
+	if(cur_Links)
 	{
 		for(check_element = root_element->children; check_element; check_element = check_element->next)
 		{
 			if((iso_channel = XML_node_get_content(check_element, "ISO_CHANNEL")))
 			{
-				if((node = g_slist_find_custom(*cur_ISOChannels, iso_channel, ISO_Channel_cmp)))
+				if((node = g_slist_find_custom(*cur_Links, iso_channel, List_Links_cmp)))
 				{
-					free_ISO_Channel_name(node->data);
-					*cur_ISOChannels = g_slist_delete_link(*cur_ISOChannels, node);
+					free_Link_entry(node->data);
+					*cur_Links = g_slist_delete_link(*cur_Links, node);
 				}
 			}
 		}
@@ -256,23 +261,28 @@ int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList *
 	return EXIT_SUCCESS;
 }
 
-int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_ISOChannels)
+int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 {
 	xmlNode *check_element;
-	struct ISO_Channel_name *list_cur_ISOChannels_node_data;
-	char *iso_channel;
+	struct Link_entry *list_cur_Links_node_data;
+	char *iso_channel_str = NULL, *dev_type_str = NULL, *anchor_ptr = NULL;
 
-	g_slist_free_full(*cur_ISOChannels, free_ISO_Channel_name);//Free List cur_ISOChannels
-	*cur_ISOChannels = NULL;
+	g_slist_free_full(*cur_Links, free_Link_entry);//Free List cur_Links
+	*cur_Links = NULL;
 	for(check_element = root_element->children; check_element; check_element = check_element->next)
 	{
-		if((iso_channel = XML_node_get_content(check_element, "ISO_CHANNEL")))
+		iso_channel_str = XML_node_get_content(check_element, "ISO_CHANNEL");
+		dev_type_str = XML_node_get_content(check_element, "INTERFACE_TYPE");
+		anchor_ptr = XML_node_get_content(check_element, "ANCHOR");
+		if(iso_channel_str && dev_type_str && anchor_ptr)
 		{
-			list_cur_ISOChannels_node_data = new_ISO_Channel_entry();
-			if(list_cur_ISOChannels_node_data)
+			list_cur_Links_node_data = new_Link_entry();
+			if(list_cur_Links_node_data)
 			{
-				memccpy(&(list_cur_ISOChannels_node_data->ISO_channel_name_str), iso_channel, '\0', sizeof(struct ISO_Channel_name));
-				*cur_ISOChannels = g_slist_append(*cur_ISOChannels, list_cur_ISOChannels_node_data);
+				memccpy(&(list_cur_Links_node_data->ISO_channel_name), iso_channel_str, '\0', sizeof(list_cur_Links_node_data->ISO_channel_name));
+				memccpy(&(list_cur_Links_node_data->interface_type), dev_type_str, '\0', sizeof(list_cur_Links_node_data->interface_type));
+				sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier), &(list_cur_Links_node_data->channel));
+				*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
 			}
 			else
 			{

@@ -90,7 +90,10 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				sprintf(Node_ID_str, "%s.%d", IPC_msg_dec->SDAQ_clean.connected_to_BUS, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
 				//check if the node is already removed
 				if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+				{
 					UA_Server_deleteNode(server, NodeId, 1);
+					UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 		case IPC_SDAQ_info:
@@ -167,6 +170,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 			sprintf(tmp_str,"SDAQ.%d.Info",ptr->SDAQ_serial_number);
 			if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str), &out))
 			{
+				UA_clear(&out, &UA_TYPES[UA_TYPES_NODEID]);
 				Morfeas_opc_ua_add_object_node(server_ptr, SDAQ_anchor_str, tmp_str, "Info");
 				sprintf(tmp_str2,"SDAQ.%d.Type",ptr->SDAQ_serial_number);
 				Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str, tmp_str2, "Type", UA_TYPES_STRING);
@@ -190,6 +194,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 				sprintf(tmp_str2,"SDAQ.%d.CH%hhu", ptr->SDAQ_serial_number, i);
 				if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, tmp_str2), &out))
 				{
+					UA_clear(&out, &UA_TYPES[UA_TYPES_NODEID]);
 					sprintf(tmp_str3,"CH%02hhu", i);
 					Morfeas_opc_ua_add_object_node(server_ptr, tmp_str, tmp_str2, tmp_str3);
 					sprintf(tmp_str3,"%s.meas", tmp_str2);
@@ -231,9 +236,11 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 // Function that find if an SDAQ is registered on a SDAQnet handler other than the on_Bus. Returns: the name string of the Bus or NULL if it's not find or if SDAQ registered on on_Bus
 char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int serial_number, const char * on_Bus)
 {
-	char Node_id_str[50], *retval;
+	static char retval[20];
+	char Node_id_str[50];
+	size_t copy_size;
 	UA_Variant res_Value;
-	UA_String *Value, UA_str_on_bus = UA_String_fromChars(on_Bus);
+	UA_String *Value, UA_str_on_bus;
 	sprintf(Node_id_str, "SDAQ.%d.onBus", serial_number);
 	//Return NULL, because the SDAQ is not registered.
 	if(UA_Server_readValue(server_ptr,  UA_NODEID_STRING(1, Node_id_str), &res_Value))
@@ -241,13 +248,17 @@ char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int seri
 	if(res_Value.type->typeIndex == UA_DATATYPEKIND_STRING)
 	{
 		Value = res_Value.data;
+		UA_str_on_bus = UA_String_fromChars(on_Bus);
 		if(!UA_String_equal(Value, &UA_str_on_bus))
 		{
-			retval = calloc(Value->length+1, sizeof(char));
-			memcpy(retval, Value->data, Value->length);
+			copy_size = Value->length<sizeof(retval) ? Value->length : sizeof(retval);
+			memcpy(retval, Value->data, copy_size);
 			retval[Value->length] = '\0';
+			UA_clear(&UA_str_on_bus, &UA_TYPES[UA_TYPES_STRING]);
 			return retval;
 		}
+		UA_clear(&UA_str_on_bus, &UA_TYPES[UA_TYPES_STRING]);
+		UA_clear(&res_Value, &UA_TYPES[UA_TYPES_VARIANT]);
 	}
 	return NULL;
 }
@@ -265,7 +276,6 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 		{
 			sprintf(tmp_str,"%s.%d", pre_reg_on_bus, ptr->SDAQ_status.dev_sn);
 			UA_Server_deleteNode(server_ptr, UA_NODEID_STRING(1, tmp_str), 1);
-			free(pre_reg_on_bus);
 		}
 		//Check if the Node with the SDAQ's data is already exist, if no add it, elsewhere update data only
 		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &Node_Id))
@@ -295,6 +305,8 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			sprintf(tmp_str,"SDAQ.%d.Mode",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
 		}
+		else
+			UA_clear(&Node_Id, &UA_TYPES[UA_TYPES_NODEID]);
 		sprintf(tmp_str,"%s.amount",ptr->connected_to_BUS);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->t_amount), UA_TYPES_BYTE);
 		sprintf(tmp_str,"SDAQ.%d.onBus",ptr->SDAQ_status.dev_sn);
