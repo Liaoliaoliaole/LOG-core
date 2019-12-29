@@ -282,7 +282,7 @@ void* IPC_Receiver(void *varg_pt)
 
 int Morfeas_ISO_Channels_request_dec(const UA_NodeId *nodeId, char **ISO_Channel, char **req_value)
 {
-	static char NodeID_str[60];
+	static char NodeID_str[128];
 	size_t str_size;
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
@@ -311,7 +311,7 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 	struct Link_entry *Node_data;
 	//UA_Variant outValue;
 	UA_NodeId src_NodeId;
-	char *ISO_Channel, *req_value, src_NodeId_str[100];
+	char *ISO_Channel, *req_value, src_NodeId_str[128];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
@@ -346,7 +346,7 @@ UA_StatusCode Dev_update_value(UA_Server *server_ptr,
 	GSList *List_Links_Node;
 	struct Link_entry *Node_data;
 	UA_NodeId src_NodeId;
-	char *ISO_Channel, *req_value, src_NodeId_str[100];
+	char *ISO_Channel, *req_value, src_NodeId_str[128];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
@@ -382,7 +382,7 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 	struct Link_entry *Node_data;
 	UA_NodeId src_NodeId;
 	UA_String t_str;
-	char *ISO_Channel, *req_value, src_NodeId_str[100];
+	char *ISO_Channel, *req_value, src_NodeId_str[128];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
