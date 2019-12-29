@@ -33,8 +33,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <signal.h>
 #include <pthread.h>
 
-#include <mcheck.h>
-
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
@@ -126,9 +124,6 @@ int main(int argc, char *argv[])
 	struct Morfeas_SDAQ_if_stats stats = {0};
 	//Timers related Variables
 	struct itimerval timer;
-
-	// start the trace
-	//mtrace();
 
 	if(argc == 1)
 	{

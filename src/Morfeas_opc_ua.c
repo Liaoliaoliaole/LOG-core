@@ -30,8 +30,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <mcheck.h>
-
 #include <glib.h>
 #include <glibtop.h>
 #include <glibtop/uptime.h>
@@ -100,8 +98,6 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
-	// start the trace
-	//mtrace();
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
