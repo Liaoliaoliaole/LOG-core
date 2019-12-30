@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdarg.h>
 #include <time.h>
 #include <sys/time.h>
+ #include <unistd.h>
 
 void Logger(const char *fmt, ...)
 {
