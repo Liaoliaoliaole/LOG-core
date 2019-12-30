@@ -321,7 +321,7 @@ U 1 1 5E08FF22
 P 1300 1000
 F 0 "D1" H 1346 921 50  0000 R CNN
 F 1 "1N4007" H 1450 1100 50  0000 R CNN
-F 2 "Diode_THT:D_DO-34_SOD68_P7.62mm_Horizontal" H 1300 1000 50  0001 C CNN
+F 2 "Diodes_ThroughHole:D_DO-41_SOD81_P10.16mm_Horizontal" H 1300 1000 50  0001 C CNN
 F 3 "~" H 1300 1000 50  0001 C CNN
 	1    1300 1000
 	-1   0    0    1   
@@ -536,12 +536,12 @@ Wire Notes Line width 20 style dash_dot rgb(255, 0, 0)
 	7650 3050 7650 550 
 Connection ~ 10150 1450
 $Comp
-L Graphic:Logo_Open_Hardware_Small #LOGO1
+L Graphic:Logo_Open_Hardware_Small Open_Source_hardware1
 U 1 1 5E0F6FA7
 P 10650 6850
-F 0 "#LOGO1" H 10650 7125 50  0001 C CNN
+F 0 "Open_Source_hardware1" H 10650 7125 50  0001 C CNN
 F 1 "Open Source Hardware" H 10650 6625 50  0000 C CNN
-F 2 "Symbols:OSHW-Logo2_36.5x30mm_SilkScreen" H 10650 6850 50  0001 C CNN
+F 2 "Symbols:OSHW-Logo2_7.3x6mm_SilkScreen" H 10650 6850 50  0001 C CNN
 F 3 "~" H 10650 6850 50  0001 C CNN
 	1    10650 6850
 	1    0    0    -1  

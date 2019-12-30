@@ -321,7 +321,7 @@ U 1 1 5E08FF22
 P 1300 1000
 F 0 "D1" H 1346 921 50  0000 R CNN
 F 1 "1N4007" H 1450 1100 50  0000 R CNN
-F 2 "Diode_THT:D_DO-34_SOD68_P7.62mm_Horizontal" H 1300 1000 50  0001 C CNN
+F 2 "Diodes_ThroughHole:D_DO-41_SOD81_P10.16mm_Horizontal" H 1300 1000 50  0001 C CNN
 F 3 "~" H 1300 1000 50  0001 C CNN
 	1    1300 1000
 	-1   0    0    1   
@@ -536,10 +536,10 @@ Wire Notes Line width 20 style dash_dot rgb(255, 0, 0)
 	7650 3050 7650 550 
 Connection ~ 10150 1450
 $Comp
-L Graphic:Logo_Open_Hardware_Small #LOGO1
+L Graphic:Logo_Open_Hardware_Small Open_Source_hardware1
 U 1 1 5E0F6FA7
 P 10650 6850
-F 0 "#LOGO1" H 10650 7125 50  0001 C CNN
+F 0 "Open_Source_hardware1" H 10650 7125 50  0001 C CNN
 F 1 "Open Source Hardware" H 10650 6625 50  0000 C CNN
 F 2 "Symbols:OSHW-Logo2_36.5x30mm_SilkScreen" H 10650 6850 50  0001 C CNN
 F 3 "~" H 10650 6850 50  0001 C CNN
@@ -1450,7 +1450,7 @@ U 1 1 5E0A6AD9
 P 2200 5800
 F 0 "D4" H 2200 6297 50  0000 C CNN
 F 1 "Status_LEDs" H 2200 6206 50  0000 C CNN
-F 2 "LED_THT:LED_D5.0mm-4_RGB" H 2200 5750 50  0001 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04_Pitch2.54mm" H 2200 5750 50  0001 C CNN
 F 3 "~" H 2200 5750 50  0001 C CNN
 	1    2200 5800
 	1    0    0    -1  
@@ -1621,4 +1621,16 @@ Wire Wire Line
 Connection ~ 1750 3300
 Wire Wire Line
 	1750 3300 1950 3300
+Text GLabel 1950 4500 0    50   Input ~ 0
+R
+Text GLabel 1950 4600 0    50   Input ~ 0
+G
+Text GLabel 1950 4700 0    50   Input ~ 0
+B
+Text GLabel 2400 5600 2    50   Input ~ 0
+R
+Text GLabel 2400 5800 2    50   Input ~ 0
+G
+Text GLabel 2400 6000 2    50   Input ~ 0
+B
 $EndSCHEMATC
