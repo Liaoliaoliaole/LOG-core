@@ -1534,4 +1534,8 @@ Text Notes 9900 3000 0    75   ~ 15
 Addr:0x7C(1111100)
 Text Notes 9900 5650 0    75   ~ 15
 Addr:0x7F(1111111)
+Text Notes 9700 2100 0    50   ~ 0
+≈4A
+Text Notes 9700 4750 0    50   ~ 0
+≈4A
 $EndSCHEMATC
