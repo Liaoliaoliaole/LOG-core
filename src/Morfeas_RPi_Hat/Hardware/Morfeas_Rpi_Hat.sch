@@ -116,17 +116,6 @@ Wire Wire Line
 	6450 6100 6550 6100
 Wire Wire Line
 	6550 6100 6550 6200
-$Comp
-L power:+3.3V #PWR017
-U 1 1 5E05BB44
-P 6550 5400
-F 0 "#PWR017" H 6550 5250 50  0001 C CNN
-F 1 "+3.3V" H 6565 5573 50  0000 C CNN
-F 2 "" H 6550 5400 50  0001 C CNN
-F 3 "" H 6550 5400 50  0001 C CNN
-	1    6550 5400
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	6450 5500 6550 5500
 Wire Wire Line
@@ -1260,14 +1249,14 @@ F 3 "" H 1950 3500 50  0001 C CNN
 	1    1950 3500
 	0    1    1    0   
 $EndComp
-Text GLabel 1850 3200 0    50   Input ~ 0
+Text GLabel 1450 3200 0    50   Input ~ 0
 SDA
-Text GLabel 1850 3300 0    50   Input ~ 0
+Text GLabel 1450 3300 0    50   Input ~ 0
 SCL
 Wire Wire Line
-	1850 3200 1950 3200
+	1450 3200 1550 3200
 Wire Wire Line
-	1850 3300 1950 3300
+	1450 3300 1750 3300
 Text GLabel 2650 3500 2    50   Input ~ 0
 RXD
 Wire Wire Line
@@ -1393,7 +1382,7 @@ U 1 1 5E075351
 P 7100 3900
 F 0 "J5" H 7072 3924 50  0000 R CNN
 F 1 "RS_232" H 7072 3833 50  0000 R CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Horizontal" H 7100 3900 50  0001 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x03_Pitch2.54mm" H 7100 3900 50  0001 C CNN
 F 3 "~" H 7100 3900 50  0001 C CNN
 	1    7100 3900
 	-1   0    0    -1  
@@ -1461,7 +1450,7 @@ U 1 1 5E0A6AD9
 P 2200 5800
 F 0 "D4" H 2200 6297 50  0000 C CNN
 F 1 "Status_LEDs" H 2200 6206 50  0000 C CNN
-F 2 "LED_THT:LED_D5.0mm-4_RGB" H 2200 5750 50  0001 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04_Pitch2.54mm" H 2200 5750 50  0001 C CNN
 F 3 "~" H 2200 5750 50  0001 C CNN
 	1    2200 5800
 	1    0    0    -1  
@@ -1538,4 +1527,110 @@ Text Notes 9700 2100 0    50   ~ 0
 ≈4A
 Text Notes 9700 4750 0    50   ~ 0
 ≈4A
+$Comp
+L Device:C_Small C15
+U 1 1 5E0ACB59
+P 6750 5400
+F 0 "C15" V 6650 5400 50  0000 C CNN
+F 1 "100nf" V 6850 5400 50  0000 C CNN
+F 2 "Capacitors_SMD:C_0805" H 6750 5400 50  0001 C CNN
+F 3 "~" H 6750 5400 50  0001 C CNN
+	1    6750 5400
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	6650 5400 6550 5400
+Connection ~ 6550 5400
+Wire Wire Line
+	6550 5400 6550 5350
+$Comp
+L power:+3.3V #PWR017
+U 1 1 5E05BB44
+P 6550 5350
+F 0 "#PWR017" H 6550 5200 50  0001 C CNN
+F 1 "+3.3V" H 6565 5523 50  0000 C CNN
+F 2 "" H 6550 5350 50  0001 C CNN
+F 3 "" H 6550 5350 50  0001 C CNN
+	1    6550 5350
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR045
+U 1 1 5E0C18FA
+P 6900 5400
+F 0 "#PWR045" H 6900 5150 50  0001 C CNN
+F 1 "GND" H 6905 5227 50  0000 C CNN
+F 2 "" H 6900 5400 50  0001 C CNN
+F 3 "" H 6900 5400 50  0001 C CNN
+	1    6900 5400
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	6850 5400 6900 5400
+$Comp
+L Device:R_US R12
+U 1 1 5E26B6BA
+P 1550 2950
+F 0 "R12" H 1650 2800 50  0000 C CNN
+F 1 "1kΩ" V 1650 3000 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 1590 2940 50  0001 C CNN
+F 3 "~" H 1550 2950 50  0001 C CNN
+	1    1550 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R_US R13
+U 1 1 5E27FB7B
+P 1750 2950
+F 0 "R13" H 1850 2800 50  0000 C CNN
+F 1 "1kΩ" V 1850 3000 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206" V 1790 2940 50  0001 C CNN
+F 3 "~" H 1750 2950 50  0001 C CNN
+	1    1750 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+3.3V #PWR046
+U 1 1 5E288B85
+P 1650 2700
+F 0 "#PWR046" H 1650 2550 50  0001 C CNN
+F 1 "+3.3V" H 1665 2873 50  0000 C CNN
+F 2 "" H 1650 2700 50  0001 C CNN
+F 3 "" H 1650 2700 50  0001 C CNN
+	1    1650 2700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1550 2800 1550 2750
+Wire Wire Line
+	1550 2750 1650 2750
+Wire Wire Line
+	1750 2750 1750 2800
+Wire Wire Line
+	1650 2750 1650 2700
+Connection ~ 1650 2750
+Wire Wire Line
+	1650 2750 1750 2750
+Wire Wire Line
+	1550 3100 1550 3200
+Connection ~ 1550 3200
+Wire Wire Line
+	1550 3200 1950 3200
+Wire Wire Line
+	1750 3100 1750 3300
+Connection ~ 1750 3300
+Wire Wire Line
+	1750 3300 1950 3300
+Text GLabel 1950 4500 0    50   Input ~ 0
+R
+Text GLabel 1950 4600 0    50   Input ~ 0
+G
+Text GLabel 1950 4700 0    50   Input ~ 0
+B
+Text GLabel 2400 5600 2    50   Input ~ 0
+R
+Text GLabel 2400 5800 2    50   Input ~ 0
+G
+Text GLabel 2400 6000 2    50   Input ~ 0
+B
 $EndSCHEMATC
