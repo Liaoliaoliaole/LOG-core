@@ -1633,4 +1633,18 @@ Text GLabel 2400 5800 2    50   Input ~ 0
 G
 Text GLabel 2400 6000 2    50   Input ~ 0
 B
+NoConn ~ 2450 5000
+NoConn ~ 2450 4900
+NoConn ~ 2450 4800
+NoConn ~ 2450 4600
+NoConn ~ 1950 4800
+NoConn ~ 1950 4900
+NoConn ~ 2450 4100
+NoConn ~ 2450 3900
+NoConn ~ 2450 3800
+NoConn ~ 1950 3800
+NoConn ~ 1950 3700
+NoConn ~ 1950 3600
+NoConn ~ 2450 3600
+NoConn ~ 1950 3400
 $EndSCHEMATC
