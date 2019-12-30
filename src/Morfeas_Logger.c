@@ -28,9 +28,11 @@ void Logger(const char *fmt, ...)
 	clock_gettime(CLOCK_REALTIME, &now);
 	timeinfo = localtime(&(now.tv_sec));
 	strftime(time_buff,sizeof(time_buff),"%F %a %T",timeinfo);
-	printf("(%s.%04lu): ", time_buff, now.tv_nsec/100000);
+	fprintf(stdout,"(%s.%04lu): ", time_buff, now.tv_nsec/100000);
 	va_list arg;
     va_start(arg, fmt);
     	vfprintf(stdout, fmt, arg);
     va_end(arg);
+	fflush(stdout);
+    fsync(fileno(stdout));
 }
