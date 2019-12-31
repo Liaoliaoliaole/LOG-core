@@ -216,10 +216,10 @@ int main(int argc, char *argv[])
 	LogBook_file(&stats, "r");
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	//Open FIFO for Write
-	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
 	Logger("Morfeas_SDAQ_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.CAN_IF_name);
+	//Open FIFO for Write
+	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
 	Logger("Morfeas_SDAQ_if (%s) Registered on OPC-UA\n",stats.CAN_IF_name);
 	//Initialize Sync timer expired time
