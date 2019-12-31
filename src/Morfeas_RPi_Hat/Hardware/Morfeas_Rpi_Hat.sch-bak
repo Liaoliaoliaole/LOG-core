@@ -286,28 +286,6 @@ F 3 "" H 10750 1050 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	9950 1150 9150 1150
-$Comp
-L Connector:Conn_01x03_Female J3
-U 1 1 5E088EC8
-P 8000 1150
-F 0 "J3" H 7892 1435 50  0000 C CNN
-F 1 "CAN0_Power+" H 7892 1344 50  0000 C CNN
-F 2 "Morfeas_RPi_hat:SPTH_V1,5" H 8000 1150 50  0001 C CNN
-F 3 "~" H 8000 1150 50  0001 C CNN
-	1    8000 1150
-	-1   0    0    -1  
-$EndComp
-Wire Wire Line
-	8200 1050 8300 1050
-Wire Wire Line
-	8300 1050 8300 1150
-Wire Wire Line
-	8300 1150 8200 1150
-Wire Wire Line
-	8200 1250 8300 1250
-Connection ~ 8300 1150
-Wire Wire Line
-	8300 1250 8300 1150
 Wire Wire Line
 	8750 1150 8400 1150
 Connection ~ 8750 1150
@@ -805,7 +783,6 @@ F 3 "" H 10750 3700 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	9950 3800 9150 3800
-Connection ~ 8300 3800
 Connection ~ 8750 3800
 Text GLabel 8300 4800 0    50   Input ~ 0
 SCL
@@ -977,17 +954,6 @@ Wire Notes Line width 20 style dash_dot rgb(255, 0, 0)
 	2100 1600 550  1600
 Text Notes 590  1760 0    100  ~ 20
 Power Supply Unit
-$Comp
-L Connector:Conn_01x03_Female J1
-U 1 1 5E179F8A
-P 800 1100
-F 0 "J1" H 750 1300 50  0000 C CNN
-F 1 "Power IN" V 900 1100 50  0000 C CNN
-F 2 "Morfeas_RPi_hat:SPTH_V1,5" H 800 1100 50  0001 C CNN
-F 3 "~" H 800 1100 50  0001 C CNN
-	1    800  1100
-	-1   0    0    -1  
-$EndComp
 Wire Notes Line width 20 style dash_dot rgb(255, 0, 0)
 	4500 550  4500 1800
 Wire Notes Line width 20 style dash_dot rgb(255, 0, 0)
@@ -995,10 +961,6 @@ Wire Notes Line width 20 style dash_dot rgb(255, 0, 0)
 Wire Wire Line
 	1000 1000 1100 1000
 Connection ~ 1100 1000
-Wire Wire Line
-	1000 1100 1100 1100
-Wire Wire Line
-	1100 1100 1100 1000
 Wire Wire Line
 	1150 1000 1100 1000
 Wire Wire Line
@@ -1301,45 +1263,45 @@ NoConn ~ 2450 4400
 $Comp
 L Mechanical:MountingHole H1
 U 1 1 5E2EEC57
-P 8650 6000
-F 0 "H1" H 8750 6046 50  0000 L CNN
-F 1 "MountingHole" H 8750 5955 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 8650 6000 50  0001 C CNN
-F 3 "~" H 8650 6000 50  0001 C CNN
-	1    8650 6000
+P 9750 6000
+F 0 "H1" H 9850 6046 50  0000 L CNN
+F 1 "MountingHole" H 9850 5955 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3mm" H 9750 6000 50  0001 C CNN
+F 3 "~" H 9750 6000 50  0001 C CNN
+	1    9750 6000
 	1    0    0    -1  
 $EndComp
 $Comp
 L Mechanical:MountingHole H2
 U 1 1 5E2F00AC
-P 8650 6200
-F 0 "H2" H 8750 6246 50  0000 L CNN
-F 1 "MountingHole" H 8750 6155 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 8650 6200 50  0001 C CNN
-F 3 "~" H 8650 6200 50  0001 C CNN
-	1    8650 6200
+P 9750 6200
+F 0 "H2" H 9850 6246 50  0000 L CNN
+F 1 "MountingHole" H 9850 6155 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3mm" H 9750 6200 50  0001 C CNN
+F 3 "~" H 9750 6200 50  0001 C CNN
+	1    9750 6200
 	1    0    0    -1  
 $EndComp
 $Comp
 L Mechanical:MountingHole H3
 U 1 1 5E2F0330
-P 9450 6000
-F 0 "H3" H 9550 6046 50  0000 L CNN
-F 1 "MountingHole" H 9550 5955 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 9450 6000 50  0001 C CNN
-F 3 "~" H 9450 6000 50  0001 C CNN
-	1    9450 6000
+P 10550 6000
+F 0 "H3" H 10650 6046 50  0000 L CNN
+F 1 "MountingHole" H 10650 5955 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3mm" H 10550 6000 50  0001 C CNN
+F 3 "~" H 10550 6000 50  0001 C CNN
+	1    10550 6000
 	1    0    0    -1  
 $EndComp
 $Comp
 L Mechanical:MountingHole H4
 U 1 1 5E2F07C8
-P 9450 6200
-F 0 "H4" H 9550 6246 50  0000 L CNN
-F 1 "MountingHole" H 9550 6155 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 9450 6200 50  0001 C CNN
-F 3 "~" H 9450 6200 50  0001 C CNN
-	1    9450 6200
+P 10550 6200
+F 0 "H4" H 10650 6246 50  0000 L CNN
+F 1 "MountingHole" H 10650 6155 50  0000 L CNN
+F 2 "MountingHole:MountingHole_3mm" H 10550 6200 50  0001 C CNN
+F 3 "~" H 10550 6200 50  0001 C CNN
+	1    10550 6200
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -1625,44 +1587,23 @@ NoConn ~ 1950 3600
 NoConn ~ 2450 3600
 NoConn ~ 1950 3400
 Wire Wire Line
-	8300 3700 8300 3800
-Wire Wire Line
-	8200 3900 8300 3900
-Wire Wire Line
-	8300 3800 8200 3800
-Wire Wire Line
-	8200 3700 8300 3700
-$Comp
-L Connector:Conn_01x03_Female J4
-U 1 1 5E14E7A3
-P 8000 3800
-F 0 "J4" H 7892 4085 50  0000 C CNN
-F 1 "CAN1_Power+" H 7892 3994 50  0000 C CNN
-F 2 "Morfeas_RPi_hat:SPTH_V1,5" H 8000 3800 50  0001 C CNN
-F 3 "~" H 8000 3800 50  0001 C CNN
-	1    8000 3800
-	-1   0    0    -1  
-$EndComp
-Wire Wire Line
-	8300 3900 8300 3800
-Wire Wire Line
 	8750 3800 8400 3800
 $Comp
-L Device:D_ALT D?
+L Device:D_ALT D6
 U 1 1 5E0B78DF
 P 8600 3450
-F 0 "D?" V 8500 3550 50  0000 R CNN
-F 1 "D_ALT" H 8700 3350 50  0000 R CNN
-F 2 "" H 8600 3450 50  0001 C CNN
+F 0 "D6" H 8550 3500 50  0000 R CNN
+F 1 "NRVTSA4100ET3G" H 8700 3350 50  0000 R CNN
+F 2 "Morfeas_RPi_hat:DO-214AC(SMA)" H 8600 3450 50  0001 C CNN
 F 3 "~" H 8600 3450 50  0001 C CNN
 	1    8600 3450
 	1    0    0    1   
 $EndComp
 $Comp
-L power:GND #PWR?
+L power:GND #PWR048
 U 1 1 5E12E002
 P 8750 3500
-F 0 "#PWR?" H 8750 3250 50  0001 C CNN
+F 0 "#PWR048" H 8750 3250 50  0001 C CNN
 F 1 "GND" H 8755 3327 50  0000 C CNN
 F 2 "" H 8750 3500 50  0001 C CNN
 F 3 "" H 8750 3500 50  0001 C CNN
@@ -1676,24 +1617,22 @@ Wire Wire Line
 Wire Wire Line
 	8400 3450 8400 3800
 Connection ~ 8400 3800
-Wire Wire Line
-	8400 3800 8300 3800
 $Comp
-L Device:D_ALT D?
+L Device:D_ALT D5
 U 1 1 5E165919
 P 8600 800
-F 0 "D?" V 8500 900 50  0000 R CNN
-F 1 "D_ALT" H 8700 700 50  0000 R CNN
-F 2 "" H 8600 800 50  0001 C CNN
+F 0 "D5" H 8550 850 50  0000 R CNN
+F 1 "NRVTSA4100ET3G" H 8700 700 50  0000 R CNN
+F 2 "Morfeas_RPi_hat:DO-214AC(SMA)" H 8600 800 50  0001 C CNN
 F 3 "~" H 8600 800 50  0001 C CNN
 	1    8600 800 
 	1    0    0    1   
 $EndComp
 $Comp
-L power:GND #PWR?
+L power:GND #PWR047
 U 1 1 5E16591F
 P 8750 850
-F 0 "#PWR?" H 8750 600 50  0001 C CNN
+F 0 "#PWR047" H 8750 600 50  0001 C CNN
 F 1 "GND" H 8755 677 50  0000 C CNN
 F 2 "" H 8750 850 50  0001 C CNN
 F 3 "" H 8750 850 50  0001 C CNN
@@ -1707,6 +1646,141 @@ Wire Wire Line
 Wire Wire Line
 	8400 800  8400 1150
 Connection ~ 8400 1150
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 7 1 5E1162EB
+P 8000 1150
+F 0 "J1" H 7892 965 50  0000 C CNN
+F 1 "Con" H 7892 1056 50  0001 C CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 8000 1150 50  0001 C CNN
+F 3 "" H 8000 1150 50  0001 C CNN
+	7    8000 1150
+	-1   0    0    1   
+$EndComp
 Wire Wire Line
-	8400 1150 8300 1150
+	8200 1150 8400 1150
+Wire Wire Line
+	8250 1400 8400 1400
+Wire Wire Line
+	8400 1400 8400 1500
+$Comp
+L power:GND #PWR049
+U 1 1 5E15111B
+P 8400 1500
+F 0 "#PWR049" H 8400 1250 50  0001 C CNN
+F 1 "GND" H 8250 1450 50  0000 C CNN
+F 2 "" H 8400 1500 50  0001 C CNN
+F 3 "" H 8400 1500 50  0001 C CNN
+	1    8400 1500
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8200 3800 8400 3800
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 1 1 5E16FE86
+P 8000 3800
+F 0 "J1" H 7892 3615 50  0000 C CNN
+F 1 "Con" H 7892 3706 50  0000 C CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 8000 3800 50  0001 C CNN
+F 3 "" H 8000 3800 50  0001 C CNN
+	1    8000 3800
+	-1   0    0    1   
+$EndComp
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 5 1 5E171471
+P 800 1000
+F 0 "J1" H 650 900 50  0000 C CNN
+F 1 "Con" H 900 1000 50  0001 C CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 800 1000 50  0001 C CNN
+F 3 "" H 800 1000 50  0001 C CNN
+	5    800  1000
+	-1   0    0    1   
+$EndComp
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 6 1 5E172C37
+P 800 1200
+F 0 "J1" H 650 1100 50  0000 C CNN
+F 1 "Con" H 900 1200 50  0001 C CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 800 1200 50  0001 C CNN
+F 3 "" H 800 1200 50  0001 C CNN
+	6    800  1200
+	-1   0    0    1   
+$EndComp
+$Comp
+L power:GND #PWR0106
+U 1 1 5E1939E0
+P 8400 6250
+F 0 "#PWR0106" H 8400 6000 50  0001 C CNN
+F 1 "GND" H 8405 6077 50  0000 C CNN
+F 2 "" H 8400 6250 50  0001 C CNN
+F 3 "" H 8400 6250 50  0001 C CNN
+	1    8400 6250
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8400 6200 8400 6250
+Wire Wire Line
+	8400 6200 8400 6100
+Connection ~ 8400 6200
+Connection ~ 8400 6000
+Wire Wire Line
+	8400 6000 8400 5900
+Connection ~ 8400 6100
+Wire Wire Line
+	8400 6100 8400 6000
+Wire Wire Line
+	8300 6200 8400 6200
+Wire Wire Line
+	8300 6100 8400 6100
+Wire Wire Line
+	8300 6000 8400 6000
+Wire Wire Line
+	8400 5900 8300 5900
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 8 1 5E1755AF
+P 8100 5900
+F 0 "J1" H 8150 5900 50  0000 L CNN
+F 1 "Con" V 8150 5700 50  0001 L CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 8100 5900 50  0001 C CNN
+F 3 "" H 8100 5900 50  0001 C CNN
+	8    8100 5900
+	-1   0    0    -1  
+$EndComp
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 4 1 5E174B4D
+P 8100 6000
+F 0 "J1" H 8150 6000 50  0000 L CNN
+F 1 "Con" V 8150 5800 50  0001 L CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 8100 6000 50  0001 C CNN
+F 3 "" H 8100 6000 50  0001 C CNN
+	4    8100 6000
+	-1   0    0    -1  
+$EndComp
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 3 1 5E1737B5
+P 8100 6100
+F 0 "J1" H 8150 6100 50  0000 L CNN
+F 1 "Con" V 8150 5900 50  0001 L CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 8100 6100 50  0001 C CNN
+F 3 "" H 8100 6100 50  0001 C CNN
+	3    8100 6100
+	-1   0    0    -1  
+$EndComp
+$Comp
+L Morfeas_Rpi_Hat:Connector J1
+U 2 1 5E12235A
+P 8100 6200
+F 0 "J1" H 8150 6200 50  0000 L CNN
+F 1 "Con" V 8150 6000 50  0001 L CNN
+F 2 "Morfeas_RPi_hat:SPT1.5_8-H-3.5" H 8100 6200 50  0001 C CNN
+F 3 "" H 8100 6200 50  0001 C CNN
+	2    8100 6200
+	-1   0    0    -1  
+$EndComp
 $EndSCHEMATC

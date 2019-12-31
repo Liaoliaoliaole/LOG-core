@@ -1,29 +1,6 @@
 EESchema-LIBRARY Version 2.4
 #encoding utf-8
 #
-# Connector_Conn_01x03_Female
-#
-DEF Connector_Conn_01x03_Female J 0 40 Y N 1 F N
-F0 "J" 0 200 50 H V C CNN
-F1 "Connector_Conn_01x03_Female" 0 -200 50 H V C CNN
-F2 "" 0 0 50 H I C CNN
-F3 "" 0 0 50 H I C CNN
-$FPLIST
- Connector*:*_1x??_*
-$ENDFPLIST
-DRAW
-A 0 -100 20 901 -901 1 1 6 N 0 -80 0 -120
-A 0 0 20 901 -901 1 1 6 N 0 20 0 -20
-A 0 100 20 901 -901 1 1 6 N 0 120 0 80
-P 2 1 1 6 -50 -100 -20 -100 N
-P 2 1 1 6 -50 0 -20 0 N
-P 2 1 1 6 -50 100 -20 100 N
-X Pin_1 1 -200 100 150 R 50 50 1 1 P
-X Pin_2 2 -200 0 150 R 50 50 1 1 P
-X Pin_3 3 -200 -100 150 R 50 50 1 1 P
-ENDDRAW
-ENDDEF
-#
 # Connector_Conn_01x03_Male
 #
 DEF Connector_Conn_01x03_Male J 0 40 Y N 1 F N
@@ -383,6 +360,41 @@ X VSS 2 0 -400 100 U 59 59 1 1 W
 X SDA 3 -450 100 100 R 59 59 1 1 B
 X VCC 4 0 400 100 D 59 59 1 1 W
 X WP 5 450 0 100 L 59 59 1 1 I
+ENDDRAW
+ENDDEF
+#
+# Morfeas_Rpi_Hat_Connector
+#
+DEF Morfeas_Rpi_Hat_Connector J 0 40 Y Y 8 F N
+F0 "J" 0 100 50 H V C CNN
+F1 "Morfeas_Rpi_Hat_Connector" 0 -100 50 H V C CNN
+F2 "" 0 0 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+DRAW
+A 0 0 20 901 -901 1 1 6 N 0 20 0 -20
+A 0 0 20 901 -901 2 1 6 N 0 20 0 -20
+A 0 0 20 901 -901 3 1 6 N 0 20 0 -20
+A 0 0 20 901 -901 4 1 6 N 0 20 0 -20
+A 0 0 20 901 -901 5 1 6 N 0 20 0 -20
+A 0 0 20 901 -901 6 1 6 N 0 20 0 -20
+A 0 0 20 901 -901 7 1 6 N 0 20 0 -20
+A 0 0 20 901 -901 8 1 6 N 0 20 0 -20
+P 2 1 1 6 -50 0 -20 0 N
+P 2 2 1 6 -50 0 -20 0 N
+P 2 3 1 6 -50 0 -20 0 N
+P 2 4 1 6 -50 0 -20 0 N
+P 2 5 1 6 -50 0 -20 0 N
+P 2 6 1 6 -50 0 -20 0 N
+P 2 7 1 6 -50 0 -20 0 N
+P 2 8 1 6 -50 0 -20 0 N
+X ~ 1 -200 0 150 R 50 50 1 1 P
+X ~ 2 -200 0 150 R 50 50 2 1 P
+X ~ 3 -200 0 150 R 50 50 3 1 P
+X ~ 4 -200 0 150 R 50 50 4 1 P
+X ~ 5 -200 0 150 R 50 50 5 1 P
+X ~ 6 -200 0 150 R 50 50 6 1 P
+X ~ 7 -200 0 150 R 50 50 7 1 P
+X ~ 8 -200 0 150 R 50 50 8 1 P
 ENDDRAW
 ENDDEF
 #
