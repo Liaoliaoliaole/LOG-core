@@ -309,7 +309,7 @@ Connection ~ 8300 1150
 Wire Wire Line
 	8300 1250 8300 1150
 Wire Wire Line
-	8750 1150 8300 1150
+	8750 1150 8400 1150
 Connection ~ 8750 1150
 Text GLabel 8300 2150 0    50   Input ~ 0
 SCL
@@ -805,19 +805,7 @@ F 3 "" H 10750 3700 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	9950 3800 9150 3800
-Wire Wire Line
-	8200 3700 8300 3700
-Wire Wire Line
-	8300 3700 8300 3800
-Wire Wire Line
-	8300 3800 8200 3800
-Wire Wire Line
-	8200 3900 8300 3900
 Connection ~ 8300 3800
-Wire Wire Line
-	8300 3900 8300 3800
-Wire Wire Line
-	8750 3800 8300 3800
 Connection ~ 8750 3800
 Text GLabel 8300 4800 0    50   Input ~ 0
 SCL
@@ -1311,17 +1299,6 @@ NoConn ~ 2450 4300
 NoConn ~ 1950 4400
 NoConn ~ 2450 4400
 $Comp
-L Connector:Conn_01x03_Female J4
-U 1 1 5E14E7A3
-P 8000 3800
-F 0 "J4" H 7892 4085 50  0000 C CNN
-F 1 "CAN1_Power+" H 7892 3994 50  0000 C CNN
-F 2 "Morfeas_RPi_hat:SPTH_V1,5" H 8000 3800 50  0001 C CNN
-F 3 "~" H 8000 3800 50  0001 C CNN
-	1    8000 3800
-	-1   0    0    -1  
-$EndComp
-$Comp
 L Mechanical:MountingHole H1
 U 1 1 5E2EEC57
 P 8650 6000
@@ -1533,7 +1510,7 @@ U 1 1 5E0ACB59
 P 6750 5400
 F 0 "C15" V 6650 5400 50  0000 C CNN
 F 1 "100nf" V 6850 5400 50  0000 C CNN
-F 2 "Capacitors_SMD:C_0805" H 6750 5400 50  0001 C CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric" H 6750 5400 50  0001 C CNN
 F 3 "~" H 6750 5400 50  0001 C CNN
 	1    6750 5400
 	0    1    1    0   
@@ -1647,4 +1624,89 @@ NoConn ~ 1950 3700
 NoConn ~ 1950 3600
 NoConn ~ 2450 3600
 NoConn ~ 1950 3400
+Wire Wire Line
+	8300 3700 8300 3800
+Wire Wire Line
+	8200 3900 8300 3900
+Wire Wire Line
+	8300 3800 8200 3800
+Wire Wire Line
+	8200 3700 8300 3700
+$Comp
+L Connector:Conn_01x03_Female J4
+U 1 1 5E14E7A3
+P 8000 3800
+F 0 "J4" H 7892 4085 50  0000 C CNN
+F 1 "CAN1_Power+" H 7892 3994 50  0000 C CNN
+F 2 "Morfeas_RPi_hat:SPTH_V1,5" H 8000 3800 50  0001 C CNN
+F 3 "~" H 8000 3800 50  0001 C CNN
+	1    8000 3800
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	8300 3900 8300 3800
+Wire Wire Line
+	8750 3800 8400 3800
+$Comp
+L Device:D_ALT D?
+U 1 1 5E0B78DF
+P 8600 3450
+F 0 "D?" V 8500 3550 50  0000 R CNN
+F 1 "D_ALT" H 8700 3350 50  0000 R CNN
+F 2 "" H 8600 3450 50  0001 C CNN
+F 3 "~" H 8600 3450 50  0001 C CNN
+	1    8600 3450
+	1    0    0    1   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5E12E002
+P 8750 3500
+F 0 "#PWR?" H 8750 3250 50  0001 C CNN
+F 1 "GND" H 8755 3327 50  0000 C CNN
+F 2 "" H 8750 3500 50  0001 C CNN
+F 3 "" H 8750 3500 50  0001 C CNN
+	1    8750 3500
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8750 3450 8750 3500
+Wire Wire Line
+	8450 3450 8400 3450
+Wire Wire Line
+	8400 3450 8400 3800
+Connection ~ 8400 3800
+Wire Wire Line
+	8400 3800 8300 3800
+$Comp
+L Device:D_ALT D?
+U 1 1 5E165919
+P 8600 800
+F 0 "D?" V 8500 900 50  0000 R CNN
+F 1 "D_ALT" H 8700 700 50  0000 R CNN
+F 2 "" H 8600 800 50  0001 C CNN
+F 3 "~" H 8600 800 50  0001 C CNN
+	1    8600 800 
+	1    0    0    1   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5E16591F
+P 8750 850
+F 0 "#PWR?" H 8750 600 50  0001 C CNN
+F 1 "GND" H 8755 677 50  0000 C CNN
+F 2 "" H 8750 850 50  0001 C CNN
+F 3 "" H 8750 850 50  0001 C CNN
+	1    8750 850 
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8750 800  8750 850 
+Wire Wire Line
+	8450 800  8400 800 
+Wire Wire Line
+	8400 800  8400 1150
+Connection ~ 8400 1150
+Wire Wire Line
+	8400 1150 8300 1150
 $EndSCHEMATC
