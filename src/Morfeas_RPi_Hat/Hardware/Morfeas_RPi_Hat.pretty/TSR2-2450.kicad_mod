@@ -1,4 +1,4 @@
-(module TSR2-2450 (layer F.Cu) (tedit 5E05A39C)
+(module TSR2-2450 (layer F.Cu) (tedit 5E0CA986)
   (fp_text reference REF** (at -5.08 -4.572) (layer F.SilkS)
     (effects (font (size 1 1) (thickness 0.15)))
   )
@@ -20,6 +20,6 @@
   (model ${KIPRJMOD}/Project's_libs/STEP/TSR2-2450.step
     (at (xyz 0 0 0))
     (scale (xyz 1 1 1))
-    (rotate (xyz 0 0 0))
+    (rotate (xyz 0 0 180))
   )
 )

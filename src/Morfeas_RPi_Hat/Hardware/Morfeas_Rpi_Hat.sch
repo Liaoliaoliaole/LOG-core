@@ -14,7 +14,7 @@ Comment3 ""
 Comment4 "Author: Sam Harry Tzavaras"
 $EndDescr
 $Comp
-L Connector_Generic:Conn_02x20_Odd_Even J2
+L Morfeas_Rpi_Hat:Conn_02x20_Odd_Even J2
 U 1 1 5E041881
 P 6250 3850
 F 0 "J2" H 6300 4967 50  0000 C CNN
@@ -492,7 +492,7 @@ U 1 1 5E0F6FA7
 P 2250 7000
 F 0 "Open_Source_hardware1" H 2250 7275 50  0001 C CNN
 F 1 "Open Source Hardware" H 2250 6775 50  0000 C CNN
-F 2 "Symbols:OSHW-Logo2_7.3x6mm_SilkScreen" H 2250 7000 50  0001 C CNN
+F 2 "Symbol:OSHW-Logo2_7.3x6mm_SilkScreen" H 2250 7000 50  0001 C CNN
 F 3 "~" H 2250 7000 50  0001 C CNN
 	1    2250 7000
 	1    0    0    -1  
@@ -1206,7 +1206,7 @@ U 1 1 5E106625
 P 6150 950
 F 0 "U2" H 6000 1200 50  0000 C CNN
 F 1 "TSR2-2450" H 6150 1101 50  0000 C CNN
-F 2 "Morfeas_RPi_hat:TSR2-2450" H 6175 800 50  0001 L CIN
+F 2 "Morfeas_RPi_Hat:TSR2-2450" H 6175 800 50  0001 L CIN
 F 3 "http://www.st.com/content/ccc/resource/technical/document/datasheet/41/4f/b3/b0/12/d4/47/88/CD00000444.pdf/files/CD00000444.pdf/jcr:content/translations/en.CD00000444.pdf" H 6150 900 50  0001 C CNN
 	1    6150 950 
 	1    0    0    -1  
@@ -1225,7 +1225,7 @@ U 1 1 5E2EEC57
 P 1000 6600
 F 0 "H1" H 1100 6646 50  0000 L CNN
 F 1 "MountingHole" H 1100 6555 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 1000 6600 50  0001 C CNN
+F 2 "MountingHole:MountingHole_3.5mm" H 1000 6600 50  0001 C CNN
 F 3 "~" H 1000 6600 50  0001 C CNN
 	1    1000 6600
 	1    0    0    -1  
@@ -1236,7 +1236,7 @@ U 1 1 5E2F00AC
 P 1000 6800
 F 0 "H2" H 1100 6846 50  0000 L CNN
 F 1 "MountingHole" H 1100 6755 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 1000 6800 50  0001 C CNN
+F 2 "MountingHole:MountingHole_3.5mm" H 1000 6800 50  0001 C CNN
 F 3 "~" H 1000 6800 50  0001 C CNN
 	1    1000 6800
 	1    0    0    -1  
@@ -1247,7 +1247,7 @@ U 1 1 5E2F0330
 P 1000 7000
 F 0 "H3" H 1100 7046 50  0000 L CNN
 F 1 "MountingHole" H 1100 6955 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 1000 7000 50  0001 C CNN
+F 2 "MountingHole:MountingHole_3.5mm" H 1000 7000 50  0001 C CNN
 F 3 "~" H 1000 7000 50  0001 C CNN
 	1    1000 7000
 	1    0    0    -1  
@@ -1258,7 +1258,7 @@ U 1 1 5E2F07C8
 P 1000 7200
 F 0 "H4" H 1100 7246 50  0000 L CNN
 F 1 "MountingHole" H 1100 7155 50  0000 L CNN
-F 2 "MountingHole:MountingHole_3mm" H 1000 7200 50  0001 C CNN
+F 2 "MountingHole:MountingHole_3.5mm" H 1000 7200 50  0001 C CNN
 F 3 "~" H 1000 7200 50  0001 C CNN
 	1    1000 7200
 	1    0    0    -1  
@@ -1269,7 +1269,7 @@ U 1 1 5E056599
 P 7200 1000
 F 0 "U3" H 6900 1300 60  0000 L CNN
 F 1 "TLV70433" H 6900 1200 60  0000 L CNN
-F 2 "Morfeas_RPi_hat:TLV70433DBVT" H 7700 850 60  0001 C CNN
+F 2 "Morfeas_RPi_Hat:TLV70433DBVT" H 7700 850 60  0001 C CNN
 F 3 "" H 6600 1250 60  0000 C CNN
 	1    7200 1000
 	1    0    0    -1  
@@ -1835,5 +1835,16 @@ F 2 "Morfeas_RPi_Hat:SPT1.5_8-H-3.5" H 850 3700 50  0001 C CNN
 F 3 "" H 850 3700 50  0001 C CNN
 	1    850  3700
 	-1   0    0    1   
+$EndComp
+$Comp
+L Morfeas_Rpi_Hat:Morfeas_project_Logo Morfeas_project_Logo1
+U 1 1 5E12A45C
+P 3250 7000
+F 0 "Morfeas_project_Logo1" H 3250 6850 60  0001 C CNN
+F 1 "Morfeas Project's Logo" H 3250 6850 60  0000 C CNN
+F 2 "Morfeas_RPi_Hat:Morfeas_logo" H 3250 7000 75  0001 C CNN
+F 3 "" H 3250 7000 75  0001 C CNN
+	1    3250 7000
+	1    0    0    -1  
 $EndComp
 $EndSCHEMATC
