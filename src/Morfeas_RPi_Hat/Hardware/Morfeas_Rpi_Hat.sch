@@ -19,7 +19,7 @@ U 1 1 5E041881
 P 6250 3850
 F 0 "J2" H 6300 4967 50  0000 C CNN
 F 1 "RPi_header" H 6300 4876 50  0000 C CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_2x20_P2.54mm_Vertical" H 6250 3850 50  0001 C CNN
+F 2 "Morfeas_RPi_Hat:PinSocket_2x20_P2.54mm_Vertical" H 6250 3850 50  0001 C CNN
 F 3 "~" H 6250 3850 50  0001 C CNN
 	1    6250 3850
 	1    0    0    -1  
