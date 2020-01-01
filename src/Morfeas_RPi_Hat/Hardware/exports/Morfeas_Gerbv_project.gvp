@@ -55,7 +55,7 @@
 	(cons 'visible #t)
 	(cons 'color #(0 50115 50115))
 )
-(define-layer! -1 (cons 'filename "")
+(define-layer! -1 (cons 'filename "Thorndale AMT")
 	(cons 'color #(0 0 0))
 )
 (set-render-type! 3)
