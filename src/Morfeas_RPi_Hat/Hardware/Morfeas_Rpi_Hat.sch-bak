@@ -1837,10 +1837,10 @@ F 3 "" H 850 3700 50  0001 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L Morfeas_Rpi_Hat:Morfeas_project_Logo #G1
+L Morfeas_Rpi_Hat:Morfeas_project_Logo Morfeas_project_Logo1
 U 1 1 5E12A45C
 P 3250 7000
-F 0 "#G1" H 3250 6850 60  0001 C CNN
+F 0 "Morfeas_project_Logo1" H 3250 6850 60  0001 C CNN
 F 1 "Morfeas Project's Logo" H 3250 6850 60  0000 C CNN
 F 2 "Morfeas_RPi_Hat:Morfeas_logo" H 3250 7000 75  0001 C CNN
 F 3 "" H 3250 7000 75  0001 C CNN
