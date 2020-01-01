@@ -1,11 +1,11 @@
-(module "DO-214AC(SMA)" (layer F.Cu) (tedit 5E0B66B2)
+(module "DO-214AC(SMA)" (layer F.Cu) (tedit 5E0B90EC)
   (descr "DO-214AC (SMA)  PACKAGE.")
   (tags "DO-214AC SMA")
   (attr smd)
-  (fp_text reference "DO-214AC(SMA)" (at 0 -2.60096) (layer F.SilkS) hide
+  (fp_text reference "DO-214AC(SMA)" (at 0 -2.60096) (layer F.CrtYd) hide
     (effects (font (size 1.00076 1.00076) (thickness 0.11938)))
   )
-  (fp_text value VAL** (at 0 2.79908) (layer F.SilkS)
+  (fp_text value VAL** (at 0 2.794) (layer F.SilkS)
     (effects (font (size 1.00076 1.00076) (thickness 0.11938)))
   )
   (fp_line (start -2.286 -1.905) (end 2.286 -1.905) (layer F.SilkS) (width 0.127))

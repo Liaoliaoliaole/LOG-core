@@ -1,4 +1,4 @@
-update=31.12.19 16:15:52
+update=Wed 01 Jan 2020 02:03:06 AM EET
 version=1
 last_client=kicad
 [general]
@@ -12,9 +12,19 @@ NetIExt=net
 version=1
 LibDir=
 [eeschema/libraries]
+[schematic_editor]
+version=1
+PageLayoutDescrFile=Morfeas_project_page.kicad_wks
+PlotDirectoryName=exports/schematic/
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=Pcbnew
+SpiceAjustPassiveValues=0
+LabSize=75
+ERC_TestSimilarLabels=1
 [pcbnew]
 version=1
-PageLayoutDescrFile=
+PageLayoutDescrFile=Morfeas_project_page.kicad_wks
 LastNetListRead=Morfeas_Rpi_Hat.net
 CopperLayerCount=2
 BoardThickness=1.6
@@ -22,10 +32,10 @@ AllowMicroVias=0
 AllowBlindVias=0
 RequireCourtyardDefinitions=0
 ProhibitOverlappingCourtyards=1
-MinTrackWidth=0.127
-MinViaDiameter=0.254
+MinTrackWidth=0.254
+MinViaDiameter=1.016
 MinViaDrill=0.3
-MinMicroViaDiameter=0.254
+MinMicroViaDiameter=1.016
 MinMicroViaDrill=0.09999999999999999
 MinHoleToHole=0.25
 TrackWidth1=0.254
@@ -38,8 +48,8 @@ ViaDiameter1=1.27
 ViaDrill1=0.6
 ViaDiameter2=1.27
 ViaDrill2=0.6
-dPairWidth1=0.2
-dPairGap1=0.25
+dPairWidth1=0.254
+dPairGap1=0.254
 dPairViaGap1=0.25
 SilkLineWidth=0.12
 SilkTextSizeV=1
@@ -64,7 +74,7 @@ OthersTextUpright=1
 SolderMaskClearance=0.07619999999999999
 SolderMaskMinWidth=0.127
 SolderPasteClearance=0
-SolderPasteRatio=-0
+SolderPasteRatio=0
 [pcbnew/Layer.F.Cu]
 Name=F.Cu
 Type=0
@@ -234,22 +244,12 @@ Enabled=0
 [pcbnew/Netclasses]
 [pcbnew/Netclasses/Default]
 Name=Default
-Clearance=0.127
+Clearance=0.1778
 TrackWidth=0.254
 ViaDiameter=1.27
 ViaDrill=0.6
 uViaDiameter=1.016
 uViaDrill=0.6
-dPairWidth=0.2
-dPairGap=0.25
+dPairWidth=0.254
+dPairGap=0.254
 dPairViaGap=0.25
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=exports/schematic/
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=Pcbnew
-SpiceAjustPassiveValues=0
-LabSize=75
-ERC_TestSimilarLabels=1
