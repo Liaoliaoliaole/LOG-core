@@ -68,7 +68,7 @@
 		(list 'digits 'Integer 4)
 	))
 )
-(define-layer! -1 (cons 'filename "/home/sam/Desktop/test/morfeas_project/src/Morfeas_RPi_Hat/Hardware/exports/Gerbers")
+(define-layer! -1 (cons 'filename "`Bnä¢U")
 	(cons 'color #(0 0 0))
 )
 (set-render-type! 3)
