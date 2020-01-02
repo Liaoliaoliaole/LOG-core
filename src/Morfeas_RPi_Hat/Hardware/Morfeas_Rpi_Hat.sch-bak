@@ -270,17 +270,6 @@ SCL
 Text GLabel 8850 5250 0    50   Input ~ 0
 SDA
 $Comp
-L Device:D_ALT D1
-U 1 1 5E08FF22
-P 4900 950
-F 0 "D1" H 4946 871 50  0000 R CNN
-F 1 "1N4007" H 5050 1050 50  0000 R CNN
-F 2 "Morfeas_RPi_hat:DO-214AC(SMA)" H 4900 950 50  0001 C CNN
-F 3 "~" H 4900 950 50  0001 C CNN
-	1    4900 950 
-	-1   0    0    1   
-$EndComp
-$Comp
 L power:+3.3V #PWR026
 U 1 1 5E059A1A
 P 9400 4850
@@ -1861,4 +1850,15 @@ Text Notes 9950 5050 0    75   ~ 15
 Addr:0x52(Block"10")
 Text Notes 9950 5200 0    75   ~ 15
 Addr:0x53(Block"11")
+$Comp
+L Device:D_ALT D1
+U 1 1 5E08FF22
+P 4900 950
+F 0 "D1" H 4946 871 50  0000 R CNN
+F 1 "1N4007" H 5050 1050 50  0000 R CNN
+F 2 "Morfeas_RPi_hat:DO-214AC(SMA)" H 4900 950 50  0001 C CNN
+F 3 "~" H 4900 950 50  0001 C CNN
+	1    4900 950 
+	-1   0    0    1   
+$EndComp
 $EndSCHEMATC
