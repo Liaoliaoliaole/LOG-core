@@ -1853,4 +1853,12 @@ Wire Wire Line
 	1100 4250 1150 4250
 Wire Wire Line
 	1100 4350 1150 4350
+Text Notes 9950 4750 0    75   ~ 15
+Addr:0x50(Block"00")
+Text Notes 9950 4900 0    75   ~ 15
+Addr:0x51(Block"01")
+Text Notes 9950 5050 0    75   ~ 15
+Addr:0x52(Block"10")
+Text Notes 9950 5200 0    75   ~ 15
+Addr:0x53(Block"11")
 $EndSCHEMATC
