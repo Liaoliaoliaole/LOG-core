@@ -1,4 +1,4 @@
-update=2.1.20 17:47:00
+update=Fri 03 Jan 2020 07:35:30 PM EET
 version=1
 last_client=kicad
 [general]
@@ -246,7 +246,7 @@ dPairViaGap=0.25
 [schematic_editor]
 version=1
 PageLayoutDescrFile=Morfeas_project_page.kicad_wks
-PlotDirectoryName=exports/
+PlotDirectoryName=Exports/
 SubpartIdSeparator=0
 SubpartFirstId=65
 NetFmtName=Pcbnew
