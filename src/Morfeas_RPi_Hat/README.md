@@ -7,7 +7,7 @@ This repository related to PCB design of the Morfeas RPi Hat and the supporting 
 * **Sam Harry Tzavaras** - *Initial work*
 
 ## License
-The hardware PCB design is licensed under TAPRv1 or later - see the [License](./Hardware/TAPR_Open_Hardware_License_v1.0.pdf) file for details.
+The PCB design is licensed under TAPRv1 or later - see the [License](./Hardware/TAPR_Open_Hardware_License_v1.0.pdf) file for details.
 
 The source code is licensed under GPLv3 or later - see the [License](../blob/master/LICENSE) file for details.
 
