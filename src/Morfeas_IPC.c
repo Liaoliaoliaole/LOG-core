@@ -45,6 +45,7 @@ char *Morfeas_IPC_handler_type_name[]={
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
 size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr)//const char *path_to_FIFO,
 {
+	/*
 	fd_set writeCheck;
     fd_set errCheck;
     struct timeval timeout;
@@ -64,6 +65,8 @@ size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr)//const char *path_to_FI
 	else if (FD_ISSET(FIFO_fd, &writeCheck))
 		return write(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
 	return 0;
+	*/
+	return write(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
 }
 //Function for construction of message for registration of a Handler
 size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg)//const char *path_to_FIFO,
