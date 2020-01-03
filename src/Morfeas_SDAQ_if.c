@@ -818,6 +818,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	{
 		list_SDAQ_node_data = check_is_in_list_SDAQ->data;
 		time(&(list_SDAQ_node_data->last_seen));//update last_seen for the SDAQ entry
+		memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status)); //update SDAQ's status value 
 		if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//if TRUE, set back to the node_data->SDAQ_address
 			SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
 		return list_SDAQ_node_data;
@@ -974,8 +975,8 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 				{
 					stats->detected_SDAQs--;
 					Logger("SDAQ with type %s, S/N:%u and address:%hhu left from the BUS\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
-																					 sdaq_node->SDAQ_status.dev_sn,
-																					 sdaq_node->SDAQ_address);
+																							 sdaq_node->SDAQ_status.dev_sn,
+																					 		 sdaq_node->SDAQ_address);
 					//Send info of the removed SDAQ through IPC
 					IPC_msg.SDAQ_clean.IPC_msg_type = IPC_SDAQ_clean_up;
 					sprintf(IPC_msg.SDAQ_clean.connected_to_BUS,"%s",stats->CAN_IF_name);
