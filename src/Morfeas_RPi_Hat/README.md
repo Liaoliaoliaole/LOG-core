@@ -2,7 +2,8 @@
 # Morfeas PRi Hat
 
 This repository related to hardware and software design of the Morfeas RPi Hat.
-[//]: # (
+
+[//]: #(
 ## Getting Started
 
 In the "Design and source" folder, can be found.
