@@ -124,11 +124,15 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	if(node)
 	{
 		node_data = cJSON_CreateObject();
+		//--Add SDAQ's general data to SDAQ's JSON object
 		strftime(date,STR_LEN,"%x %T",gmtime(&node_dec->last_seen));//format time
+		cJSON_AddStringToObject(node_data, "Last_seen_UTC", date);
+		cJSON_AddNumberToObject(node_data, "Last_seen_UNIX", node_dec->last_seen);
 		cJSON_AddNumberToObject(node_data, "Address", node_dec->SDAQ_address);
 		cJSON_AddNumberToObject(node_data, "Serial_number", (node_dec->SDAQ_status).dev_sn);
 		cJSON_AddItemToObject(node_data, "SDAQ_type", cJSON_CreateString(dev_type_str[(node_dec->SDAQ_info).dev_type]));
-		//--Add SDAQ's Status data to SDAQ's JSON object
+		cJSON_AddNumberToObject(node_data, "Timediff", node_dec->Timediff);
+		//--Add SDAQ's Status
 		cJSON_AddItemToObject(node_data, "SDAQ_Status", SDAQ_status = cJSON_CreateObject());
 		cJSON_AddNumberToObject(SDAQ_status, "SDAQ_status_val", (node_dec->SDAQ_status).status);
 		cJSON_AddItemToObject(SDAQ_status, "In_sync", cJSON_CreateBool((node_dec->SDAQ_status).status & (1<<In_sync)));
@@ -145,9 +149,6 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		//-- Add SDAQ's channel Cal dates  --//
 		cJSON_AddItemToObject(node_data, "Calibration_Data",list_SDAQ_Channels_cal_dates = cJSON_CreateArray());
 		g_slist_foreach(SDAQ_Channels_cal_dates, extract_list_SDAQ_Channels_cal_dates, list_SDAQ_Channels_cal_dates);
-		cJSON_AddStringToObject(node_data, "Last_seen_UTC", date);
-		cJSON_AddNumberToObject(node_data, "Last_seen_UNIX", node_dec->last_seen);
-		cJSON_AddNumberToObject(node_data, "Timediff", node_dec->Timediff);
 		cJSON_AddItemToObject(list_SDAQs, "SDAQs_data",node_data);
 	}
 }
