@@ -129,21 +129,19 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		cJSON_AddNumberToObject(node_data, "Serial_number", (node_dec->SDAQ_status).dev_sn);
 		cJSON_AddItemToObject(node_data, "SDAQ_type", cJSON_CreateString(dev_type_str[(node_dec->SDAQ_info).dev_type]));
 		//--Add SDAQ's Status data to SDAQ's JSON object
-		SDAQ_status = cJSON_CreateObject();
+		cJSON_AddItemToObject(node_data, "SDAQ_Status", SDAQ_status = cJSON_CreateObject());
 		cJSON_AddNumberToObject(SDAQ_status, "SDAQ_status_val", (node_dec->SDAQ_status).status);
 		cJSON_AddItemToObject(SDAQ_status, "In_sync", cJSON_CreateBool((node_dec->SDAQ_status).status & (1<<In_sync)));
 		cJSON_AddItemToObject(SDAQ_status, "Error", cJSON_CreateBool((node_dec->SDAQ_status).status & (1<<Error)));
 		cJSON_AddItemToObject(SDAQ_status, "State", cJSON_CreateString(status_byte_dec((node_dec->SDAQ_status).status, State)));
 		cJSON_AddItemToObject(SDAQ_status, "Mode", cJSON_CreateString(status_byte_dec((node_dec->SDAQ_status).status, Mode)));
-		cJSON_AddItemToObject(node_data, "SDAQ_Status", SDAQ_status);
 		//-- Add SDAQ's Info--//
-		SDAQ_info = cJSON_CreateObject();
+		cJSON_AddItemToObject(node_data, "SDAQ_info", SDAQ_info = cJSON_CreateObject());
 		cJSON_AddNumberToObject(SDAQ_info, "firm_rev", (node_dec->SDAQ_info).firm_rev);
 		cJSON_AddNumberToObject(SDAQ_info, "hw_rev", (node_dec->SDAQ_info).hw_rev);
 		cJSON_AddNumberToObject(SDAQ_info, "Number_of_channels", (node_dec->SDAQ_info).num_of_ch);
 		cJSON_AddNumberToObject(SDAQ_info, "Sample_rate", (node_dec->SDAQ_info).sample_rate);
 		cJSON_AddNumberToObject(SDAQ_info, "Max_cal_point", (node_dec->SDAQ_info).max_cal_point);
-		cJSON_AddItemToObject(node_data, "SDAQ_info", SDAQ_info);
 		//-- Add SDAQ's channel Cal dates  --//
 		cJSON_AddItemToObject(node_data, "Calibration_date",list_SDAQ_Channels_cal_dates = cJSON_CreateArray());
 		g_slist_foreach(SDAQ_Channels_cal_dates, extract_list_SDAQ_Channels_cal_dates, list_SDAQ_Channels_cal_dates);
