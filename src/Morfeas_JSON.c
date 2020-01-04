@@ -124,7 +124,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	if(node)
 	{
 		node_data = cJSON_CreateObject();
-		//--Add SDAQ's general data to SDAQ's JSON object
+		//-- Add SDAQ's general data to SDAQ's JSON object --//
 		strftime(date,STR_LEN,"%x %T",gmtime(&node_dec->last_seen));//format time
 		cJSON_AddStringToObject(node_data, "Last_seen_UTC", date);
 		cJSON_AddNumberToObject(node_data, "Last_seen_UNIX", node_dec->last_seen);
@@ -132,14 +132,14 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		cJSON_AddNumberToObject(node_data, "Serial_number", (node_dec->SDAQ_status).dev_sn);
 		cJSON_AddItemToObject(node_data, "SDAQ_type", cJSON_CreateString(dev_type_str[(node_dec->SDAQ_info).dev_type]));
 		cJSON_AddNumberToObject(node_data, "Timediff", node_dec->Timediff);
-		//--Add SDAQ's Status
+		//-- Add SDAQ's Status --//
 		cJSON_AddItemToObject(node_data, "SDAQ_Status", SDAQ_status = cJSON_CreateObject());
 		cJSON_AddNumberToObject(SDAQ_status, "SDAQ_status_val", (node_dec->SDAQ_status).status);
 		cJSON_AddItemToObject(SDAQ_status, "In_sync", cJSON_CreateBool((node_dec->SDAQ_status).status & (1<<In_sync)));
 		cJSON_AddItemToObject(SDAQ_status, "Error", cJSON_CreateBool((node_dec->SDAQ_status).status & (1<<Error)));
 		cJSON_AddItemToObject(SDAQ_status, "State", cJSON_CreateString(status_byte_dec((node_dec->SDAQ_status).status, State)));
 		cJSON_AddItemToObject(SDAQ_status, "Mode", cJSON_CreateString(status_byte_dec((node_dec->SDAQ_status).status, Mode)));
-		//-- Add SDAQ's Info--//
+		//-- Add SDAQ's Info --//
 		cJSON_AddItemToObject(node_data, "SDAQ_info", SDAQ_info = cJSON_CreateObject());
 		cJSON_AddNumberToObject(SDAQ_info, "firm_rev", (node_dec->SDAQ_info).firm_rev);
 		cJSON_AddNumberToObject(SDAQ_info, "hw_rev", (node_dec->SDAQ_info).hw_rev);
