@@ -148,6 +148,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		//-- Add SDAQ's channel Cal dates  --//
 		cJSON_AddItemToObject(node_data, "Calibration_Data",list_SDAQ_Channels_cal_dates = cJSON_CreateArray());
 		g_slist_foreach(SDAQ_Channels_cal_dates, extract_list_SDAQ_Channels_cal_dates, list_SDAQ_Channels_cal_dates);
+		//-- Add SDAQ's Data to root JSON object --//
 		cJSON_AddItemToObject(list_SDAQs, "SDAQs_data",node_data);
 	}
 }
