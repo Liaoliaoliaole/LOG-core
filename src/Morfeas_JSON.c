@@ -118,10 +118,10 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	char date[STR_LEN];
 	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
 	GSList *SDAQ_Channels_cal_dates = node_dec->SDAQ_Channels_cal_dates;
-	cJSON *list_SDAQs = (cJSON *)arg_pass;
-	cJSON *node_data, *list_SDAQ_Channels_cal_dates, *SDAQ_status, *SDAQ_info;
+	cJSON *list_SDAQs, *node_data, *list_SDAQ_Channels_cal_dates, *SDAQ_status, *SDAQ_info;
 	if(node)
 	{
+		list_SDAQs = arg_pass;
 		node_data = cJSON_CreateObject();
 		//-- Add SDAQ's general data to SDAQ's JSON object --//
 		strftime(date,STR_LEN,"%x %T",gmtime(&node_dec->last_seen));//format time
