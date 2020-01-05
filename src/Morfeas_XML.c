@@ -293,3 +293,8 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	}
 	return EXIT_SUCCESS;
 }
+
+int Morfeas_daemon_config_valid(xmlNode *root_element)
+{
+
+}

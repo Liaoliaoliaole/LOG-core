@@ -3,6 +3,7 @@
 <CONFIG>
 	<LOGGERS_DIR>/mnt/ramdisk</LOGGERS_DIR>
 	<COMPONENT>
+		<TYPE>Server</TYPE>
 		<PROGRAM>Morfeas_opc_ua</PROGRAM>
 		<ARGUMENTS>
 			<ARGUMENT>
@@ -16,6 +17,7 @@
 		</ARGUMENTS>
 	</COMPONENT>
 	<COMPONENT>
+		<TYPE>Handler</TYPE>
 		<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
 		<ARGUMENTS>
 			<ARGUMENT>
@@ -27,6 +29,7 @@
 		</ARGUMENTS>
 	</COMPONENT>
 	<COMPONENT>
+		<TYPE>Handler</TYPE>
 		<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
 		<ARGUMENTS>
 			<ARGUMENT>

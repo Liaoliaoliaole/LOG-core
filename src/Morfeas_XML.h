@@ -29,6 +29,10 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc);
 //Function where scan a root xmlNodePtr for node with node_name, return the contents of the node, or NULL if it does not exist
 char * XML_node_get_content(xmlNode *node, const char *node_name);
 
+//-- Morfeas_daemon's Configuration XML related --//
+//Function that validate the content of the Configuration for Morfeas_deamon
+int Morfeas_daemon_config_valid(xmlNode *root_element);
+
 //-- Morfeas_OPC_UA's Configuration XML related --//
 //Function that validate the content of the Configuration for Morfeas OPC_UA
 int Morfeas_opc_ua_config_valid(xmlNode *root_element);
