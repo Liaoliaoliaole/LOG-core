@@ -72,12 +72,12 @@ int logstat_json(char *logstat_path, void *stats_arg)
 		fputs(JSON_str, pFile);
 		fclose (pFile);
 		if(write_error)
-			fprintf(stderr,"Write error @ Statlog file Restored\n");
+			fprintf(stderr,"Write error @ Statlog file, Restored\n");
 		write_error = 0;
 	}
 	else if(!write_error)
 	{
-		fprintf(stderr,"Write error @ Statlog file\n");
+		fprintf(stderr,"Write error @ Statlog file!!!\n");
 		write_error = -1;
 	}
 	cJSON_Delete(root);

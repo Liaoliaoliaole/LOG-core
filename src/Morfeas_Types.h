@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Array with stings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];
 
-//Morfeas_SDAQ-if stats struct
+//Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
 	int FIFO_fd;
@@ -36,7 +36,7 @@ struct Morfeas_SDAQ_if_stats{
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
 };
-// Data of a list_SDAQs node
+// Data of a list_SDAQs node, used in Morfeas_SDAQ_if
 struct SDAQ_info_entry{
 	unsigned char SDAQ_address;
 	short Timediff;
@@ -44,20 +44,20 @@ struct SDAQ_info_entry{
 	sdaq_info SDAQ_info;
 	GSList *SDAQ_Channels_cal_dates;
 	time_t last_seen;
-	unsigned info_collection_status : 2;//3=all info collected, 2=only Dev_info collected, 1=Dev_info requested 0= nothing has been collected
+	unsigned info_collection_status : 2;//3 = All info collected, 2 = Only Dev_info collected, 1 = Dev_info requested, 0 = Nothing has been collected
 };
 // Data of a SDAQ_cal_dates node
 struct Channel_date_entry{
 	unsigned char Channel;
 	sdaq_calibration_date CH_date;
 };
-// Data of a list_SDAQs node
+// Data of a list_SDAQs node, used in Morfeas_SDAQ_if
 struct LogBook_entry{
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
 }__attribute__((packed, aligned(1)));
 
-//Data of the List Links
+//Data of the List Links, used in Morfeas_opc_ua
 struct Link_entry{
 	char ISO_channel_name[20];
 	char interface_type[10];
