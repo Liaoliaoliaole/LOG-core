@@ -1,7 +1,11 @@
 ![picture](./Docs/Artwork/PCB_3d_render.png)
 # Morfeas PRi Hat
 
-This repository related to PCB design of the Morfeas RPi Hat and the supporting software.
+This repository related to Supporting software, PCB and Mechanical design for the Morfeas RPi Hat.
+
+The PCB designed using [KiCad EDA](https://kicad-pcb.org/) where is a Libre(free) electronic CAD/CAM software.
+The mechanical design of the enclosures designed using [Freecad](https://www.freecadweb.org/) where is a Libre(free) mechanical/architecture CAD/CAM Software.
+The supporting software for the Morfeas RPi Hat written in ANSI C and is compatible with GNU operating system.
 
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
