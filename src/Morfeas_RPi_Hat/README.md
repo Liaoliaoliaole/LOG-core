@@ -8,7 +8,6 @@ The mechanical design of the enclosures designed using [Freecad](https://www.fre
 The supporting software for the Morfeas RPi Hat written in ANSI C and is compatible with GNU operating system.<br>
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
-
 ## License
 The PCB design is licensed under TAPRv1 or later - see the [License](./Hardware/TAPR_Open_Hardware_License_v1.0.pdf) file for details.
 
