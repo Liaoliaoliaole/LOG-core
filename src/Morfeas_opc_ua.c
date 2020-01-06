@@ -131,7 +131,10 @@ int main(int argc, char *argv[])
 	}
 	//Wait until all threads ends
 	for(int i=0; i<n_threads; i++)
-		pthread_join(Threads_ids[i], NULL);// wait for threads to finish
+	{
+		pthread_join(Threads_ids[i], NULL);// wait for thread to finish
+		pthread_detach(Threads_ids[i]);
+	}
     UA_Server_delete(server);
 	unlink("/tmp/.Morfeas_FIFO");
 
