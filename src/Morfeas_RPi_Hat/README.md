@@ -3,10 +3,9 @@
 
 This repository related to Supporting software, PCB and Mechanical design for the Morfeas RPi Hat.
 
-The PCB designed using [KiCad EDA](https://kicad-pcb.org/) where is a Libre(free) electronic CAD/CAM software.
-The mechanical design of the enclosures designed using [Freecad](https://www.freecadweb.org/) where is a Libre(free) mechanical/architecture CAD/CAM Software.
-The supporting software for the Morfeas RPi Hat written in ANSI C and is compatible with GNU operating system.
-
+The PCB designed using [KiCad EDA](https://kicad-pcb.org/), A Libre(free) electronic CAD/CAM software.<br>
+The mechanical design of the enclosures designed using [Freecad](https://www.freecadweb.org/), A Libre(free) mechanical/architecture CAD/CAM Software.<br>
+The supporting software for the Morfeas RPi Hat written in ANSI C and is compatible with GNU operating system.<br>
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
 
