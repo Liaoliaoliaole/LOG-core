@@ -48,6 +48,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <fcntl.h>
 
 //Include Functions implementation header
+#include "Morfeas_run_check.h"
 #include "Morfeas_JSON.h"
 #include "Morfeas_IPC.h"// including -> "Types.h"
 #include "Morfeas_Logger.h"
@@ -125,12 +126,18 @@ int main(int argc, char *argv[])
 	//Timers related Variables
 	struct itimerval timer;
 
-
 	if(argc == 1)
 	{
 		print_usage(argv[0]);
 		exit(1);
 	}
+	//Check if program already runs on same bus.
+	if(check_already_run_onBus(argv[0], argv[1]))
+	{
+		fprintf(stderr, "%s for interface \"%s\" Already Running!!!\n", argv[0], argv[1]);
+		exit(EXIT_SUCCESS);
+	}
+	
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
 	if (dir)

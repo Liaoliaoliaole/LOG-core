@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 int check_already_run(char *prog_name)
 {
 	char out_str[128], cmd[128], *tok, i=1;
+	
 	sprintf(cmd, "pidof %s",prog_name);
 	FILE *out = popen(cmd, "r");
 	fgets(out_str, sizeof(out_str), out);
@@ -29,4 +30,18 @@ int check_already_run(char *prog_name)
 	while((tok = strtok(NULL, " ")))
 		i++;
 	return i>1? 1 : 0;
+}
+
+int check_already_run_onBus(char *prog_name, char *bus_name)
+{
+	char out_str[1024], cmd[128], *tok, i=1;
+	
+	sprintf(cmd, "ps a | grep --color=none \"%s %s\"",prog_name, bus_name);
+	FILE *out = popen(cmd, "r");
+	fread(out_str, sizeof(out_str), sizeof(char), out);
+	pclose(out);
+	tok = strtok(out_str, "\n");
+	while((tok = strtok(NULL, "\n")))
+		i++;
+	return i>3? 1 : 0;
 }

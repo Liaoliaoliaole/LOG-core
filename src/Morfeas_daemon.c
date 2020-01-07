@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "Morfeas_run_check.h"
 #include "Morfeas_Types.h"
 #include "Morfeas_XML.h"
 
@@ -72,6 +73,14 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
+	
+	//Check if program already runs in other instance.
+	if(check_already_run(argv[0]))
+	{
+		fprintf(stderr, "%s Already running !!!\n", argv[0]);
+		exit(EXIT_SUCCESS);
+	}
+	
 	if(!config_path || access(config_path, R_OK | F_OK ) || !strstr(config_path, ".xml"))
 	{
 		fprintf(stderr, "Configuration File not defined or invalid!!!\n");
