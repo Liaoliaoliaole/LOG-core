@@ -50,7 +50,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Supplementary/Morfeas_run_check.h"
 #include "../Supplementary/Morfeas_JSON.h"
-#include "../IPC/Morfeas_IPC.h"// including -> "Morfeas_Types.h"
+#include "../IPC/Morfeas_IPC.h" //<-#include -> "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_Logger.h"
 
 static struct Morfeas_SDAQ_if_flags{
