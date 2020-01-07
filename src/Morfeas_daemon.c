@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 
 	int c;
 	//Get options
-	while ((c = getopt (argc, argv, "hVc:a:")) != -1)
+	while ((c = getopt (argc, argv, "hVc:")) != -1)
 	{
 		switch (c)
 		{
