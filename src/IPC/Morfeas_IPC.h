@@ -54,7 +54,7 @@ typedef struct Handler_register_struct{
 	unsigned char handler_type;
 }Handler_reg_op_msg;
 
-	//------SDAQ related------//
+  //------ SDAQ + CANBus related ------//
 typedef struct SDAQ_register_msg_struct{
 	unsigned char IPC_msg_type;
 	char connected_to_BUS[connected_to_BUS_str_size];
@@ -112,6 +112,7 @@ typedef struct CAN_BUS_info_msg_struct{
 //--IPC_MESSAGE--//
 typedef union{
 	Handler_reg_op_msg Handler_reg;
+	//SDAQ + CANBus related
 	SDAQ_reg_update_msg SDAQ_reg_update;
 	SDAQ_clear_msg SDAQ_clean;
 	SDAQ_info_msg SDAQ_info;
