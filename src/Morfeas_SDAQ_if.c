@@ -1,5 +1,5 @@
 /*
-Program: Morfeas-SDAQ-if. A controlling software for SDAQ-CAN Devices, part of morfeas_core project.
+Program: Morfeas_SDAQ_if. A controlling software for SDAQ-CAN Devices, part of morfeas_core project.
 Copyright (C) 12019-12020  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
@@ -120,11 +120,11 @@ int main(int argc, char *argv[])
 	sdaq_sync_debug_data *ts_dec = (sdaq_sync_debug_data *)frame_rx.data;
 	sdaq_calibration_date *date_dec = (sdaq_calibration_date *)frame_rx.data;
 	sdaq_meas *meas_dec = (sdaq_meas *)frame_rx.data;
-
 	//data_and stats of the Morfeas-SDAQ_IF
 	struct Morfeas_SDAQ_if_stats stats = {0};
 	//Timers related Variables
 	struct itimerval timer;
+
 
 	if(argc == 1)
 	{

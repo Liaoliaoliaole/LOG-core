@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <glibtop/fsusage.h>
 
 //Include Functions implementation header
+#include "Morfeas_run_check.h"
 #include "Morfeas_handlers_nodeset.h" //<-#include "Morfeas_Types.h"
 #include "Morfeas_XML.h"
 
@@ -76,6 +77,7 @@ int main(int argc, char *argv[])
 	//variables for threads
 	pthread_t Threads_ids[n_threads] = {0};
 	int c;
+	
 	//Get options
 	while ((c = getopt (argc, argv, "hVc:a:")) != -1)
 	{
@@ -98,6 +100,13 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
+	//Check if program already runs in other instance.
+	if(check_already_run(argv[0]))
+	{
+		fprintf(stderr, "%s Already running !!!\n", argv[0]);
+		exit(EXIT_SUCCESS);
+	}
+	
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
