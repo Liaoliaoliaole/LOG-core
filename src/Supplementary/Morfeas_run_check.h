@@ -15,9 +15,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <stdio.h>
+
 //-- Function that detects if other program with the same name already running --//
-//-- return 0 if no other program found --// 
+//-- return 0 if no other program found --//
 int check_already_run(char *prog_name);
 //-- Function that detects if other program with the same name already running on the same bus --//
-//-- return 0 if no other program found --// 
+//-- return 0 if no other program found --//
 int check_already_run_onBus(char *prog_name, char *bus_name);
+//-- Function that calculate and returns the bsd Checksum of the data--//
+unsigned int Checksum(void *data, size_t data_size);
+
+

@@ -56,7 +56,11 @@ struct LogBook_entry{
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
 }__attribute__((packed, aligned(1)));
-
+// Data entry of a LogBook file, used in Morfeas_SDAQ_if
+struct LogBook{
+	struct LogBook_entry data;
+	unsigned short checksum;
+}__attribute__((packed, aligned(1)));
 //Data of the List Links, used in Morfeas_opc_ua
 struct Link_entry{
 	char ISO_channel_name[20];

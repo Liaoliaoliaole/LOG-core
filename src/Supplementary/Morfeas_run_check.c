@@ -45,3 +45,15 @@ int check_already_run_onBus(char *prog_name, char *bus_name)
 		i++;
 	return i>3? 1 : 0;
 }
+
+unsigned short Checksum(void *data, size_t data_size)
+{
+    unsigned short checksum = 0;
+	unsigned char *data_dec = (unsigned char *)data;
+    for (size_t i = 0; i < data_size; i++, data_dec++)
+    {
+        checksum = (checksum >> 1) + ((checksum & 1) << 15);
+        checksum += *(data_dec);
+    }
+    return checksum;
+}
