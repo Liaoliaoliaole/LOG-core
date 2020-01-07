@@ -220,7 +220,10 @@ int main(int argc, char *argv[])
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
-	if(LogBook_file(&stats, "r"))
+	RX_bytes = LogBook_file(&stats, "r");
+	if(RX_bytes>0)
+		Logger("IO Error on LogBook File!!!\n");
+	else if(RX_bytes<0)
 		Logger("Checksum Error on LogBook File!!!\n");
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
@@ -632,12 +635,14 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 						stats->LogBook = NULL;
 						fp = freopen(stats->LogBook_file_path, "w", fp);
 						fclose(fp);
-						return EXIT_FAILURE;
+						return -1;
 					}
 				}
-			}while(read_bytes == sizeof(struct LogBook_entry));
+			}while(read_bytes == sizeof(struct LogBook));
 			fclose(fp);
 		}
+		else
+			return EXIT_FAILURE;
 	}
 	else if(!strcmp(read_write_or_append, "w"))
 	{
@@ -660,6 +665,8 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 				}
 				fclose(fp);
 			}
+			else
+				return EXIT_FAILURE;
 		}
 	}
 	else if(!strcmp(read_write_or_append, "a"))
@@ -678,6 +685,8 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 				fwrite (&checksum, 1, sizeof(unsigned short), fp);
 				fclose(fp);
 			}
+			else
+				return EXIT_FAILURE;
 		}
 	}
 	return 0;
