@@ -29,8 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
-#include "Morfeas_Types.h"
-//#include "Morfeas_IPC.h"
+#include "../Morfeas_Types.h"
 
 /*
 void print_XML_node(xmlNode * node)

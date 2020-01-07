@@ -48,10 +48,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <fcntl.h>
 
 //Include Functions implementation header
-#include "Morfeas_run_check.h"
-#include "Morfeas_JSON.h"
-#include "Morfeas_IPC.h"// including -> "Types.h"
-#include "Morfeas_Logger.h"
+#include "../Supplementary/Morfeas_run_check.h"
+#include "../Supplementary/Morfeas_JSON.h"
+#include "../IPC/Morfeas_IPC.h"// including -> "Types.h"
+#include "../Supplementary/Morfeas_Logger.h"
 
 static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s for interface \"%s\" Already Running!!!\n", argv[0], argv[1]);
 		exit(EXIT_SUCCESS);
 	}
-	
+
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
 	if (dir)
@@ -825,7 +825,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	{
 		list_SDAQ_node_data = check_is_in_list_SDAQ->data;
 		time(&(list_SDAQ_node_data->last_seen));//update last_seen for the SDAQ entry
-		memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status)); //update SDAQ's status value 
+		memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status)); //update SDAQ's status value
 		if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//if TRUE, set back to the node_data->SDAQ_address
 			SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
 		return list_SDAQ_node_data;

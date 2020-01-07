@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <math.h>
 
 //Include Functions implementation header
-#include "Morfeas_handlers_nodeset.h"
+#include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
 pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 

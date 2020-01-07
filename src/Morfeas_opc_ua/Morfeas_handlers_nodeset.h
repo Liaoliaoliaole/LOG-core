@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 
-#include "Morfeas_IPC.h"//<-#include "Morfeas_Types.h"
+#include "../IPC/Morfeas_IPC.h"//<-#include "Morfeas_Types.h"
 
 extern pthread_mutex_t OPC_UA_NODESET_access;
 
