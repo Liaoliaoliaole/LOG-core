@@ -7,17 +7,15 @@ CANif_DEP_dir = ./src/sdaq-worker/work
 CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src/*.h
 CANif_DEP_SRC_dir = ./src/sdaq-worker/src
 
-HEADERS_all = $(SRC_dir)/IPC/*.h \
-			  $(SRC_dir)/Morfeas_opc_ua/*.h \
-			  $(SRC_dir)/Morfeas_SDAQ/*.h \
-			  $(SRC_dir)/Supplementary/*.h \
-			  $(SRC_dir)/Morfeas_RPi_Hat/*.h
+HEADERS = $(SRC_dir)/IPC/*.h \
+		  $(SRC_dir)/Morfeas_opc_ua/*.h \
+		  $(SRC_dir)/Supplementary/*.h \
+		  #$(SRC_dir)/Morfeas_RPi_Hat/*.h
 
 Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_daemon.o \
 					  $(WORK_dir)/Morfeas_XML.o \
-					  $(WORK_dir)/Morfeas_IPC.o \
-					  #$(HEADERS_all)
+					  $(WORK_dir)/Morfeas_IPC.o
 
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_opc_ua.o \
@@ -25,8 +23,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
-					  $(WORK_dir)/Morfeas_XML.o \
-					  #$(HEADERS_all)
+					  $(WORK_dir)/Morfeas_XML.o
 
 Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_SDAQ_if.o \
@@ -34,21 +31,20 @@ Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_Logger.o \
-					  $(CANif_DEP_HEADERS_dir) \
-					  #$(HEADERS_all)
+					  $(CANif_DEP_HEADERS_dir)
 
 all: $(BUILD_dir)/Morfeas_daemon \
 	 $(BUILD_dir)/Morfeas_opc_ua \
 	 $(BUILD_dir)/Morfeas_SDAQ_if
 
 #Compilation of Morfeas applications
-$(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP)
+$(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP) $(HEADERS)
 	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
 
-$(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP)
+$(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP) $(HEADERS)
 	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
 
-$(BUILD_dir)/Morfeas_daemon: $(Morfeas_daemon_DEP)
+$(BUILD_dir)/Morfeas_daemon: $(Morfeas_daemon_DEP) $(HEADERS)
 	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 #Compilation of Morfeas_IPC
