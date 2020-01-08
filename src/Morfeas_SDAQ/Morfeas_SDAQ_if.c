@@ -87,6 +87,8 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats);
+//Function that add current meas to channel's accumulator of a SDAQ's channel. Used in FSM
+int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry *sdaq_node);
 //Function that find and return the amount of incomplete (with out all info and dates) nodes.
 int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM, also send IPC msg t opc_ua.
@@ -258,7 +260,9 @@ int main(int argc, char *argv[])
 				case Measurement_value:
 					if((SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 					{
-						time(&(SDAQ_data->last_seen));
+						time(&(SDAQ_data->last_seen));//Update last seen time
+						if(logstat_path)
+							acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//add meas to acc
 						//Send measurement through IPC
 						IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
 						memccpy(IPC_msg.SDAQ_meas.connected_to_BUS,stats.CAN_IF_name,'\0',connected_to_BUS_str_size);
@@ -517,6 +521,12 @@ struct Channel_date_entry* new_SDAQ_Channel_date_entry()
     struct Channel_date_entry *new_node = g_slice_new0(struct Channel_date_entry);
     return new_node;
 }
+//Channel_acc_meas_entry allocator
+struct Channel_acc_meas_entry* new_SDAQ_Channel_acc_meas_entry()
+{
+    struct Channel_acc_meas_entry *new_node = g_slice_new0(struct Channel_acc_meas_entry);
+    return new_node;
+}
 //LogBook_entry allocator
 struct LogBook_entry* new_LogBook_entry()
 {
@@ -529,12 +539,19 @@ void free_channel_cal_dates_entry(gpointer node)
 {
 	g_slice_free(struct Channel_date_entry, node);
 }
+//free a node from list SDAQ_Channels_acc_meas
+void free_channel_acc_meas_entry(gpointer node)
+{
+	g_slice_free(struct Channel_acc_meas_entry, node);
+}
 //free a node from list SDAQ_info
 void free_SDAQ_info_entry(gpointer node)
 {
 	struct SDAQ_info_entry *node_dec = node;
 	g_slist_free_full(node_dec->SDAQ_Channels_cal_dates, free_channel_cal_dates_entry);
-	//node_dec->SDAQ_Channels_cal_dates = NULL;
+	node_dec->SDAQ_Channels_cal_dates = NULL;
+	g_slist_free_full(node_dec->SDAQ_Channels_acc_meas, free_channel_acc_meas_entry);
+	node_dec->SDAQ_Channels_acc_meas = NULL;
 	g_slice_free(struct SDAQ_info_entry, node);
 }
 //free a node from List LogBook
@@ -741,12 +758,21 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 	return EXIT_SUCCESS;
 }
 /*
-	Comparing function used in g_slist_find_custom, comp arg channel to node's channel.
+	Comparing function used in g_slist_find_custom, comp arg channel to Channel_date_entry node's channel.
 */
-gint SDAQ_Channels_cal_dates_entry_find_address (gconstpointer node, gconstpointer arg)
+gint SDAQ_Channels_cal_dates_entry_find_channel (gconstpointer node, gconstpointer arg)
 {
 	const unsigned char *arg_t = arg;
 	struct Channel_date_entry *node_dec = (struct Channel_date_entry *) node;
+	return node_dec->Channel == *arg_t ? 0 : 1;
+}
+/*
+	Comparing function used in g_slist_find_custom, comp arg channel to Channel_acc_meas_entry node's channel.
+*/
+gint SDAQ_Channels_acc_meas_entry_find_channel (gconstpointer node, gconstpointer arg)
+{
+	const unsigned char *arg_t = arg;
+	struct Channel_acc_meas_entry *node_dec = (struct Channel_acc_meas_entry *) node;
 	return node_dec->Channel == *arg_t ? 0 : 1;
 }
 /*
@@ -755,6 +781,13 @@ gint SDAQ_Channels_cal_dates_entry_find_address (gconstpointer node, gconstpoint
 gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
 {
 	return (((struct Channel_date_entry *)a)->Channel <= ((struct Channel_date_entry *)b)->Channel) ?  0 : 1;
+}
+/*
+	Comparing function used in g_slist_insert_sorted,
+*/
+gint SDAQ_Channels_acc_meas_entry_cmp (gconstpointer a, gconstpointer b) 
+{
+	return (((struct Channel_acc_meas_entry *)a)->Channel <= ((struct Channel_acc_meas_entry *)b)->Channel) ?  0 : 1;
 }
 /*Function for Updating "Device Info" of a SDAQ. Used in FSM*/
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
@@ -804,7 +837,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
-			date_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_cal_dates, &channel, SDAQ_Channels_cal_dates_entry_find_address);
+			date_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_cal_dates, &channel, SDAQ_Channels_cal_dates_entry_find_channel);
 			if(date_list_node)//channel is already in to the SDAQ_Channels_cal_dates list: Update CH_date.
 			{
 				sdaq_Channels_cal_dates_node = date_list_node->data;
@@ -847,6 +880,57 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 	}
 	return EXIT_FAILURE;
 }
+/*Function that add current meas to channel's accumulator of a SDAQ's channel. Used in FSM*/
+int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry *sdaq_node)
+{
+	GSList *acc_meas_list_node = NULL;
+	struct Channel_acc_meas_entry *sdaq_Channels_acc_meas_node;
+	if(sdaq_node)
+	{
+		acc_meas_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_acc_meas, &channel, SDAQ_Channels_acc_meas_entry_find_channel);
+		if(acc_meas_list_node)//channel is already in to the SDAQ_Channels_acc_meas list: add meas to acc.
+		{
+			sdaq_Channels_acc_meas_node = acc_meas_list_node->data;
+			sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
+			sdaq_Channels_acc_meas_node->status = meas_dec->status;
+			sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
+			sdaq_Channels_acc_meas_node->cnt++;
+			return EXIT_SUCCESS;
+		}
+		else//Channel is not in the list
+		{
+			sdaq_Channels_acc_meas_node = new_SDAQ_Channel_acc_meas_entry();
+			if(sdaq_Channels_acc_meas_node)
+			{
+				sdaq_Channels_acc_meas_node->Channel = channel;
+				sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
+				sdaq_Channels_acc_meas_node->status = meas_dec->status;
+				if(!(meas_dec->status & (1<<No_sensor)))
+				{
+					sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
+					sdaq_Channels_acc_meas_node->cnt++;
+				}
+				else
+				{
+					sdaq_Channels_acc_meas_node->meas_acc = 0;
+					sdaq_Channels_acc_meas_node->cnt = 0;
+				}
+				sdaq_node->SDAQ_Channels_acc_meas = g_slist_insert_sorted(sdaq_node->SDAQ_Channels_acc_meas,
+																			  sdaq_Channels_acc_meas_node,
+																		      SDAQ_Channels_acc_meas_entry_cmp);
+				return EXIT_SUCCESS;
+			}
+			else
+			{
+				fprintf(stderr,"Memory error!!!\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+	else
+		return EXIT_FAILURE;
+}
+
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM
 struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats)
 {

@@ -43,8 +43,17 @@ struct SDAQ_info_entry{
 	sdaq_status SDAQ_status;
 	sdaq_info SDAQ_info;
 	GSList *SDAQ_Channels_cal_dates;
+	GSList *SDAQ_Channels_acc_meas;
 	time_t last_seen;
 	unsigned info_collection_status : 2;//3 = All info collected, 2 = Only Dev_info collected, 1 = Dev_info requested, 0 = Nothing has been collected
+};
+// Data of a SDAQ_average_meas node
+struct Channel_acc_meas_entry{
+	unsigned char Channel;
+	unsigned char status;
+	unsigned char unit_code;
+	float meas_acc;
+	unsigned short cnt;
 };
 // Data of a SDAQ_cal_dates node
 struct Channel_date_entry{

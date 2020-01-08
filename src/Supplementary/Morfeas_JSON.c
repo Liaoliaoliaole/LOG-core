@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 #include <time.h>
 
 //Header for cJSON
@@ -56,10 +57,10 @@ int logstat_json(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
-	cJSON_AddNumberToObject(root, "BUS_voltage", stats->Bus_voltage);
-	cJSON_AddNumberToObject(root, "BUS_amperage", stats->Bus_amperage);
+	cJSON_AddNumberToObject(root, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
+	cJSON_AddNumberToObject(root, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
 	cJSON_AddNumberToObject(root, "BUS_Shunt_Res_temp", stats->Shunt_temp);
-	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
+	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
 	cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
 	g_slist_foreach(stats->list_SDAQs, extract_list_SDAQnode_data, logstat);
@@ -91,7 +92,7 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 	char date[STR_LEN];
 	struct Channel_date_entry *node_dec = node;
 	struct tm cal_date = {0};
-	cJSON *list_SDAQs = arg_pass;
+	cJSON *array = arg_pass;
 	cJSON *node_data;
 	if(node)
 	{
@@ -109,7 +110,37 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->CH_date.cal_units]));
 		cJSON_AddItemToObject(node_data, "Is_calibrated", cJSON_CreateBool(node_dec->CH_date.cal_units >= Unit_code_base_region_size));
 		cJSON_AddNumberToObject(node_data, "Unit_code", node_dec->CH_date.cal_units);
-		cJSON_AddItemToObject(list_SDAQs, "Calibration_Data", node_data);
+		cJSON_AddItemToObject(array, "Calibration_Data", node_data);
+	}
+}
+
+void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass)
+{
+	struct Channel_acc_meas_entry *node_dec = node;
+	cJSON *array = arg_pass;
+	cJSON *node_data, *channel_status;
+	if(node)
+	{
+		node_data = cJSON_CreateObject();
+		cJSON_AddNumberToObject(node_data, "Channel", node_dec->Channel);
+		//-- Add SDAQ's Channel Status --//
+		cJSON_AddItemToObject(node_data, "Channel_Status", channel_status = cJSON_CreateObject());
+		cJSON_AddNumberToObject(channel_status, "Channel_status_val", node_dec->status);
+		cJSON_AddItemToObject(channel_status, "Out_of_Range", cJSON_CreateBool(node_dec->status & (1<<Out_of_range)));
+		cJSON_AddItemToObject(channel_status, "No_Sensor", cJSON_CreateBool(node_dec->status & (1<<No_sensor)));
+		//-- Add Unit of Channel --//
+		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->unit_code]));
+		//-- Add Averaged measurement of Channel --//
+		if(!(node_dec->status & (1<<No_sensor)))
+		{
+			node_dec->meas_acc/=(float)node_dec->cnt;
+			cJSON_AddNumberToObject(node_data, "Meas_avg", roundf(1000.0 * node_dec->meas_acc)/1000.0);
+			node_dec->meas_acc = 0;
+			node_dec->cnt = 0;
+		}
+		else
+			cJSON_AddNumberToObject(node_data, "Meas_avg", NAN);
+		cJSON_AddItemToObject(array, "Measurement_data", node_data);
 	}
 }
 
@@ -118,7 +149,8 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 	char date[STR_LEN];
 	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
 	GSList *SDAQ_Channels_cal_dates = node_dec->SDAQ_Channels_cal_dates;
-	cJSON *list_SDAQs, *node_data, *list_SDAQ_Channels_cal_dates, *SDAQ_status, *SDAQ_info;
+	GSList *SDAQ_Channels_acc_meas = node_dec->SDAQ_Channels_acc_meas;
+	cJSON *list_SDAQs, *node_data, *list_SDAQ_Channels_cal_dates, *SDAQ_status, *SDAQ_info, *list_SDAQ_Channels_acc_meas;
 	if(node)
 	{
 		list_SDAQs = arg_pass;
@@ -148,6 +180,9 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		//-- Add SDAQ's channel Cal dates  --//
 		cJSON_AddItemToObject(node_data, "Calibration_Data",list_SDAQ_Channels_cal_dates = cJSON_CreateArray());
 		g_slist_foreach(SDAQ_Channels_cal_dates, extract_list_SDAQ_Channels_cal_dates, list_SDAQ_Channels_cal_dates);
+		//-- Add SDAQ's channel average measurement  --//
+		cJSON_AddItemToObject(node_data, "Channels_Meas",list_SDAQ_Channels_acc_meas = cJSON_CreateArray());
+		g_slist_foreach(SDAQ_Channels_acc_meas, extract_list_SDAQ_Channels_acc_to_avg_meas, list_SDAQ_Channels_acc_meas);
 		//-- Add SDAQ's Data to root JSON object --//
 		cJSON_AddItemToObject(list_SDAQs, "SDAQs_data",node_data);
 	}
