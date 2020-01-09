@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define connected_to_BUS_str_size 10
+#define connected_to_BUS_str_size 20
 #define Data_FIFO "/tmp/.Morfeas_handlers_FIFO"
 
 #include "../Morfeas_Types.h"

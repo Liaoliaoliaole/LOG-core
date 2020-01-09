@@ -239,6 +239,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 //IPC_Receiver, Thread function.
 void* IPC_Receiver(void *varg_pt)
 {
+	char str_msg_buff[50];
 	//Morfeas IPC msg decoder
 	IPC_message IPC_msg_dec;
 	time_t last_health_update=0, now;
@@ -256,6 +257,9 @@ void* IPC_Receiver(void *varg_pt)
 			{
 				//--- Message type from any handler (Registration to OPC_UA) ---//
 				case IPC_Handler_register:
+					sprintf(str_msg_buff, "Register %s Handler for Bus: %s", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
+																					    IPC_msg_dec.Handler_reg.connected_to_BUS);
+					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, str_msg_buff);
 					switch(IPC_msg_dec.Handler_reg.handler_type)
 					{
 						case SDAQ:
