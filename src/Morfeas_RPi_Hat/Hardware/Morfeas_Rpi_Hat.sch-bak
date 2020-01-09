@@ -461,7 +461,7 @@ U 1 1 5E0F6FA7
 P 2250 7000
 F 0 "Open_Source_hardware1" H 2250 7275 50  0001 C CNN
 F 1 "Open Source Hardware" H 2250 6775 50  0000 C CNN
-F 2 "Symbol:OSHW-Logo2_7.3x6mm_SilkScreen" H 2250 7000 50  0001 C CNN
+F 2 "Symbol:OSHW-Logo2_9.8x8mm_SilkScreen" H 2250 7000 50  0001 C CNN
 F 3 "~" H 2250 7000 50  0001 C CNN
 	1    2250 7000
 	1    0    0    -1  
@@ -1793,7 +1793,7 @@ U 1 1 5E12A45C
 P 3250 7000
 F 0 "Morfeas_project_Logo1" H 3250 6850 60  0001 C CNN
 F 1 "Morfeas Project's Logo" H 3250 6850 60  0000 C CNN
-F 2 "Morfeas_RPi_Hat:Morfeas_logo" H 3250 7000 75  0001 C CNN
+F 2 "Morfeas_RPi_Hat:Morfeas_logo_big_silkscreen" H 3250 7000 75  0001 C CNN
 F 3 "" H 3250 7000 75  0001 C CNN
 	1    3250 7000
 	1    0    0    -1  
