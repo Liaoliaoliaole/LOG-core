@@ -274,6 +274,9 @@ void* IPC_Receiver(void *varg_pt)
 					}
 					break;
 				case IPC_Handler_unregister:
+					sprintf(str_msg_buff, "Remove %s Handler for %s", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
+																					    IPC_msg_dec.Handler_reg.connected_to_BUS);
+					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, str_msg_buff);
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
