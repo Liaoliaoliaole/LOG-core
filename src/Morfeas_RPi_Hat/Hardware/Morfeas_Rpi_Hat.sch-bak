@@ -1146,7 +1146,6 @@ TXD
 NoConn ~ 8950 3500
 NoConn ~ 10150 3900
 NoConn ~ 10150 3800
-NoConn ~ 6050 2950
 Text GLabel 8800 1650 0    50   Input ~ 0
 TXD
 Text GLabel 8800 1950 0    50   Input ~ 0
