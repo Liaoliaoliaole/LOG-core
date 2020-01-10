@@ -109,6 +109,14 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 #define anchor_check_buff_size 100
 int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 {
+	union check_flags{
+		struct xml_check_flags{
+			unsigned interface_name : 1;
+			unsigned iso_channel : 1;
+			unsigned anchor : 1;
+		}as_struct;
+		unsigned char as_byte;
+	}fl = {.as_byte = 0};
 	xmlNode *check_element, *element;
 	char *content, *iso_channel, *anchor_arg[max_arg_range] = {NULL};
 	char anchor_check[anchor_check_buff_size], arg_check[max_arg_range][anchor_check_buff_size];
@@ -129,6 +137,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 					}
 					else if(!strcmp((char *)(check_element->name), "INTERFACE_TYPE"))//Invalid Interface name
 					{
+						fl.as_struct.interface_name = 1;
 						if_name_okay = 0;
 						for(int i=0; Morfeas_IPC_handler_type_name[i]; i++)
 							if(!strcmp(Morfeas_IPC_handler_type_name[i], (char *)(check_element->children->content)))
@@ -159,6 +168,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		{
 			if((iso_channel = XML_node_get_content(element, "ISO_CHANNEL")))
 			{
+				fl.as_struct.iso_channel = 1;
 				for(check_element = element->next; check_element; check_element = check_element->next)
 				{
 					if((content = XML_node_get_content(check_element, "ISO_CHANNEL")))
@@ -186,6 +196,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		}
 		if((content = XML_node_get_content(check_element, "ANCHOR")))
 		{
+			fl.as_struct.anchor = 1;
 			strcpy(anchor_check, content);
 			if(strstr(content,".CH"))
 			{
@@ -204,6 +215,11 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 				return EXIT_FAILURE;
 			}
 		}
+	}
+	if(!fl.as_byte)
+	{
+		fprintf(stderr, "\nConfiguration XML have missing nodes !!!!\n\n");
+		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
