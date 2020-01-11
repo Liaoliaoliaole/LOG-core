@@ -239,7 +239,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 //IPC_Receiver, Thread function.
 void* IPC_Receiver(void *varg_pt)
 {
-	char str_msg_buff[50];
+	char str_msg_buff[128];
 	//Morfeas IPC msg decoder
 	IPC_message IPC_msg_dec;
 	time_t last_health_update=0, now;
