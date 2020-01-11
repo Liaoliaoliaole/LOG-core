@@ -247,7 +247,7 @@ void* IPC_Receiver(void *varg_pt)
 	int FIFO_fd;
 	//Make the Named Pipe(FIFO)
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-    FIFO_fd = open(Data_FIFO, O_RDWR );//O_NONBLOCK | O_RSYNC, O_RDONLY
+    FIFO_fd = open(Data_FIFO, O_RDWR);// O_NONBLOCK | O_RSYNC, O_RDONLY
 	while(running)
 	{
 		type = IPC_msg_RX(FIFO_fd, &IPC_msg_dec);
