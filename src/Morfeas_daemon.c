@@ -108,10 +108,9 @@ int main(int argc, char *argv[])
 				{
 					closedir(loggers_dir);
 					//Get components from Config XML
-					xml_node = root_element->next;
+					xml_node = root_element->children->next->children;
 					while(xml_node)
 					{
-
 						xml_node = xml_node->next;
 					}
 				}
