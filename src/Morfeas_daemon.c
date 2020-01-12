@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
 				if((loggers_dir = opendir(path_buff)))
 				{
 					closedir(loggers_dir);
+					//Get components from Config XML
 					xml_node = root_element->next;
 					while(xml_node)
 					{
