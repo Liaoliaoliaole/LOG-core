@@ -108,10 +108,18 @@ int main(int argc, char *argv[])
 				{
 					closedir(loggers_dir);
 					//Get components from Config XML
-					xml_node = root_element->children->next->children;
-					while(xml_node)
+					if((xml_node = get_XML_node(root_element, "COMPONENTS")))
 					{
-						xml_node = xml_node->next;
+						while(xml_node)
+						{
+							xml_node = xml_node->next;
+						}
+					}
+					else
+					{
+						printf("\"COMPONENTS\" XML node not found\n");
+						xmlFreeDoc(doc);//Free XML Doc
+						exit(EXIT_FAILURE);
 					}
 				}
 				else

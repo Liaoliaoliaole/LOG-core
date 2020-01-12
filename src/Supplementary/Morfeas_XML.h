@@ -26,6 +26,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //-- General XML Functions --//
 //Function that parser and validate the Nodeset configuration XML
 int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc);
+//Function that find and return the node with name "Node_name"
+xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name);
 //Function where scan a root xmlNodePtr for node with node_name, return the contents of the node, or NULL if it does not exist
 char * XML_node_get_content(xmlNode *node, const char *node_name);
 

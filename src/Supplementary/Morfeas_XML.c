@@ -355,7 +355,25 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 	return EXIT_SUCCESS;
 }
 
-
+xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name)
+{
+	xmlNode *cur_node, *ret = NULL;
+	if (root_node->type == XML_ELEMENT_NODE)
+	{
+		for (cur_node = root_node->children; cur_node; cur_node = cur_node->next)
+		{
+			if (cur_node->type == XML_ELEMENT_NODE)
+			{
+				if(!strcmp((char *)(cur_node->name), Node_name))
+					return cur_node;
+				if(cur_node->children)
+					if((ret = get_XML_node(cur_node, Node_name)))
+						return ret;
+			}
+		}
+	}
+	return NULL;
+}
 
 
 
