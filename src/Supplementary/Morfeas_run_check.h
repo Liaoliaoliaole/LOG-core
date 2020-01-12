@@ -24,6 +24,6 @@ int check_already_run(char *prog_name);
 //-- return 0 if no other program found --//
 int check_already_run_onBus(char *prog_name, char *bus_name);
 //-- Function that calculate and returns the bsd Checksum of the data--//
-unsigned int Checksum(void *data, size_t data_size);
+unsigned char Checksum(void *data, size_t data_size);
 
 

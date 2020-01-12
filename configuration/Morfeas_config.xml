@@ -2,42 +2,44 @@
 <!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
 <CONFIG>
 	<LOGGERS_DIR>/mnt/ramdisk</LOGGERS_DIR>
-	<COMPONENT>
-		<TYPE>Server</TYPE>
-		<PROGRAM>Morfeas_opc_ua</PROGRAM>
-		<ARGUMENTS>
-			<ARGUMENT>
-				<OPTION>-a</OPTION>
-				<OPT_ARG>Morfeas test application</OPT_ARG>
-			</ARGUMENT>
-			<ARGUMENT>
-				<OPTION>-c</OPTION>
-				<OPT_ARG></OPT_ARG><!-- Absolute path of the NODESet configuration file-->
-			</ARGUMENT>
-		</ARGUMENTS>
-	</COMPONENT>
-	<COMPONENT>
-		<TYPE>Handler</TYPE>
-		<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
-		<ARGUMENTS>
-			<ARGUMENT>
-				<OPTION>vcan0</OPTION>
-			</ARGUMENT>
-			<ARGUMENT>
-				<OPTION>/mnt/ramdisk</OPTION>
-			</ARGUMENT>
-		</ARGUMENTS>
-	</COMPONENT>
-	<COMPONENT>
-		<TYPE>Handler</TYPE>
-		<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
-		<ARGUMENTS>
-			<ARGUMENT>
-				<OPTION>vcan1</OPTION>
-			</ARGUMENT>
-			<ARGUMENT>
-				<OPTION>/mnt/ramdisk</OPTION>
-			</ARGUMENT>
-		</ARGUMENTS>
-	</COMPONENT>
+	<COMPONENTS>
+		<COMPONENT>
+			<TYPE>Server</TYPE>
+			<PROGRAM>Morfeas_opc_ua</PROGRAM>
+			<ARGUMENTS>
+				<ARGUMENT>
+					<OPTION>-a</OPTION>
+					<OPT_ARG>Morfeas test application</OPT_ARG>
+				</ARGUMENT>
+				<ARGUMENT>
+					<OPTION>-c</OPTION>
+					<OPT_ARG></OPT_ARG><!-- Absolute path of the NODESet configuration file-->
+				</ARGUMENT>
+			</ARGUMENTS>
+		</COMPONENT>
+		<COMPONENT>
+			<TYPE>Handler</TYPE>
+			<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
+			<ARGUMENTS>
+				<ARGUMENT>
+					<OPTION>vcan0</OPTION>
+				</ARGUMENT>
+				<ARGUMENT>
+					<OPTION>/mnt/ramdisk</OPTION>
+				</ARGUMENT>
+			</ARGUMENTS>
+		</COMPONENT>
+		<COMPONENT Disable="true">
+			<TYPE>Handler</TYPE>
+			<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
+			<ARGUMENTS>
+				<ARGUMENT>
+					<OPTION>vcan1</OPTION>
+				</ARGUMENT>
+				<ARGUMENT>
+					<OPTION>/mnt/ramdisk</OPTION>
+				</ARGUMENT>
+			</ARGUMENTS>
+		</COMPONENT>
+	</COMPONENTS>
 </CONFIG>

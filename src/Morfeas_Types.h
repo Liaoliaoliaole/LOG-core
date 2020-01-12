@@ -68,7 +68,7 @@ struct LogBook_entry{
 // Data entry of a LogBook file, used in Morfeas_SDAQ_if
 struct LogBook{
 	struct LogBook_entry data;
-	unsigned short checksum;
+	unsigned char checksum;
 }__attribute__((packed, aligned(1)));
 //Data of the List Links, used in Morfeas_opc_ua
 struct Link_entry{

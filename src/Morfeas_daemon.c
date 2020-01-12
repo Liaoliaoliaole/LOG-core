@@ -87,6 +87,10 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
+	signal(SIGINT, stopHandler);
+    signal(SIGTERM, stopHandler);
+
 	if(!Morfeas_XML_parsing(config_path, &doc))
 	{
 		root_element = xmlDocGetRootElement(doc);
@@ -107,10 +111,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "XML Parsing of The configuration XML file failed!!!\n");
 		exit(EXIT_FAILURE);
 	}
-
-	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
-	signal(SIGINT, stopHandler);
-    signal(SIGTERM, stopHandler);
 
 	while(running)
 		sleep(1);

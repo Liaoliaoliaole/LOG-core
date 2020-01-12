@@ -42,16 +42,50 @@ void print_XML_node(xmlNode * node)
 		{
 			if (cur_node->type == XML_ELEMENT_NODE)
 			{
-				printf("\tChild Node name: %s\n", cur_node->name);
 				if(cur_node->children)
-					printf("\t\tHave contents: %s\n", cur_node->children->content);
+				{
+					if(cur_node->children->content)
+					{
+						printf("\tChild Node name: %s\n", cur_node->name);
+						printf("\t\tHave contents: %s\n", cur_node->children->content);
+					}
+					else if(cur_node->children)
+					{
+						print_XML_node(cur_node);
+					}
+				}
 				else
 					printf("\t\tEmpty\n");
 			}
+			else
+				printf("Is Not 'XML_ELEMENT_NODE'\n");
 		}
 	}
 }
 */
+xmlNode* scaning_XML_nodes_for_empty(xmlNode * node)
+{
+    xmlNode *cur_node, *ret = NULL;
+	if (node->type == XML_ELEMENT_NODE)
+	{
+		for (cur_node = node->children; cur_node; cur_node = cur_node->next)
+		{
+			if (cur_node->type == XML_ELEMENT_NODE)
+			{
+				if(cur_node->children)
+				{
+					ret = scaning_XML_nodes_for_empty(cur_node);
+					if (ret)
+						return ret;
+				}
+				else
+					return cur_node;
+			}
+		}
+	}
+	return NULL;
+}
+
 char * XML_node_get_content(xmlNode *node, const char *node_name)
 {
     xmlNode *cur_node;
@@ -311,5 +345,20 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 
 int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
+	xmlNode *empty;
+	//Empty content scan
+	if((empty = scaning_XML_nodes_for_empty(root_element)))
+	{
+		fprintf(stderr, "\nNode \"%s\" @Line: %d does not have content !!!!\n\n", empty->name, empty->line);
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }
+
+
+
+
+
+
+
+

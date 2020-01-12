@@ -619,7 +619,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 	struct LogBook_entry *node_data;
 	struct LogBook data;
 	size_t read_bytes;
-	unsigned short checksum;
+	unsigned char checksum;
 
 	if(!strcmp(read_write_or_append, "r"))
 	{
@@ -632,7 +632,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 		if(fp)
 		{
 			do{
-				read_bytes = fread(&data, 1, sizeof(struct LogBook), fp);
+				read_bytes = fread(&data, 1, sizeof(data), fp);
 				if(read_bytes == sizeof(struct LogBook))
 				{
 					if(!(node_data = new_LogBook_entry()))
@@ -640,10 +640,10 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 						fprintf(stderr,"Memory Error!!!\n");
 						exit(EXIT_FAILURE);
 					}
-					checksum = Checksum(&(data.data), sizeof(struct LogBook_entry));
+					checksum = Checksum(&(data.data), sizeof(data.data));
 					if(!(data.checksum ^ checksum))
 					{
-						memcpy(node_data, &(data.data), sizeof(struct LogBook_entry));
+						memcpy(node_data, &(data.data), sizeof(data.data));
 						stats->LogBook = g_slist_append(stats->LogBook, node_data);
 					}
 					else
@@ -676,7 +676,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 					{
 						checksum = Checksum(node_data, sizeof(struct LogBook_entry));
 						fwrite (node_data, 1, sizeof(struct LogBook_entry), fp);
-						fwrite (&checksum, 1, sizeof(unsigned short), fp);
+						fwrite (&checksum, 1, sizeof(checksum), fp);
 					}
 					LogBook_node = LogBook_node -> next;//next node
 				}
@@ -699,7 +699,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 				checksum = Checksum(node_data, sizeof(struct LogBook_entry));
 				//Store last node of list LogBook in file
 				fwrite (node_data, 1, sizeof(struct LogBook_entry), fp);
-				fwrite (&checksum, 1, sizeof(unsigned short), fp);
+				fwrite (&checksum, 1, sizeof(checksum), fp);
 				fclose(fp);
 			}
 			else
@@ -785,7 +785,7 @@ gint SDAQ_Channels_cal_dates_entry_cmp (gconstpointer a, gconstpointer b)
 /*
 	Comparing function used in g_slist_insert_sorted,
 */
-gint SDAQ_Channels_acc_meas_entry_cmp (gconstpointer a, gconstpointer b) 
+gint SDAQ_Channels_acc_meas_entry_cmp (gconstpointer a, gconstpointer b)
 {
 	return (((struct Channel_acc_meas_entry *)a)->Channel <= ((struct Channel_acc_meas_entry *)b)->Channel) ?  0 : 1;
 }
