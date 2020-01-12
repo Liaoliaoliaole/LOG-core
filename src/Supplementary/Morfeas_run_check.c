@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 int check_already_run(char *prog_name)
 {
-	char out_str[128], cmd[128], *tok, i=1;
+	char out_str[128]={0}, cmd[128], *tok, i=1;
 
 	sprintf(cmd, "pidof %s",prog_name);
 	FILE *out = popen(cmd, "r");

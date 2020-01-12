@@ -134,8 +134,8 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
         	xmlFreeDoc(*doc);
         	return EXIT_FAILURE;
         }
-		xmlFreeParserCtxt(ctxt);
     }
+    xmlFreeParserCtxt(ctxt);
     return EXIT_SUCCESS;
 }
 

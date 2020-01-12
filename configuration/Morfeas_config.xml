@@ -13,7 +13,7 @@
 				</ARGUMENT>
 				<ARGUMENT>
 					<OPTION>-c</OPTION>
-					<OPT_ARG></OPT_ARG><!-- Absolute path of the NODESet configuration file-->
+					<OPT_ARG>12312</OPT_ARG><!-- Absolute path of the NODESet configuration file-->
 				</ARGUMENT>
 			</ARGUMENTS>
 		</COMPONENT>

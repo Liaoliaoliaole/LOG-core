@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define VERSION "0.1" /*Release Version of Morfeas_daemon*/
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,8 +50,9 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
-	char *config_path = NULL;
-	xmlDoc *doc;//XML tree pointer
+	char *config_path = NULL, *loggers_dir_path, path_buff[128]={0};
+	DIR *loggers_dir;
+	xmlDoc *doc;//XML DOC tree pointer
 	xmlNode *xml_node, *root_element; //XML root Node
 
 	int c;
@@ -77,13 +79,13 @@ int main(int argc, char *argv[])
 	//Check if program already runs in other instance.
 	if(check_already_run(argv[0]))
 	{
-		fprintf(stderr, "%s Already running !!!\n", argv[0]);
+		printf("%s Already running !!!\n", argv[0]);
 		exit(EXIT_SUCCESS);
 	}
 
 	if(!config_path || access(config_path, R_OK | F_OK ) || !strstr(config_path, ".xml"))
 	{
-		fprintf(stderr, "Configuration File not defined or invalid!!!\n");
+		printf("Configuration File not defined or invalid!!!\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -91,30 +93,61 @@ int main(int argc, char *argv[])
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
+	//Configuration XML parsing and validation check
 	if(!Morfeas_XML_parsing(config_path, &doc))
 	{
 		root_element = xmlDocGetRootElement(doc);
 		if(!Morfeas_daemon_config_valid(root_element))
 		{
-			printf("Okay\n");
-			//for(xml_node = root_element->children; xml_node; xml_node = xml_node->next)
-				//Morfeas_OPC_UA_add_update_ISO_Channel_node(server, xml_node);
+			if((loggers_dir_path = XML_node_get_content(root_element, "LOGGERS_DIR")))
+			{
+				//make Morfeas_Loggers_Directory
+				sprintf(path_buff, "%s/Morfeas_Loggers/", loggers_dir_path);
+				mkdir(path_buff, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+				if((loggers_dir = opendir(path_buff)))
+				{
+					closedir(loggers_dir);
+					xml_node = root_element->next;
+					while(xml_node)
+					{
+
+						xml_node = xml_node->next;
+					}
+				}
+				else
+				{
+					perror("Error on Loggers directory: ");
+					xmlFreeDoc(doc);//Free XML Doc
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			{
+				printf("\"LOGGERS_DIR\" XML node not found\n");
+				xmlFreeDoc(doc);//Free XML Doc
+				exit(EXIT_FAILURE);
+			}
 		}
 		else
 		{
-			fprintf(stderr, "Data Validation of The configuration XML file failed!!!\n");
+			printf("Data Validation of The configuration XML file failed!!!\n");
+			xmlFreeDoc(doc);//Free XML Doc
 			exit(EXIT_FAILURE);
 		}
+		xmlFreeDoc(doc);//Free XML Doc
 	}
 	else
 	{
-		fprintf(stderr, "XML Parsing of The configuration XML file failed!!!\n");
+		printf("XML Parsing of The configuration XML file failed!!!\n");
+		xmlFreeDoc(doc);//Free XML Doc
 		exit(EXIT_FAILURE);
 	}
 
 	while(running)
 		sleep(1);
 
+	xmlCleanupParser();
+	xmlMemoryDump();
 	return 0;
 }
 
