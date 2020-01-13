@@ -343,18 +343,6 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	return EXIT_SUCCESS;
 }
 
-int Morfeas_daemon_config_valid(xmlNode *root_element)
-{
-	xmlNode *empty;
-	//Empty content scan
-	if((empty = scaning_XML_nodes_for_empty(root_element)))
-	{
-		fprintf(stderr, "\nNode \"%s\" @Line: %d does not have content !!!!\n\n", empty->name, empty->line);
-		return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
 xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name)
 {
 	xmlNode *cur_node, *ret = NULL;
@@ -374,6 +362,20 @@ xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name)
 	}
 	return NULL;
 }
+
+int Morfeas_daemon_config_valid(xmlNode *root_element)
+{
+	xmlNode *empty;
+	//Empty content scan
+	if((empty = scaning_XML_nodes_for_empty(root_element)))
+	{
+		fprintf(stderr, "\nNode \"%s\" @Line: %d does not have content !!!!\n\n", empty->name, empty->line);
+		return EXIT_FAILURE;
+	}
+	
+	return EXIT_SUCCESS;
+}
+
 
 
 
