@@ -259,7 +259,7 @@ void* IPC_Receiver(void *varg_pt)
 				case IPC_Handler_register:
 					sprintf(str_msg_buff, "Register %s Handler for %s", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
 																					    IPC_msg_dec.Handler_reg.connected_to_BUS);
-					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, str_msg_buff);
+					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, (const char *) str_msg_buff);
 					switch(IPC_msg_dec.Handler_reg.handler_type)
 					{
 						case SDAQ:
