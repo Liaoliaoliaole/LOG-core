@@ -239,7 +239,6 @@ void * Nodeset_XML_reader(void *varg_pt)
 //IPC_Receiver, Thread function.
 void* IPC_Receiver(void *varg_pt)
 {
-	char str_msg_buff[128];
 	//Morfeas IPC msg decoder
 	IPC_message IPC_msg_dec;
 	time_t last_health_update=0, now;
@@ -257,11 +256,10 @@ void* IPC_Receiver(void *varg_pt)
 			{
 				//--- Message type from any handler (Registration to OPC_UA) ---//
 				case IPC_Handler_register:
-					//sprintf(str_msg_buff, "Register %s Handler for %s", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
-					//																    IPC_msg_dec.Handler_reg.connected_to_BUS);
-					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "Register %s Handler for %s",
-																						Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
-																					    IPC_msg_dec.Handler_reg.connected_to_BUS);
+					UA_LOG_INFO(UA_Log_Stdout, 
+								UA_LOGCATEGORY_SERVER, 
+								"Register %s Handler for %s", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
+															  IPC_msg_dec.Handler_reg.connected_to_BUS);
 					switch(IPC_msg_dec.Handler_reg.handler_type)
 					{
 						case SDAQ:
@@ -276,9 +274,10 @@ void* IPC_Receiver(void *varg_pt)
 					}
 					break;
 				case IPC_Handler_unregister:
-					sprintf(str_msg_buff, "Remove %s Handler for %s", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
-																					    IPC_msg_dec.Handler_reg.connected_to_BUS);
-					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, str_msg_buff);
+					UA_LOG_INFO(UA_Log_Stdout, 
+								UA_LOGCATEGORY_SERVER, 
+								"Remove %s Handler for %s",	Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
+															IPC_msg_dec.Handler_reg.connected_to_BUS);
 					pthread_mutex_lock(&OPC_UA_NODESET_access);
 						UA_Server_deleteNode(server, UA_NODEID_STRING(1, IPC_msg_dec.Handler_reg.connected_to_BUS), 1);
 					pthread_mutex_unlock(&OPC_UA_NODESET_access);
