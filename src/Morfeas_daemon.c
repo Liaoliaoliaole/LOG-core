@@ -134,7 +134,6 @@ int main(int argc, char *argv[])
 						{
 							if(!strcmp((char *)node_attr, "false"))
 							{
-								printf("\nNew Node\n");
 								pthread_mutex_lock(&thread_make_lock);//Lock threading making
 									printf("Node name: %s\n", Morfeas_component->name);
 									t_arg.component = Morfeas_component;
@@ -209,12 +208,13 @@ void print_usage(char *prog_name)
 //Thread Function, Decode varg_pt to xmlNode and start the Morfeas Component program.
 void * Morfeas_thread(void *varg_pt)
 {
-		char system_call_str[512] = {0}, loggers_dir[256] = {0};
-		thread_arg *t_arg = varg_pt;
+	char system_call_str[1024] = {0}, *loggers_dir;
+	thread_arg *t_arg = varg_pt;
 	pthread_mutex_lock(&thread_make_lock);//Lock threading making	
-		strncpy(loggers_dir, t_arg->loggers_path, sizeof(loggers_dir));
+		loggers_dir = calloc(sizeof(*loggers_dir), strlen(t_arg->loggers_path));
+		strcpy(loggers_dir, t_arg->loggers_path);
 		if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
-			sprintf(system_call_str,"%s -a %s -c %s", Morfeas_opc_ua, 
+			sprintf(system_call_str,"%s -a %s -c %s", Morfeas_opc_ua,
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
 													  XML_node_get_content(t_arg->component, "CONFIG_FILE"));
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
@@ -235,17 +235,19 @@ void * Morfeas_thread(void *varg_pt)
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
 		{
-			printf("Not implemented for Component with type \"SUPPLEMENTARY\"\n");
+			printf("Not implemented decode for Components with type \"SUPPLEMENTARY\"\n");
 		}
 		else
 		{
-			printf("Unknown Morfeas Component!!!\n");
+			printf("Unknown Component type (%s)!!!\n",t_arg->component->name);
 			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
+			free(loggers_dir);
 			return NULL;
 		}
 		printf("system_call_str = %s\n",system_call_str);
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 	while(running)
 		sleep(1);
+	free(loggers_dir);
 	return NULL;
 }

@@ -5,7 +5,6 @@
 	<LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
 	<COMPONENTS>
 		<OPC_UA_SERVER>
-			<!-- OPC_UA Application Name -->
 			<APP_NAME>Morfeas test application</APP_NAME>
 			<!-- Absolute path to the NODESet configuration file-->
 			<CONFIG_FILE>/home/pi/Morfeas_proj/Morfeas_core/configuration/OPC_UA_Config.xml</CONFIG_FILE>
