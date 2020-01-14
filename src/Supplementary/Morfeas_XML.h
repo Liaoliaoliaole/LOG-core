@@ -33,7 +33,7 @@ char * XML_node_get_content(xmlNode *node, const char *node_name);
 
 //-- Morfeas_daemon's Configuration XML related --//
 //Function that validate the content of the Configuration for Morfeas_deamon
-int Morfeas_daemon_config_valid(xmlNode *root_element);
+int Morfeas_daemon_config_valid(xmlNode *root_element, unsigned char max_amount_of_active_componets);
 
 //-- Morfeas_OPC_UA's Configuration XML related --//
 //Function that validate the content of the Configuration for Morfeas OPC_UA

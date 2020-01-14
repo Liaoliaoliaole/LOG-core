@@ -86,6 +86,26 @@ xmlNode* scaning_XML_nodes_for_empty(xmlNode * node)
 	return NULL;
 }
 
+xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name)
+{
+	xmlNode *cur_node, *ret = NULL;
+	if (root_node->type == XML_ELEMENT_NODE)
+	{
+		for (cur_node = root_node->children; cur_node; cur_node = cur_node->next)
+		{
+			if (cur_node->type == XML_ELEMENT_NODE)
+			{
+				if(!strcmp((char *)(cur_node->name), Node_name))
+					return cur_node;
+				if(cur_node->children)
+					if((ret = get_XML_node(cur_node, Node_name)))
+						return ret;
+			}
+		}
+	}
+	return NULL;
+}
+
 char * XML_node_get_content(xmlNode *node, const char *node_name)
 {
     xmlNode *cur_node;
@@ -343,36 +363,64 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	return EXIT_SUCCESS;
 }
 
-xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name)
+int Morfeas_daemon_config_valid(xmlNode *root_element, unsigned char max_amount_of_active_componets)
 {
-	xmlNode *cur_node, *ret = NULL;
-	if (root_node->type == XML_ELEMENT_NODE)
+	unsigned char nodes_cnt=0;
+	xmlNode *xml_node, *component;
+	xmlChar* node_attr;
+	//check for nodes with Empty content
+	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
 	{
-		for (cur_node = root_node->children; cur_node; cur_node = cur_node->next)
-		{
-			if (cur_node->type == XML_ELEMENT_NODE)
-			{
-				if(!strcmp((char *)(cur_node->name), Node_name))
-					return cur_node;
-				if(cur_node->children)
-					if((ret = get_XML_node(cur_node, Node_name)))
-						return ret;
-			}
-		}
-	}
-	return NULL;
-}
-
-int Morfeas_daemon_config_valid(xmlNode *root_element)
-{
-	xmlNode *empty;
-	//Empty content scan
-	if((empty = scaning_XML_nodes_for_empty(root_element)))
-	{
-		fprintf(stderr, "\nNode \"%s\" @Line: %d does not have content !!!!\n\n", empty->name, empty->line);
+		fprintf(stderr, "\nNode \"%s\" @Line: %d does not have content !!!!\n\n", xml_node->name, xml_node->line);
 		return EXIT_FAILURE;
 	}
-	
+	//check for existent of node "LOGGERS_DIR"
+	if(!XML_node_get_content(root_element, "LOGGERS_DIR"))
+	{
+		fprintf(stderr, "\"LOGGERS_DIR\" XML node not found\n");
+		return EXIT_FAILURE;
+	}
+	//check for existent of node "LOGSTAT_DIR"
+	if(!XML_node_get_content(root_element, "LOGSTAT_DIR"))
+	{
+		fprintf(stderr, "\"LOGSTAT_DIR\" XML node not found\n");
+		return EXIT_FAILURE;
+	}
+	//check for existent of node "COMPONENTS"
+	if(!(xml_node = get_XML_node(root_element, "COMPONENTS")))
+	{
+		fprintf(stderr, "\"COMPONENTS\" XML node not found\n");
+		return EXIT_FAILURE;
+	}
+	//Scan children of node "COMPONENTS" for errors
+	xml_node = xml_node->children;
+	while(xml_node)
+	{
+		if (xml_node->type == XML_ELEMENT_NODE)
+		{
+			if((node_attr = xmlGetProp(xml_node, BAD_CAST"Disable")))
+			{
+				if(strcmp((char *)node_attr, "true") && strcmp((char *)node_attr, "false"))
+				{
+					fprintf(stderr, "Attribute Value: \"%s\" for XML node \"COMPONENTS\"(Line:%d) is out of range (true,false)\n",
+						(char*)node_attr, xml_node->line);
+					xmlFree(node_attr);
+					return EXIT_FAILURE;
+				}	
+				xmlFree(node_attr);
+				nodes_cnt++;
+			}
+			else
+			{
+				fprintf(stderr, "Unknown Attribute found at Line:%d\n", xml_node->line);
+				return EXIT_FAILURE;
+			}
+		}
+		xml_node = xml_node->next;
+		if(nodes_cnt > max_amount_of_active_componets)
+			fprintf(stderr, "Maximum Amount of Components reached (Limit: %d)\n", max_amount_of_active_componets);
+		
+	}
 	return EXIT_SUCCESS;
 }
 

@@ -1,45 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
 <CONFIG>
-	<LOGGERS_DIR>/mnt/ramdisk</LOGGERS_DIR>
+	<LOGGERS_DIR>/mnt/ramdisk/Morfeas_components_Loggers/</LOGGERS_DIR>
+	<LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
 	<COMPONENTS>
-		<COMPONENT>
-			<TYPE>Server</TYPE>
-			<PROGRAM>Morfeas_opc_ua</PROGRAM>
+		<OPC_UA_SERVER>
+			<!-- OPC_UA Application Name -->
+			<APP_NAME>Morfeas test application</APP_NAME>
+			<!-- Absolute path to the NODESet configuration file-->
+			<CONFIG_FILE>/home/pi/Morfeas_proj/Morfeas_core/configuration/OPC_UA_Config.xml</CONFIG_FILE>
+		</OPC_UA_SERVER>
+		<SDAQ_HANDLER>
+			<CANBUS_IF>can0</CANBUS_IF>
+		</SDAQ_HANDLER>
+		<SDAQ_HANDLER>
+			<CANBUS_IF>can1</CANBUS_IF>
+		</SDAQ_HANDLER>
+		<SDAQ_HANDLER>
+			<CANBUS_IF>vcan0</CANBUS_IF>
+		</SDAQ_HANDLER>
+		<MDAQ_HANDLER Disable="true">
+			<IP_ADDR>10.0.0.10</IP_ADDR>
+		</MDAQ_HANDLER>
+		<IOBOX_HANDLER Disable="true">
+			<IP_ADDR>10.0.0.7</IP_ADDR>
+		</IOBOX_HANDLER>
+		<MTI_HANDLER Disable="true">
+			<IP_ADDR>10.0.0.11</IP_ADDR>
+		</MTI_HANDLER>
+		<SUPPLEMENTARY Disable="true">
+			<PROGRAM>program_name</PROGRAM>
 			<ARGUMENTS>
 				<ARGUMENT>
-					<OPTION>-a</OPTION>
-					<OPT_ARG>Morfeas test application</OPT_ARG>
-				</ARGUMENT>
-				<ARGUMENT>
-					<OPTION>-c</OPTION>
-					<OPT_ARG>12312</OPT_ARG><!-- Absolute path of the NODESet configuration file-->
+					<OPTION>test_option</OPTION>
+					<OPT_ARG>test_option_argument</OPT_ARG>
 				</ARGUMENT>
 			</ARGUMENTS>
-		</COMPONENT>
-		<COMPONENT>
-			<TYPE>Handler</TYPE>
-			<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
-			<ARGUMENTS>
-				<ARGUMENT>
-					<OPTION>vcan0</OPTION>
-				</ARGUMENT>
-				<ARGUMENT>
-					<OPTION>/mnt/ramdisk</OPTION>
-				</ARGUMENT>
-			</ARGUMENTS>
-		</COMPONENT>
-		<COMPONENT Disable="true">
-			<TYPE>Handler</TYPE>
-			<PROGRAM>Morfeas_SDAQ_if</PROGRAM>
-			<ARGUMENTS>
-				<ARGUMENT>
-					<OPTION>vcan1</OPTION>
-				</ARGUMENT>
-				<ARGUMENT>
-					<OPTION>/mnt/ramdisk</OPTION>
-				</ARGUMENT>
-			</ARGUMENTS>
-		</COMPONENT>
+		</SUPPLEMENTARY>
 	</COMPONENTS>
 </CONFIG>

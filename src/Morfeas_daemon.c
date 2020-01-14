@@ -14,8 +14,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 #define VERSION "0.1" /*Release Version of Morfeas_daemon*/
+#define max_num_of_threads 18
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,10 +49,12 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
-	char *config_path = NULL, *loggers_dir_path, path_buff[128]={0};
+	char *config_path = NULL, *path_buff;
 	DIR *loggers_dir;
 	xmlDoc *doc;//XML DOC tree pointer
-	xmlNode *xml_node, *root_element; //XML root Node
+	xmlNode *Morfeas_component, *root_element; //XML root Node
+	//variables for threads
+	pthread_t Threads_ids[max_num_of_threads] = {0}, *Threads_ids_ind = Threads_ids;
 
 	int c;
 	//Get options
@@ -96,41 +98,24 @@ int main(int argc, char *argv[])
 	if(!Morfeas_XML_parsing(config_path, &doc))
 	{
 		root_element = xmlDocGetRootElement(doc);
-		if(!Morfeas_daemon_config_valid(root_element))
+		if(!Morfeas_daemon_config_valid(root_element, max_num_of_threads))
 		{
-			if((loggers_dir_path = XML_node_get_content(root_element, "LOGGERS_DIR")))
+			//make Morfeas_Loggers_Directory
+			path_buff = XML_node_get_content(root_element, "LOGGERS_DIR");
+			mkdir(path_buff, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+			if((loggers_dir = opendir(path_buff)))
 			{
-				//make Morfeas_Loggers_Directory
-				sprintf(path_buff, "%s/Morfeas_Loggers/", loggers_dir_path);
-				mkdir(path_buff, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-				if((loggers_dir = opendir(path_buff)))
+				closedir(loggers_dir);
+				//Get Morfeas component from Configuration XML
+				Morfeas_component = get_XML_node(root_element, "COMPONENTS");
+				while(Morfeas_component)
 				{
-					closedir(loggers_dir);
-					//Get components from Config XML
-					if((xml_node = get_XML_node(root_element, "COMPONENTS")))
-					{
-						while(xml_node)
-						{
-							xml_node = xml_node->next;
-						}
-					}
-					else
-					{
-						printf("\"COMPONENTS\" XML node not found\n");
-						xmlFreeDoc(doc);//Free XML Doc
-						exit(EXIT_FAILURE);
-					}
-				}
-				else
-				{
-					perror("Error on Loggers directory: ");
-					xmlFreeDoc(doc);//Free XML Doc
-					exit(EXIT_FAILURE);
-				}
+					Morfeas_component = Morfeas_component->next;
+				}				
 			}
 			else
 			{
-				printf("\"LOGGERS_DIR\" XML node not found\n");
+				perror("Error on creation of Loggers directory: ");
 				xmlFreeDoc(doc);//Free XML Doc
 				exit(EXIT_FAILURE);
 			}
@@ -146,13 +131,19 @@ int main(int argc, char *argv[])
 	else
 	{
 		printf("XML Parsing of The configuration XML file failed!!!\n");
-		xmlFreeDoc(doc);//Free XML Doc
 		exit(EXIT_FAILURE);
 	}
-
+	//sleep_loop
 	while(running)
 		sleep(1);
-
+	
+	//Wait until all threads ends
+	for(int i=0; i<max_num_of_threads; i++)
+	{
+		pthread_join(Threads_ids[i], NULL);// wait for thread to finish
+		pthread_detach(Threads_ids[i]);
+	}
+	
 	xmlCleanupParser();
 	xmlMemoryDump();
 	return 0;
