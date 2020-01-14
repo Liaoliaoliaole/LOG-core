@@ -53,7 +53,7 @@ pthread_mutex_t thread_make_lock = PTHREAD_MUTEX_INITIALIZER;
 
 //print the Usage manual
 void print_usage(char *prog_name);
-//Thread function 
+//Thread function
 void * Morfeas_thread(void *varg_pt);
 
 static void stopHandler(int sign)
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	DIR *loggers_dir;
 	xmlDoc *doc;//XML DOC tree pointer
 	xmlNode *Morfeas_component, *root_element; //XML root Node
-	xmlChar* node_attr; //Value of Node's Attribute 
+	xmlChar* node_attr; //Value of Node's Attribute
 	//variables for threads
 	pthread_t Threads_ids[max_num_of_threads] = {0}, *Threads_ids_ind = Threads_ids;
 
@@ -135,13 +135,12 @@ int main(int argc, char *argv[])
 							if(!strcmp((char *)node_attr, "false"))
 							{
 								pthread_mutex_lock(&thread_make_lock);//Lock threading making
-									printf("Node name: %s\n", Morfeas_component->name);
 									t_arg.component = Morfeas_component;
 									pthread_create(Threads_ids_ind, NULL, Morfeas_thread, &t_arg);
 								pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 								Threads_ids_ind++;
 								usleep(10000);
-							}	
+							}
 							xmlFree(node_attr);
 							nodes_cnt++;
 						}
@@ -174,12 +173,12 @@ int main(int argc, char *argv[])
 	//sleep_loop
 	while(running)
 		sleep(1);
-	
+
 	//Wait until all threads ends
 	for(int i=0; i<max_num_of_threads; i++)
 	{
 		pthread_join(Threads_ids[i], NULL);// wait for thread to finish
-		pthread_detach(Threads_ids[i]);//de-allocate thread memory 
+		pthread_detach(Threads_ids[i]);//de-allocate thread memory
 	}
 	xmlCleanupParser();
 	xmlMemoryDump();
@@ -210,27 +209,27 @@ void * Morfeas_thread(void *varg_pt)
 {
 	char system_call_str[512] = {0}, *loggers_dir;
 	thread_arg *t_arg = varg_pt;
-	pthread_mutex_lock(&thread_make_lock);//Lock threading making	
-		loggers_dir = calloc(sizeof(*loggers_dir), strlen(t_arg->loggers_path));
+	pthread_mutex_lock(&thread_make_lock);//Lock threading making
+		loggers_dir = calloc(strlen(t_arg->loggers_path)+2, sizeof(*loggers_dir));
 		strcpy(loggers_dir, t_arg->loggers_path);
 		if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
 			sprintf(system_call_str,"%s -a %s -c %s", Morfeas_opc_ua,
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
 													  XML_node_get_content(t_arg->component, "CONFIG_FILE"));
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_SDAQ_if, 
+			sprintf(system_call_str,"%s %s %s", Morfeas_SDAQ_if,
 												XML_node_get_content(t_arg->component, "CANBUS_IF"),
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_MDAQ_if, 
+			sprintf(system_call_str,"%s %s %s", Morfeas_MDAQ_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_IOBOX_if, 
+			sprintf(system_call_str,"%s %s %s", Morfeas_IOBOX_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_MTI_if, 
+			sprintf(system_call_str,"%s %s %s", Morfeas_MTI_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
@@ -244,8 +243,11 @@ void * Morfeas_thread(void *varg_pt)
 			free(loggers_dir);
 			return NULL;
 		}
-		printf("system_call_str = %s\n",system_call_str);
+		//printf("system_call_str = %s\n",system_call_str);
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
+	//Make correction of loggers_dir
+	if(loggers_dir[strlen(loggers_dir)-1]!='/')
+		loggers_dir[strlen(loggers_dir)-1] = '/';
 	while(running)
 		sleep(1);
 	free(loggers_dir);
