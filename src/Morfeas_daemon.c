@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 	for(int i=0; i<max_num_of_threads; i++)
 	{
 		pthread_join(Threads_ids[i], NULL);// wait for thread to finish
-		pthread_detach(Threads_ids[i]);//deallocate thread memory 
+		pthread_detach(Threads_ids[i]);//de-allocate thread memory 
 	}
 	xmlCleanupParser();
 	xmlMemoryDump();
