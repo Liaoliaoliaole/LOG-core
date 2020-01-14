@@ -94,6 +94,14 @@ delete-the-tree:
 clean:
 	rm -f $(WORK_dir)/* $(BUILD_dir)/*
 
+install:
+	install $(BUILD_dir)/Morfeas_opc_ua -t /usr/local/bin/
+	install $(BUILD_dir)/Morfeas_SDAQ_if -t /usr/local/bin/
+	install $(BUILD_dir)/Morfeas_daemon -t /usr/local/bin/
+
+uninstall:
+	rm /usr/local/bin/Morfeas_*
+
 .PHONY: all clean clean-tree
 
 

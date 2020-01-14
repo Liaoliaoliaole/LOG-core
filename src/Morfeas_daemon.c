@@ -234,7 +234,7 @@ void * Morfeas_thread(void *varg_pt)
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
 		{
-			printf("Not implemented decode for Components with type \"SUPPLEMENTARY\"\n");
+			printf("Not yet implemented decode for Components with type \"SUPPLEMENTARY\"\n");
 		}
 		else
 		{
@@ -245,9 +245,11 @@ void * Morfeas_thread(void *varg_pt)
 		}
 		//printf("system_call_str = %s\n",system_call_str);
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
+
 	//Make correction of loggers_dir
 	if(loggers_dir[strlen(loggers_dir)-1]!='/')
 		loggers_dir[strlen(loggers_dir)-1] = '/';
+
 	while(running)
 		sleep(1);
 	free(loggers_dir);
