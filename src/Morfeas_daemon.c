@@ -208,7 +208,7 @@ void print_usage(char *prog_name)
 //Thread Function, Decode varg_pt to xmlNode and start the Morfeas Component program.
 void * Morfeas_thread(void *varg_pt)
 {
-	char system_call_str[1024] = {0}, *loggers_dir;
+	char system_call_str[512] = {0}, *loggers_dir;
 	thread_arg *t_arg = varg_pt;
 	pthread_mutex_lock(&thread_make_lock);//Lock threading making	
 		loggers_dir = calloc(sizeof(*loggers_dir), strlen(t_arg->loggers_path));
