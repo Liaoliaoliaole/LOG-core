@@ -3,7 +3,9 @@
 !*.*
 *.*#
 **/build/
+**/build-doc/
 **/work/
+**/work-doc/
 **/Thumbs.db
 UaExpert-1.5.1-331-x86_64.AppImage
 #.gitignore
