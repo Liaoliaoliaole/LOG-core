@@ -36,11 +36,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Global variables
 static unsigned char running = 1;
-pthread_mutex_t start = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t thread_make_lock = PTHREAD_MUTEX_INITIALIZER;
 
 //print the Usage manual
 void print_usage(char *prog_name);
-
+//Thread function 
+void * Morfeas_thread(void *varg_pt);
 
 static void stopHandler(int sign)
 {
@@ -119,6 +120,8 @@ int main(int argc, char *argv[])
 							if(!strcmp((char *)node_attr, "false"))
 							{
 								printf("Node name: %s\n", Morfeas_component->name);
+								pthread_mutex_lock(&thread_make_lock);
+								pthread_create(Threads_ids_ind, NULL, Morfeas_thread, Morfeas_component);
 								Threads_ids_ind++;
 							}	
 							xmlFree(node_attr);
@@ -182,4 +185,12 @@ void print_usage(char *prog_name)
 	};
 	printf("%s\nUsage: %s [Options]\n\n%s",preamp, prog_name, manual);
 	return;
+}
+
+//Thread Function, Decode varg_pt, and start the Morfeas Component program.
+void * Morfeas_thread(void *varg_pt)
+{
+	//Unlock threading making
+	pthread_mutex_unlock(&thread_make_lock);
+	return NULL;
 }
