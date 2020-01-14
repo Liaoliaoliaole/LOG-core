@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
 <CONFIG>
-	<LOGGERS_DIR>/mnt/ramdisk/Morfeas_components_Loggers/</LOGGERS_DIR>
+	<LOGGERS_DIR>/mnt/ramdisk/Morfeas_Loggers/</LOGGERS_DIR>
 	<LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
 	<COMPONENTS>
 		<OPC_UA_SERVER>

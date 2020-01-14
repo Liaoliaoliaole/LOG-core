@@ -34,6 +34,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Supplementary/Morfeas_run_check.h"
 #include "Supplementary/Morfeas_XML.h"
 
+typedef struct thread_arguments{
+	xmlNode *component;
+	char *loggers_path_buff;
+	char *logstat_path_buff;
+}thread_arg;
+
 //Global variables
 static unsigned char running = 1;
 pthread_mutex_t thread_make_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -50,8 +56,9 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
+	thread_arg t_arg;
 	unsigned char nodes_cnt=0;
-	char *config_path = NULL, *path_buff;
+	char *config_path = NULL;
 	DIR *loggers_dir;
 	xmlDoc *doc;//XML DOC tree pointer
 	xmlNode *Morfeas_component, *root_element; //XML root Node
@@ -104,9 +111,10 @@ int main(int argc, char *argv[])
 		if(!Morfeas_daemon_config_valid(root_element))
 		{
 			//make Morfeas_Loggers_Directory
-			path_buff = XML_node_get_content(root_element, "LOGGERS_DIR");
-			mkdir(path_buff, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-			if((loggers_dir = opendir(path_buff)))
+			t_arg.logstat_path_buff = XML_node_get_content(root_element, "LOGSTAT_DIR");
+			t_arg.loggers_path_buff = XML_node_get_content(root_element, "LOGGERS_DIR");
+			mkdir(t_arg.loggers_path_buff, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+			if((loggers_dir = opendir(t_arg.loggers_path_buff)))
 			{
 				closedir(loggers_dir);
 				//Get Morfeas component from Configuration XML
@@ -119,9 +127,9 @@ int main(int argc, char *argv[])
 						{
 							if(!strcmp((char *)node_attr, "false"))
 							{
-								printf("Node name: %s\n", Morfeas_component->name);
-								pthread_mutex_lock(&thread_make_lock);
-								pthread_create(Threads_ids_ind, NULL, Morfeas_thread, Morfeas_component);
+								t_arg.component = Morfeas_component;
+								pthread_mutex_lock(&thread_make_lock);//Lock threading making
+								pthread_create(Threads_ids_ind, NULL, Morfeas_thread, &t_arg);
 								Threads_ids_ind++;
 							}	
 							xmlFree(node_attr);
@@ -131,7 +139,7 @@ int main(int argc, char *argv[])
 					Morfeas_component = Morfeas_component->next;
 				}
 				if(nodes_cnt>=max_num_of_threads)
-					printf("Max_amount of thread reached!!!\n");
+					printf("Max_amount(%d) of thread reached!!!\n",max_num_of_threads);
 			}
 			else
 			{
@@ -187,10 +195,43 @@ void print_usage(char *prog_name)
 	return;
 }
 
-//Thread Function, Decode varg_pt, and start the Morfeas Component program.
+//Thread Function, Decode varg_pt to xmlNode and start the Morfeas Component program.
 void * Morfeas_thread(void *varg_pt)
 {
-	//Unlock threading making
-	pthread_mutex_unlock(&thread_make_lock);
+	char system_call_str[256] = {0};
+	thread_arg *t_arg = varg_pt;
+	if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
+	{
+		
+	}
+	else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
+	{
+		
+	}
+	else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
+	{
+		
+	}
+	else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
+	{
+		
+	}
+	else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
+	{
+		
+	}
+	else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
+	{
+		
+	}
+	else
+	{
+		printf("Unknown Morfeas Component!!!\n");
+		pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
+		return NULL;
+	}
+	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
+	while(running)
+		sleep(1);
 	return NULL;
 }
