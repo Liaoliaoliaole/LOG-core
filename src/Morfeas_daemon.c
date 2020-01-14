@@ -49,10 +49,12 @@ static void stopHandler(int sign)
 
 int main(int argc, char *argv[])
 {
+	unsigned char nodes_cnt=0;
 	char *config_path = NULL, *path_buff;
 	DIR *loggers_dir;
 	xmlDoc *doc;//XML DOC tree pointer
 	xmlNode *Morfeas_component, *root_element; //XML root Node
+	xmlChar* node_attr; //Value of Node's Attribute 
 	//variables for threads
 	pthread_t Threads_ids[max_num_of_threads] = {0}, *Threads_ids_ind = Threads_ids;
 
@@ -98,7 +100,7 @@ int main(int argc, char *argv[])
 	if(!Morfeas_XML_parsing(config_path, &doc))
 	{
 		root_element = xmlDocGetRootElement(doc);
-		if(!Morfeas_daemon_config_valid(root_element, max_num_of_threads))
+		if(!Morfeas_daemon_config_valid(root_element))
 		{
 			//make Morfeas_Loggers_Directory
 			path_buff = XML_node_get_content(root_element, "LOGGERS_DIR");
@@ -107,11 +109,26 @@ int main(int argc, char *argv[])
 			{
 				closedir(loggers_dir);
 				//Get Morfeas component from Configuration XML
-				Morfeas_component = get_XML_node(root_element, "COMPONENTS");
-				while(Morfeas_component)
+				Morfeas_component = (get_XML_node(root_element, "COMPONENTS"))->children;
+				while(Morfeas_component && nodes_cnt<max_num_of_threads)
 				{
+					if (Morfeas_component->type == XML_ELEMENT_NODE)
+					{
+						if((node_attr = xmlGetProp(Morfeas_component, BAD_CAST"Disable")))
+						{
+							if(!strcmp((char *)node_attr, "false"))
+							{
+								printf("Node name: %s\n", Morfeas_component->name);
+								Threads_ids_ind++;
+							}	
+							xmlFree(node_attr);
+							nodes_cnt++;
+						}
+					}
 					Morfeas_component = Morfeas_component->next;
-				}				
+				}
+				if(nodes_cnt>=max_num_of_threads)
+					printf("Max_amount of thread reached!!!\n");
 			}
 			else
 			{
@@ -141,9 +158,8 @@ int main(int argc, char *argv[])
 	for(int i=0; i<max_num_of_threads; i++)
 	{
 		pthread_join(Threads_ids[i], NULL);// wait for thread to finish
-		pthread_detach(Threads_ids[i]);
+		pthread_detach(Threads_ids[i]);//deallocate thread memory 
 	}
-	
 	xmlCleanupParser();
 	xmlMemoryDump();
 	return 0;

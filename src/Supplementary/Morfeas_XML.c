@@ -363,10 +363,9 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	return EXIT_SUCCESS;
 }
 
-int Morfeas_daemon_config_valid(xmlNode *root_element, unsigned char max_amount_of_active_componets)
+int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
-	unsigned char nodes_cnt=0;
-	xmlNode *xml_node, *component;
+	xmlNode *xml_node;
 	xmlChar* node_attr;
 	//check for nodes with Empty content
 	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
@@ -408,7 +407,6 @@ int Morfeas_daemon_config_valid(xmlNode *root_element, unsigned char max_amount_
 					return EXIT_FAILURE;
 				}	
 				xmlFree(node_attr);
-				nodes_cnt++;
 			}
 			else
 			{
@@ -417,9 +415,6 @@ int Morfeas_daemon_config_valid(xmlNode *root_element, unsigned char max_amount_
 			}
 		}
 		xml_node = xml_node->next;
-		if(nodes_cnt > max_amount_of_active_componets)
-			fprintf(stderr, "Maximum Amount of Components reached (Limit: %d)\n", max_amount_of_active_componets);
-		
 	}
 	return EXIT_SUCCESS;
 }
