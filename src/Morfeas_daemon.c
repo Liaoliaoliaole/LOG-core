@@ -271,7 +271,7 @@ void * Morfeas_thread(void *varg_pt)
 	Log_fd = fopen(loggers_path, "w");
 	if(Log_fd)
 		fclose(Log_fd);
-	//fork command in system_call_str to thread
+	//Fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
 	if(!cmd_fd)
     {
