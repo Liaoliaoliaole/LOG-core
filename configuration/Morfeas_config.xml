@@ -15,7 +15,7 @@
 		<SDAQ_HANDLER>
 			<CANBUS_IF>can1</CANBUS_IF>
 		</SDAQ_HANDLER>
-		<SDAQ_HANDLER Disable="false">
+		<SDAQ_HANDLER Disable="true">
 			<CANBUS_IF>vcan0</CANBUS_IF>
 		</SDAQ_HANDLER>
 		<MDAQ_HANDLER Disable="true">
