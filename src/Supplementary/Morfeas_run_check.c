@@ -34,11 +34,14 @@ int check_already_run(const char *prog_name)
 
 int check_already_run_onBus(const char *called_prog_name,const char *bus_name)
 {
-	char out_str[1024] = {0}, cmd[1024], buff[768], *tok, *prog_name, i=1;
+	const char *prog_name = called_prog_name;
+	char out_str[1024] = {0}, cmd[1024], buff[768], *tok, i=1;
 	strncpy(buff, called_prog_name, sizeof(buff));
-	tok = strtok(buff, "/");
-	while((tok = strtok(NULL, "/")))
-		prog_name = tok;
+	if((tok = strtok(buff, "/")))
+	{
+		while((tok = strtok(NULL, "/")))
+			prog_name = tok;
+	}
 	sprintf(cmd, "ps aux | grep --color=none -E '([0-9] |/)%s %s'",prog_name, bus_name);
 	FILE *out = popen(cmd, "r");
 	fread(out_str, sizeof(out_str), sizeof(char), out);
