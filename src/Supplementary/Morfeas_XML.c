@@ -365,7 +365,7 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 
 int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
-	xmlNode *xml_node, *xml_head_node;
+	xmlNode *xml_node, *head_node, *check_node;
 	xmlChar* node_attr;
 	//check for nodes with Empty content
 	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
@@ -386,14 +386,13 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		return EXIT_FAILURE;
 	}
 	//check for existent of node "COMPONENTS"
-	if(!(xml_head_node = get_XML_node(root_element, "COMPONENTS")))
+	if(!(head_node = get_XML_node(root_element, "COMPONENTS")))
 	{
 		fprintf(stderr, "\"COMPONENTS\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
-	
 	//Scan children of node "COMPONENTS" for Attribute errors
-	xml_node = xml_head_node->children;
+	xml_node = head_node->children;
 	while(xml_node)
 	{
 		if (xml_node->type == XML_ELEMENT_NODE)
@@ -406,7 +405,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 						(char*)node_attr, xml_node->line);
 					xmlFree(node_attr);
 					return EXIT_FAILURE;
-				}	
+				}
 				xmlFree(node_attr);
 			}
 			else
@@ -417,6 +416,34 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
+	/*
+	//Scan children of node "COMPONENTS" for duplicates
+	xml_node = head_node->children;
+	check_node
+	while(xml_node)
+	{
+		if (xml_node->type == XML_ELEMENT_NODE)
+		{
+			if((node_attr = xmlGetProp(xml_node, BAD_CAST"Disable")))
+			{
+				if(strcmp((char *)node_attr, "true") && strcmp((char *)node_attr, "false"))
+				{
+					fprintf(stderr, "Attribute Value: \"%s\" for XML node \"COMPONENTS\"(Line:%d) is out of range (true,false)\n",
+						(char*)node_attr, xml_node->line);
+					xmlFree(node_attr);
+					return EXIT_FAILURE;
+				}
+				xmlFree(node_attr);
+			}
+			else
+			{
+				fprintf(stderr, "Unknown Attribute found at Line:%d\n", xml_node->line);
+				return EXIT_FAILURE;
+			}
+		}
+		xml_node = xml_node->next;
+	}
+	*/
 	return EXIT_SUCCESS;
 }
 
