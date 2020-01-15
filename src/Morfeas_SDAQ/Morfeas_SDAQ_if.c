@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
-								Logger("Register new SDAQ (%s) with S/N: %010u -> %02hhu\n", dev_type_str[status_dec->dev_type],
+								Logger("Register new SDAQ (%s) with S/N: %010u -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
 																									   status_dec->dev_sn,
 																									   SDAQ_data->SDAQ_address);
 							}

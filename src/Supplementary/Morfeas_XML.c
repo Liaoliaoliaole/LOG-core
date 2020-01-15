@@ -365,7 +365,7 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 
 int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
-	xmlNode *xml_node;
+	xmlNode *xml_node, *xml_head_node;
 	xmlChar* node_attr;
 	//check for nodes with Empty content
 	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
@@ -386,13 +386,14 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		return EXIT_FAILURE;
 	}
 	//check for existent of node "COMPONENTS"
-	if(!(xml_node = get_XML_node(root_element, "COMPONENTS")))
+	if(!(xml_head_node = get_XML_node(root_element, "COMPONENTS")))
 	{
 		fprintf(stderr, "\"COMPONENTS\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
-	//Scan children of node "COMPONENTS" for errors
-	xml_node = xml_node->children;
+	
+	//Scan children of node "COMPONENTS" for Attribute errors
+	xml_node = xml_head_node->children;
 	while(xml_node)
 	{
 		if (xml_node->type == XML_ELEMENT_NODE)

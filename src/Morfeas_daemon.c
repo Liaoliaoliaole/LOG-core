@@ -233,17 +233,26 @@ void * Morfeas_thread(void *varg_pt)
 												t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
+		{
+			sprintf(Logger_name,"%s_%s.log",Morfeas_MDAQ_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MDAQ_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
+		}
 		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
+		{
+			sprintf(Logger_name,"%s_%s.log",Morfeas_IOBOX_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_IOBOX_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
+		}
 		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
+		{
+			sprintf(Logger_name,"%s_%s.log",Morfeas_MTI_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MTI_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
+		}
 		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
 		{
 			printf("Not yet implemented decode for Components with type \"SUPPLEMENTARY\"\n");
@@ -264,13 +273,16 @@ void * Morfeas_thread(void *varg_pt)
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
 		loggers_path[strlen(loggers_path)] = '/';
+	
 	//Enlarge loggers_path table to fit logger_name and copy logger_name to it
 	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+1);
 	strcat(loggers_path, Logger_name);
-	//Build Logger file or Delete old contents
+	
+	//Build New Logger file or Delete contents from old one
 	Log_fd = fopen(loggers_path, "w");
 	if(Log_fd)
 		fclose(Log_fd);
+	
 	//Fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
 	if(!cmd_fd)
@@ -279,7 +291,9 @@ void * Morfeas_thread(void *varg_pt)
         free(loggers_path);
 		return NULL;
     }
-    while(fgets(out_str, sizeof(out_str), cmd_fd)) 
+	
+    //Read from stdout/err of forked command and write it to Log file 
+	while(fgets(out_str, sizeof(out_str), cmd_fd)) 
 	{
 		Log_fd = fopen(loggers_path, "a+");
 		if(Log_fd)
@@ -290,8 +304,11 @@ void * Morfeas_thread(void *varg_pt)
 		else
 			perror("fopen_error");
     }
+	//Check exit status of forked command 
 	if(256 == pclose(cmd_fd))
-		printf("Command \"%s\" Exit with Error!!!\n", system_call_str);
+		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
+	else if(running)
+		printf("Thread for command \"%s\" Exit unexpectedly !!!\n", system_call_str);
 	//free allocated memory
 	free(loggers_path);
 	return NULL;
