@@ -264,8 +264,10 @@ void * Morfeas_thread(void *varg_pt)
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
 		loggers_path[strlen(loggers_path)] = '/';
+	//enlarge loggers_path table to fit logger_name and copy logger_name to it
 	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+1);
 	strcat(loggers_path, Logger_name);
+	//fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
 	if (!cmd_fd)
     {
