@@ -7,15 +7,16 @@
 		<OPC_UA_SERVER>
 			<APP_NAME>Morfeas test application</APP_NAME>
 			<!-- Absolute path to the NODESet configuration file-->
-			<CONFIG_FILE>/home/pi/Morfeas_proj/Morfeas_core/configuration/OPC_UA_Config.xml</CONFIG_FILE>
+			<!--<CONFIG_FILE>/home/pi/Morfeas_proj/Morfeas_core/configuration/OPC_UA_Config.xml</CONFIG_FILE>-->
+			<CONFIG_FILE>/home/sam/Desktop/test/morfeas_project/configuration/OPC_UA_Config.xml</CONFIG_FILE>
 		</OPC_UA_SERVER>
-		<SDAQ_HANDLER>
+		<SDAQ_HANDLER Disable="true">
 			<CANBUS_IF>can0</CANBUS_IF>
 		</SDAQ_HANDLER>
-		<SDAQ_HANDLER>
+		<SDAQ_HANDLER Disable="true">
 			<CANBUS_IF>can1</CANBUS_IF>
 		</SDAQ_HANDLER>
-		<SDAQ_HANDLER Disable="true">
+		<SDAQ_HANDLER Disable="false">
 			<CANBUS_IF>vcan0</CANBUS_IF>
 		</SDAQ_HANDLER>
 		<MDAQ_HANDLER Disable="true">

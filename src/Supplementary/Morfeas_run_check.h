@@ -19,10 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //-- Function that detects if other program with the same name already running --//
 //-- return 0 if no other program found --//
-int check_already_run(char *prog_name);
+int check_already_run(const char *prog_name);
 //-- Function that detects if other program with the same name already running on the same bus --//
 //-- return 0 if no other program found --//
-int check_already_run_onBus(char *prog_name, char *bus_name);
+int check_already_run_onBus(const char *called_prog_name, const char *bus_name);
 //-- Function that calculate and returns the bsd Checksum of the data--//
 unsigned char Checksum(void *data, size_t data_size);
 
