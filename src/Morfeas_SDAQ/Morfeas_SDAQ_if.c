@@ -163,7 +163,9 @@ int main(int argc, char *argv[])
 	strcpy(ifr.ifr_name, argv[1]); // get value from CAN-IF arguments
 	if(ioctl(CAN_socket_num, SIOCGIFINDEX, &ifr))
 	{
-		perror("CAN-IF");
+		char if_error[30];
+		sprintf(if_error, "CAN-IF (%s)",ifr.ifr_name);
+		perror(if_error);
 		exit(EXIT_FAILURE);
 	}
 	stats.CAN_IF_name = argv[1];

@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 			//make Morfeas_Loggers_Directory
 			t_arg.logstat_path = XML_node_get_content(root_element, "LOGSTAT_DIR");
 			t_arg.loggers_path = XML_node_get_content(root_element, "LOGGERS_DIR");
-			mkdir(t_arg.loggers_path, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+			mkdir(t_arg.loggers_path, 0777);
 			if((loggers_dir = opendir(t_arg.loggers_path)))
 			{
 				closedir(loggers_dir);
@@ -207,51 +207,90 @@ void print_usage(char *prog_name)
 //Thread Function, Decode varg_pt to xmlNode and start the Morfeas Component program.
 void * Morfeas_thread(void *varg_pt)
 {
-	char system_call_str[512] = {0}, *loggers_dir;
+	FILE *cmd_fd, *Log_fd;
+	char out_str[256] = {0}, system_call_str[512] = {0}, Logger_name[128] = {0}, *loggers_path;
 	thread_arg *t_arg = varg_pt;
 	pthread_mutex_lock(&thread_make_lock);//Lock threading making
-		loggers_dir = calloc(strlen(t_arg->loggers_path)+2, sizeof(*loggers_dir));
-		strcpy(loggers_dir, t_arg->loggers_path);
+		loggers_path = calloc(strlen(t_arg->loggers_path)+2, sizeof(*loggers_path));
+		if(!loggers_path)
+		{
+			fprintf(stderr,"Memory Error!!!\n");
+			exit(EXIT_FAILURE);
+		}
+		strcpy(loggers_path, t_arg->loggers_path);
 		if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
-			sprintf(system_call_str,"%s -a %s -c %s", Morfeas_opc_ua,
+		{
+			sprintf(Logger_name,"OPC_UA_SERVER.log");
+			sprintf(system_call_str,"%s -a %s -c %s 2>&1", Morfeas_opc_ua,
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
 													  XML_node_get_content(t_arg->component, "CONFIG_FILE"));
+		}
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_SDAQ_if,
+		{
+			sprintf(Logger_name,"SDAQ_HANDLER_%s.log",XML_node_get_content(t_arg->component, "CANBUS_IF"));
+			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_SDAQ_if,
 												XML_node_get_content(t_arg->component, "CANBUS_IF"),
 												t_arg->logstat_path);
+		}
 		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_MDAQ_if,
+			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MDAQ_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_IOBOX_if,
+			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_IOBOX_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
-			sprintf(system_call_str,"%s %s %s", Morfeas_MTI_if,
+			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MTI_if,
 												XML_node_get_content(t_arg->component, "IP_ADDR"),
 												t_arg->logstat_path);
 		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
 		{
 			printf("Not yet implemented decode for Components with type \"SUPPLEMENTARY\"\n");
+			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
+			free(loggers_path);
+			return NULL;
 		}
 		else
 		{
 			printf("Unknown Component type (%s)!!!\n",t_arg->component->name);
 			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
-			free(loggers_dir);
+			free(loggers_path);
 			return NULL;
 		}
 		//printf("system_call_str = %s\n",system_call_str);
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 
-	//Make correction of loggers_dir
-	if(loggers_dir[strlen(loggers_dir)-1]!='/')
-		loggers_dir[strlen(loggers_dir)-1] = '/';
-
+	//Make correction of loggers_path
+	if(loggers_path[strlen(loggers_path)-1]!='/')
+		loggers_path[strlen(loggers_path)-1] = '/';
+	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+1);
+	strcat(loggers_path, Logger_name);
+	printf("loggers_path = %s\n",loggers_path);
+	cmd_fd = popen(system_call_str, "re");
+	if (!cmd_fd)
+    {
+        printf("Couldn't start command\n");
+        free(loggers_path);
+		return NULL;
+    }
+    while (fgets(out_str, sizeof(out_str), cmd_fd) != NULL) 
+	{
+		Log_fd = fopen(loggers_path,"a+");
+		if(Log_fd)
+		{
+			fprintf(Log_fd, "%s",out_str);
+			fclose(Log_fd);
+		}
+		else
+			perror("fopen_error");
+    }
+	if(256 == pclose(cmd_fd))
+		printf("Command \"%s\" Exit with Error!!!\n", system_call_str);
+	/*
 	while(running)
 		sleep(1);
-	free(loggers_dir);
+	*/
+	free(loggers_path);
 	return NULL;
 }

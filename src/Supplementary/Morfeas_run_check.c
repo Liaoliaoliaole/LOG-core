@@ -29,21 +29,21 @@ int check_already_run(char *prog_name)
 	tok = strtok(out_str, " ");
 	while((tok = strtok(NULL, " ")))
 		i++;
-	return i>1? 1 : 0;
+	return i>1? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 int check_already_run_onBus(char *prog_name, char *bus_name)
 {
 	char out_str[1024] = {0}, cmd[128], *tok, i=1;
 
-	sprintf(cmd, "ps aux | grep --color=none \"%s %s\"",prog_name, bus_name);
+	sprintf(cmd, "ps aux | grep --color=none \"[0-9] %s %s\"",prog_name, bus_name);
 	FILE *out = popen(cmd, "r");
 	fread(out_str, sizeof(out_str), sizeof(char), out);
 	pclose(out);
 	tok = strtok(out_str, "\n");
 	while((tok = strtok(NULL, "\n")))
 		i++;
-	return i>3? 1 : 0;
+	return i>1? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 unsigned char Checksum(void *data, size_t data_size)
