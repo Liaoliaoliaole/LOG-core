@@ -264,21 +264,22 @@ void * Morfeas_thread(void *varg_pt)
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
 		loggers_path[strlen(loggers_path)] = '/';
-	//enlarge loggers_path table to fit logger_name and copy logger_name to it
+	//Enlarge loggers_path table to fit logger_name and copy logger_name to it
 	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+1);
 	strcat(loggers_path, Logger_name);
+	//Build Logger file or Delete old contents
+	Log_fd = fopen(loggers_path, "w");
+	if(Log_fd)
+		fclose(Log_fd);
 	//fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
-	if (!cmd_fd)
+	if(!cmd_fd)
     {
         printf("Couldn't start command\n");
         free(loggers_path);
 		return NULL;
     }
-	Log_fd = fopen(loggers_path, "w");
-	if(Log_fd)
-		fclose(Log_fd);
-    while (fgets(out_str, sizeof(out_str), cmd_fd) != NULL) 
+    while(fgets(out_str, sizeof(out_str), cmd_fd)) 
 	{
 		Log_fd = fopen(loggers_path, "a+");
 		if(Log_fd)
@@ -291,10 +292,7 @@ void * Morfeas_thread(void *varg_pt)
     }
 	if(256 == pclose(cmd_fd))
 		printf("Command \"%s\" Exit with Error!!!\n", system_call_str);
-	/*
-	while(running)
-		sleep(1);
-	*/
+	//free allocated memory
 	free(loggers_path);
 	return NULL;
 }
