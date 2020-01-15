@@ -220,14 +220,14 @@ void * Morfeas_thread(void *varg_pt)
 		strcpy(loggers_path, t_arg->loggers_path);
 		if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
 		{
-			sprintf(Logger_name,"OPC_UA_SERVER.log");
+			sprintf(Logger_name,"%s.log",Morfeas_opc_ua);
 			sprintf(system_call_str,"%s -a %s -c %s 2>&1", Morfeas_opc_ua,
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
 													  XML_node_get_content(t_arg->component, "CONFIG_FILE"));
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
 		{
-			sprintf(Logger_name,"SDAQ_HANDLER_%s.log",XML_node_get_content(t_arg->component, "CANBUS_IF"));
+			sprintf(Logger_name,"%s_%s.log",Morfeas_SDAQ_if, XML_node_get_content(t_arg->component, "CANBUS_IF"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_SDAQ_if,
 												XML_node_get_content(t_arg->component, "CANBUS_IF"),
 												t_arg->logstat_path);
@@ -263,10 +263,9 @@ void * Morfeas_thread(void *varg_pt)
 
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
-		loggers_path[strlen(loggers_path)-1] = '/';
+		loggers_path[strlen(loggers_path)] = '/';
 	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+1);
 	strcat(loggers_path, Logger_name);
-	printf("loggers_path = %s\n",loggers_path);
 	cmd_fd = popen(system_call_str, "re");
 	if (!cmd_fd)
     {
@@ -274,9 +273,12 @@ void * Morfeas_thread(void *varg_pt)
         free(loggers_path);
 		return NULL;
     }
+	Log_fd = fopen(loggers_path, "w");
+	if(Log_fd)
+		fclose(Log_fd);
     while (fgets(out_str, sizeof(out_str), cmd_fd) != NULL) 
 	{
-		Log_fd = fopen(loggers_path,"a+");
+		Log_fd = fopen(loggers_path, "a+");
 		if(Log_fd)
 		{
 			fprintf(Log_fd, "%s",out_str);
