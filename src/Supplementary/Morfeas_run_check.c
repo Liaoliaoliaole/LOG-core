@@ -35,20 +35,39 @@ int check_already_run(const char *prog_name)
 int check_already_run_onBus(const char *called_prog_name,const char *bus_name)
 {
 	const char *prog_name = called_prog_name;
-	char out_str[1024] = {0}, cmd[1024], buff[768], *tok, i=1;
-	strncpy(buff, called_prog_name, sizeof(buff));
+	char out_str[1024] = {0}, *cmd, *buff, *tok, i=1;
+	//Allocate memory for buff, where is the size of called_prog_name
+	if(!(buff = calloc(strlen(called_prog_name)+1, sizeof(*buff))))
+	{
+		fprintf(stderr, "Memory error!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	//copy called_prog_name to buff and split it with delimiter "/"
+	strcpy(buff, called_prog_name);
 	if((tok = strtok(buff, "/")))
 	{
 		while((tok = strtok(NULL, "/")))
 			prog_name = tok;
 	}
+	//allocate memory for cmd, where is sizes of "prog_name" and "bus_name" + 50 (41+3 round to 50)
+	if(!(cmd = calloc(strlen(prog_name)+strlen(bus_name)+50, sizeof(*cmd))))
+	{
+		fprintf(stderr, "Memory error!!!\n");
+		free(buff);
+		exit(EXIT_FAILURE);
+	}
+	//Construct cmd
 	sprintf(cmd, "ps aux | grep --color=none -E '([0-9] |/)%s %s'",prog_name, bus_name);
+	//fork cmd and get stdout through pipe to out_str
 	FILE *out = popen(cmd, "r");
-	fread(out_str, sizeof(out_str), sizeof(char), out);
+	fread(out_str, sizeof(out_str), sizeof(*out_str), out);
 	pclose(out);
+	// split out_str with delimiter "\n", count the amount of slices
 	tok = strtok(out_str, "\n");
 	while((tok = strtok(NULL, "\n")))
 		i++;
+	free(cmd);
+	free(buff);
 	return i>1? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
