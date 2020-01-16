@@ -205,7 +205,7 @@ void print_usage(char *prog_name)
 		"Options:\n"
 		"           -h : Print help.\n"
 		"           -V : Version.\n"
-		"           -c : Path to configuration XML file.(see notes)\n"
+		"           -c : Path to configuration XML file (see notes).\n"
 		"\nNote_1: If '-c' option not used the Morfeas_daemon will try to\n"
 		"          get config_path from env_var:\"Morfeas_deamon_config_path\"\n"
 	};
