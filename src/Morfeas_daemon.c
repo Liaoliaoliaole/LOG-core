@@ -48,7 +48,7 @@ typedef struct thread_arguments{
 }thread_arg;
 
 //Global variables
-static unsigned char running = 1;
+static volatile unsigned char daemon_run = 1;
 pthread_mutex_t thread_make_lock = PTHREAD_MUTEX_INITIALIZER;
 
 //print the Usage manual
@@ -58,7 +58,7 @@ void * Morfeas_thread(void *varg_pt);
 
 static void stopHandler(int sign)
 {
-	running = 0;
+	daemon_run = 0;
 }
 
 int main(int argc, char *argv[])
@@ -171,9 +171,13 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	//sleep_loop
-	while(running)
+	while(daemon_run)
+	{
+		//TO-DO: check led status and light green
 		sleep(1);
-
+	}
+	//send signal INT to group
+	kill(0,SIGINT);
 	//Wait until all threads ends
 	for(int i=0; i<max_num_of_threads; i++)
 	{
@@ -273,16 +277,16 @@ void * Morfeas_thread(void *varg_pt)
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
 		loggers_path[strlen(loggers_path)] = '/';
-	
+
 	//Enlarge loggers_path table to fit logger_name and copy logger_name to it
 	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+1);
 	strcat(loggers_path, Logger_name);
-	
+
 	//Build New Logger file or Delete contents from old one
 	Log_fd = fopen(loggers_path, "w");
 	if(Log_fd)
 		fclose(Log_fd);
-	
+
 	//Fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
 	if(!cmd_fd)
@@ -291,9 +295,9 @@ void * Morfeas_thread(void *varg_pt)
         free(loggers_path);
 		return NULL;
     }
-	
-    //Read from stdout/err of forked command and write it to Log file 
-	while(fgets(out_str, sizeof(out_str), cmd_fd)) 
+
+    //Read from stdout/err of forked command and write it to Log file
+	while(fgets(out_str, sizeof(out_str), cmd_fd))
 	{
 		Log_fd = fopen(loggers_path, "a+");
 		if(Log_fd)
@@ -304,10 +308,10 @@ void * Morfeas_thread(void *varg_pt)
 		else
 			perror("fopen_error");
     }
-	//Check exit status of forked command 
+	//Check exit status of forked command
 	if(256 == pclose(cmd_fd))
 		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
-	else if(running)
+	else if(daemon_run)
 		printf("Thread for command \"%s\" Exit unexpectedly !!!\n", system_call_str);
 	//free allocated memory
 	free(loggers_path);
