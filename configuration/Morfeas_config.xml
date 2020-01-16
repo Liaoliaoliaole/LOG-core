@@ -5,7 +5,7 @@
 	<LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
 	<COMPONENTS>
 		<OPC_UA_SERVER>
-			<APP_NAME>Morfeas test application</APP_NAME>
+			<APP_NAME>Morfeas_test_application</APP_NAME>
 			<!-- Absolute path to the NODESet configuration file-->
 			<CONFIG_FILE>/home/pi/Morfeas_proj/Morfeas_core/configuration/OPC_UA_Config.xml</CONFIG_FILE>
 		</OPC_UA_SERVER>
@@ -20,15 +20,15 @@
 		</SDAQ_HANDLER>
 		<MDAQ_HANDLER Disable="true">
 			<DEV_NAME>test1</DEV_NAME>
-			<IP_ADDR>10.0.0.10</IP_ADDR>
+			<IPv4_ADDR>10.0.0.10</IPv4_ADDR>
 		</MDAQ_HANDLER>
 		<IOBOX_HANDLER Disable="true">
 			<DEV_NAME>test2</DEV_NAME>
-			<IP_ADDR>10.0.0.7</IP_ADDR>
+			<IPv4_ADDR>10.0.0.7</IPv4_ADDR>
 		</IOBOX_HANDLER>
 		<MTI_HANDLER Disable="true">
 			<DEV_NAME>test3</DEV_NAME>
-			<IP_ADDR>10.0.0.11</IP_ADDR>
+			<IPv4_ADDR>10.0.0.11</IPv4_ADDR>
 		</MTI_HANDLER>
 		<SUPPLEMENTARY Disable="true">
 			<PROGRAM>program_name</PROGRAM>

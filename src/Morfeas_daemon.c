@@ -221,7 +221,7 @@ void * Morfeas_thread(void *varg_pt)
 		if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
 		{
 			sprintf(Logger_name,"%s.log",Morfeas_opc_ua);
-			sprintf(system_call_str,"%s -a %s -c %s 2>&1", Morfeas_opc_ua,
+			sprintf(system_call_str,"%s -a '%s' -c '%s' 2>&1", Morfeas_opc_ua,
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
 													  XML_node_get_content(t_arg->component, "CONFIG_FILE"));
 		}

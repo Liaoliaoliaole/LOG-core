@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <time.h>
 #include <sys/time.h>
 #include <math.h>
+#include <arpa/inet.h>
 
 #include <glib.h>
 #include <gmodule.h>
@@ -362,11 +363,17 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	}
 	return EXIT_SUCCESS;
 }
+//Return 0 if ipv4_str is not valid. Using inet_pton to validate 
+int is_valid_IPv4(const char* ipv4_str)
+{
+	unsigned char buf[sizeof(struct in6_addr)];
+    return inet_pton(AF_INET, ipv4_str, buf);
+}
 
 int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
-	xmlNode *xml_node, *head_node, *check_node;
-	xmlChar* node_attr;
+	xmlNode *xml_node, *components_head_node, *check_node;
+	xmlChar* content, *ipv4_addr, *dev_name;
 	//Check for nodes with Empty content
 	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
 	{
@@ -386,33 +393,139 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		return EXIT_FAILURE;
 	}
 	//Check for existence of node "COMPONENTS"
-	if(!(head_node = get_XML_node(root_element, "COMPONENTS")))
+	if(!(components_head_node = get_XML_node(root_element, "COMPONENTS")))
 	{
 		fprintf(stderr, "\"COMPONENTS\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
-	//Check for existence of node "OPC_UA_SERVER"
-	if(!get_XML_node(head_node, "OPC_UA_SERVER"))
+	//Check for existence of node "OPC_UA_SERVER" and validate it's contents
+	if((xml_node = get_XML_node(components_head_node, "OPC_UA_SERVER")))
+	{
+		if((content = (xmlChar *) XML_node_get_content(xml_node, "APP_NAME")))
+		{
+			if(strstr((char*)content, " "))
+			{
+				fprintf(stderr, "Content (\"%s\") of XML node \"APP_NAME\" is invalid (contain Whitespaces)!!!\n",content);
+				return EXIT_FAILURE;
+			}
+		}	
+		else
+		{
+			fprintf(stderr, "\"APP_NAME\" XML child node of \"OPC_UA_SERVER\" not found\n");
+			return EXIT_FAILURE;
+		}
+		if((content = (xmlChar *) XML_node_get_content(xml_node, "CONFIG_FILE")))
+		{
+			if(access((const char*)content, F_OK|R_OK))
+			{
+				fprintf(stderr, "Content (%s) of \"CONFIG_FILE\" is invalid:\
+								 \n\t File does not exist or user does not have privileges for read!!!\n",content);
+				return EXIT_FAILURE;
+			}
+		}
+		else
+		{
+			fprintf(stderr, "\"CONFIG_FILE\" XML child node of \"OPC_UA_SERVER\" not found\n");
+			return EXIT_FAILURE;
+		}	
+	}
+	else
 	{
 		fprintf(stderr, "\"OPC_UA_SERVER\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
+	//Scan all SDAQ_HANDLER nodes for CANBUS_IF with duplicate content
+	xml_node = components_head_node->children;
+	while(xml_node)
+	{
+		if (xml_node->type == XML_ELEMENT_NODE)
+		{
+			if(!strcmp((char*)xml_node->name, "SDAQ_HANDLER"))
+			{
+				content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF");
+				check_node = xml_node->next;
+				while(check_node)
+				{
+					if (check_node->type == XML_ELEMENT_NODE)
+					{
+						if(!strcmp((char*)check_node->name, "SDAQ_HANDLER"))
+						{
+							if(!strcmp((char*)content, XML_node_get_content(check_node, "CANBUS_IF")))
+							{
+								fprintf(stderr, "XML Node with name \"CANBUS_IF\" and content \"%s\" found multiple times!!!\n",content);
+								return EXIT_FAILURE;
+							}
+						}
+					}
+					check_node = check_node->next;
+				}
+			}
+		}
+		xml_node = xml_node->next;
+	}
+	//Scan nodes MDAQ,IOBOX,MTI for child node with duplicate content
+	xml_node = components_head_node->children;
+	while(xml_node)
+	{
+		if (xml_node->type == XML_ELEMENT_NODE)
+		{
+			if(!strcmp((char*)xml_node->name, "MDAQ_HANDLER") ||
+			   !strcmp((char*)xml_node->name, "IOBOX_HANDLER")||
+			   !strcmp((char*)xml_node->name, "MTI_HANDLER"))
+			{
+				ipv4_addr = (xmlChar *) XML_node_get_content(xml_node, "IPv4_ADDR");
+				dev_name = (xmlChar *) XML_node_get_content(xml_node, "DEV_NAME");
+				if(!is_valid_IPv4((char *)ipv4_addr))
+				{
+					fprintf(stderr, "The Internet protocol version 4 address (%s) on line %d is not valid !!!\n",
+									 ipv4_addr,
+									 get_XML_node(xml_node, "IPv4_ADDR")->line);
+					return EXIT_FAILURE;
+				}
+				check_node = xml_node->next;
+				while(check_node)
+				{
+					if (check_node->type == XML_ELEMENT_NODE)
+					{
+						if(!strcmp((char*)check_node->name, "MDAQ_HANDLER") ||
+						   !strcmp((char*)check_node->name, "IOBOX_HANDLER")||
+						   !strcmp((char*)check_node->name, "MTI_HANDLER"))
+						{
+							if(!strcmp((char*)ipv4_addr, XML_node_get_content(check_node, "IPv4_ADDR")))
+							{
+								fprintf(stderr, "XML Node with name \"IPv4_ADDR\" and content \"%s\" found multiple times!!!\n",ipv4_addr);
+								return EXIT_FAILURE;
+							}
+							if(!strcmp((char*)dev_name, XML_node_get_content(check_node, "DEV_NAME")))
+							{
+								fprintf(stderr, "XML Node with name \"DEV_NAME\" and content \"%s\" found multiple times!!!\n",dev_name);
+								return EXIT_FAILURE;
+							}
+						}
+					}
+					check_node = check_node->next;
+				}
+			}
+		}
+		xml_node = xml_node->next;
+	}
+	
 	//Scan children of node "COMPONENTS" for Attribute errors
-	xml_node = head_node->children;
+	xml_node = components_head_node->children;
 	while(xml_node)
 	{
 		if (xml_node->type == XML_ELEMENT_NODE)
 		{
-			if((node_attr = xmlGetProp(xml_node, BAD_CAST"Disable")))
+			if((content = xmlGetProp(xml_node, BAD_CAST"Disable")))
 			{
-				if(strcmp((char *)node_attr, "true") && strcmp((char *)node_attr, "false"))
+				if(strcmp((char *)content, "true") && strcmp((char *)content, "false"))
 				{
 					fprintf(stderr, "Attribute Value: \"%s\" for XML node \"COMPONENTS\"(Line:%d) is out of range (true,false)\n",
-						(char*)node_attr, xml_node->line);
-					xmlFree(node_attr);
+						(char*)content, xml_node->line);
+					xmlFree(content);
 					return EXIT_FAILURE;
 				}
-				xmlFree(node_attr);
+				xmlFree(content);
 			}
 			else
 			{
@@ -422,34 +535,6 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
-	/*
-	//Scan children of node "COMPONENTS" for duplicates
-	xml_node = head_node->children;
-	check_node
-	while(xml_node)
-	{
-		if (xml_node->type == XML_ELEMENT_NODE)
-		{
-			if((node_attr = xmlGetProp(xml_node, BAD_CAST"Disable")))
-			{
-				if(strcmp((char *)node_attr, "true") && strcmp((char *)node_attr, "false"))
-				{
-					fprintf(stderr, "Attribute Value: \"%s\" for XML node \"COMPONENTS\"(Line:%d) is out of range (true,false)\n",
-						(char*)node_attr, xml_node->line);
-					xmlFree(node_attr);
-					return EXIT_FAILURE;
-				}
-				xmlFree(node_attr);
-			}
-			else
-			{
-				fprintf(stderr, "Unknown Attribute found at Line:%d\n", xml_node->line);
-				return EXIT_FAILURE;
-			}
-		}
-		xml_node = xml_node->next;
-	}
-	*/
 	return EXIT_SUCCESS;
 }
 
