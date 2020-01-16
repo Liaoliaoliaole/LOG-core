@@ -3581,7 +3581,7 @@
   (gr_text "G RX TX" (at 135.382 113.792) (layer F.SilkS)
     (effects (font (size 1.143 1.143) (thickness 0.2032)))
   )
-  (gr_text "Morfeas RPi Hat \nV1.1" (at 124.714 112.268 90) (layer F.SilkS)
+  (gr_text "Morfeas RPi Hat \nV1.2" (at 124.714 112.268 90) (layer F.SilkS)
     (effects (font (size 1.143 1.27) (thickness 0.25)) (justify left))
   )
   (gr_text + (at 167.132 118.364) (layer F.SilkS)
