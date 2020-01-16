@@ -367,28 +367,34 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
 	xmlNode *xml_node, *head_node, *check_node;
 	xmlChar* node_attr;
-	//check for nodes with Empty content
+	//Check for nodes with Empty content
 	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
 	{
 		fprintf(stderr, "\nNode \"%s\" @Line: %d does not have content !!!!\n\n", xml_node->name, xml_node->line);
 		return EXIT_FAILURE;
 	}
-	//check for existent of node "LOGGERS_DIR"
+	//Check for existence of node "LOGGERS_DIR"
 	if(!XML_node_get_content(root_element, "LOGGERS_DIR"))
 	{
 		fprintf(stderr, "\"LOGGERS_DIR\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
-	//check for existent of node "LOGSTAT_DIR"
+	//Check for existence of node "LOGSTAT_DIR"
 	if(!XML_node_get_content(root_element, "LOGSTAT_DIR"))
 	{
 		fprintf(stderr, "\"LOGSTAT_DIR\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
-	//check for existent of node "COMPONENTS"
+	//Check for existence of node "COMPONENTS"
 	if(!(head_node = get_XML_node(root_element, "COMPONENTS")))
 	{
 		fprintf(stderr, "\"COMPONENTS\" XML node not found\n");
+		return EXIT_FAILURE;
+	}
+	//Check for existence of node "OPC_UA_SERVER"
+	if(!get_XML_node(head_node, "OPC_UA_SERVER"))
+	{
+		fprintf(stderr, "\"OPC_UA_SERVER\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
 	//Scan children of node "COMPONENTS" for Attribute errors
