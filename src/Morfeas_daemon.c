@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.1" /*Release Version of Morfeas_daemon*/
+#define VERSION "0.9" /*Release Version of Morfeas_daemon*/
 #define max_num_of_threads 18
 
 //Define Morfeas Components programs
@@ -100,7 +100,10 @@ int main(int argc, char *argv[])
 		printf("%s Already running !!!\n", argv[0]);
 		exit(EXIT_SUCCESS);
 	}
-
+	//If config_path is NULL try to get it from the environment variable "Morfeas_deamon_config_path"
+	if(!config_path)
+		config_path = getenv("Morfeas_deamon_config_path");
+	printf("Morfeas_deamon_config_path = %s\n",config_path);
 	if(!config_path || access(config_path, R_OK | F_OK ) || !strstr(config_path, ".xml"))
 	{
 		printf("Configuration File not defined or invalid!!!\n");
@@ -202,7 +205,9 @@ void print_usage(char *prog_name)
 		"Options:\n"
 		"           -h : Print help.\n"
 		"           -V : Version.\n"
-		"           -c : Path to configuration XML file.\n"
+		"           -c : Path to configuration XML file.(see notes)\n"
+		"\nNote_1: If '-c' option not used the Morfeas_daemon will try to\n"
+		"          get config_path from env_var:\"Morfeas_deamon_config_path\"\n"
 	};
 	printf("%s\nUsage: %s [Options]\n\n%s",preamp, prog_name, manual);
 	return;
