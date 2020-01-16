@@ -103,7 +103,6 @@ int main(int argc, char *argv[])
 	//If config_path is NULL try to get it from the environment variable "Morfeas_deamon_config_path"
 	if(!config_path)
 		config_path = getenv("Morfeas_deamon_config_path");
-	printf("Morfeas_deamon_config_path = %s\n",config_path);
 	if(!config_path || access(config_path, R_OK | F_OK ) || !strstr(config_path, ".xml"))
 	{
 		printf("Configuration File not defined or invalid!!!\n");

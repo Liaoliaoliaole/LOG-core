@@ -4,8 +4,8 @@ BUILD_dir=build
 WORK_dir=work
 SRC_dir=src
 CANif_DEP_dir = ./src/sdaq-worker/work
-CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src/*.h
-CANif_DEP_SRC_dir = ./src/sdaq-worker/src
+CANif_DEP_HEADERS_dir = ./src/SDAQ_worker/src/*.h
+CANif_DEP_SRC_dir = ./src/SDAQ_worker/src
 
 HEADERS = $(SRC_dir)/IPC/*.h \
 		  $(SRC_dir)/Morfeas_opc_ua/*.h \
