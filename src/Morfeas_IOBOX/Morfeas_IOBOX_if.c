@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	//MODBus related variables
 	modbus_t *ctx;
 	unsigned short *IOBOX_regs;
-	int rc, i, offset;
+	int rc, i, j, offset;
 	//Apps variables
 	char *IOBOX_IPv4_addr, *dev_name;
 	//Check for call without arguments 
@@ -113,65 +113,82 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 	//Make connection to IOBOX
-	if (modbus_connect(ctx) == -1) 
+	while(modbus_connect(ctx)) 
 	{
 		fprintf(stderr, "Connection failed: %s\n", modbus_strerror(errno));
-		modbus_free(ctx);
-		free(IOBOX_regs);
-		return EXIT_FAILURE;
+		sleep(1);
 	}
 	//main application loop
 	while(handler_run)
 	{
 		rc = modbus_read_registers(ctx, 0, IOBOX_imp_reg, IOBOX_regs);
-		if (rc == -1) 
+		if (rc <= 0) 
+		{
 			fprintf(stderr, "Error(%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
-		
-		printf("\n");
-		/*
-		for (int i=0; i < 13; i++) 
-			printf("reg[%d]=%.3f\n", i, IOBOX_regs[i]*0.01);
-		*/
-		printf("----  RX 1 ----\n");
-		offset = 25;
-		for(i=0;i<16;i++)
-		{
-			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+			if(errno == 110)
+			{
+				while(modbus_connect(ctx) && handler_run) 
+				{
+					fprintf(stderr, "Re-Connection failed: %s\n", modbus_strerror(errno));
+					sleep(1);
+				}
+			}
 		}
-		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-		printf("Status = %hu\n", IOBOX_regs[22+offset]);
-		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-		
-		printf("----  RX 2 ----\n");
-		offset = 50;
-		for(i=0;i<16;i++)
+		else
 		{
-			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+			printf("----  Wireless Inductive Power Supply ----\n");
+			j=1;
+			printf("Uin=%.3f\n\n", IOBOX_regs[0]*0.01);
+			offset = 1;
+			while(offset<13)
+			{
+				printf("%uUout=%.3fV\n", j, IOBOX_regs[offset++]*0.01);
+				printf("%uIout=%.3fA\n", j, IOBOX_regs[offset++]*0.01);
+				printf("%uIout_filtered=%.3fA\n\n", j, IOBOX_regs[offset++]*0.01);
+				j++;
+			}
+			/*
+			printf("----  RX 1 ----\n");
+			offset = 25;
+			for(i=0;i<16;i++)
+			{
+				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+			}
+			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+			printf("Status = %hu\n", IOBOX_regs[22+offset]);
+			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+			
+			printf("----  RX 2 ----\n");
+			offset = 50;
+			for(i=0;i<16;i++)
+			{
+				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+			}
+			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+			printf("Status = %hu\n", IOBOX_regs[22+offset]);
+			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+			
+			printf("----  RX 3 ----\n");
+			offset = 75;
+			for(i=0;i<16;i++)
+			{
+				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+			}
+			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+			printf("Status = %hu\n", IOBOX_regs[22+offset]);
+			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+			
+			printf("----  RX 4 ----\n");
+			offset = 100;
+			for(i=0;i<16;i++)
+			{
+				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+			}
+			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+			printf("Status = %hu\n", IOBOX_regs[22+offset]);
+			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+			*/
 		}
-		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-		printf("Status = %hu\n", IOBOX_regs[22+offset]);
-		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-		
-		printf("----  RX 3 ----\n");
-		offset = 75;
-		for(i=0;i<16;i++)
-		{
-			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
-		}
-		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-		printf("Status = %hu\n", IOBOX_regs[22+offset]);
-		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-		
-		printf("----  RX 4 ----\n");
-		offset = 100;
-		for(i=0;i<16;i++)
-		{
-			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
-		}
-		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-		printf("Status = %hu\n", IOBOX_regs[22+offset]);
-		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-		
 		usleep(100000);
 	}
 	//Close MODBus connection and De-allocate memory
