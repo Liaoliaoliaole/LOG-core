@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
 <CONFIG>
-	<CONFIGS_DIR>/home/pi/Morfeas_proj/Morfeas_core/configuration</CONFIGS_DIR>
+	<!--<CONFIGS_DIR>/home/pi/Morfeas_proj/Morfeas_core/configuration</CONFIGS_DIR>-->
+	<CONFIGS_DIR>/home/sam/Desktop/test/morfeas_project/configuration</CONFIGS_DIR>
 	<LOGGERS_DIR>/mnt/ramdisk/Morfeas_Loggers/</LOGGERS_DIR>
 	<LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
 	<COMPONENTS>

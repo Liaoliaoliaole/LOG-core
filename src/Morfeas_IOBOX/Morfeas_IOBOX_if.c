@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.1" /*Release Version of Morfeas_IOBOX_if*/
 
-#define IOBOX_imp_reg 125 
+#define IOBOX_imp_reg 125
 #define IOBOX_slave_address 10
 
 #include <stdio.h>
@@ -54,13 +54,13 @@ int main(int argc, char *argv[])
 	int rc, i, j, offset;
 	//Apps variables
 	char *IOBOX_IPv4_addr, *dev_name;
-	//Check for call without arguments 
+	//Check for call without arguments
 	if(argc == 1)
 	{
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	
+
 	//Get options
 	int c;
 	while ((c = getopt (argc, argv, "hVc:")) != -1)
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Argument of Device name missing!!!\n");
 		exit(EXIT_FAILURE);
 	}
-	 // Allocate and initialize the memory to store the IOBOX's registers 
+	 // Allocate and initialize the memory to store the IOBOX's registers
 	if(!(IOBOX_regs = calloc(IOBOX_imp_reg+5, sizeof(unsigned short))))
 	{
 		fprintf(stderr, "Memory Error!!!\n");
@@ -101,10 +101,10 @@ int main(int argc, char *argv[])
 	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
-	
+
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(IOBOX_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
-	//Set Slave address 
+	//Set Slave address
 	if(modbus_set_slave(ctx, IOBOX_slave_address))
 	{
 		fprintf(stderr, "Can not set slave address !!!\n");
@@ -112,27 +112,28 @@ int main(int argc, char *argv[])
 		free(IOBOX_regs);
 		return EXIT_FAILURE;
 	}
-	//Make connection to IOBOX
-	while(modbus_connect(ctx)) 
+	//Attempt connection to IOBOX
+	while(modbus_connect(ctx) && handler_run)
 	{
 		fprintf(stderr, "Connection failed: %s\n", modbus_strerror(errno));
 		sleep(1);
+	}
+	if(!handler_run)
+	{
+		modbus_free(ctx);
+		free(IOBOX_regs);
+		return EXIT_FAILURE;
 	}
 	//main application loop
 	while(handler_run)
 	{
 		rc = modbus_read_registers(ctx, 0, IOBOX_imp_reg, IOBOX_regs);
-		if (rc <= 0) 
+		if (rc <= 0)
 		{
-			fprintf(stderr, "Error(%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
-			if(errno == ETIMEDOUT) //Connection timed out
-			{
-				while(modbus_connect(ctx) && handler_run) 
-				{
-					fprintf(stderr, "Re-Connection failed: %s\n", modbus_strerror(errno));
-					sleep(1);
-				}
-			}
+			//fprintf(stderr, "Error(%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
+			//Attempt to reconnection
+			while(modbus_connect(ctx) && handler_run)
+				sleep(1);
 		}
 		else
 		{
@@ -142,9 +143,9 @@ int main(int argc, char *argv[])
 			offset = 1;
 			while(offset<13)
 			{
-				printf("%uUout=%.3fV\n", j, IOBOX_regs[offset++]*0.01);
-				printf("%uIout=%.3fA\n", j, IOBOX_regs[offset++]*0.01);
-				printf("%uIout_filtered=%.3fA\n\n", j, IOBOX_regs[offset++]*0.01);
+				printf("%uUout=%.3fV\n", j, IOBOX_regs[offset++]/100.0);
+				printf("%uIout=%.3fA\n", j, IOBOX_regs[offset++]/100.0);
+				printf("%uIout_filtered=%.3fA\n\n", j, IOBOX_regs[offset++]/100.0);
 				j++;
 			}
 			/*
@@ -157,7 +158,7 @@ int main(int argc, char *argv[])
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
 			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-			
+
 			printf("----  RX 2 ----\n");
 			offset = 50;
 			for(i=0;i<16;i++)
@@ -167,7 +168,7 @@ int main(int argc, char *argv[])
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
 			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-			
+
 			printf("----  RX 3 ----\n");
 			offset = 75;
 			for(i=0;i<16;i++)
@@ -177,7 +178,7 @@ int main(int argc, char *argv[])
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
 			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-			
+
 			printf("----  RX 4 ----\n");
 			offset = 100;
 			for(i=0;i<16;i++)

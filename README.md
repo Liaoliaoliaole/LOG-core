@@ -95,6 +95,21 @@ $ make -j$(nproc)
 ```
 The executable binaries located under the **./build** directory.
 
+### Instalation of the Morfeas-core Project
+```
+$ sudo make install
+```
+### Configuration for the Morfeas_daemon and Systemd service
+```
+$ #Make the nececery modifications on the Unit file of the Morfeas_daemon service
+$ sudo systemctl edit Morfeas_system.service --full
+$ #Also modify the configuration file of the Morfeas_daemon service
+$ sudo vim /etc/systemd/system/Morfeas_system.service.d/Morfeas_system.conf
+$ #Start the systemd service daemon
+$ sudo systemctl start Morfeas_system.service
+$ #If you want to start the daemon on boot
+$ sudo systemctl enable Morfeas_system.service
+```
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
 
