@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 		if (rc <= 0) 
 		{
 			fprintf(stderr, "Error(%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
-			if(errno == 110)
+			if(errno == ETIMEDOUT) //Connection timed out
 			{
 				while(modbus_connect(ctx) && handler_run) 
 				{
