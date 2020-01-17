@@ -101,7 +101,7 @@ $ sudo make install
 ```
 ### Configuration for the Morfeas_daemon and Systemd service
 ```
-$ #--- Optionaly copy the configuration to your home directory ---
+$ #--- Optionaly copy the configuration directory to your home ---
 $ cp -r configuration ~/
 $ #Make the nececery modifications on the Morfeas_daemon configuration (.xml) file
 $ vim (~/)configuration/Morfeas_config.xml
