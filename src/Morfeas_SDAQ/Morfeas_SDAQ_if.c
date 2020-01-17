@@ -217,6 +217,7 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, CAN_if_timer_handler);
 	//Link signal SIGINT and SIGPIPE to quit_signal_handler
 	signal(SIGINT, quit_signal_handler);
+	signal(SIGTERM, quit_signal_handler);
 	signal(SIGPIPE, quit_signal_handler);
 	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
 	led_init(stats.CAN_IF_name);
