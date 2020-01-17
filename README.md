@@ -95,7 +95,7 @@ $ make -j$(nproc)
 ```
 The executable binaries located under the **./build** directory.
 
-### Instalation of the Morfeas-core Project
+### Installation of the Morfeas-core Project
 ```
 $ sudo make install
 ```
