@@ -101,13 +101,17 @@ $ sudo make install
 ```
 ### Configuration for the Morfeas_daemon and Systemd service
 ```
+$ #--- Optionaly copy the configuration to your home directory ---
+$ cp -r configuration ~/
+$ #Make the nececery modifications on the Morfeas_daemon configuration (.xml) file
+$ vim (~/)configuration/Morfeas_config.xml
 $ #Make the nececery modifications on the Unit file of the Morfeas_daemon service
 $ sudo systemctl edit Morfeas_system.service --full
 $ #Also modify the configuration file of the Morfeas_daemon service
 $ sudo vim /etc/systemd/system/Morfeas_system.service.d/Morfeas_system.conf
 $ #Start the systemd service daemon
 $ sudo systemctl start Morfeas_system.service
-$ #If you want to start the daemon on boot
+$ #--- Optionaly If you want to start the daemon on boot ---
 $ sudo systemctl enable Morfeas_system.service
 ```
 ## Authors
