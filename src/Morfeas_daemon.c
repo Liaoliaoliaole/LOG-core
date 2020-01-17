@@ -101,6 +101,8 @@ int main(int argc, char *argv[])
 		printf("%s Already running !!!\n", argv[0]);
 		exit(EXIT_SUCCESS);
 	}
+	//Print start message
+	printf("----- Morfeas_daemon Started -----\n");
 	//If config_path is NULL try to get it from the environment variable "Morfeas_daemon_config_path"
 	if(!config_path)
 		config_path = getenv("Morfeas_daemon_config_path");
