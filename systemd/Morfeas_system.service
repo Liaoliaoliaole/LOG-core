@@ -1,10 +1,13 @@
 [Unit]
 Description=Systemd service for Morfeas_daemon 
-After=network.target rc.local.service
+After=network.target \
+#Un-Comment next line if you have related operation in rc.local 
+rc.local.service
 
 [Service]
 Type=simple
 ExecStart=Morfeas_daemon -c $Morfeas_deamon_config_path 
+User=pi
 
 [Install]
 WantedBy=multi-user.target
