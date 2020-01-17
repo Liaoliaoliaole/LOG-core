@@ -1,8 +1,8 @@
 [Unit]
 Description=Systemd service for Morfeas_daemon 
 After=network.target \
-#Un-Comment next line if you have related operation in rc.local 
-rc.local.service
+#Un-Comment next line if you have related jobs in rc.local 
+#rc.local.service
 
 [Service]
 Type=simple
