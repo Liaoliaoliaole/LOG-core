@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
 <CONFIG>
+	<CONFIGS_DIR>/home/pi/Morfeas_proj/Morfeas_core/configuration</CONFIGS_DIR>
 	<LOGGERS_DIR>/mnt/ramdisk/Morfeas_Loggers/</LOGGERS_DIR>
 	<LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
 	<COMPONENTS>
 		<OPC_UA_SERVER>
 			<APP_NAME>Morfeas_test_application</APP_NAME>
-			<!-- Absolute path to the NODESet configuration file-->
-			<!-- <CONFIG_FILE>/home/pi/Morfeas_proj/Morfeas_core/configuration/OPC_UA_Config.xml</CONFIG_FILE> -->
-			<CONFIG_FILE>/home/sam/Desktop/test/morfeas_project/configuration/OPC_UA_Config.xml</CONFIG_FILE>
+			<CONFIG_FILE>OPC_UA_Config.xml</CONFIG_FILE>
 		</OPC_UA_SERVER>
-		<SDAQ_HANDLER Disable="true">
+		<SDAQ_HANDLER Disable="false">
 			<CANBUS_IF>can0</CANBUS_IF>
 		</SDAQ_HANDLER>
-		<SDAQ_HANDLER Disable="true">
+		<SDAQ_HANDLER Disable="false">
 			<CANBUS_IF>can1</CANBUS_IF>
 		</SDAQ_HANDLER>
 		<SDAQ_HANDLER Disable="false">

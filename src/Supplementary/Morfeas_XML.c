@@ -369,15 +369,46 @@ int is_valid_IPv4(const char* ipv4_str)
 	unsigned char buf[sizeof(struct in6_addr)];
     return inet_pton(AF_INET, ipv4_str, buf);
 }
+//Return 0 if file is accessible, or 1 if configs_dir does not exist, otherwise -1   
+int check_file(const char *configs_dir, const char *file_name)
+{
+	DIR *configs_dir_ptr;
+	int retval = 0;
+	char *abs_file_path;
+	if(!configs_dir || !file_name)
+		return -1;
+	if(!(configs_dir_ptr = opendir(configs_dir)))
+		return 1;
+	abs_file_path = calloc(strlen(configs_dir)+strlen(file_name)+5, sizeof(char));
+	if(!abs_file_path)
+	{
+		fprintf(stderr, "Memory Error!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	strcat(abs_file_path, configs_dir);
+	if(abs_file_path[strlen(abs_file_path)-1]!='/')
+		abs_file_path[strlen(abs_file_path)]='/';
+	strcat(abs_file_path, file_name);
+	if(access((const char*)abs_file_path, R_OK))
+		retval = -1;
+	free(abs_file_path);
+	return retval;
+}
 
 int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
 	xmlNode *xml_node, *components_head_node, *check_node;
-	xmlChar* content, *ipv4_addr, *dev_name;
+	xmlChar* content, *ipv4_addr, *dev_name, *config_Dir;
 	//Check for nodes with Empty content
 	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
 	{
 		fprintf(stderr, "\nNode \"%s\" @Line: %d does not have content !!!!\n\n", xml_node->name, xml_node->line);
+		return EXIT_FAILURE;
+	}
+	//Check for existence of node "CONFIGS_DIR"
+	if(!(config_Dir = (xmlChar *) XML_node_get_content(root_element, "CONFIGS_DIR")))
+	{
+		fprintf(stderr, "\"CONFIGS_DIR\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
 	//Check for existence of node "LOGGERS_DIR"
@@ -416,10 +447,17 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		if((content = (xmlChar *) XML_node_get_content(xml_node, "CONFIG_FILE")))
 		{
-			if(access((const char*)content, F_OK|R_OK))
+			int check_ret = check_file((char*)config_Dir, (char*)content);
+			if(check_ret<0)
 			{
 				fprintf(stderr, "Content (%s) of \"CONFIG_FILE\" is invalid:\
 								 \n\t File does not exist or user does not have privileges for read!!!\n",content);
+				return EXIT_FAILURE;
+			}
+			else if(check_ret>0)
+			{
+				fprintf(stderr, "Content (%s) of \"CONFIGS_DIR\" is invalid:\
+								 \n\t Directory does not exist !!!\n",config_Dir);
 				return EXIT_FAILURE;
 			}
 		}

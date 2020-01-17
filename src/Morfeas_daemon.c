@@ -43,6 +43,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 typedef struct thread_arguments{
 	xmlNode *component;
+	char *configs_Dir_path;
 	char *loggers_path;
 	char *logstat_path;
 }thread_arg;
@@ -120,6 +121,7 @@ int main(int argc, char *argv[])
 		if(!Morfeas_daemon_config_valid(root_element))
 		{
 			//make Morfeas_Loggers_Directory
+			t_arg.configs_Dir_path = XML_node_get_content(root_element, "CONFIGS_DIR");
 			t_arg.logstat_path = XML_node_get_content(root_element, "LOGSTAT_DIR");
 			t_arg.loggers_path = XML_node_get_content(root_element, "LOGGERS_DIR");
 			mkdir(t_arg.loggers_path, 0777);
@@ -229,8 +231,10 @@ void * Morfeas_thread(void *varg_pt)
 		if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
 		{
 			sprintf(Logger_name,"%s.log",Morfeas_opc_ua);
-			sprintf(system_call_str,"%s -a '%s' -c '%s' 2>&1", Morfeas_opc_ua,
+			sprintf(system_call_str,"%s -a '%s' -c '%s%s%s' 2>&1", Morfeas_opc_ua,
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
+													  t_arg->configs_Dir_path,
+													  t_arg->configs_Dir_path[strlen(t_arg->configs_Dir_path)-1]=='/'?"":"/",
 													  XML_node_get_content(t_arg->component, "CONFIG_FILE"));
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
