@@ -14,3 +14,197 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define VERSION "0.1" /*Release Version of Morfeas_IOBOX_if*/
+
+#define IOBOX_imp_reg 125 
+#define IOBOX_slave_address 10
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+#include <math.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
+
+#include <modbus.h>
+
+//Global variables
+static volatile unsigned char handler_run = 1;
+
+//Print the Usage manual
+void print_usage(char *prog_name);
+
+
+static void stopHandler(int sign)
+{
+	handler_run = 0;
+}
+
+int main(int argc, char *argv[])
+{
+	//MODBus related variables
+	modbus_t *ctx;
+	unsigned short *IOBOX_regs;
+	int rc, i, offset;
+	//Apps variables
+	char *IOBOX_IPv4_addr, *dev_name;
+	//Check for call without arguments 
+	if(argc == 1)
+	{
+		print_usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	
+	//Get options
+	int c;
+	while ((c = getopt (argc, argv, "hVc:")) != -1)
+	{
+		switch (c)
+		{
+			case 'h'://help
+				print_usage(argv[0]);
+				exit(EXIT_SUCCESS);
+			case 'V'://Version
+				printf(VERSION"\n");
+				exit(EXIT_SUCCESS);
+			case '?':
+				print_usage(argv[0]);
+				exit(EXIT_FAILURE);
+		}
+	}
+	//Get arguments
+	IOBOX_IPv4_addr = argv[optind];
+	dev_name = argv[optind+1];
+	//Check arguments
+	if(!IOBOX_IPv4_addr)
+	{
+		fprintf(stderr, "Argument of IOBOX's IPv4 address missing!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	if(!dev_name)
+	{
+		fprintf(stderr, "Argument of Device name missing!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	 // Allocate and initialize the memory to store the IOBOX's registers 
+	if(!(IOBOX_regs = calloc(IOBOX_imp_reg+5, sizeof(unsigned short))))
+	{
+		fprintf(stderr, "Memory Error!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
+	signal(SIGINT, stopHandler);
+    signal(SIGTERM, stopHandler);
+	
+	//Make MODBus socket for connection
+	ctx = modbus_new_tcp(IOBOX_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
+	//Set Slave address 
+	if(modbus_set_slave(ctx, IOBOX_slave_address))
+	{
+		fprintf(stderr, "Can not set slave address !!!\n");
+		modbus_free(ctx);
+		free(IOBOX_regs);
+		return EXIT_FAILURE;
+	}
+	//Make connection to IOBOX
+	if (modbus_connect(ctx) == -1) 
+	{
+		fprintf(stderr, "Connection failed: %s\n", modbus_strerror(errno));
+		modbus_free(ctx);
+		free(IOBOX_regs);
+		return EXIT_FAILURE;
+	}
+	//main application loop
+	while(handler_run)
+	{
+		rc = modbus_read_registers(ctx, 0, IOBOX_imp_reg, IOBOX_regs);
+		if (rc == -1) 
+			fprintf(stderr, "Error(%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
+		
+		printf("\n");
+		/*
+		for (int i=0; i < 13; i++) 
+			printf("reg[%d]=%.3f\n", i, IOBOX_regs[i]*0.01);
+		*/
+		printf("----  RX 1 ----\n");
+		offset = 25;
+		for(i=0;i<16;i++)
+		{
+			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+		}
+		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+		printf("Status = %hu\n", IOBOX_regs[22+offset]);
+		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+		
+		printf("----  RX 2 ----\n");
+		offset = 50;
+		for(i=0;i<16;i++)
+		{
+			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+		}
+		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+		printf("Status = %hu\n", IOBOX_regs[22+offset]);
+		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+		
+		printf("----  RX 3 ----\n");
+		offset = 75;
+		for(i=0;i<16;i++)
+		{
+			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+		}
+		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+		printf("Status = %hu\n", IOBOX_regs[22+offset]);
+		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+		
+		printf("----  RX 4 ----\n");
+		offset = 100;
+		for(i=0;i<16;i++)
+		{
+			printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+		}
+		printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
+		printf("Status = %hu\n", IOBOX_regs[22+offset]);
+		printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+		
+		usleep(100000);
+	}
+	//Close MODBus connection and De-allocate memory
+	modbus_close(ctx);
+	free(IOBOX_regs);
+	return EXIT_SUCCESS;
+}
+
+//print the Usage manual
+void print_usage(char *prog_name)
+{
+	const char preamp[] = {
+	"\tProgram: Morfeas_IOBOX_if  Copyright (C) 12019-12020  Sam Harry Tzavaras\n"
+    "\tThis program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE.\n"
+    "\tThis is free software, and you are welcome to redistribute it\n"
+    "\tunder certain conditions; for details see LICENSE.\n"
+	};
+	const char manual[] = {
+		"\tDev_name: A string that related to the configuration of the IOBOX\n\n"
+		"\t    IPv4: The IPv4 address of IOBOX\n\n"
+		"Options:\n"
+		"           -h : Print help.\n"
+		"           -V : Version.\n"
+	};
+	printf("%s\nUsage: %s IPv4 Dev_name [/path/to/logstat/directory] [Options]\n\n%s",preamp, prog_name, manual);
+	return;
+}
+
+
+
+
+
+
+
+
+
