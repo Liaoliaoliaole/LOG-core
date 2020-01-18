@@ -21,7 +21,7 @@ $ # Make the compilation directory tree
 $ make tree
 $ make
 ```
-The executable binaries located under the **./build** directory.
+The executable binary located under the **./build** directory.
 
 ### Installation
 ```
