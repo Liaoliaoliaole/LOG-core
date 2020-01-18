@@ -17,7 +17,8 @@ As the Morfeas project developed additional support added for other devices (MDA
 
 Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web".
 Thisof, will provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
-** In relation with this project is the [Morfeas_RPi_Hat](./src/Morfeas_RPi_Hat) **
+
+**In relation with this project [Morfeas_RPi_Hat](./src/Morfeas_RPi_Hat)**
 ### Design Philosophy
 The Morfeas-core project designed as a micro-component with supervision system.
 This means that all the components called from a supervisor programs,
