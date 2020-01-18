@@ -282,7 +282,7 @@ void * Morfeas_thread(void *varg_pt)
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
 		{
-			printf("Not yet implemented decode for Components with type \"SUPPLEMENTARY\"\n");
+			printf("Not yet implemented decoder for Components with type \"SUPPLEMENTARY\"\n");
 			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 			free(loggers_path);
 			return NULL;
@@ -333,7 +333,7 @@ void * Morfeas_thread(void *varg_pt)
     }
 
 	//Check exit status of forked command
-	if(256 == pclose(cmd_fd))
+	if(pclose(cmd_fd) == 256)
 		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
 	else if(daemon_run)
 		printf("Thread for command \"%s\" Exit unexpectedly !!!\n", system_call_str);

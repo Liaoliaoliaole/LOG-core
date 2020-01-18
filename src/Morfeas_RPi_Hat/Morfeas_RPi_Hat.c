@@ -23,9 +23,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <linux/i2c-dev.h>
+#include <linux/i2c-smbus.h>
+
 #include "../Morfeas_Types.h"
 #include "Morfeas_RPi_Hat.h"
 
+	//---- LEDs related ----//
+//Init Morfeas_RPi_Hat LEDs, return 1 if sysfs files exist, 0 otherwise.
 int led_init(char *CAN_IF_name)
 {
 	char path[35];
@@ -70,7 +75,7 @@ int led_init(char *CAN_IF_name)
 	}
 	return 1;
 }
-
+//Write value to Morfeas_RPi_Hat LED, return 0 if write was success, -1 otherwise.
 int GPIOWrite(int LED_name, int value)
 {
 	static const char s_values_str[] = "01";
@@ -91,7 +96,7 @@ int GPIOWrite(int LED_name, int value)
 	close(fd);
 	return(0);
 }
-
+//Read value of Morfeas_RPi_Hat LED by name, return value of the LED, or -1 if read failed.
 int GPIORead(int LED_name)
 {
 	char read_val[30] = {0};
@@ -112,5 +117,7 @@ int GPIORead(int LED_name)
 	close(fd);
 	return(atoi(read_val));
 }
+
+	//---- I2C device related ----//
 
 
