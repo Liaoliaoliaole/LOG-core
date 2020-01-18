@@ -94,7 +94,7 @@ int GPIOWrite(int LED_name, int value)
 
 int GPIORead(int LED_name)
 {
-	char read_val[30];
+	char read_val[30] = {0};
 	char path[50];
 	int fd;
 	snprintf(path, 30, "/sys/class/gpio/gpio%d/value", LED_name);

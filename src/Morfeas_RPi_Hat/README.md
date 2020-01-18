@@ -1,11 +1,37 @@
 ![picture](./Docs/Artwork/PCB_3d_render.png)
 # Morfeas PRi Hat
-
 This repository related to Supporting software, PCB and Mechanical design for the Morfeas RPi Hat.
 
 The PCB designed using [KiCAD EDA](https://kicad-pcb.org/), A Libre(free) electronic CAD/CAM software.<br>
 The mechanical design of the enclosures designed using [FreeCAD](https://www.freecadweb.org/), A Libre(free) mechanical/architecture CAD/CAM Software.<br>
 The software for the Morfeas RPi Hat written in ANSI C and is compatible with GNU operating system.<br>
+
+### Requirements
+For compilation of this project the following dependencies are required.
+* [GCC](https://gcc.gnu.org/) - The GNU Compilers Collection
+* [GNU Make](https://www.gnu.org/software/make/) - GNU make utility
+* [NCURSES](https://www.gnu.org/software/ncurses/ncurses.html) - A free (libre) software emulation library of curses.
+* [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
+* [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data.
+
+### Compilation
+To compile the program (tested under GNU/Linux only)
+```
+$ # Make the compilation directory tree
+$ make tree
+$ make
+```
+The executable binaries located under the **./build** directory.
+
+### Installation
+```
+$ sudo make install
+```
+### Un-installation
+```
+$ sudo make uninstall
+```
+
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
 ## License
