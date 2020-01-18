@@ -31,7 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Local functions
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass);
 
-int logstat_json(char *logstat_path, void *stats_arg)
+int logstat_SDAQ(char *logstat_path, void *stats_arg)
 {
 	if(!logstat_path)
 		return 1;

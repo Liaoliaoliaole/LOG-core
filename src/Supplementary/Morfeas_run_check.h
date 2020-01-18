@@ -21,8 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 int check_already_run(const char *prog_name);
 //-- Function that detects if other program with the same name already running on the same bus --//
 //-- return 0 if no other program found --//
-int check_already_run_onBus(const char *called_prog_name, const char *bus_name);
+int check_already_run_with_same_arg(const char *called_prog_name, const char *bus_name);
 //-- Function that calculate and returns the bsd Checksum of the data--//
 unsigned char Checksum(void *data, size_t data_size);
-
+//Return 0 if ipv4_str is not valid. Using inet_pton to validate
+int is_valid_IPv4(const char* ipv4_str);
 

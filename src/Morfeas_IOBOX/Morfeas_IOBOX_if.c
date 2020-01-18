@@ -34,6 +34,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <modbus.h>
 
+#include "../Supplementary/Morfeas_run_check.h"
+
 //Global variables
 static volatile unsigned char handler_run = 1;
 
@@ -50,10 +52,10 @@ int main(int argc, char *argv[])
 {
 	//MODBus related variables
 	modbus_t *ctx;
-	unsigned short *IOBOX_regs;
 	int rc, i, j, offset;
 	//Apps variables
 	char *IOBOX_IPv4_addr, *dev_name;
+	unsigned short *IOBOX_regs;
 	//Check for call without arguments
 	if(argc == 1)
 	{
@@ -81,18 +83,27 @@ int main(int argc, char *argv[])
 	//Get arguments
 	IOBOX_IPv4_addr = argv[optind];
 	dev_name = argv[optind+1];
+
 	//Check arguments
-	if(!IOBOX_IPv4_addr)
+	if(!IOBOX_IPv4_addr || !dev_name)
 	{
-		fprintf(stderr, "Argument of IOBOX's IPv4 address missing!!!\n");
+		fprintf(stderr, "Mandatory Argument missing!!!\n");
+		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	if(!dev_name)
+
+	if(!is_valid_IPv4(IOBOX_IPv4_addr))
 	{
 		fprintf(stderr, "Argument of Device name missing!!!\n");
 		exit(EXIT_FAILURE);
 	}
-	 // Allocate and initialize the memory to store the IOBOX's registers
+	//Check if other instance of this program already runs with same IOBOX_IPv4_addr
+	if(check_already_run_with_same_arg(argv[0], IOBOX_IPv4_addr))
+	{
+		fprintf(stderr, "%s for IPv4:%s Already Running!!!\n", argv[0], IOBOX_IPv4_addr);
+		exit(EXIT_SUCCESS);
+	}
+	// Allocate and initialize the memory to store the IOBOX's registers
 	if(!(IOBOX_regs = calloc(IOBOX_imp_reg+5, sizeof(unsigned short))))
 	{
 		fprintf(stderr, "Memory Error!!!\n");

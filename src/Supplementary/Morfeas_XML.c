@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <time.h>
 #include <sys/time.h>
 #include <math.h>
-#include <arpa/inet.h>
 
 #include <glib.h>
 #include <gmodule.h>
@@ -31,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libxml/tree.h>
 
 #include "../Morfeas_Types.h"
+#include "Morfeas_run_check.h"
 
 /*
 void print_XML_node(xmlNode * node)
@@ -363,13 +363,8 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	}
 	return EXIT_SUCCESS;
 }
-//Return 0 if ipv4_str is not valid. Using inet_pton to validate 
-int is_valid_IPv4(const char* ipv4_str)
-{
-	unsigned char buf[sizeof(struct in6_addr)];
-    return inet_pton(AF_INET, ipv4_str, buf);
-}
-//Return 0 if file is accessible, or 1 if configs_dir does not exist, otherwise -1   
+
+//Return 0 if file is accessible, or 1 if configs_dir does not exist, otherwise -1
 int check_file(const char *configs_dir, const char *file_name)
 {
 	DIR *configs_dir_ptr;
@@ -439,7 +434,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 				fprintf(stderr, "Content (\"%s\") of XML node \"APP_NAME\" is invalid (contain Whitespaces)!!!\n",content);
 				return EXIT_FAILURE;
 			}
-		}	
+		}
 		else
 		{
 			fprintf(stderr, "\"APP_NAME\" XML child node of \"OPC_UA_SERVER\" not found\n");
@@ -465,7 +460,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		{
 			fprintf(stderr, "\"CONFIG_FILE\" XML child node of \"OPC_UA_SERVER\" not found\n");
 			return EXIT_FAILURE;
-		}	
+		}
 	}
 	else
 	{
@@ -547,7 +542,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
-	
+
 	//Scan children of node "COMPONENTS" for Attribute errors
 	xml_node = components_head_node->children;
 	while(xml_node)

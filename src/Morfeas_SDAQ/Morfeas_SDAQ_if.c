@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	//Check if program already runs on same bus.
-	if(check_already_run_onBus(argv[0], argv[1]))
+	if(check_already_run_with_same_arg(argv[0], argv[1]))
 	{
 		fprintf(stderr, "%s for interface \"%s\" Already Running!!!\n", argv[0], argv[1]);
 		exit(EXIT_SUCCESS);
@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
 			IPC_msg.BUS_info.shunt_temp = stats.Shunt_temp;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 			//Write Stats to Logstat JSON file
-			logstat_json(logstat_path,&stats);
+			logstat_SDAQ(logstat_path,&stats);
 		}
 		led_stat(&stats);
 	}

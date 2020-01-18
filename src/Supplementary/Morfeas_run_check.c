@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 int check_already_run(const char *prog_name)
 {
@@ -32,7 +33,7 @@ int check_already_run(const char *prog_name)
 	return i>1? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-int check_already_run_onBus(const char *called_prog_name,const char *bus_name)
+int check_already_run_with_same_arg(const char *called_prog_name,const char *arg_check)
 {
 	const char *prog_name = called_prog_name;
 	char out_str[1024] = {0}, *cmd, *buff, *tok, i=1;
@@ -49,15 +50,15 @@ int check_already_run_onBus(const char *called_prog_name,const char *bus_name)
 		while((tok = strtok(NULL, "/")))
 			prog_name = tok;
 	}
-	//allocate memory for cmd, where is sizes of "prog_name" and "bus_name" + 50 (41+3 round to 50)
-	if(!(cmd = calloc(strlen(prog_name)+strlen(bus_name)+50, sizeof(*cmd))))
+	//allocate memory for cmd, where is sizes of "prog_name" and "arg_check" + 50 (41+3 round to 50)
+	if(!(cmd = calloc(strlen(prog_name)+strlen(arg_check)+50, sizeof(*cmd))))
 	{
 		fprintf(stderr, "Memory error!!!\n");
 		free(buff);
 		exit(EXIT_FAILURE);
 	}
 	//Construct cmd
-	sprintf(cmd, "ps aux | grep --color=none -E '([0-9] |/)%s %s'",prog_name, bus_name);
+	sprintf(cmd, "ps aux | grep --color=none -E '([0-9] |/)%s %s'",prog_name, arg_check);
 	//fork cmd and get stdout through pipe to out_str
 	FILE *out = popen(cmd, "r");
 	fread(out_str, sizeof(out_str), sizeof(*out_str), out);
@@ -81,4 +82,11 @@ unsigned char Checksum(void *data, size_t data_size)
         checksum += *(data_dec);
     }
     return checksum;
+}
+
+//Return 0 if ipv4_str is not valid. Using inet_pton to validate
+int is_valid_IPv4(const char* ipv4_str)
+{
+	unsigned char buf[sizeof(struct in6_addr)];
+    return inet_pton(AF_INET, ipv4_str, buf);
 }

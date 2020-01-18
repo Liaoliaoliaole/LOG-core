@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.9" /*Release Version of Morfeas_daemon*/
 #define max_num_of_threads 18
+#define max_lines_on_Logger 256
 
 //Define Morfeas Components programs
 #define Morfeas_opc_ua "Morfeas_opc_ua"
@@ -328,7 +329,7 @@ void * Morfeas_thread(void *varg_pt)
 			fclose(Log_fd);
 		}
 		else
-			perror("fopen_error");
+			perror("fopen_error:");
     }
 	//Check exit status of forked command
 	if(256 == pclose(cmd_fd))

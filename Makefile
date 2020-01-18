@@ -113,7 +113,7 @@ install:
 	@install $(BUILD_dir)/Morfeas_opc_ua -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_SDAQ_if -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_IOBOX_if -v -t /usr/local/bin/
-	@echo "\n Installing Systemd service for Morfeas_daemon"
+	@echo "\nInstallation of Systemd service for Morfeas_daemon"
 	cp -r -n ./systemd/* /etc/systemd/system/
 	@echo "\n If you want to run the Morfeas-System at boot, execute:"
 	@echo  "# systemctl enable Morfeas_system.service"
