@@ -1,5 +1,5 @@
 /*
-File: Morfeas_RPi_Hat.h  Declaration of functions related to Morfeas_RPi_Hat.
+Program: Morfeas_RPi_Hat_if.c  Implementation of supporting software for Morfeas_RPi_Hat.
 Copyright (C) 12019-12020  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
@@ -14,12 +14,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define YELLOW_LED 19
-#define RED_LED 13
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-//Init Morfeas_RPi_Hat LEDs, return 1 if sysfs files exist, 0 otherwise.
-int led_init();
-//Write value to Morfeas_RPi_Hat LED, return 0 if write was success, -1 otherwise.
-int GPIOWrite(int LED_name, int value);
-//Read value of Morfeas_RPi_Hat LED by name, return value of the LED, or -1 if read failed.
-int GPIORead(int LED_name);
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "Morfeas_RPi_Hat.h"
+
+int main(int argc, char *argv[])
+{
+	printf("Not yet Implemented\n");
+	return 0;
+}
+
+
