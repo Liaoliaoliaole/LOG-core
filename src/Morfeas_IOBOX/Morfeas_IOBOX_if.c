@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
 	//Get options
 	int c;
-	while ((c = getopt (argc, argv, "hVc:")) != -1)
+	while ((c = getopt (argc, argv, "hV")) != -1)
 	{
 		switch (c)
 		{
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	//Set Slave address
 	if(modbus_set_slave(ctx, IOBOX_slave_address))
 	{
-		fprintf(stderr, "Can not set slave address !!!\n");
+		fprintf(stderr, "Can't set slave address !!!\n");
 		modbus_free(ctx);
 		free(IOBOX_regs);
 		return EXIT_FAILURE;

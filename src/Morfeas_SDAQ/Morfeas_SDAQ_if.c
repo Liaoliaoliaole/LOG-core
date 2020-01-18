@@ -14,8 +14,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define YELLOW_LED 19
-#define RED_LED 13
 #define LogBooks_dir "/var/tmp/Morfeas_LogBooks/"
 #define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
@@ -52,6 +50,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_JSON.h"
 #include "../IPC/Morfeas_IPC.h" //<-#include -> "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_Logger.h"
+#include "../Morfeas_RPi_Hat/Morfeas_RPi_Hat.h"
 
 static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
@@ -72,8 +71,7 @@ void CAN_if_timer_handler(int signum);//sync timer handler function
 void print_usage(char *prog_name);//print the usage manual
 
 	/*Morfeas_SDAQ-if functions*/
-//Error Warning Leds controlling function
-void led_init();
+//Function for Status LEDs
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 //Logbook read and write from file;
 int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append);
@@ -220,7 +218,7 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, quit_signal_handler);
 	signal(SIGPIPE, quit_signal_handler);
 	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
-	led_init(stats.CAN_IF_name);
+	flags.led_existent = led_init(stats.CAN_IF_name);
 	Logger("Morfeas_SDAQ_if (%s) Program Start\n",stats.CAN_IF_name);
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
@@ -354,113 +352,6 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-void led_init(char *CAN_IF_name)
-{
-	char path[35];
-	char buffer[3];
-	ssize_t bytes_written;
-	int sysfs_fd, i, pin;
-	if(!strcmp(CAN_IF_name, "can0") || !strcmp(CAN_IF_name, "can1"))
-	{	//init GPIO on sysfs
-		for(i=0; i<2; i++)
-		{
-			sysfs_fd = open("/sys/class/gpio/export", O_WRONLY);
-			if(sysfs_fd < 0)
-			{
-				fprintf(stderr, "LEDs are Not supported!\n");
-				return;
-			}
-			pin = i ? YELLOW_LED : RED_LED;
-			bytes_written = snprintf(buffer, 3, "%d", pin);
-			write(sysfs_fd, buffer, bytes_written);
-			close(sysfs_fd);
-		}
-		sleep(1);
-		//Set direction of GPIOs
-		for(i=0; i<2; i++)
-		{
-			pin = i ? YELLOW_LED : RED_LED;
-			snprintf(path, 35, "/sys/class/gpio/gpio%d/direction", pin);
-			sysfs_fd = open(path, O_WRONLY);
-			if(sysfs_fd < 0)
-			{
-				fprintf(stderr, "LEDs are Not supported! (Direction File Error!!!)\n");
-				return;
-			}
-			if (write(sysfs_fd, "out", 3)<0)
-			{
-				fprintf(stderr, "Failed to set direction!\n");
-				return;
-			}
-			close(sysfs_fd);
-
-		}
-		flags.led_existent = 1;
-	}
-}
-
-static int GPIOWrite(int pin, int value)
-{
-	static const char s_values_str[] = "01";
-	char path[30];
-	int fd;
-	snprintf(path, 30, "/sys/class/gpio/gpio%d/value", pin);
-	fd = open(path, O_WRONLY);
-	if (-1 == fd)
-	{
-		fprintf(stderr, "Failed to open gpio value for writing!\n");
-		return(-1);
-	}
-	if (1 != write(fd, &s_values_str[!value ? 0 : 1], 1))
-	{
-		fprintf(stderr, "Failed to write value!\n");
-		return(-1);
-	}
-	close(fd);
-	return(0);
-}
-
-void led_stat(struct Morfeas_SDAQ_if_stats *stats)
-{
-	static struct{
-		unsigned Bus_util : 1;
-		unsigned Max_dev_num : 1;
-	}leds_status = {0};
-
-	if(stats->Bus_util>95.0)
-	{
-		if(flags.led_existent)
-			GPIOWrite(YELLOW_LED, 1);
-		if(!leds_status.Bus_util)
-			Logger("Bus Utilization is in High Level(>95%%) !!!!\n");
-		leds_status.Bus_util = 1;
-	}
-	else if(stats->Bus_util<=80.0 && leds_status.Bus_util)
-	{
-		if(flags.led_existent)
-			GPIOWrite(YELLOW_LED, 0);
-		leds_status.Bus_util = 0;
-		Logger("Bus Utilization restore to Normal Level(<80%%)!!!!\n");
-	}
-
-	if(stats->detected_SDAQs>=60)
-	{
-		if(flags.led_existent)
-			GPIOWrite(RED_LED, 1);
-		leds_status.Max_dev_num = 1;
-	}
-	else
-	{
-		if(leds_status.Max_dev_num)
-		{
-			if(flags.led_existent)
-				GPIOWrite(RED_LED, 0);
-			leds_status.Max_dev_num = 0;
-			Logger("Amount of SDAQs restored to Normal (<60)!!!!\n");
-		}
-	}
-}
-
 inline void quit_signal_handler(int signum)
 {
 	if(signum == SIGPIPE)
@@ -509,6 +400,47 @@ void print_usage(char *prog_name)
 	};
 	printf("%s\nUsage: %s CAN-IF [/path/to/logstat/directory] \n\n%s\n", preamp, prog_name,exp);
 	return;
+}
+
+void led_stat(struct Morfeas_SDAQ_if_stats *stats)
+{
+	static struct{
+		unsigned Bus_util : 1;
+		unsigned Max_dev_num : 1;
+	}leds_status = {0};
+
+	if(stats->Bus_util>95.0)
+	{
+		if(flags.led_existent)
+			GPIOWrite(YELLOW_LED, 1);
+		if(!leds_status.Bus_util)
+			Logger("Bus Utilization is in High Level(>95%%) !!!!\n");
+		leds_status.Bus_util = 1;
+	}
+	else if(stats->Bus_util<=80.0 && leds_status.Bus_util)
+	{
+		if(flags.led_existent)
+			GPIOWrite(YELLOW_LED, 0);
+		leds_status.Bus_util = 0;
+		Logger("Bus Utilization restore to Normal Level(<80%%)!!!!\n");
+	}
+
+	if(stats->detected_SDAQs>=60)
+	{
+		if(flags.led_existent)
+			GPIOWrite(RED_LED, 1);
+		leds_status.Max_dev_num = 1;
+	}
+	else
+	{
+		if(leds_status.Max_dev_num)
+		{
+			if(flags.led_existent)
+				GPIOWrite(RED_LED, 0);
+			leds_status.Max_dev_num = 0;
+			Logger("Amount of SDAQs restored to Normal (<60)!!!!\n");
+		}
+	}
 }
 
 /*Lists related function implementation*/

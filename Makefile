@@ -9,7 +9,7 @@ CANif_DEP_SRC_dir = ./src/sdaq-worker/src
 HEADERS = $(SRC_dir)/IPC/*.h \
 		  $(SRC_dir)/Morfeas_opc_ua/*.h \
 		  $(SRC_dir)/Supplementary/*.h \
-		  #$(SRC_dir)/Morfeas_RPi_Hat/*.h
+		  $(SRC_dir)/Morfeas_RPi_Hat/*.h
 
 Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_daemon.o \
@@ -27,6 +27,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_SDAQ_if.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
+					  $(WORK_dir)/Morfeas_RPi_Hat.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_Logger.o \
@@ -79,6 +80,9 @@ $(WORK_dir)/Morfeas_SDAQ_if.o: $(SRC_dir)/Morfeas_SDAQ/Morfeas_SDAQ_if.c
 $(WORK_dir)/SDAQ_drv.o: $(CANif_DEP_SRC_dir)/SDAQ_drv.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
+$(WORK_dir)/Morfeas_RPi_Hat.o: $(SRC_dir)/Morfeas_RPi_Hat/Morfeas_RPi_Hat.c
+	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
 $(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ/Morfeas_SDAQ_nodeset.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
@@ -109,16 +113,20 @@ clean:
 	rm -f $(WORK_dir)/* $(BUILD_dir)/*
 
 install:
+	@echo "Installation of executable Binaries"
 	@install $(BUILD_dir)/Morfeas_daemon -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_opc_ua -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_SDAQ_if -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_IOBOX_if -v -t /usr/local/bin/
 	@echo "\nInstallation of Systemd service for Morfeas_daemon"
 	cp -r -n ./systemd/* /etc/systemd/system/
-	@echo "\n If you want to run the Morfeas-System at boot, execute:"
+	@echo "\n If you want to run the Morfeas-System at boot, run:"
 	@echo  "# systemctl enable Morfeas_system.service"
 
 uninstall:
+	@echo  "Stop Morfeas_system service"
+	systemctl stop Morfeas_system.service
+	@echo  "Remove related binaries and systemd file"
 	rm /usr/local/bin/Morfeas_*
 	rm -r /etc/systemd/system/Morfeas_system*
 

@@ -374,6 +374,7 @@ int check_file(const char *configs_dir, const char *file_name)
 		return -1;
 	if(!(configs_dir_ptr = opendir(configs_dir)))
 		return 1;
+	closedir(configs_dir_ptr);
 	abs_file_path = calloc(strlen(configs_dir)+strlen(file_name)+5, sizeof(char));
 	if(!abs_file_path)
 	{

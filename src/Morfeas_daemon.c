@@ -331,6 +331,7 @@ void * Morfeas_thread(void *varg_pt)
 		else
 			perror("fopen_error:");
     }
+
 	//Check exit status of forked command
 	if(256 == pclose(cmd_fd))
 		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
