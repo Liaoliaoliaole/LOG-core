@@ -14,5 +14,5 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-//Converter and exporting function for the struct stats (Type Morfeas_SDAQ_if_stats). Convert it to logstat_path.json format and save it to logstat_path
+//Converting and exporting function for struct stats (Type Morfeas_SDAQ_if_stats). Convert it to JSON format and save it to logstat_path
 int logstat_SDAQ(char *logstat_path, void *stats_arg);
