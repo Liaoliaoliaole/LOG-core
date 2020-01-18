@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <fcntl.h>
 
 #include <linux/i2c-dev.h>
-#include <linux/i2c-smbus.h>
 
 #include "../Morfeas_Types.h"
 #include "Morfeas_RPi_Hat.h"
