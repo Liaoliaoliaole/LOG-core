@@ -28,6 +28,7 @@ struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
 	int FIFO_fd;
 	char *CAN_IF_name;
+	unsigned char port;
 	float Bus_util;
 	float Bus_voltage;
 	float Bus_amperage;

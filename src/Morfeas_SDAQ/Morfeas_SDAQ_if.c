@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 
+#define I2C_BUS_NUM 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -107,6 +109,9 @@ int main(int argc, char *argv[])
 	char *logstat_path = argv[2];
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
+	//Variables for CANBus Port Electric
+	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config port_meas_config;
+	struct Morfeas_RPi_Hat_Port_meas port_meas;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	//Variables for Socket CAN and SDAQ_decoders
@@ -218,9 +223,21 @@ int main(int argc, char *argv[])
 	signal(SIGINT, quit_signal_handler);
 	signal(SIGTERM, quit_signal_handler);
 	signal(SIGPIPE, quit_signal_handler);
+	Logger("Morfeas_SDAQ_if (%s) Program Started\n",stats.CAN_IF_name);
 	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
 	flags.led_existent = led_init(stats.CAN_IF_name);
-	Logger("Morfeas_SDAQ_if (%s) Program Start\n",stats.CAN_IF_name);
+	//Get SDAQ_NET Port config
+	stats.port = get_port_num(stats.CAN_IF_name);
+	if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
+	{
+		//Init SDAQ_NET Port's CSA
+		if(!MAX9611_init(stats.port, I2C_BUS_NUM))
+			flags.port_inst_existen = 1;
+		else
+			Logger("SDAQnet Port CSA not found!!!\n");
+	}
+	else
+		Logger("SDAQnet Port configuration EEPROM not found!!!\n");
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
@@ -320,12 +337,15 @@ int main(int argc, char *argv[])
 			msg_cnt = 0;
 			flags.bus_info = 0;
 			//Get Electrics for BUS port
-			/*//TO-DO Read ADC, scale readings, Write them to stats.
-			if(port_inst_existen)
+			if(flags.port_inst_existen)
 			{
-
+				if(!get_port_meas(&port_meas, stats.port,I2C_BUS_NUM))
+				{
+					stats.Bus_voltage = (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler;
+					stats.Bus_amperage = (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler;
+					stats.Shunt_temp = port_meas.temperature * MAX9611_temp_scaler;
+				}
 			}
-			*/
 			//transfer bus utilization to opc_ua
 			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
 			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);

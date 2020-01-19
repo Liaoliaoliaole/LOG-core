@@ -17,9 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define YELLOW_LED 19
 #define RED_LED 13
 
+#define MAX9611_temp_scaler 1.0
+
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
 //Struct for EEPROM(24AA08) data
-struct Morfeas_RPi_Hat_EEPROM_CANBus_Port_config{
+struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 	struct last_port_calibration_date{
 		unsigned char year;
 		unsigned char month;
@@ -41,6 +43,8 @@ struct Morfeas_RPi_Hat_Port_meas{
 };
 #pragma pack(pop)//Disable packing
 
+//Decode string CAN_if_name to Port number. Return: Port's Number or -1 on failure
+int get_port_num(char * CAN_if_name);
 	//---- LEDs related ----//
 //Init Morfeas_RPi_Hat LEDs, return 1 if sysfs files exist, 0 otherwise.
 int led_init();
@@ -48,18 +52,21 @@ int led_init();
 int GPIOWrite(int LED_name, int value);
 //Read value of Morfeas_RPi_Hat LED by name, return value of the LED, or -1 if read failed.
 int GPIORead(int LED_name);
-	//---- I2C device related ----//
-//All I2C related functions: Return 0 in success, -1 otherwise.
 
+	//---- I2C device related ----//
+	/* All I2C related functions Return:
+	 * 0 in success,
+	 * -1 otherwise
+	 */
 //Function to init the MAX9611, return 0 in success, -1 otherwise.
 int MAX9611_init(unsigned char port, unsigned char i2c_dev_num);
 //Function that read measurements for MAX9611, store them on memory pointed by meas.
 int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, unsigned char i2c_dev_num);
 
 //Function that read data from EEPROM
-int read_port_config(struct Morfeas_RPi_Hat_EEPROM_CANBus_Port_config *config, unsigned char port, unsigned char i2c_dev_num);
+int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, unsigned char port, unsigned char i2c_dev_num);
 //Function that write data to EEPROM, checksum calculated inside.
-int write_port_config(struct Morfeas_RPi_Hat_EEPROM_CANBus_Port_config *config, unsigned char port, unsigned char i2c_dev_num);
+int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, unsigned char port, unsigned char i2c_dev_num);
 
 
 

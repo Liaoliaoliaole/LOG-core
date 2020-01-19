@@ -4,7 +4,8 @@ BUILD_dir=build
 WORK_dir=work
 
 Morfeas_RPi_hat_DEP = $(WORK_dir)/Morfeas_RPi_Hat_if.o \
-					  $(WORK_dir)/Morfeas_RPi_Hat.o
+					  $(WORK_dir)/Morfeas_RPi_Hat.o \
+					  $(WORK_dir)/Morfeas_run_check.o
 
 all: $(BUILD_dir)/Morfeas_RPi_Hat
 
@@ -13,10 +14,13 @@ $(BUILD_dir)/Morfeas_RPi_Hat: $(Morfeas_RPi_hat_DEP) *.h
 	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_RPi_Hat
+$(WORK_dir)/Morfeas_RPi_Hat_if.o: Morfeas_RPi_Hat_if.c
+	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
 $(WORK_dir)/Morfeas_RPi_Hat.o: Morfeas_RPi_Hat.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_RPi_Hat_if.o: Morfeas_RPi_Hat_if.c
+$(WORK_dir)/Morfeas_run_check.o: ../Supplementary/Morfeas_run_check.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 tree:

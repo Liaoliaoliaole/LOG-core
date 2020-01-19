@@ -27,7 +27,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 int main(int argc, char *argv[])
 {
+	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config config = {0};
 	printf("Not yet Implemented\n");
+	if(!read_port_config(&config, 0, 0))
+	{
+		for(int i=0;i<sizeof(config);i++)
+			printf("%c",((unsigned char *)&config)[i]);
+		putchar('\n');
+	}
 	return 0;
 }
 
