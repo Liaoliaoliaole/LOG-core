@@ -10,9 +10,13 @@ The software for the Morfeas RPi Hat written in ANSI C and is compatible with GN
 For compilation of this project the following dependencies are required.
 * [GCC](https://gcc.gnu.org/) - The GNU Compilers Collection
 * [GNU Make](https://www.gnu.org/software/make/) - GNU make utility
+* [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace
 * [NCURSES](https://www.gnu.org/software/ncurses/ncurses.html) - A free (libre) software emulation library of curses.
 * [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
 * [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data.
+
+##### Optionally
+* [I2C-tools](https://packages.debian.org/jessie/i2c-tools) - Heterogeneous set of I2C tools for Linux kernel
 
 ### Compilation
 To compile the program (tested under GNU/Linux only)

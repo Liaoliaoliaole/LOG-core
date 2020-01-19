@@ -1,5 +1,5 @@
 CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall -g3 #-Werror
-LDLIBS= -lm -lrt -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libmodbus libusb)
+LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libmodbus libusb)
 BUILD_dir=build
 WORK_dir=work
 SRC_dir=src

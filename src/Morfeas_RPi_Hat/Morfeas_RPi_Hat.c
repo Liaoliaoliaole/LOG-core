@@ -22,8 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+#include <asm/ioctl.h>
 
+#include <linux/i2c.h>
 #include <linux/i2c-dev.h>
+#include <i2c/smbus.h>
 
 #include "../Morfeas_Types.h"
 #include "Morfeas_RPi_Hat.h"
@@ -116,7 +120,54 @@ int GPIORead(int LED_name)
 	close(fd);
 	return(atoi(read_val));
 }
-
 	//---- I2C device related ----//
-
+//Function to init the MAX9611
+int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
+{
+	return 0;
+}
+//Function that read measurements for MAX9611, store them on memory pointed by meas.
+int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, unsigned char i2c_dev_num)
+{
+	char filename[30];//Path to sysfs I2C-dev
+	int i2c_fd;//I2C file descriptor
+	int addr;// Address for MAX9611 connected to port
+	switch(port)
+	{
+		case 0: addr=0x70; break;
+		case 1: addr=0x73; break;
+		case 2: addr=0x7c; break;
+		case 3: addr=0x7f; break;
+		default: return -1;
+	}
+	//Open I2C-bus
+	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
+	i2c_fd = open(filename, O_RDWR);
+	if (i2c_fd < 0)
+	{
+	  perror("Error on I2C open:");
+	  return -1;
+	}
+	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
+	{
+	  perror("Error on ioctl:");
+	  close(i2c_fd);
+	  return -1;
+	}
+	//read the measurements
+	i2c_smbus_read_block_data(i2c_fd, 0, (unsigned char*)meas);
+	//write(i2c_fd, buf, 1);
+	close(i2c_fd);
+	return 0;
+}
+//Function that read data from EEPROM
+int read_port_config(struct Morfeas_RPi_Hat_EEPROM_CANBus_Port_config *config, unsigned char port, unsigned char i2c_dev_num)
+{
+	return 0;
+}
+//Function that write data to EEPROM, checksum calculated inside.
+int write_port_config(struct Morfeas_RPi_Hat_EEPROM_CANBus_Port_config *config, unsigned char port, unsigned char i2c_dev_num)
+{
+	return 0;
+}
 

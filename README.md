@@ -44,12 +44,14 @@ For compilation of this project the following dependencies required.
 * [NCURSES](https://www.gnu.org/software/ncurses/ncurses.html) - A free (libre) software emulation library of curses.
 * [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
 * [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data.
-* [libxml2](http://xmlsoft.org/) -  Library for parsing XML documents.
+* [libxml2](http://xmlsoft.org/) - Library for parsing XML documents.
 * [libusb](https://libusb.info/) - A ANSI C library that provides generic access to USB devices.
 * [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
+* [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace
 
 ##### Optionally
 * [CAN-Utils](https://elinux.org/Can-utils) - CANBus utilities
+* [I2C-tools](https://packages.debian.org/jessie/i2c-tools) - Heterogeneous set of I2C tools for Linux kernel
 
 ## The Source
 The source of the Morfeas-core project have the following submodules:
