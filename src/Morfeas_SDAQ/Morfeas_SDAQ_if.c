@@ -55,6 +55,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
 	unsigned led_existent :1;
+	unsigned port_inst_existen :1;
 	unsigned Clean_flag :1;
 	unsigned bus_info :1;
 }flags = {.run=1,0};
@@ -319,7 +320,12 @@ int main(int argc, char *argv[])
 			msg_cnt = 0;
 			flags.bus_info = 0;
 			//Get Electrics for BUS port
-				//TO-DO Read ADC, scale readings, Write them to stats.
+			/*//TO-DO Read ADC, scale readings, Write them to stats.
+			if(port_inst_existen)
+			{
+
+			}
+			*/
 			//transfer bus utilization to opc_ua
 			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
 			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);

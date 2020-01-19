@@ -121,6 +121,85 @@ int GPIORead(int LED_name)
 	return(atoi(read_val));
 }
 	//---- I2C device related ----//
+//Function that write block "data" to I2C device with address "dev_addr" on I2C bus "i2c_dev_num". Return: 0 on success, -1 on failure.
+int I2C_write_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned char reg, void *data, unsigned char len)
+{
+	char filename[30];//Path to sysfs I2C-dev
+	int i2c_fd;//I2C file descriptor
+	int write_bytes;
+	unsigned char *data_w_reg;
+	//Open I2C-bus
+	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
+	i2c_fd = open(filename, O_RDWR);
+	if (i2c_fd < 0)
+	{
+	  perror("Error on I2C open:");
+	  return -1;
+	}
+	if (ioctl(i2c_fd, I2C_SLAVE, dev_addr) < 0)
+	{
+	  perror("Error on ioctl:");
+	  close(i2c_fd);
+	  return -1;
+	}
+	if(!(data_w_reg = calloc(len+1, sizeof(*data_w_reg))))
+	{
+	  fprintf(stderr, "Memory error!!!\n");
+	  exit(EXIT_FAILURE);
+	}
+	data_w_reg[0] = reg;
+	memcpy(data_w_reg+1, data, len);
+	write_bytes = write(i2c_fd, data_w_reg, len);
+	free(data_w_reg);
+	close(i2c_fd);
+	return write_bytes == len ? 0 : -1;
+}
+//Function that read a block "data" from an I2C device with address "dev_addr" on I2C bus "i2c_dev_num". Return: 0 on success, -1 on failure.
+int I2C_read_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned char reg, void *data, unsigned char len)
+{
+	char filename[30];//Path to sysfs I2C-dev
+	int ret_val, i2c_fd;//I2C file descriptor
+	struct i2c_rdwr_ioctl_data msgset;
+	//Open I2C-bus
+	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
+	i2c_fd = open(filename, O_RDWR);
+	if (i2c_fd < 0)
+	{
+	  perror("Error on I2C open:");
+	  return -1;
+	}
+	/*
+	if (ioctl(i2c_fd, I2C_SLAVE, dev_addr) < 0)
+	{
+	  perror("Error on ioctl:");
+	  close(i2c_fd);
+	  return -1;
+	}
+	*/
+	//Allocate memory for the messages
+	msgset.nmsgs = 2;
+	if(!(msgset.msgs = calloc(msgset.nmsgs, sizeof(struct i2c_msg))))
+	{
+	  fprintf(stderr, "Memory error!!!\n");
+	  exit(EXIT_FAILURE);
+	}
+	//Build message for Write reg
+	msgset.msgs[0].addr = dev_addr;
+	msgset.msgs[0].flags = 0; //Write
+	msgset.msgs[0].len = 1;
+	msgset.msgs[0].buf = &reg;
+	//Build message for Read *data
+	msgset.msgs[1].addr = dev_addr;
+	msgset.msgs[1].flags = I2C_M_RD;//Read flag
+	msgset.msgs[1].len = len;
+	msgset.msgs[1].buf = data;
+	//write reg and read the measurements
+	ret_val = ioctl(i2c_fd, I2C_RDWR, &msgset);
+	close(i2c_fd);
+	free(msgset.msgs);
+	return ret_val;
+}
+
 //Function to init the MAX9611
 int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 {
@@ -129,8 +208,6 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 //Function that read measurements for MAX9611, store them on memory pointed by meas.
 int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, unsigned char i2c_dev_num)
 {
-	char filename[30];//Path to sysfs I2C-dev
-	int i2c_fd;//I2C file descriptor
 	int addr;// Address for MAX9611 connected to port
 	switch(port)
 	{
@@ -140,25 +217,7 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 		case 3: addr=0x7f; break;
 		default: return -1;
 	}
-	//Open I2C-bus
-	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
-	i2c_fd = open(filename, O_RDWR);
-	if (i2c_fd < 0)
-	{
-	  perror("Error on I2C open:");
-	  return -1;
-	}
-	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
-	{
-	  perror("Error on ioctl:");
-	  close(i2c_fd);
-	  return -1;
-	}
-	//read the measurements
-	i2c_smbus_read_block_data(i2c_fd, 0, (unsigned char*)meas);
-	//write(i2c_fd, buf, 1);
-	close(i2c_fd);
-	return 0;
+	return I2C_read_block(i2c_dev_num, addr, 0, meas, sizeof(struct Morfeas_RPi_Hat_Port_meas));
 }
 //Function that read data from EEPROM
 int read_port_config(struct Morfeas_RPi_Hat_EEPROM_CANBus_Port_config *config, unsigned char port, unsigned char i2c_dev_num)
