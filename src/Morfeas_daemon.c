@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				perror("Error on creation of Loggers directory: ");
+				perror("Error on creation of Loggers directory");
 				xmlFreeDoc(doc);//Free XML Doc
 				exit(EXIT_FAILURE);
 			}
@@ -329,7 +329,7 @@ void * Morfeas_thread(void *varg_pt)
 			fclose(Log_fd);
 		}
 		else
-			perror("fopen_error:");
+			perror("fopen_error");
     }
 
 	//Check exit status of forked command
