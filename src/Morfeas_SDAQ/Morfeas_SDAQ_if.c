@@ -55,7 +55,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 static struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
 	unsigned led_existent :1;
-	unsigned port_inst_existen :1;
+	unsigned port_meas_existen :1;
 	unsigned Clean_flag :1;
 	unsigned bus_info :1;
 }flags = {.run=1,0};
@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
 	{
 		//Init SDAQ_NET Port's CSA
 		if(!MAX9611_init(stats.port, I2C_BUS_NUM))
-			flags.port_inst_existen = 1;
+			flags.port_meas_existen = 1;
 		else
 			Logger("SDAQnet Port CSA not found!!!\n");
 	}
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
 			msg_cnt = 0;
 			flags.bus_info = 0;
 			//Get Electrics for BUS port
-			if(flags.port_inst_existen)
+			if(flags.port_meas_existen)
 			{
 				if(!get_port_meas(&port_meas, stats.port,I2C_BUS_NUM))
 				{
