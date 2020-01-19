@@ -19,8 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 
-#define I2C_BUS_NUM 0
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

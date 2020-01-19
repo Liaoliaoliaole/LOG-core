@@ -23,11 +23,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <arpa/inet.h>
+
 #include "Morfeas_RPi_Hat.h"
 
 int main(int argc, char *argv[])
 {
 	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config config = {0};
+	struct Morfeas_RPi_Hat_Port_meas test = {0};
+	unsigned char *test_ptr = (void *)&test;
+	test_ptr[0]=0x12;
+	test_ptr[1]=0x34;
+	*(unsigned short*)(test_ptr) = htons(*(unsigned short*)(test_ptr));
+	printf("0x%04x\n",test.port_current);
+
 	printf("Not yet Implemented\n");
 	if(!read_port_config(&config, 0, 0))
 	{

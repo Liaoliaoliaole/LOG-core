@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/ioctl.h>
 #include <asm/ioctl.h>
 
+#include <arpa/inet.h>
+
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include <i2c/smbus.h>
@@ -227,7 +229,8 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 //Function that read measurements for MAX9611, store them on memory pointed by meas.
 int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, unsigned char i2c_dev_num)
 {
-	int addr;// Address for MAX9611 connected to port
+	int ret_val, addr;// Address for MAX9611 connected to port
+	unsigned short *meas_dec = (unsigned short *)meas;
 	switch(port)
 	{
 		case 0: addr=0x70; break;
@@ -236,7 +239,13 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 		case 3: addr=0x7f; break;
 		default: return -1;
 	}
-	return I2C_read_block(i2c_dev_num, addr, 0, meas, sizeof(struct Morfeas_RPi_Hat_Port_meas));
+	ret_val = I2C_read_block(i2c_dev_num, addr, 0, meas, sizeof(struct Morfeas_RPi_Hat_Port_meas));
+	for(int i=0; i<sizeof(struct Morfeas_RPi_Hat_Port_meas); i++)
+	{
+		*(meas_dec+i) = htons(*(meas_dec+i));
+		*(meas_dec+i) >>= 4;
+	}
+	return ret_val;
 }
 //Function that read data from EEPROM(24AA08)
 int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, unsigned char port, unsigned char i2c_dev_num)
