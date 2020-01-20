@@ -167,7 +167,6 @@ int main(int argc, char *argv[])
 				printf("%uIout_filtered=%.3fA\n\n", j, IOBOX_regs[offset++]/100.0);
 				j++;
 			}
-			/*
 			printf("----  RX 1 ----\n");
 			offset = 25;
 			for(i=0;i<16;i++)
@@ -207,7 +206,6 @@ int main(int argc, char *argv[])
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
 			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-			*/
 		}
 		usleep(100000);
 	}
