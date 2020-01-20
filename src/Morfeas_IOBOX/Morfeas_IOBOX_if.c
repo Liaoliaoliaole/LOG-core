@@ -159,7 +159,6 @@ int main(int argc, char *argv[])
 			stats.ind_link_reg.CH3_Iout = IOBOX_regs[8]/100.0;
 			stats.ind_link_reg.CH4_Vout = IOBOX_regs[10]/100.0;
 			stats.ind_link_reg.CH4_Iout = IOBOX_regs[11]/100.0;
-			
 			//Load RX Data to stats
 			offset = 25;
 			for(int i=0; i<4; i++)
