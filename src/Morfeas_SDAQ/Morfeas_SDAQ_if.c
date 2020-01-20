@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 
 	//Link signal SIGALRM to timer's handler
 	signal(SIGALRM, CAN_if_timer_handler);
-	//Link signal SIGINT and SIGPIPE to quit_signal_handler
+	//Link signal SIGINT, SIGTERM and SIGPIPE to quit_signal_handler
 	signal(SIGINT, quit_signal_handler);
 	signal(SIGTERM, quit_signal_handler);
 	signal(SIGPIPE, quit_signal_handler);

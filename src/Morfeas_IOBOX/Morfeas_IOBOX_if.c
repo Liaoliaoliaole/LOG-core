@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.1" /*Release Version of Morfeas_IOBOX_if*/
+#define VERSION "0.5" /*Release Version of Morfeas_IOBOX_if*/
 
 #define IOBOX_imp_reg 125
 #define IOBOX_slave_address 10
@@ -43,8 +43,10 @@ static volatile unsigned char handler_run = 1;
 void print_usage(char *prog_name);
 
 
-static void stopHandler(int sign)
+static void stopHandler(int signum)
 {
+	if(signum == SIGPIPE)
+		fprintf(stderr,"IPC: Force Termination!!!\n");
 	handler_run = 0;
 }
 
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 	modbus_t *ctx;
 	int rc, i, j, offset;
 	//Apps variables
-	char *IOBOX_IPv4_addr, *dev_name;
+	char *IOBOX_IPv4_addr, *dev_name, *path_to_logstat_dir;
 	unsigned short *IOBOX_regs;
 	//Check for call without arguments
 	if(argc == 1)
@@ -82,8 +84,8 @@ int main(int argc, char *argv[])
 	}
 	//Get arguments
 	IOBOX_IPv4_addr = argv[optind];
-	dev_name = argv[optind+1];
-
+	dev_name = argv[++optind];
+	path_to_logstat_dir = argv[++optind];
 	//Check arguments
 	if(!IOBOX_IPv4_addr || !dev_name)
 	{
@@ -91,7 +93,6 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
-
 	if(!is_valid_IPv4(IOBOX_IPv4_addr))
 	{
 		fprintf(stderr, "Argument of Device name missing!!!\n");
@@ -109,9 +110,15 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Memory Error!!!\n");
 		exit(EXIT_FAILURE);
 	}
-	//Install stopHandler as the signal handler for SIGINT and SIGTERM signals.
+	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
+    signal(SIGPIPE, stopHandler);
+
+	//Print welcome message
+	Logger("---- Morfeas_IOBOX_if Started ----\n",argv[0]);
+	if(!path_to_logstat_dir)
+		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(IOBOX_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
@@ -126,7 +133,7 @@ int main(int argc, char *argv[])
 	//Attempt connection to IOBOX
 	while(modbus_connect(ctx) && handler_run)
 	{
-		fprintf(stderr, "Connection failed: %s\n", modbus_strerror(errno));
+		Logger("Connection Error @ %s: %s\n", IOBOX_IPv4_addr, modbus_strerror(errno));
 		sleep(1);
 	}
 	if(!handler_run)
@@ -141,7 +148,7 @@ int main(int argc, char *argv[])
 		rc = modbus_read_registers(ctx, 0, IOBOX_imp_reg, IOBOX_regs);
 		if (rc <= 0)
 		{
-			//fprintf(stderr, "Error(%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
+			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
 				sleep(1);
