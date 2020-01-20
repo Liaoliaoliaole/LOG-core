@@ -66,14 +66,14 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 		case IPC_CAN_BUS_info:
-			sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec->BUS_info.connected_to_BUS);
+			sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.BUS_utilization), UA_TYPES_FLOAT);
-				sprintf(Node_ID_str, "%s.volts", IPC_msg_dec->BUS_info.connected_to_BUS);
+				sprintf(Node_ID_str, "%s.volts", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.voltage), UA_TYPES_FLOAT);
-				sprintf(Node_ID_str, "%s.amps", IPC_msg_dec->BUS_info.connected_to_BUS);
+				sprintf(Node_ID_str, "%s.amps", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.amperage), UA_TYPES_FLOAT);
-				sprintf(Node_ID_str, "%s.shunt", IPC_msg_dec->BUS_info.connected_to_BUS);
+				sprintf(Node_ID_str, "%s.shunt", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.shunt_temp), UA_TYPES_FLOAT);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
@@ -82,10 +82,10 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 			break;
 		case IPC_SDAQ_clean_up:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				sprintf(Node_ID_str,"%s.amount",IPC_msg_dec->SDAQ_clean.connected_to_BUS);
+				sprintf(Node_ID_str,"%s.amount",IPC_msg_dec->SDAQ_clean.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_clean.t_amount), UA_TYPES_BYTE);
 				UA_NodeId_init(&NodeId);
-				sprintf(Node_ID_str, "%s.%d", IPC_msg_dec->SDAQ_clean.connected_to_BUS, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
+				sprintf(Node_ID_str, "%s.%d", IPC_msg_dec->SDAQ_clean.Dev_or_Bus_name, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
 				//check if the node is already removed
 				if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 				{
@@ -129,27 +129,27 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 	}
 }
 
-void SDAQ_handler_reg(UA_Server *server_ptr, char *connected_to_BUS)
+void SDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	char tmp_buff[30], tmp_buff_1[30], zero=0;
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], connected_to_BUS);
-		Morfeas_opc_ua_add_object_node(server_ptr, "SDAQ-ifs", connected_to_BUS, tmp_buff);
-		sprintf(tmp_buff, "%s.SDAQnet", connected_to_BUS);
-		Morfeas_opc_ua_add_object_node(server_ptr, connected_to_BUS, tmp_buff, "SDAQnet");
-		sprintf(tmp_buff, "%s.BUS_util", connected_to_BUS);
-		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
-		sprintf(tmp_buff, "%s.amount", connected_to_BUS);
-		Morfeas_opc_ua_add_variable_node(server_ptr, connected_to_BUS, tmp_buff, "Dev_on_BUS", UA_TYPES_BYTE);
+		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, "SDAQ-ifs", Dev_or_Bus_name, tmp_buff);
+		sprintf(tmp_buff, "%s.SDAQnet", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, tmp_buff, "SDAQnet");
+		sprintf(tmp_buff, "%s.BUS_util", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
+		sprintf(tmp_buff, "%s.amount", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "Dev_on_BUS", UA_TYPES_BYTE);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_buff), &zero, UA_TYPES_BYTE);
 		//Object with electric status of a SDAQnet port
-		sprintf(tmp_buff, "%s.Electrics", connected_to_BUS);
-		Morfeas_opc_ua_add_object_node(server_ptr, connected_to_BUS, tmp_buff, "Electric");
-		sprintf(tmp_buff_1, "%s.volts", connected_to_BUS);
+		sprintf(tmp_buff, "%s.Electrics", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, tmp_buff, "Electric");
+		sprintf(tmp_buff_1, "%s.volts", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage (V)", UA_TYPES_FLOAT);
-		sprintf(tmp_buff_1, "%s.amps", connected_to_BUS);
+		sprintf(tmp_buff_1, "%s.amps", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Amperage (A)", UA_TYPES_FLOAT);
-		sprintf(tmp_buff_1, "%s.shunt", connected_to_BUS);
+		sprintf(tmp_buff_1, "%s.shunt", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Shunt Temp (°C)", UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
@@ -161,7 +161,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 	UA_NodeId out;
 	//UA_NodeId_init(&out);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		sprintf(SDAQ_anchor_str,"%s.%u", ptr->connected_to_BUS, ptr->SDAQ_serial_number);
+		sprintf(SDAQ_anchor_str,"%s.%u", ptr->Dev_or_Bus_name, ptr->SDAQ_serial_number);
 		if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &out))
 		{
 			//UA_NodeId_init(&out);
@@ -269,9 +269,9 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 	//UA_NodeId_init(&Node_Id);
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		//Build SDAQ_anchor
-		sprintf(SDAQ_anchor_str,"%s.%u",ptr->connected_to_BUS,ptr->SDAQ_status.dev_sn);
+		sprintf(SDAQ_anchor_str,"%s.%u",ptr->Dev_or_Bus_name,ptr->SDAQ_status.dev_sn);
 		//Check if SDAQ is pre-register on other bus
-		if((pre_reg_on_bus = find_if_SDAQ_is_registered(server_ptr, ptr->SDAQ_status.dev_sn, ptr->connected_to_BUS)))
+		if((pre_reg_on_bus = find_if_SDAQ_is_registered(server_ptr, ptr->SDAQ_status.dev_sn, ptr->Dev_or_Bus_name)))
 		{
 			sprintf(tmp_str,"%s.%d", pre_reg_on_bus, ptr->SDAQ_status.dev_sn);
 			UA_Server_deleteNode(server_ptr, UA_NODEID_STRING(1, tmp_str), 1);
@@ -280,7 +280,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 		if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, SDAQ_anchor_str), &Node_Id))
 		{
 			//SDAQ's object
-			sprintf(tmp_str,"%s.SDAQnet",ptr->connected_to_BUS);
+			sprintf(tmp_str,"%s.SDAQnet",ptr->Dev_or_Bus_name);
 			sprintf(tmp_str2,"%s (%02hhu)", (char *)dev_type_str[ptr->SDAQ_status.dev_type], ptr->address);
 			Morfeas_opc_ua_add_object_node(server_ptr, tmp_str, SDAQ_anchor_str, tmp_str2);
 			//SDAQ's SDAQnet info and Timediff
@@ -306,10 +306,10 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 		}
 		else
 			UA_clear(&Node_Id, &UA_TYPES[UA_TYPES_NODEID]);
-		sprintf(tmp_str,"%s.amount",ptr->connected_to_BUS);
+		sprintf(tmp_str,"%s.amount",ptr->Dev_or_Bus_name);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->t_amount), UA_TYPES_BYTE);
 		sprintf(tmp_str,"SDAQ.%u.onBus",ptr->SDAQ_status.dev_sn);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), ptr->connected_to_BUS, UA_TYPES_STRING);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), ptr->Dev_or_Bus_name, UA_TYPES_STRING);
 		sprintf(tmp_str,"SDAQ.%u.S/N",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_status.dev_sn), UA_TYPES_UINT32);
 		sprintf(tmp_str,"SDAQ.%u.Address",ptr->SDAQ_status.dev_sn);

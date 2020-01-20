@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define connected_to_BUS_str_size 20
+#define Dev_or_Bus_name_str_size 20
 #define Data_FIFO "/tmp/.Morfeas_handlers_FIFO"
 
 #include "../Morfeas_Types.h"
@@ -50,14 +50,14 @@ enum Morfeas_IPC_handler_type{
 	//---Bus Handlers related---//
 typedef struct Handler_register_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned char handler_type;
 }Handler_reg_op_msg;
 
   //------ SDAQ + CANBus related ------//
 typedef struct SDAQ_register_msg_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned char address;
 	sdaq_status SDAQ_status;
 	unsigned char t_amount;
@@ -65,21 +65,21 @@ typedef struct SDAQ_register_msg_struct{
 
 typedef struct SDAQ_clean_registeration_msg_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int SDAQ_serial_number;
 	unsigned char t_amount;
 }SDAQ_clear_msg;
 
 typedef struct SDAQ_info_msg_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int SDAQ_serial_number;
 	sdaq_info SDAQ_info_data;
 }SDAQ_info_msg;
 
 typedef struct SDAQ_cal_date_msg_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int SDAQ_serial_number;
 	unsigned char channel;
 	sdaq_calibration_date SDAQ_cal_date;
@@ -87,14 +87,14 @@ typedef struct SDAQ_cal_date_msg_struct{
 
 typedef struct SDAQ_timediff_msg_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int SDAQ_serial_number;
 	short Timediff;
 }SDAQ_timediff_msg;
 
 typedef struct SDAQ_measure_msg_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int SDAQ_serial_number;
 	unsigned char channel;
 	sdaq_meas SDAQ_channel_meas;
@@ -102,7 +102,7 @@ typedef struct SDAQ_measure_msg_struct{
 
 typedef struct CAN_BUS_info_msg_struct{
 	unsigned char IPC_msg_type;
-	char connected_to_BUS[connected_to_BUS_str_size];
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	float BUS_utilization;
 	float amperage;
 	float voltage;
@@ -132,5 +132,5 @@ unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr);
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
 size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr);
 //Function for construction of message for registration of a Handler
-size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *connected_to_BUS, unsigned char unreg);
+size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *Dev_or_Bus_name, unsigned char unreg);
 

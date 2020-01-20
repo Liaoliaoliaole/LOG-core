@@ -93,7 +93,7 @@ int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM, also send IPC msg t opc_ua.
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for construction of message for registration or update of a SDAQ
-int IPC_SDAQ_reg_update(int FIFO_fd, char connected_to_BUS[10], unsigned char address, sdaq_status *SDAQ_status, unsigned char amount);
+int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char amount);
 
 	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
@@ -282,8 +282,8 @@ int main(int argc, char *argv[])
 							acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//add meas to acc
 						//Send measurement through IPC
 						IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
-						memccpy(IPC_msg.SDAQ_meas.connected_to_BUS,stats.CAN_IF_name,'\0',connected_to_BUS_str_size);
-						IPC_msg.SDAQ_meas.connected_to_BUS[connected_to_BUS_str_size-1] = '\0';
+						memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name,stats.CAN_IF_name,'\0',Dev_or_Bus_name_str_size);
+						IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 						IPC_msg.SDAQ_meas.SDAQ_serial_number = SDAQ_data->SDAQ_status.dev_sn;
 						IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
 						memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
 			}
 			//transfer bus utilization to opc_ua
 			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
-			sprintf(IPC_msg.BUS_info.connected_to_BUS,"%s",stats.CAN_IF_name);
+			sprintf(IPC_msg.BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg.BUS_info.voltage = stats.Bus_voltage;
 			IPC_msg.BUS_info.amperage = stats.Bus_amperage;
@@ -709,7 +709,7 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 			time(&(sdaq_node->last_seen));
 			//Send timediff over IPC
 			IPC_msg.SDAQ_timediff.IPC_msg_type = IPC_SDAQ_timediff;
-			sprintf(IPC_msg.SDAQ_timediff.connected_to_BUS,"%s",stats->CAN_IF_name);
+			sprintf(IPC_msg.SDAQ_timediff.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
 			IPC_msg.SDAQ_timediff.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
 			IPC_msg.SDAQ_timediff.Timediff = sdaq_node->Timediff;
 			IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
@@ -768,7 +768,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			sdaq_node->info_collection_status = 2;
 			//Send info through IPC
 			IPC_msg.SDAQ_info.IPC_msg_type = IPC_SDAQ_info;
-			sprintf(IPC_msg.SDAQ_info.connected_to_BUS,"%s",stats->CAN_IF_name);
+			sprintf(IPC_msg.SDAQ_info.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
 			IPC_msg.SDAQ_info.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
 			memcpy(&(IPC_msg.SDAQ_info.SDAQ_info_data), info_dec, sizeof(sdaq_info));
 			IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
@@ -825,7 +825,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			time(&(sdaq_node->last_seen));
 			//Send calibration data via IPC
 			IPC_msg.SDAQ_cal_date.IPC_msg_type = IPC_SDAQ_cal_date;
-			sprintf(IPC_msg.SDAQ_cal_date.connected_to_BUS,"%s",stats->CAN_IF_name);
+			sprintf(IPC_msg.SDAQ_cal_date.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
 			IPC_msg.SDAQ_cal_date.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
 			IPC_msg.SDAQ_cal_date.channel = channel;
 			memcpy(&(IPC_msg.SDAQ_cal_date.SDAQ_cal_date), date_dec, sizeof(sdaq_calibration_date));
@@ -1068,7 +1068,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 																					 		 sdaq_node->SDAQ_address);
 					//Send info of the removed SDAQ through IPC
 					IPC_msg.SDAQ_clean.IPC_msg_type = IPC_SDAQ_clean_up;
-					sprintf(IPC_msg.SDAQ_clean.connected_to_BUS,"%s",stats->CAN_IF_name);
+					sprintf(IPC_msg.SDAQ_clean.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
 					IPC_msg.SDAQ_clean.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
 					IPC_msg.SDAQ_clean.t_amount = stats->detected_SDAQs;
 					IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
@@ -1086,13 +1086,13 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 }
 
 //Function for construction of message for registration or update of a SDAQ
-int IPC_SDAQ_reg_update(int FIFO_fd, char connected_to_BUS[10], unsigned char address, sdaq_status *SDAQ_status, unsigned char amount)
+int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char amount)
 {
 	IPC_message IPC_reg_msg = {0};
 	//Send SDAQ registration over IPC
 	IPC_reg_msg.SDAQ_reg_update.IPC_msg_type = IPC_SDAQ_register_or_update;
-	memccpy(&(IPC_reg_msg.SDAQ_reg_update.connected_to_BUS), connected_to_BUS, '\0', 10);
-	IPC_reg_msg.SDAQ_reg_update.connected_to_BUS[9] = '\0';
+	memccpy(&(IPC_reg_msg.SDAQ_reg_update.Dev_or_Bus_name), CANBus_if_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_reg_msg.SDAQ_reg_update.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	IPC_reg_msg.SDAQ_reg_update.address = address;
 	memcpy(&(IPC_reg_msg.SDAQ_reg_update.SDAQ_status), SDAQ_status,  sizeof(sdaq_status));
 	IPC_reg_msg.SDAQ_reg_update.t_amount = amount;
