@@ -109,6 +109,8 @@ typedef struct CAN_BUS_info_msg_struct{
 	float shunt_temp;
 }CAN_BUS_info_msg;
 
+#pragma pack(pop)//Disable packing
+
 //--IPC_MESSAGE--//
 typedef union{
 	Handler_reg_op_msg Handler_reg;
@@ -121,7 +123,6 @@ typedef union{
 	SDAQ_meas_msg SDAQ_meas;
 	CAN_BUS_info_msg BUS_info;
 }IPC_message;
-#pragma pack(pop)//Disable packing
 
 	//----RX Functions----//
 //function for RX, return the type of the received message or 0 in failure

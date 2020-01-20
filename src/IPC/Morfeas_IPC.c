@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 size_t Morfeas_IPC_msg_size[]={
 	sizeof(Handler_reg_op_msg),
 	sizeof(Handler_reg_op_msg),
+	//SDAQ_related IPC messages sizes
 	sizeof(SDAQ_reg_update_msg),
 	sizeof(CAN_BUS_info_msg),
 	sizeof(SDAQ_clear_msg),
