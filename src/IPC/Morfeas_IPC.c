@@ -75,8 +75,8 @@ size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *connect
 	//Construct and send Handler registration msg
 	IPC_reg_msg.Handler_reg.IPC_msg_type = unreg ? IPC_Handler_unregister : IPC_Handler_register;
 	IPC_reg_msg.Handler_reg.handler_type = handler_type;
-	memccpy(&(IPC_reg_msg.Handler_reg.connected_to_BUS), connected_to_BUS, '\0', 10);
-	IPC_reg_msg.Handler_reg.connected_to_BUS[9] = '\0';
+	memccpy(&(IPC_reg_msg.Handler_reg.connected_to_BUS), connected_to_BUS, '\0', connected_to_BUS_str_size);
+	IPC_reg_msg.Handler_reg.connected_to_BUS[connected_to_BUS_str_size-1] = '\0';
 	return IPC_msg_TX(FIFO_fd, &IPC_reg_msg);
 }
 	//----RX Function----//
