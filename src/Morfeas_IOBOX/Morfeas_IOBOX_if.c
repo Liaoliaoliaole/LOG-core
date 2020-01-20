@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	int rc, i, j, offset;
 	//Apps variables
 	char *IOBOX_IPv4_addr, *dev_name, *path_to_logstat_dir;
-	unsigned short *IOBOX_regs;
+	unsigned short IOBOX_regs[IOBOX_imp_reg];
 	//Check for call without arguments
 	if(argc == 1)
 	{
@@ -105,12 +105,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s for IPv4:%s Already Running!!!\n", argv[0], IOBOX_IPv4_addr);
 		exit(EXIT_SUCCESS);
 	}
-	// Allocate and initialize the memory to store the IOBOX's registers
-	if(!(IOBOX_regs = calloc(IOBOX_imp_reg+5, sizeof(unsigned short))))
-	{
-		fprintf(stderr, "Memory Error!!!\n");
-		exit(EXIT_FAILURE);
-	}
 	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
@@ -128,7 +122,6 @@ int main(int argc, char *argv[])
 	{
 		fprintf(stderr, "Can't set slave address !!!\n");
 		modbus_free(ctx);
-		free(IOBOX_regs);
 		return EXIT_FAILURE;
 	}
 	//Attempt connection to IOBOX
@@ -140,7 +133,6 @@ int main(int argc, char *argv[])
 	if(!handler_run)
 	{
 		modbus_free(ctx);
-		free(IOBOX_regs);
 		return EXIT_FAILURE;
 	}
 	//main application loop
@@ -212,7 +204,6 @@ int main(int argc, char *argv[])
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
-	free(IOBOX_regs);
 	return EXIT_SUCCESS;
 }
 
