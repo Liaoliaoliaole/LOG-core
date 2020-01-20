@@ -145,6 +145,7 @@ int main(int argc, char *argv[])
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
 				sleep(1);
+			Logger("Recover from Last Error\n");
 		}
 		else
 		{
