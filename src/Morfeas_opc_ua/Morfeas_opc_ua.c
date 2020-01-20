@@ -56,6 +56,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server, xmlNode *node);
 
 //Global variables
+pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 static UA_Boolean running = true;
 static UA_Server *server = NULL;
 static GSList *Links = NULL;
@@ -256,7 +257,7 @@ void* IPC_Receiver(void *varg_pt)
 			{
 				//--- Message type from any handler (Registration to OPC_UA) ---//
 				case IPC_Handler_register:
-					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, 
+					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
 								"Register %s Handler for %s", Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
 															  IPC_msg_dec.Handler_reg.connected_to_BUS);
 					switch(IPC_msg_dec.Handler_reg.handler_type)
@@ -273,7 +274,7 @@ void* IPC_Receiver(void *varg_pt)
 					}
 					break;
 				case IPC_Handler_unregister:
-					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, 
+					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
 								"Remove %s Handler for %s",	Morfeas_IPC_handler_type_name[IPC_msg_dec.Handler_reg.handler_type],
 															IPC_msg_dec.Handler_reg.connected_to_BUS);
 					pthread_mutex_lock(&OPC_UA_NODESET_access);

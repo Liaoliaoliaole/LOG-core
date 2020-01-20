@@ -22,8 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
-pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
-
 void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;

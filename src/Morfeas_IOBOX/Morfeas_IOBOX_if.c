@@ -35,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <modbus.h>
 
 #include "../Supplementary/Morfeas_run_check.h"
+#include "../Supplementary/Morfeas_Logger.h"
 
 //Global variables
 static volatile unsigned char handler_run = 1;
