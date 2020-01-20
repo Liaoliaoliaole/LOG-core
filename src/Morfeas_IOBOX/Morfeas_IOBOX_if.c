@@ -213,6 +213,7 @@ int main(int argc, char *argv[])
 	}
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);
+	modbus_free(ctx);
 	free(IOBOX_regs);
 	return EXIT_SUCCESS;
 }
