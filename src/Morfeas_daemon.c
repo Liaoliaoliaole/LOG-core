@@ -256,16 +256,17 @@ void * Morfeas_thread(void *varg_pt)
 			/*
 			sprintf(Logger_name,"%s_%s.log",Morfeas_MDAQ_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MDAQ_if,
-												XML_node_get_content(t_arg->component, "IP_ADDR"),
+												XML_node_get_content(t_arg->component, "IPv4_ADDR"),
 												t_arg->logstat_path);
 			*/
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
 		{
 			sprintf(Logger_name,"%s_%s.log",Morfeas_IOBOX_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
-			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_IOBOX_if,
-												XML_node_get_content(t_arg->component, "IP_ADDR"),
-												t_arg->logstat_path);
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_IOBOX_if,
+												     XML_node_get_content(t_arg->component, "IPv4_ADDR"),
+													 XML_node_get_content(t_arg->component, "DEV_NAME"),
+												     t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
 		{
@@ -276,7 +277,7 @@ void * Morfeas_thread(void *varg_pt)
 			/*
 			sprintf(Logger_name,"%s_%s.log",Morfeas_MTI_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MTI_if,
-												XML_node_get_content(t_arg->component, "IP_ADDR"),
+												XML_node_get_content(t_arg->component, "IPv4_ADDR"),
 												t_arg->logstat_path);
 			*/
 		}
@@ -337,6 +338,8 @@ void * Morfeas_thread(void *varg_pt)
 		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
 	else if(daemon_run)
 		printf("Thread for command \"%s\" Exit unexpectedly !!!\n", system_call_str);
+	//Delete Logger file
+	unlink(loggers_path);
 	//free allocated memory
 	free(loggers_path);
 	return NULL;

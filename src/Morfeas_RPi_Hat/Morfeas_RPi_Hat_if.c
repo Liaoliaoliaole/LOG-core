@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 	printf("0x%04x\n",test.port_current);
 	*/
 	printf("Not yet Implemented\n");
-	if(!read_port_config(&config[0], 0, 0))
+	if(!read_port_config(&config[0], 0, 1))
 	{
 		for(int i=0;i<sizeof(config);i++)
 			printf("%c",((unsigned char *)&config[0])[i]);

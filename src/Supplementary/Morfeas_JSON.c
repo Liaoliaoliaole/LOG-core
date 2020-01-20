@@ -31,10 +31,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Local functions
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass);
 
+//Delete logstat file for IOBOX_handler
+int delete_logstat_SDAQ(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+	char *logstat_path_and_name, *slash;
+	struct Morfeas_SDAQ_if_stats *stats = stats_arg;
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_12345.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_%s.json",logstat_path, slash, stats->CAN_IF_name);
+	//Delete logstat file
+	return unlink(logstat_path_and_name);
+}
+
 int logstat_SDAQ(char *logstat_path, void *stats_arg)
 {
-	if(!logstat_path)
-		return 1;
+	if(!logstat_path || !stats_arg)
+		return -1;
 	struct Morfeas_SDAQ_if_stats *stats = stats_arg;
 	FILE * pFile;
 	static unsigned char write_error = 0;
@@ -186,5 +201,98 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		//-- Add SDAQ's Data to root JSON object --//
 		cJSON_AddItemToObject(list_SDAQs, "SDAQs_data",node_data);
 	}
+}
+//Delete logstat file for IOBOX_handler
+int delete_logstat_IOBOX(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+	char *logstat_path_and_name, *slash;
+	struct Morfeas_IOBOX_if_stats *stats = stats_arg;
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_12345.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_IOBOX_%s.json",logstat_path, slash, stats->dev_name);
+	//Delete logstat file
+	return unlink(logstat_path_and_name);
+}
+//Converting and exporting function for IOBOX Modbus register. Convert it to JSON format and save it to logstat_path
+int logstat_IOBOX(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+	struct Morfeas_IOBOX_if_stats *stats = stats_arg;
+	FILE * pFile;
+	static unsigned char write_error = 0;
+	char *logstat_path_and_name, *slash, date[STR_LEN];
+	char str_buff[10] = {0};
+	//make time_t variable and get unix time
+	time_t now_time = time(NULL);
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_12345.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_IOBOX_%s.json",logstat_path, slash, stats->dev_name);
+	//cJSON related variables
+	char *JSON_str = NULL;
+	cJSON *root = NULL;
+    cJSON *pow_supp_data = NULL;
+	cJSON *RX = NULL;
+	
+	//get and format time
+	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
+	root = cJSON_CreateObject();
+	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddItemToObject(root, "dev_name", cJSON_CreateString(stats->dev_name));
+	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->IOBOX_IPv4_addr));
+	//Add Wireless_Inductive_Power_Supply data
+	cJSON_AddItemToObject(root, "Power_Supply",pow_supp_data = cJSON_CreateObject());
+	cJSON_AddNumberToObject(pow_supp_data, "Vin", roundf(100.0 * stats->ind_link_reg.Vin)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH1_Vout", roundf(100.0 * stats->ind_link_reg.CH1_Vout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH1_Iout", roundf(100.0 * stats->ind_link_reg.CH1_Iout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH2_Vout", roundf(100.0 * stats->ind_link_reg.CH2_Vout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH2_Iout", roundf(100.0 * stats->ind_link_reg.CH2_Iout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH3_Vout", roundf(100.0 * stats->ind_link_reg.CH3_Vout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH3_Iout", roundf(100.0 * stats->ind_link_reg.CH3_Iout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH4_Vout", roundf(100.0 * stats->ind_link_reg.CH4_Vout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "CH4_Iout", roundf(100.0 * stats->ind_link_reg.CH4_Iout)/100.0);
+	//Add RX_Data
+	for(int i=0; i<4; i++)
+	{
+		sprintf(str_buff, "RX%1u", i+1);
+		cJSON_AddItemToObject(root, str_buff, RX = cJSON_CreateObject());
+		for(int j=0; j<16; j++)
+		{
+			sprintf(str_buff, "CH%1u", j+1);
+			cJSON_AddNumberToObject(RX, str_buff, roundf(1000.0 * stats->RX[i].CH_value[j]/stats->counter)/1000.0);
+			stats->RX[i].CH_value[j] = 0;
+		}
+		cJSON_AddNumberToObject(RX, "Index", stats->RX[i].index);
+		cJSON_AddNumberToObject(RX, "Status", stats->RX[i].status);
+		cJSON_AddNumberToObject(RX, "Success", stats->RX[i].success);
+	}
+	//Reset accumulator counter
+	stats->counter = 0;
+	//Print JSON to File
+	//JSON_str = cJSON_Print(root);
+	JSON_str = cJSON_PrintUnformatted(root);
+	pFile = fopen (logstat_path_and_name, "w");
+	if(pFile)
+	{
+		fputs(JSON_str, pFile);
+		fclose (pFile);
+		if(write_error)
+			fprintf(stderr,"Write error @ Statlog file, Restored\n");
+		write_error = 0;
+	}
+	else if(!write_error)
+	{
+		fprintf(stderr,"Write error @ Statlog file!!!\n");
+		write_error = -1;
+	}
+	cJSON_Delete(root);
+	free(JSON_str);
+	free(logstat_path_and_name);
+	return 0;
 }
 

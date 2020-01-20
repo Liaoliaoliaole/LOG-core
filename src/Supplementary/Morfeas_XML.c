@@ -497,7 +497,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
-	//Scan nodes MDAQ,IOBOX,MTI for child node with duplicate content
+	//Scan nodes MDAQ,IOBOX,MTI for child node with duplicate and validate content
 	xml_node = components_head_node->children;
 	while(xml_node)
 	{
@@ -508,13 +508,25 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 			   !strcmp((char*)xml_node->name, "MTI_HANDLER"))
 			{
 				ipv4_addr = (xmlChar *) XML_node_get_content(xml_node, "IPv4_ADDR");
-				dev_name = (xmlChar *) XML_node_get_content(xml_node, "DEV_NAME");
+				//Check "IPv4_ADDR" content if is a valid IPv4 address
 				if(!is_valid_IPv4((char *)ipv4_addr))
 				{
 					fprintf(stderr, "The Internet protocol version 4 address (%s) on line %d is not valid !!!\n",
 									 ipv4_addr,
 									 get_XML_node(xml_node, "IPv4_ADDR")->line);
 					return EXIT_FAILURE;
+				}
+				dev_name = (xmlChar *) XML_node_get_content(xml_node, "DEV_NAME");
+				//Check "DEV_NAME" content for illegal characters
+				for(int i=0; dev_name[i]!='\0'; i++)
+				{
+					if(dev_name[i] == ' ' || dev_name[i] == '\'' || dev_name[i] == '\"')
+					{
+						fprintf(stderr, "Content of \"DEV_NAME\" on line %d is not valid contains \"%c\"!!!\n",
+										get_XML_node(xml_node, "DEV_NAME")->line,
+										dev_name[i]);
+					return EXIT_FAILURE;
+					}
 				}
 				check_node = xml_node->next;
 				while(check_node)

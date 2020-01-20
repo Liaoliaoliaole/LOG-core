@@ -14,6 +14,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+//Defs for IOBOX_handler
+#define IOBOX_imp_reg 125
+#define IOBOX_slave_address 10
 
 #include <gmodule.h>
 #include <glib.h>
@@ -23,6 +26,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Array with stings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];
 
+//struct for IOBOX stats
+struct Morfeas_IOBOX_if_stats{
+	char *IOBOX_IPv4_addr;
+	char *dev_name;
+	struct Wireless_Inductive_Power_Supply_registers{
+		float Vin;
+		float CH1_Vout,CH1_Iout;
+		float CH2_Vout,CH2_Iout;
+		float CH3_Vout,CH3_Iout;
+		float CH4_Vout,CH4_Iout;
+	}ind_link_reg;
+	struct RXs{
+		float CH_value[16];
+		unsigned short index;
+		unsigned char status;
+		unsigned char success;
+	}RX[4];
+	unsigned int counter;
+};
 //Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];

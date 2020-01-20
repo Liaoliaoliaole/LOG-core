@@ -373,6 +373,9 @@ int main(int argc, char *argv[])
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 1);
 	Logger("Morfeas_SDAQ_if (%s) Removed from OPC-UA\n",stats.CAN_IF_name);
 	close(stats.FIFO_fd);
+	//Delete logstat file
+	if(logstat_path)
+		delete_logstat_SDAQ(logstat_path, &stats);
 	return EXIT_SUCCESS;
 }
 

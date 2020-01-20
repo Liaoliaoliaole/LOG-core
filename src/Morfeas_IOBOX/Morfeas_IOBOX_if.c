@@ -16,9 +16,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.5" /*Release Version of Morfeas_IOBOX_if*/
 
-#define IOBOX_imp_reg 125
-#define IOBOX_slave_address 10
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +31,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <modbus.h>
 
+#include "../Morfeas_Types.h"
 #include "../Supplementary/Morfeas_run_check.h"
+#include "../Supplementary/Morfeas_JSON.h"
 #include "../Supplementary/Morfeas_Logger.h"
 
 //Global variables
@@ -55,9 +54,10 @@ int main(int argc, char *argv[])
 {
 	//MODBus related variables
 	modbus_t *ctx;
-	int rc, i, j, offset;
+	int rc, offset;
 	//Apps variables
-	char *IOBOX_IPv4_addr, *dev_name, *path_to_logstat_dir;
+	char *path_to_logstat_dir;
+	struct Morfeas_IOBOX_if_stats stats = {0};
 	unsigned short IOBOX_regs[IOBOX_imp_reg];
 	//Check for call without arguments
 	if(argc == 1)
@@ -84,25 +84,25 @@ int main(int argc, char *argv[])
 		}
 	}
 	//Get arguments
-	IOBOX_IPv4_addr = argv[optind];
-	dev_name = argv[++optind];
+	stats.IOBOX_IPv4_addr = argv[optind];
+	stats.dev_name = argv[++optind];
 	path_to_logstat_dir = argv[++optind];
 	//Check arguments
-	if(!IOBOX_IPv4_addr || !dev_name)
+	if(!stats.IOBOX_IPv4_addr || !stats.dev_name)
 	{
 		fprintf(stderr, "Mandatory Argument missing!!!\n");
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	if(!is_valid_IPv4(IOBOX_IPv4_addr))
+	if(!is_valid_IPv4(stats.IOBOX_IPv4_addr))
 	{
 		fprintf(stderr, "Argument of Device name missing!!!\n");
 		exit(EXIT_FAILURE);
 	}
 	//Check if other instance of this program already runs with same IOBOX_IPv4_addr
-	if(check_already_run_with_same_arg(argv[0], IOBOX_IPv4_addr))
+	if(check_already_run_with_same_arg(argv[0], stats.IOBOX_IPv4_addr))
 	{
-		fprintf(stderr, "%s for IPv4:%s Already Running!!!\n", argv[0], IOBOX_IPv4_addr);
+		fprintf(stderr, "%s for IPv4:%s Already Running!!!\n", argv[0], stats.IOBOX_IPv4_addr);
 		exit(EXIT_SUCCESS);
 	}
 	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 
 	//Make MODBus socket for connection
-	ctx = modbus_new_tcp(IOBOX_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
+	ctx = modbus_new_tcp(stats.IOBOX_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
 	//Set Slave address
 	if(modbus_set_slave(ctx, IOBOX_slave_address))
 	{
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 	//Attempt connection to IOBOX
 	while(modbus_connect(ctx) && handler_run)
 	{
-		Logger("Connection Error @ %s: %s\n", IOBOX_IPv4_addr, modbus_strerror(errno));
+		Logger("Connection Error @ %s: %s\n", stats.IOBOX_IPv4_addr, modbus_strerror(errno));
 		sleep(1);
 	}
 	if(!handler_run)
@@ -148,62 +148,44 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			printf("----  Wireless Inductive Power Supply ----\n");
-			j=1;
-			printf("Uin=%.3f\n\n", IOBOX_regs[0]*0.01);
-			offset = 1;
-			while(offset<13)
-			{
-				printf("%uUout=%.3fV\n", j, IOBOX_regs[offset++]/100.0);
-				printf("%uIout=%.3fA\n", j, IOBOX_regs[offset++]/100.0);
-				printf("%uIout_filtered=%.3fA\n\n", j, IOBOX_regs[offset++]/100.0);
-				j++;
-			}
-			printf("----  RX 1 ----\n");
+			//Load Wireless Inductive Power Supply data to stats
+			stats.ind_link_reg.Vin = IOBOX_regs[0]/100.0;
+			stats.ind_link_reg.CH1_Vout = IOBOX_regs[1]/100.0;
+			stats.ind_link_reg.CH1_Iout = IOBOX_regs[2]/100.0;
+			stats.ind_link_reg.CH2_Vout = IOBOX_regs[4]/100.0;
+			stats.ind_link_reg.CH2_Iout = IOBOX_regs[5]/100.0;
+			stats.ind_link_reg.CH3_Vout = IOBOX_regs[7]/100.0;
+			stats.ind_link_reg.CH3_Iout = IOBOX_regs[8]/100.0;
+			stats.ind_link_reg.CH4_Vout = IOBOX_regs[10]/100.0;
+			stats.ind_link_reg.CH4_Iout = IOBOX_regs[11]/100.0;
+			
+			//Load RX Data to stats
 			offset = 25;
-			for(i=0;i<16;i++)
+			for(int i=0; i<4; i++)
 			{
-				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+				for(int j=0; j<16; j++)
+					stats.RX[i].CH_value[j] += IOBOX_regs[j+offset]/16.0;
+				stats.RX[i].index = IOBOX_regs[21+offset];
+				stats.RX[i].status = IOBOX_regs[22+offset];
+				stats.RX[i].success = IOBOX_regs[23+offset];
+				offset += 25;
 			}
-			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-			printf("Status = %hu\n", IOBOX_regs[22+offset]);
-			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-
-			printf("----  RX 2 ----\n");
-			offset = 50;
-			for(i=0;i<16;i++)
+			if(stats.counter == 10)
 			{
-				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+				logstat_IOBOX(path_to_logstat_dir, &stats);
+				stats.counter = 0;
 			}
-			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-			printf("Status = %hu\n", IOBOX_regs[22+offset]);
-			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-
-			printf("----  RX 3 ----\n");
-			offset = 75;
-			for(i=0;i<16;i++)
-			{
-				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
-			}
-			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-			printf("Status = %hu\n", IOBOX_regs[22+offset]);
-			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
-
-			printf("----  RX 4 ----\n");
-			offset = 100;
-			for(i=0;i<16;i++)
-			{
-				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
-			}
-			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
-			printf("Status = %hu\n", IOBOX_regs[22+offset]);
-			printf("Succsess Ration = %hu\n", IOBOX_regs[23+offset]);
+			else
+				stats.counter++;
 		}
 		usleep(100000);
 	}
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
+	//Delete logstat file
+	if(path_to_logstat_dir)
+		delete_logstat_IOBOX(path_to_logstat_dir, &stats);
 	return EXIT_SUCCESS;
 }
 
