@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
 			offset = 25;
 			for(i=0;i<16;i++)
 			{
-				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
 			}
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 			offset = 50;
 			for(i=0;i<16;i++)
 			{
-				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
 			}
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 			offset = 75;
 			for(i=0;i<16;i++)
 			{
-				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
 			}
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 			offset = 100;
 			for(i=0;i<16;i++)
 			{
-				printf("CH%d -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
+				printf("CH%02u -> %.3f°C\n", i+1, IOBOX_regs[i+offset]/16.0);
 			}
 			printf("Packet index = %hu\n", IOBOX_regs[21+offset]);
 			printf("Status = %hu\n", IOBOX_regs[22+offset]);
