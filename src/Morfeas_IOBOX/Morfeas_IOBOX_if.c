@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 #include <modbus.h>
 
@@ -144,18 +145,23 @@ int main(int argc, char *argv[])
 	{
 		sleep(1);
 		IOBOX_status(FIFO_fd, &stats, errno);
-		Logger("Connection Error @ %s: %s\n", stats.IOBOX_IPv4_addr, modbus_strerror(errno));
+		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
 	}
 	IOBOX_status(FIFO_fd, &stats, 0);
-	Logger("Connected to IOBOX(%s)\n", stats.IOBOX_IPv4_addr);
-	//main application loop
+	Logger("Connected to IOBOX %s@%s\n", stats.dev_name, stats.IOBOX_IPv4_addr);
+		//--- main application loop ---//
+	//Load dev name and IPv4 address to IPC_msg
+	IPC_msg.IOBOX_data.IPC_msg_type = IPC_IOBOX_data;
+	memccpy(IPC_msg.IOBOX_data.Dev_or_Bus_name, stats.dev_name,'\0',Dev_or_Bus_name_str_size);
+	IPC_msg.IOBOX_data.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	inet_pton(AF_INET, stats.IOBOX_IPv4_addr, &(IPC_msg.IOBOX_data.IOBOX_IPv4));
 	while(handler_run)
 	{
 		rc = modbus_read_registers(ctx, 0, IOBOX_imp_reg, IOBOX_regs);
 		if (rc <= 0)
 		{
-			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 			IOBOX_status(FIFO_fd, &stats, errno);
+			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
 				sleep(1);
@@ -165,9 +171,7 @@ int main(int argc, char *argv[])
 		else
 		{
 			//scale measurements and send them to Morfeas_opc_ua via IPC
-			IPC_msg.IOBOX_data.IPC_msg_type = IPC_IOBOX_data;
-			memccpy(IPC_msg.IOBOX_data.Dev_or_Bus_name, stats.dev_name,'\0',Dev_or_Bus_name_str_size);
-			IPC_msg.IOBOX_data.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+			
 			//Load Data for "Wireless Inductive Power Supply"
 			IPC_msg.IOBOX_data.Supply_Vin = IOBOX_regs[0]/100.0;
 			for(int i=0, j=1; i<4; i++)
