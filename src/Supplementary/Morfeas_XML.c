@@ -522,7 +522,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 				{
 					if(dev_name[i] == ' ' || dev_name[i] == '\'' || dev_name[i] == '\"')
 					{
-						fprintf(stderr, "Content of \"DEV_NAME\" on line %d is not valid contains (%c)!!!\n",
+						fprintf(stderr, "Content of \"DEV_NAME\" on line %d is not valid. Contains (%c) Character !!!\n",
 										get_XML_node(xml_node, "DEV_NAME")->line,
 										dev_name[i]);
 						return EXIT_FAILURE;

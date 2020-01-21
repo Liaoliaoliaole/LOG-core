@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.9" /*Release Version of Morfeas_daemon*/
 #define max_num_of_threads 18
-#define max_lines_on_Logger 256
+#define max_lines_on_Logger 128
 
 //Define Morfeas Components programs
 #define Morfeas_opc_ua "Morfeas_opc_ua"
@@ -57,6 +57,8 @@ pthread_mutex_t thread_make_lock = PTHREAD_MUTEX_INITIALIZER;
 void print_usage(char *prog_name);
 //Thread function
 void * Morfeas_thread(void *varg_pt);
+//File function that open the file from loggers_path, truncate it to limit_lines and append the buff
+int tranc_file_and_wrire(char *loggers_path,char *out_str, unsigned int limit_lines);
 
 static void stopHandler(int sign)
 {
@@ -319,20 +321,11 @@ void * Morfeas_thread(void *varg_pt)
         free(loggers_path);
 		return NULL;
     }
-
     //Read from stdout/err of forked command and write it to Log file
 	while(fgets(out_str, sizeof(out_str), cmd_fd))
 	{
-		Log_fd = fopen(loggers_path, "a+");
-		if(Log_fd)
-		{
-			fprintf(Log_fd, "%s",out_str);
-			fclose(Log_fd);
-		}
-		else
-			perror("fopen_error");
-    }
-
+		tranc_file_and_wrire(loggers_path, out_str, max_lines_on_Logger);
+	}
 	//Check exit status of forked command
 	if(pclose(cmd_fd) == 256)
 		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
@@ -343,4 +336,59 @@ void * Morfeas_thread(void *varg_pt)
 	//free allocated memory
 	free(loggers_path);
 	return NULL;
+}
+
+int tranc_file_and_wrire(char *loggers_path,char *buff, unsigned int limit_lines)
+{
+	FILE *Log_fd;
+	char *file_cont;
+	int c=0, flag=0;
+	unsigned int i, lines=0, str_len;
+	Log_fd = fopen(loggers_path, "r+");
+	if(Log_fd)
+	{
+		fseek(Log_fd, 0, SEEK_END);
+		if(ftell(Log_fd))
+		{
+			//allocate memory with length the file size
+			if(!(file_cont = malloc(ftell(Log_fd)+1)))
+			{
+				fprintf(stderr, "Memory Error!!!!");
+				exit(EXIT_FAILURE);
+			}
+			//Load file to buffer and Count the lines
+			rewind(Log_fd);
+			for(i=0; (c = fgetc(Log_fd)) != EOF;)
+			{
+				if(flag)
+				{
+					file_cont[i] = c;
+					i++;
+				}
+				if(c == '\n')
+				{
+					lines++;
+					flag = 1;
+				}
+			}
+			file_cont[i] = '\0';
+			//Check for amount of lines
+			if(lines >= limit_lines)
+			{
+				Log_fd = freopen(loggers_path, "w", Log_fd);
+				str_len = strlen(file_cont);
+				for(i=0; i<str_len; i++)
+					fputc(file_cont[i], Log_fd);
+			}
+			else
+				fseek(Log_fd, 0, SEEK_END);
+			free(file_cont);
+		}
+		fprintf(Log_fd, "%s",buff);
+		fclose(Log_fd);
+		return EXIT_SUCCESS;
+	}
+	else
+		perror("fopen_error");
+	return EXIT_FAILURE;
 }

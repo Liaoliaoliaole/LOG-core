@@ -57,7 +57,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server, xmlNode *node
 
 //Global variables
 pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
-static UA_Boolean running = true;
+static volatile UA_Boolean running = true;
 static UA_Server *server = NULL;
 static GSList *Links = NULL;
 

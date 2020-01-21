@@ -52,7 +52,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_Logger.h"
 #include "../Morfeas_RPi_Hat/Morfeas_RPi_Hat.h"
 
-static struct Morfeas_SDAQ_if_flags{
+static volatile struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
 	unsigned led_existent :1;
 	unsigned port_meas_existen :1;
