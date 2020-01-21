@@ -23,7 +23,7 @@
 			<DEV_NAME>test1</DEV_NAME>
 			<IPv4_ADDR>10.0.0.10</IPv4_ADDR>
 		</MDAQ_HANDLER>
-		<IOBOX_HANDLER Disable="true">
+		<IOBOX_HANDLER Disable="false">
 			<DEV_NAME>LAD_IOBOX</DEV_NAME>
 			<IPv4_ADDR>10.0.0.7</IPv4_ADDR>
 		</IOBOX_HANDLER>
