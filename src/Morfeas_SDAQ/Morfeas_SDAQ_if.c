@@ -226,16 +226,19 @@ int main(int argc, char *argv[])
 	flags.led_existent = led_init(stats.CAN_IF_name);
 	//Get SDAQ_NET Port config
 	stats.port = get_port_num(stats.CAN_IF_name);
-	if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
+	if(stats.port>=0 && stats.port<=3)
 	{
-		//Init SDAQ_NET Port's CSA
-		if(!MAX9611_init(stats.port, I2C_BUS_NUM))
-			flags.port_meas_existen = 1;
+		if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
+		{
+			//Init SDAQ_NET Port's CSA
+			if(!MAX9611_init(stats.port, I2C_BUS_NUM))
+				flags.port_meas_existen = 1;
+			else
+				Logger("SDAQnet Port CSA not found!!!\n");
+		}
 		else
-			Logger("SDAQnet Port CSA not found!!!\n");
+			Logger("SDAQnet Port configuration EEPROM not found!!!\n");
 	}
-	else
-		Logger("SDAQnet Port configuration EEPROM not found!!!\n");
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
