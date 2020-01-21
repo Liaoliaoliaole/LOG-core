@@ -39,6 +39,7 @@ void Update_NodeValue_by_nodeID(UA_Server *server, UA_NodeId Node_to_update, con
 void SDAQ_handler_reg(UA_Server *server, char *connected_to_BUS);
 void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr);
 void SDAQ2OPC_UA_register_update_info(UA_Server *server, SDAQ_info_msg *ptr);
-void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);
-
-
+void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec);
+//IOBOX's Handler related
+void IOBOX_handler_reg(UA_Server *server, char *dev_name);
+void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);

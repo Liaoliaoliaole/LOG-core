@@ -29,7 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
-#include "../Morfeas_Types.h"
+#include "../IPC/Morfeas_IPC.h"// -> #include "Morfeas_Types.h"
 #include "Morfeas_run_check.h"
 
 /*
@@ -522,10 +522,17 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 				{
 					if(dev_name[i] == ' ' || dev_name[i] == '\'' || dev_name[i] == '\"')
 					{
-						fprintf(stderr, "Content of \"DEV_NAME\" on line %d is not valid contains \"%c\"!!!\n",
+						fprintf(stderr, "Content of \"DEV_NAME\" on line %d is not valid contains (%c)!!!\n",
 										get_XML_node(xml_node, "DEV_NAME")->line,
 										dev_name[i]);
-					return EXIT_FAILURE;
+						return EXIT_FAILURE;
+					}
+					if(i>=Dev_or_Bus_name_str_size)
+					{
+						fprintf(stderr, "Content of \"DEV_NAME\" on line %d is too long (>=%u)!!!\n",
+										get_XML_node(xml_node, "DEV_NAME")->line,
+										Dev_or_Bus_name_str_size);
+						return EXIT_FAILURE;
 					}
 				}
 				check_node = xml_node->next;

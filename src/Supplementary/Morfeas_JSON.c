@@ -247,15 +247,17 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->IOBOX_IPv4_addr));
 	//Add Wireless_Inductive_Power_Supply data
 	cJSON_AddItemToObject(root, "Power_Supply",pow_supp_data = cJSON_CreateObject());
-	cJSON_AddNumberToObject(pow_supp_data, "Vin", roundf(100.0 * stats->ind_link_reg.Vin)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH1_Vout", roundf(100.0 * stats->ind_link_reg.CH1_Vout)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH1_Iout", roundf(100.0 * stats->ind_link_reg.CH1_Iout)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH2_Vout", roundf(100.0 * stats->ind_link_reg.CH2_Vout)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH2_Iout", roundf(100.0 * stats->ind_link_reg.CH2_Iout)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH3_Vout", roundf(100.0 * stats->ind_link_reg.CH3_Vout)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH3_Iout", roundf(100.0 * stats->ind_link_reg.CH3_Iout)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH4_Vout", roundf(100.0 * stats->ind_link_reg.CH4_Vout)/100.0);
-	cJSON_AddNumberToObject(pow_supp_data, "CH4_Iout", roundf(100.0 * stats->ind_link_reg.CH4_Iout)/100.0);
+	cJSON_AddNumberToObject(pow_supp_data, "Vin", roundf(100.0 * stats->Supply_Vin/stats->counter)/100.0);
+	stats->Supply_Vin = 0;
+	for(int i=0; i<4; i++)
+	{
+		sprintf(str_buff, "CH%1u_Vout", i+1);
+		cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Vout/stats->counter)/100.0);
+		stats->Supply_meas[i].Vout = 0;
+		sprintf(str_buff, "CH%1u_Iout", i+1);
+		cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Iout/stats->counter)/100.0);
+		stats->Supply_meas[i].Iout = 0;
+	}
 	//Add RX_Data
 	for(int i=0; i<4; i++)
 	{

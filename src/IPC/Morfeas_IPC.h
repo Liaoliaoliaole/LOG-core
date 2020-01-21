@@ -120,17 +120,16 @@ typedef struct CAN_BUS_info_msg_struct{
 typedef struct IOBOX_data_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
-	
-	
-	
+	unsigned int IOBOX_IPv4;
+	float Supply_Vin;
+	struct Power_Supply Supply_meas[4];
+	struct RXs RX[4];
 }IOBOX_data_msg;
 
 typedef struct IOBOX_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
-	
-	
-	
+	int status;	
 }IOBOX_report_msg;
 #pragma pack(pop)//Disable packing
 

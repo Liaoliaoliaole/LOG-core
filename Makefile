@@ -22,6 +22,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
+					  $(WORK_dir)/Morfeas_IOBOX_nodeset.o \
 					  $(WORK_dir)/Morfeas_XML.o
 
 Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
@@ -85,9 +86,12 @@ $(WORK_dir)/Morfeas_RPi_Hat.o: $(SRC_dir)/Morfeas_RPi_Hat/Morfeas_RPi_Hat.c
 
 $(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ/Morfeas_SDAQ_nodeset.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
-
+	
 #Dependencies of the Morfeas_IOBOX_if
 $(WORK_dir)/Morfeas_IOBOX_if.o: $(SRC_dir)/Morfeas_IOBOX/Morfeas_IOBOX_if.c
+	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_IOBOX_nodeset.o: $(SRC_dir)/Morfeas_IOBOX/Morfeas_IOBOX_nodeset.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Supplementary dependencies

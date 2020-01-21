@@ -268,6 +268,7 @@ void* IPC_Receiver(void *varg_pt)
 						case MDAQ:
 							break;
 						case IOBOX:
+						    IOBOX_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
 						case MTI:
 							break;
@@ -284,7 +285,8 @@ void* IPC_Receiver(void *varg_pt)
 				default://Msg from Handler (nested if to find from which one)
 					if(type>=Morfeas_IPC_SDAQ_MIN_type && type<=Morfeas_IPC_SDAQ_MAX_type)//Msg type from SDAQ_handler
 						IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
-
+					else if(type>=Morfeas_IPC_IOBOX_MIN_type && type<=Morfeas_IPC_IOBOX_MAX_type)//Msg type from IOBOX_handler
+						IPC_msg_from_IOBOX_handler(server, type, &IPC_msg_dec);//mutex inside
 					break;
 			}
 		}
