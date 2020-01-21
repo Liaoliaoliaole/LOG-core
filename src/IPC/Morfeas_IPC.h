@@ -32,11 +32,18 @@ enum Morfeas_IPC_msg_type{
 	IPC_SDAQ_cal_date,
 	IPC_SDAQ_timediff,
 	IPC_SDAQ_meas,
+	//SDAQ_related IPC messages
+	IPC_IOBOX_data,
+	IPC_IOBOX_report,
 	//Set MIN/MAX_num_type, (Min and Max for each IPC_handler_type)
+	//---SDAQ---//
 	Morfeas_IPC_SDAQ_MIN_type = IPC_SDAQ_register_or_update,
 	Morfeas_IPC_SDAQ_MAX_type = IPC_SDAQ_meas,
+	//---IO-BOX---//
+	Morfeas_IPC_IOBOX_MIN_type = IPC_IOBOX_data,
+	Morfeas_IPC_IOBOX_MAX_type = IPC_IOBOX_report,
 	//MAX number of any type of IPC message
-	Morfeas_IPC_MAX_type = IPC_SDAQ_meas
+	Morfeas_IPC_MAX_type = IPC_IOBOX_report
 };
 
 enum Morfeas_IPC_handler_type{
@@ -109,6 +116,22 @@ typedef struct CAN_BUS_info_msg_struct{
 	float shunt_temp;
 }CAN_BUS_info_msg;
 
+	//------ IO-BOX related ------//
+typedef struct IOBOX_data_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	
+	
+	
+}IOBOX_data_msg;
+
+typedef struct IOBOX_report_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	
+	
+	
+}IOBOX_report_msg;
 #pragma pack(pop)//Disable packing
 
 //--IPC_MESSAGE--//
@@ -122,6 +145,9 @@ typedef union{
 	SDAQ_timediff_msg SDAQ_timediff;
 	SDAQ_meas_msg SDAQ_meas;
 	CAN_BUS_info_msg BUS_info;
+	//IO-BOX related
+	IOBOX_data_msg IOBOX_data;
+	IOBOX_report_msg IOBOX_report;
 }IPC_message;
 
 	//----RX Functions----//
