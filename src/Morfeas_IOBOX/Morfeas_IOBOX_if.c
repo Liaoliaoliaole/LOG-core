@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.5" /*Release Version of Morfeas_IOBOX_if*/
+#define VERSION "0.9" /*Release Version of Morfeas_IOBOX_if*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,8 +50,8 @@ static void stopHandler(int signum)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
 	handler_run = 0;
 }
-// IOBOX_status function. Send Status of IOBOX to Morfeas_opc_ua via IPC 
-void IOBOX_status(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status);
+// IOBOX_status_to_IPC function. Send Status of IOBOX to Morfeas_opc_ua via IPC
+void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status);
 
 int main(int argc, char *argv[])
 {
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	struct Morfeas_IOBOX_if_stats stats = {0};
 	unsigned short IOBOX_regs[IOBOX_imp_reg];
 	//FIFO file descriptor
-	int FIFO_fd; 
+	int FIFO_fd;
 	//Check for call without arguments
 	if(argc == 1)
 	{
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 	Logger("---- Morfeas_IOBOX_if Started ----\n",argv[0]);
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
-	
+
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Register handler to Morfeas_OPC-UA Server
@@ -144,10 +144,10 @@ int main(int argc, char *argv[])
 	while(modbus_connect(ctx) && handler_run)
 	{
 		sleep(1);
-		IOBOX_status(FIFO_fd, &stats, errno);
+		IOBOX_status_to_IPC(FIFO_fd, &stats, errno);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
 	}
-	IOBOX_status(FIFO_fd, &stats, 0);
+	IOBOX_status_to_IPC(FIFO_fd, &stats, 0);
 	Logger("Connected to IOBOX %s(%s)\n", stats.IOBOX_IPv4_addr, stats.dev_name);
 		//--- main application loop ---//
 	//Load dev name and IPv4 address to IPC_msg
@@ -160,18 +160,18 @@ int main(int argc, char *argv[])
 		rc = modbus_read_registers(ctx, 0, IOBOX_imp_reg, IOBOX_regs);
 		if (rc <= 0)
 		{
-			IOBOX_status(FIFO_fd, &stats, errno);
+			IOBOX_status_to_IPC(FIFO_fd, &stats, errno);
 			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
 				sleep(1);
 			Logger("Recover from Last Error\n");
-			IOBOX_status(FIFO_fd, &stats, 0);
+			IOBOX_status_to_IPC(FIFO_fd, &stats, 0);
 		}
 		else
 		{
 			//scale measurements and send them to Morfeas_opc_ua via IPC
-			
+
 			//Load Data for "Wireless Inductive Power Supply"
 			IPC_msg.IOBOX_data.Supply_Vin = IOBOX_regs[0]/100.0;
 			for(int i=0, j=1; i<4; i++)
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 				IPC_msg.IOBOX_data.Supply_meas[i].Iout = IOBOX_regs[j++]/100.0;
 				j++;
 			}
-			//Load Data for RXs 
+			//Load Data for RXs
 			offset = 25;
 			for(int i=0; i<4; i++)
 			{
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 			}
 			//Send measurements
 			IPC_msg_TX(FIFO_fd, &IPC_msg);
-			
+
 			if(stats.counter >= 10)
 			{
 				logstat_IOBOX(path_to_logstat_dir, &stats);
@@ -257,8 +257,8 @@ void print_usage(char *prog_name)
 	return;
 }
 
-// IOBOX_status function. Send Status of IOBOX to Morfeas_opc_ua via IPC 
-void IOBOX_status(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status)
+// IOBOX_status function. Send Status of IOBOX to Morfeas_opc_ua via IPC
+void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
@@ -270,10 +270,3 @@ void IOBOX_status(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status)
 	//Send status report
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
-
-
-
-
-
-
-
