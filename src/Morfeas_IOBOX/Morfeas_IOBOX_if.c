@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
 	}
 	IOBOX_status(FIFO_fd, &stats, 0);
-	Logger("Connected to IOBOX %s@%s\n", stats.dev_name, stats.IOBOX_IPv4_addr);
+	Logger("Connected to IOBOX %s(%s)\n", stats.IOBOX_IPv4_addr, stats.dev_name);
 		//--- main application loop ---//
 	//Load dev name and IPv4 address to IPC_msg
 	IPC_msg.IOBOX_data.IPC_msg_type = IPC_IOBOX_data;
@@ -186,9 +186,9 @@ int main(int argc, char *argv[])
 			{
 				for(int j=0; j<16; j++)
 					IPC_msg.IOBOX_data.RX[i].CH_value[j] = IOBOX_regs[j+offset]/16.0;
-				IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[21+offset];
-				IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[22+offset];
-				IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[23+offset];
+				IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[20+offset];
+				IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[21+offset];
+				IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[22+offset];
 				offset += 25;
 			}
 			//Send measurements
