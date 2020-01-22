@@ -34,6 +34,13 @@ Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_Logger.o \
 					  $(CANif_DEP_HEADERS_dir)
 
+Morfeas_MDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
+					  $(WORK_dir)/Morfeas_MDAQ_if.o 
+#					  $(WORK_dir)/Morfeas_JSON.o \
+#					  $(WORK_dir)/SDAQ_drv.o \
+#					  $(WORK_dir)/Morfeas_IPC.o \
+#					  $(WORK_dir)/Morfeas_Logger.o \
+
 Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/Morfeas_IOBOX_if.o \
 					   $(WORK_dir)/Morfeas_JSON.o \
@@ -44,6 +51,7 @@ Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 all: $(BUILD_dir)/Morfeas_daemon \
 	 $(BUILD_dir)/Morfeas_opc_ua \
 	 $(BUILD_dir)/Morfeas_SDAQ_if \
+	 $(BUILD_dir)/Morfeas_MDAQ_if \
 	 $(BUILD_dir)/Morfeas_IOBOX_if
 
 #Compilation of Morfeas applications
@@ -54,6 +62,9 @@ $(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP) $(HEADERS)
 	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP) $(HEADERS)
+	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+$(BUILD_dir)/Morfeas_MDAQ_if: $(Morfeas_MDAQ_if_DEP) $(HEADERS)
 	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_dir)/Morfeas_IOBOX_if: $(Morfeas_IOBOX_if_DEP) $(HEADERS)
@@ -86,7 +97,14 @@ $(WORK_dir)/Morfeas_RPi_Hat.o: $(SRC_dir)/Morfeas_RPi_Hat/Morfeas_RPi_Hat.c
 
 $(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ/Morfeas_SDAQ_nodeset.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
-	
+
+#Dependencies of the Morfeas_MDAQ_if
+$(WORK_dir)/Morfeas_MDAQ_if.o: $(SRC_dir)/Morfeas_MDAQ/Morfeas_MDAQ_if.c
+	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_MDAQ_nodeset.o: $(SRC_dir)/Morfeas_MDAQ/Morfeas_MDAQ_nodeset.c
+	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
 #Dependencies of the Morfeas_IOBOX_if
 $(WORK_dir)/Morfeas_IOBOX_if.o: $(SRC_dir)/Morfeas_IOBOX/Morfeas_IOBOX_if.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
