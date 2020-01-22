@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define YELLOW_LED 19
 #define RED_LED 13
 
-#define I2C_BUS_NUM 2
+#define I2C_BUS_NUM 1
 #define MAX9611_temp_scaler 0.48
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)

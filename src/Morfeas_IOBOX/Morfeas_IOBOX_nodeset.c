@@ -65,7 +65,7 @@ void IOBOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
-	char Node_ID_str[60], IOBOX_IPv4_addr_str[20];	
+	char Node_ID_str[60], IOBOX_IPv4_addr_str[20], status_byte = 0;	
 	char tmp_buff[80], tmp_buff_1[50], tmp_buff_2[80];
 	float nan = NAN;
 	//Msg type from IOBOX_handler
@@ -87,18 +87,8 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_report.status), UA_TYPES_INT32);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
-		case IPC_IOBOX_data:
+		case IPC_IOBOX_channel_reg:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				//Load power supply measurements to OPC-UA variables
-				sprintf(Node_ID_str, "%s.Ind_link.Vin", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
-				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_Vin), UA_TYPES_FLOAT);
-				for(unsigned char i=0; i<4; i++)
-				{
-					sprintf(Node_ID_str, "%s.Ind_link.CH%1hhu.Vout", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Vout), UA_TYPES_FLOAT);
-					sprintf(Node_ID_str, "%s.Ind_link.CH%1hhu.Iout", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Iout), UA_TYPES_FLOAT);
-				}
 				//Check if node for object Receivers exist 
 				sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 				if(UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
@@ -138,6 +128,20 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 				}
 				else
 					UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+			pthread_mutex_unlock(&OPC_UA_NODESET_access);
+			break;
+		case IPC_IOBOX_data:
+			pthread_mutex_lock(&OPC_UA_NODESET_access);
+				//Load power supply measurements to OPC-UA variables
+				sprintf(Node_ID_str, "%s.Ind_link.Vin", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_Vin), UA_TYPES_FLOAT);
+				for(unsigned char i=0; i<4; i++)
+				{
+					sprintf(Node_ID_str, "%s.Ind_link.CH%1hhu.Vout", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Vout), UA_TYPES_FLOAT);
+					sprintf(Node_ID_str, "%s.Ind_link.CH%1hhu.Iout", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Iout), UA_TYPES_FLOAT);
+				}
 				//Load values to variables 
 				for(unsigned char i=0; i<4; i++)
 				{
@@ -147,18 +151,35 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					{
 						sprintf(tmp_buff_1, "IOBOX.%u.RX%hhu.CH%hhu", IPC_msg_dec->IOBOX_data.IOBOX_IPv4, i+1, j+1);
 						sprintf(tmp_buff_2, "%s.meas", tmp_buff_1);
-						if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] < 2000.0)
-							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), 
-															   &(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j]), UA_TYPES_FLOAT);
-						else
-							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), 
-															   &nan, UA_TYPES_FLOAT);
-						/*
-						sprintf(tmp_buff_2, "%s.status", tmp_buff_1);
-						Morfeas_opc_ua_add_variable_node(server, tmp_buff_1, tmp_buff_2, "Status", UA_TYPES_STRING);
+						//Check if RX status to check if telemetry is active 
+						if(IPC_msg_dec->IOBOX_data.RX[i].status)
+						{
+							//Check for No sensor (values higher that 2000 shows open TC)
+							if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] > 2000.0)
+							{
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), 
+																   &nan, UA_TYPES_FLOAT);
+								status_byte = 1<<7; //127 = No sensor
+								sprintf(tmp_buff_2, "%s.status", tmp_buff_1);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), "No sensor", UA_TYPES_STRING);
+							}
+							else //Sensor okay
+							{
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), 
+																   &(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j]), UA_TYPES_FLOAT);
+								sprintf(tmp_buff_2, "%s.status", tmp_buff_1);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), "Okay", UA_TYPES_STRING);
+							}
+						}//Check success for messages in receivers buffer 
+						else if(!IPC_msg_dec->IOBOX_data.RX[i].success)
+						{	
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), &nan, UA_TYPES_FLOAT);
+							sprintf(tmp_buff_2, "%s.status", tmp_buff_1);
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), "Disconnected", UA_TYPES_STRING);
+							status_byte = -1; //255 = No Telemetry connected
+						}
 						sprintf(tmp_buff_2, "%s.status_byte", tmp_buff_1);
-						Morfeas_opc_ua_add_variable_node(server, tmp_buff_1, tmp_buff_2, "Status_value", UA_TYPES_BYTE);
-						*/
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), &status_byte, UA_TYPES_BYTE);
 					}
 					//Variables for receiver 
 					sprintf(tmp_buff_2, "IOBOX.%u.RX%hhu.index", IPC_msg_dec->IOBOX_data.IOBOX_IPv4, i+1);

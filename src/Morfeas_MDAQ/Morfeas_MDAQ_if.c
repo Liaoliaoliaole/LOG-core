@@ -262,6 +262,6 @@ void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats, int st
 	IPC_msg.MDAQ_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	IPC_msg.MDAQ_report.status = status;
 	//Send status report
-	//IPC_msg_TX(FIFO_fd, &IPC_msg);
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
 

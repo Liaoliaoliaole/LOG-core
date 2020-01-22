@@ -52,6 +52,8 @@ static void stopHandler(int signum)
 }
 // IOBOX_status_to_IPC function. Send Status of IOBOX to Morfeas_opc_ua via IPC
 void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status);
+// Function that register IOBOX Channels to Morfeas_opc_ua via IPC
+void IPC_Channel_reg(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
@@ -150,6 +152,8 @@ int main(int argc, char *argv[])
 	IOBOX_status_to_IPC(FIFO_fd, &stats, 0);
 	Logger("Connected to IOBOX %s(%s)\n", stats.IOBOX_IPv4_addr, stats.dev_name);
 		//--- main application loop ---//
+	//Register channels on Morfeas_opc_ua via IPC
+	IPC_Channel_reg(FIFO_fd, &stats);
 	//Load dev name and IPv4 address to IPC_msg
 	IPC_msg.IOBOX_data.IPC_msg_type = IPC_IOBOX_data;
 	memccpy(IPC_msg.IOBOX_data.Dev_or_Bus_name, stats.dev_name,'\0',Dev_or_Bus_name_str_size);
@@ -184,7 +188,7 @@ int main(int argc, char *argv[])
 			for(int i=0; i<4; i++)
 			{
 				for(int j=0; j<16; j++)
-					IPC_msg.IOBOX_data.RX[i].CH_value[j] = IOBOX_regs[j+offset]/16.0;
+					IPC_msg.IOBOX_data.RX[i].CH_value[j] = ((short)IOBOX_regs[j+offset])/16.0;//Recast the value to signed
 				IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[20+offset];
 				IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[21+offset];
 				IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[22+offset];
@@ -256,16 +260,32 @@ void print_usage(char *prog_name)
 	return;
 }
 
-// IOBOX_status function. Send Status of IOBOX to Morfeas_opc_ua via IPC
+//IOBOX_status function. Send Status of IOBOX to Morfeas_opc_ua via IPC
 void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	//scale measurements and send them to Morfeas_opc_ua via IPC
+	//Load status to IPC_message
 	IPC_msg.IOBOX_report.IPC_msg_type = IPC_IOBOX_report;
 	memccpy(IPC_msg.IOBOX_report.Dev_or_Bus_name, stats->dev_name,'\0',Dev_or_Bus_name_str_size);
 	IPC_msg.IOBOX_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	IPC_msg.IOBOX_report.status = status;
-	//Send status report
+	//Send status report to Morfeas_opc_ua
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
+}
+
+//Function that register IOBOX Channels to Morfeas_opc_ua via IPC
+void IPC_Channel_reg(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats)
+{
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	//--- Load necessary message data to IPC_message ---/
+	IPC_msg.IOBOX_channel_reg.IPC_msg_type = IPC_IOBOX_channel_reg; //Message type
+	//Load Device name to IPC_message
+	memccpy(IPC_msg.IOBOX_channel_reg.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_msg.IOBOX_channel_reg.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load IOBOX IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->IOBOX_IPv4_addr, &(IPC_msg.IOBOX_channel_reg.IOBOX_IPv4));
+	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }

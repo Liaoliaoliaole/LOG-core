@@ -32,11 +32,13 @@ enum Morfeas_IPC_msg_type{
 	IPC_SDAQ_cal_date,
 	IPC_SDAQ_timediff,
 	IPC_SDAQ_meas,
-	//SDAQ_related IPC messages
+	//IOBOX_related IPC messages
 	IPC_IOBOX_data,
+	IPC_IOBOX_channel_reg,
 	IPC_IOBOX_report,
-	//SDAQ_related IPC messages
+	//MDAQ_related IPC messages
 	IPC_MDAQ_data,
+	IPC_MDAQ_channel_reg,
 	IPC_MDAQ_report,
 	//Set MIN/MAX_num_type, (Min and Max for each IPC_handler_type)
 	//---SDAQ---//
@@ -132,6 +134,12 @@ typedef struct IOBOX_data_msg_struct{
 	struct RXs RX[4];
 }IOBOX_data_msg;
 
+typedef struct IOBOX_channel_reg_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int IOBOX_IPv4;
+}IOBOX_channel_reg_msg;
+
 typedef struct IOBOX_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
@@ -147,6 +155,12 @@ typedef struct MDAQ_data_msg_struct{
 	float board_temp;
 	struct MDAQ_Channel meas[8];
 }MDAQ_data_msg;
+
+typedef struct MDAQ_channel_reg_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MDAQ_IPv4;
+}MDAQ_channel_reg_msg;
 
 typedef struct MDAQ_report_msg_struct{
 	unsigned char IPC_msg_type;
@@ -168,9 +182,11 @@ typedef union{
 	CAN_BUS_info_msg BUS_info;
 	//IO-BOX related
 	IOBOX_data_msg IOBOX_data;
+	IOBOX_channel_reg_msg IOBOX_channel_reg;
 	IOBOX_report_msg IOBOX_report;
 	//MDAQ related
 	MDAQ_data_msg MDAQ_data;
+	MDAQ_channel_reg_msg MDAQ_channels_reg;
 	MDAQ_report_msg MDAQ_report;
 }IPC_message;
 
