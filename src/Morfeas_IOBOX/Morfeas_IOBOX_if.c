@@ -53,7 +53,7 @@ static void stopHandler(int signum)
 // IOBOX_status_to_IPC function. Send Status of IOBOX to Morfeas_opc_ua via IPC
 void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int status);
 // Function that register IOBOX Channels to Morfeas_opc_ua via IPC
-void IPC_Channel_reg(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats);
+void IPC_Channels_reg(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 	Logger("Connected to IOBOX %s(%s)\n", stats.IOBOX_IPv4_addr, stats.dev_name);
 		//--- main application loop ---//
 	//Register channels on Morfeas_opc_ua via IPC
-	IPC_Channel_reg(FIFO_fd, &stats);
+	IPC_Channels_reg(FIFO_fd, &stats);
 	//Load dev name and IPv4 address to IPC_msg
 	IPC_msg.IOBOX_data.IPC_msg_type = IPC_IOBOX_data;
 	memccpy(IPC_msg.IOBOX_data.Dev_or_Bus_name, stats.dev_name,'\0',Dev_or_Bus_name_str_size);
@@ -275,17 +275,17 @@ void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats, int 
 }
 
 //Function that register IOBOX Channels to Morfeas_opc_ua via IPC
-void IPC_Channel_reg(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats)
+void IPC_Channels_reg(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	//--- Load necessary message data to IPC_message ---/
-	IPC_msg.IOBOX_channel_reg.IPC_msg_type = IPC_IOBOX_channel_reg; //Message type
+	IPC_msg.IOBOX_channels_reg.IPC_msg_type = IPC_IOBOX_channels_reg; //Message type
 	//Load Device name to IPC_message
-	memccpy(IPC_msg.IOBOX_channel_reg.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
-	IPC_msg.IOBOX_channel_reg.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	memccpy(IPC_msg.IOBOX_channels_reg.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_msg.IOBOX_channels_reg.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	//Load IOBOX IPv4 by converting from string to unsigned integer
-	inet_pton(AF_INET, stats->IOBOX_IPv4_addr, &(IPC_msg.IOBOX_channel_reg.IOBOX_IPv4));
+	inet_pton(AF_INET, stats->IOBOX_IPv4_addr, &(IPC_msg.IOBOX_channels_reg.IOBOX_IPv4));
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }

@@ -87,7 +87,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_report.status), UA_TYPES_INT32);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
-		case IPC_IOBOX_channel_reg:
+		case IPC_IOBOX_channels_reg:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				//Check if node for object Receivers exist 
 				sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
@@ -154,8 +154,8 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						//Check if RX status to check if telemetry is active 
 						if(IPC_msg_dec->IOBOX_data.RX[i].status)
 						{
-							//Check for No sensor (values higher that 2000 shows open TC)
-							if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] > 2000.0)
+							//Check for No sensor (values higher that 1500 shows open TC)
+							if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] > 1500.0)
 							{
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), 
 																   &nan, UA_TYPES_FLOAT);
@@ -163,7 +163,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 								sprintf(tmp_buff_2, "%s.status", tmp_buff_1);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), "No sensor", UA_TYPES_STRING);
 							}
-							else //Sensor okay
+							else //Sensor okay, update value
 							{
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,tmp_buff_2), 
 																   &(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j]), UA_TYPES_FLOAT);
