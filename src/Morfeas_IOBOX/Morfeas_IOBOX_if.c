@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.IOBOX_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
 	//Set Slave address
-	if(modbus_set_slave(ctx, IOBOX_slave_address))
+	if(modbus_set_slave(ctx, default_slave_address))
 	{
 		fprintf(stderr, "Can't set slave address !!!\n");
 		modbus_free(ctx);
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
 	inet_pton(AF_INET, stats.IOBOX_IPv4_addr, &(IPC_msg.IOBOX_data.IOBOX_IPv4));
 	while(handler_run)
 	{
-		rc = modbus_read_registers(ctx, 0, IOBOX_imp_reg, IOBOX_regs);
+		rc = modbus_read_registers(ctx, IOBOX_start_reg, IOBOX_imp_reg, IOBOX_regs);
 		if (rc <= 0)
 		{
 			IOBOX_status_to_IPC(FIFO_fd, &stats, errno);
@@ -170,8 +170,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			//scale measurements and send them to Morfeas_opc_ua via IPC
-
+			// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
 			//Load Data for "Wireless Inductive Power Supply"
 			IPC_msg.IOBOX_data.Supply_Vin = IOBOX_regs[0]/100.0;
 			for(int i=0, j=1; i<4; i++)

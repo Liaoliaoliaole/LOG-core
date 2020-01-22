@@ -202,6 +202,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		cJSON_AddItemToObject(list_SDAQs, "SDAQs_data",node_data);
 	}
 }
+
 //Delete logstat file for IOBOX_handler
 int delete_logstat_IOBOX(char *logstat_path, void *stats_arg)
 {
@@ -243,7 +244,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	root = cJSON_CreateObject();
 	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
-	cJSON_AddItemToObject(root, "dev_name", cJSON_CreateString(stats->dev_name));
+	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->IOBOX_IPv4_addr));
 	//Add Wireless_Inductive_Power_Supply data
 	cJSON_AddItemToObject(root, "Power_Supply",pow_supp_data = cJSON_CreateObject());
@@ -298,3 +299,99 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	return 0;
 }
 
+//Delete logstat file for IOBOX_handler
+int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+	char *logstat_path_and_name, *slash;
+	struct Morfeas_MDAQ_if_stats *stats = stats_arg;
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_12345.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_MDAQ_%s.json",logstat_path, slash, stats->dev_name);
+	//Delete logstat file
+	return unlink(logstat_path_and_name);
+}
+
+//Converting and exporting function for MDAQ Modbus register. Convert it to JSON format and save it to logstat_path
+int logstat_MDAQ(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+	struct Morfeas_MDAQ_if_stats *stats = stats_arg;
+	FILE * pFile;
+	static unsigned char write_error = 0;
+	char *logstat_path_and_name, *slash, date[STR_LEN];
+	char str_buff[30] = {0};
+	//make time_t variable and get unix time
+	time_t now_time = time(NULL);
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_12345.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_MDAQ_%s.json",logstat_path, slash, stats->dev_name);
+	//cJSON related variables
+	char *JSON_str = NULL;
+	cJSON *root = NULL, *Channels_array = NULL, *Channel = NULL, *values = NULL, *warnings = NULL;
+	
+	//get and format time
+	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
+	root = cJSON_CreateObject();
+	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
+	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->MDAQ_IPv4_addr));
+	//Add MDAQ Board data
+	cJSON_AddNumberToObject(root, "Index", roundf(stats->meas_index));
+	cJSON_AddNumberToObject(root, "Board_temp", roundf(100.0 * stats->board_temp/stats->counter)/100.0);
+	stats->board_temp = 0;
+	//Add array with channels measurements on JSON
+	cJSON_AddItemToObject(root, "MDAQ_Channels",Channels_array = cJSON_CreateArray());
+	//Load MDAQ Channels Data to stats
+	for(int i=0; i<8; i++)
+	{
+		Channel = cJSON_CreateObject();
+		cJSON_AddItemToObject(Channel, "Values", values = cJSON_CreateObject());
+		for(int j=0; j<4; j++)
+		{
+			cJSON_AddNumberToObject(Channel, "Channel", i+1);
+			sprintf(str_buff, "Value%1hhu", j+1);
+			if(!((stats->meas[i].warnings>>j)&1))
+				cJSON_AddNumberToObject(values, str_buff, roundf(100.0 * stats->meas[i].value[j]/stats->counter)/100.0);
+			else
+				cJSON_AddNumberToObject(values, str_buff, NAN);
+			stats->meas[i].value[j] = 0;
+		}
+		cJSON_AddItemToObject(Channel, "Warnings", warnings = cJSON_CreateObject());
+		cJSON_AddNumberToObject(warnings, "Warnings_value", stats->meas[i].warnings);
+		for(int j=0; j<4; j++)
+		{
+			sprintf(str_buff, "Is_Value%1hhu_valid", j+1);
+			cJSON_AddItemToObject(warnings, str_buff, cJSON_CreateBool(!((stats->meas[i].warnings>>j)&1)));
+		}
+		cJSON_AddItemToArray(Channels_array, Channel);
+	}
+	//Reset accumulator counter
+	stats->counter = 0;
+	//Print JSON to File
+	//JSON_str = cJSON_Print(root);
+	JSON_str = cJSON_PrintUnformatted(root);
+	pFile = fopen (logstat_path_and_name, "w");
+	if(pFile)
+	{
+		fputs(JSON_str, pFile);
+		fclose (pFile);
+		if(write_error)
+			fprintf(stderr,"Write error @ Statlog file, Restored\n");
+		write_error = 0;
+	}
+	else if(!write_error)
+	{
+		fprintf(stderr,"Write error @ Statlog file!!!\n");
+		write_error = -1;
+	}
+	cJSON_Delete(root);
+	free(JSON_str);
+	free(logstat_path_and_name);
+	return 0;
+}

@@ -38,7 +38,10 @@ size_t Morfeas_IPC_msg_size[]={
 	sizeof(SDAQ_meas_msg),
 	//IOBOX_related IPC messages sizes
 	sizeof(IOBOX_data_msg),
-	sizeof(IOBOX_report_msg)
+	sizeof(IOBOX_report_msg),
+	//MDAQ_related IPC messages sizes
+	sizeof(MDAQ_data_msg),
+	sizeof(MDAQ_report_msg)
 };
 
 char *Morfeas_IPC_handler_type_name[]={

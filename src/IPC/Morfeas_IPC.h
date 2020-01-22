@@ -35,6 +35,9 @@ enum Morfeas_IPC_msg_type{
 	//SDAQ_related IPC messages
 	IPC_IOBOX_data,
 	IPC_IOBOX_report,
+	//SDAQ_related IPC messages
+	IPC_MDAQ_data,
+	IPC_MDAQ_report,
 	//Set MIN/MAX_num_type, (Min and Max for each IPC_handler_type)
 	//---SDAQ---//
 	Morfeas_IPC_SDAQ_MIN_type = IPC_SDAQ_register_or_update,
@@ -42,8 +45,11 @@ enum Morfeas_IPC_msg_type{
 	//---IO-BOX---//
 	Morfeas_IPC_IOBOX_MIN_type = IPC_IOBOX_data,
 	Morfeas_IPC_IOBOX_MAX_type = IPC_IOBOX_report,
+	//---MDAQ---//
+	Morfeas_IPC_MDAQ_MIN_type = IPC_MDAQ_data,
+	Morfeas_IPC_MDAQ_MAX_type = IPC_MDAQ_report,
 	//MAX number of any type of IPC message
-	Morfeas_IPC_MAX_type = IPC_IOBOX_report
+	Morfeas_IPC_MAX_type = IPC_MDAQ_report
 };
 
 enum Morfeas_IPC_handler_type{
@@ -131,6 +137,22 @@ typedef struct IOBOX_report_msg_struct{
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	int status;	
 }IOBOX_report_msg;
+
+	//------ MDAQ related ------//
+typedef struct MDAQ_data_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MDAQ_IPv4;
+	float meas_index;
+	float board_temp;
+	struct MDAQ_Channel meas[8];
+}MDAQ_data_msg;
+
+typedef struct MDAQ_report_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	int status;	
+}MDAQ_report_msg;
 #pragma pack(pop)//Disable packing
 
 //--IPC_MESSAGE--//
@@ -147,6 +169,9 @@ typedef union{
 	//IO-BOX related
 	IOBOX_data_msg IOBOX_data;
 	IOBOX_report_msg IOBOX_report;
+	//MDAQ related
+	MDAQ_data_msg MDAQ_data;
+	MDAQ_report_msg MDAQ_report;
 }IPC_message;
 
 	//----RX Functions----//

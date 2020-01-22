@@ -14,9 +14,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+//Default MODBus Slave address
+#define default_slave_address 10
+
 //Defs for IOBOX_handler
+#define IOBOX_start_reg 0
 #define IOBOX_imp_reg 125
-#define IOBOX_slave_address 10
+
+//Defs for MDAQ_handler
+#define MDAQ_start_reg 100
+#define MDAQ_imp_reg 90
 
 #include <gmodule.h>
 #include <glib.h>
@@ -36,13 +43,26 @@ struct RXs{
 	unsigned char status;
 	unsigned char success;
 };
-
 struct Morfeas_IOBOX_if_stats{
 	char *IOBOX_IPv4_addr;
 	char *dev_name;
 	float Supply_Vin;
 	struct Power_Supply Supply_meas[4];
 	struct RXs RX[4];
+	unsigned int counter;
+};
+
+//structs for MDAQ_handler
+struct MDAQ_Channel{
+	float value[4];
+	unsigned char warnings;
+};
+struct Morfeas_MDAQ_if_stats{
+	char *MDAQ_IPv4_addr;
+	char *dev_name;
+	float meas_index;
+	float board_temp;
+	struct MDAQ_Channel meas[8];
 	unsigned int counter;
 };
 

@@ -35,18 +35,18 @@ Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(CANif_DEP_HEADERS_dir)
 
 Morfeas_MDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
-					  $(WORK_dir)/Morfeas_MDAQ_if.o 
-#					  $(WORK_dir)/Morfeas_JSON.o \
-#					  $(WORK_dir)/SDAQ_drv.o \
-#					  $(WORK_dir)/Morfeas_IPC.o \
-#					  $(WORK_dir)/Morfeas_Logger.o \
+					  $(WORK_dir)/Morfeas_MDAQ_if.o \
+					  $(WORK_dir)/Morfeas_JSON.o \
+					  $(WORK_dir)/SDAQ_drv.o \
+					  $(WORK_dir)/Morfeas_IPC.o \
+					  $(WORK_dir)/Morfeas_Logger.o 
 
 Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/Morfeas_IOBOX_if.o \
 					   $(WORK_dir)/Morfeas_JSON.o \
 					   $(WORK_dir)/SDAQ_drv.o \
 					   $(WORK_dir)/Morfeas_IPC.o \
-					   $(WORK_dir)/Morfeas_Logger.o \
+					   $(WORK_dir)/Morfeas_Logger.o 
 
 all: $(BUILD_dir)/Morfeas_daemon \
 	 $(BUILD_dir)/Morfeas_opc_ua \
@@ -139,6 +139,7 @@ install:
 	@install $(BUILD_dir)/Morfeas_daemon -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_opc_ua -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_SDAQ_if -v -t /usr/local/bin/
+	@install $(BUILD_dir)/Morfeas_MDAQ_if -v -t /usr/local/bin/
 	@install $(BUILD_dir)/Morfeas_IOBOX_if -v -t /usr/local/bin/
 	@echo "\nInstallation of Systemd service for Morfeas_daemon"
 	cp -r -n ./systemd/* /etc/systemd/system/

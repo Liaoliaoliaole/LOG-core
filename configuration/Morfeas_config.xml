@@ -19,8 +19,8 @@
 		<SDAQ_HANDLER Disable="true">
 			<CANBUS_IF>vcan0</CANBUS_IF>
 		</SDAQ_HANDLER>
-		<MDAQ_HANDLER Disable="true">
-			<DEV_NAME>test1</DEV_NAME>
+		<MDAQ_HANDLER Disable="false">
+			<DEV_NAME>LAD_MDAQ</DEV_NAME>
 			<IPv4_ADDR>10.0.0.10</IPv4_ADDR>
 		</MDAQ_HANDLER>
 		<IOBOX_HANDLER Disable="false">

@@ -19,6 +19,11 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg);
 //delete logstat file for SDAQnet_Handler
 int delete_logstat_SDAQ(char *logstat_path, void *stats_arg);
 
+//Converting and exporting function for MDAQ Modbus register. Convert it to JSON format and save it to logstat_path
+int logstat_MDAQ(char *logstat_path, void *stats_arg);
+//delete logstat file for IOBOX_handler
+int delete_logstat_MDAQ(char *logstat_path, void *stats_arg);
+
 //Converting and exporting function for IOBOX Modbus register. Convert it to JSON format and save it to logstat_path
 int logstat_IOBOX(char *logstat_path, void *stats_arg);
 //delete logstat file for IOBOX_handler

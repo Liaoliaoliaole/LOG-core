@@ -251,16 +251,11 @@ void * Morfeas_thread(void *varg_pt)
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
 		{
-			printf("Not yet implemented\n");
-			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
-			free(loggers_path);
-			return NULL;
-			/*
 			sprintf(Logger_name,"%s_%s.log",Morfeas_MDAQ_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
-			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MDAQ_if,
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_MDAQ_if,
 												XML_node_get_content(t_arg->component, "IPv4_ADDR"),
+												XML_node_get_content(t_arg->component, "DEV_NAME"),
 												t_arg->logstat_path);
-			*/
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
 		{
@@ -297,9 +292,10 @@ void * Morfeas_thread(void *varg_pt)
 			free(loggers_path);
 			return NULL;
 		}
-		//printf("system_call_str = %s\n",system_call_str);
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
-
+	
+	//Report Thread call
+	printf("Thread Made for command = %s\n",system_call_str);
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
 		loggers_path[strlen(loggers_path)] = '/';
