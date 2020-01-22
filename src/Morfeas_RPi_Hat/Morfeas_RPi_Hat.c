@@ -277,14 +277,14 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 	if(blank_check == sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config))
 	{
 		fprintf(stderr, "EEPROM is Blank!!!\n");
-		return -1;
+		return 2;
 	}
 	//Calculate and compare Checksum
 	checksum = Checksum(&config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)-1);
 	if(config_read.checksum ^ checksum)
 	{
 		fprintf(stderr, "Checksum Error!!!\n");
-		return -1;
+		return 1;
 	}
 	memcpy(config, &config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config));
 	return 0;
@@ -316,14 +316,14 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	if (i2c_fd < 0)
 	{
 	  perror("Error on I2C open");
-	  return -1;
+	  return 3;
 	}
 	//Set addr as I2C_SLAVE address
 	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
 	{
 	  perror("Error on ioctl");
 	  close(i2c_fd);
-	  return -1;
+	  return 4;
 	}
 	//Check device existence.
 	if(i2c_smbus_write_quick(i2c_fd, 0))
