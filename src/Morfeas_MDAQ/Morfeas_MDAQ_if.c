@@ -140,6 +140,7 @@ int main(int argc, char *argv[])
 	if(modbus_set_slave(ctx, default_slave_address))
 	{
 		fprintf(stderr, "Can't set slave address !!!\n");
+		modbus_close(ctx);
 		modbus_free(ctx);
 		return EXIT_FAILURE;
 	}
@@ -180,7 +181,7 @@ int main(int argc, char *argv[])
 			IPC_msg.MDAQ_data.meas_index = modbus_get_float_cdab(&MDAQ_regs[0]);//30101
 			IPC_msg.MDAQ_data.board_temp = modbus_get_float_cdab(&MDAQ_regs[6]);//30107
 
-			//Load MDAQ Channels Data 
+			//Load MDAQ Channels Data
 			offset = 10;
 			for(int i=0; i<8; i++)
 			{
