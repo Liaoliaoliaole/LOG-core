@@ -26,38 +26,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void IOBOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	int negative_one = -1;
-	char tmp_buff[30], tmp_buff_1[50], tmp_buff_2[80];
+	char Node_ID_str[30], Node_ID_child_str[50], Node_ID_child_child_str[80], Node_name[30];
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[IOBOX], Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, "IOBOX-ifs", Dev_or_Bus_name, tmp_buff);
-		sprintf(tmp_buff, "%s.IP_addr", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "IPv4 Address", UA_TYPES_STRING);
+		sprintf(Node_ID_str, "%s-if (%s)", Morfeas_IPC_handler_type_name[IOBOX], Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, "IOBOX-ifs", Dev_or_Bus_name, Node_ID_str);
+		sprintf(Node_ID_str, "%s.IP_addr", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "IPv4 Address", UA_TYPES_STRING);
 		//Add IOBOX Dev name variable
-		sprintf(tmp_buff, "%s.dev_name", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "Device Name", UA_TYPES_STRING);
+		sprintf(Node_ID_str, "%s.dev_name", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "Device Name", UA_TYPES_STRING);
 		//Set Dev name		
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_buff), Dev_or_Bus_name, UA_TYPES_STRING);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_ID_str), Dev_or_Bus_name, UA_TYPES_STRING);
 		//Add status variable and set it to "Initializing"
-		sprintf(tmp_buff, "%s.status", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "IO-BOX Status", UA_TYPES_STRING);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_buff), "Initializing", UA_TYPES_STRING);
-		sprintf(tmp_buff, "%s.status_value", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "IO-BOX Status Value", UA_TYPES_INT32);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_buff), &negative_one, UA_TYPES_INT32);
+		sprintf(Node_ID_str, "%s.status", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "IO-BOX Status", UA_TYPES_STRING);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_ID_str), "Initializing", UA_TYPES_STRING);
+		sprintf(Node_ID_str, "%s.status_value", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "IO-BOX Status Value", UA_TYPES_INT32);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_ID_str), &negative_one, UA_TYPES_INT32);
 		//Object with electric status of a IOBOX Induction link power supplies
-		sprintf(tmp_buff, "%s.Ind_link", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, tmp_buff, "I-Link Power Supply");
-		sprintf(tmp_buff_1, "%s.Vin", tmp_buff);
-		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Power Supply Vin(V)", UA_TYPES_FLOAT);
+		sprintf(Node_ID_str, "%s.Ind_link", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "I-Link Power Supply");
+		sprintf(Node_ID_child_str, "%s.Vin", Node_ID_str);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_str, Node_ID_child_str, "Power Supply Vin(V)", UA_TYPES_FLOAT);
 		for(unsigned char i=1; i<=4; i++)
 		{
-			sprintf(tmp_buff_2, "CH%1hhu", i);
-			sprintf(tmp_buff_1, "%s.CH%1hhu", tmp_buff, i);
-			Morfeas_opc_ua_add_object_node(server_ptr, tmp_buff, tmp_buff_1, tmp_buff_2);
-			sprintf(tmp_buff_2, "%s.Vout", tmp_buff_1);
-			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff_1, tmp_buff_2, "Vout(V)", UA_TYPES_FLOAT);
-			sprintf(tmp_buff_2, "%s.Iout", tmp_buff_1);
-			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff_1, tmp_buff_2, "Iout(A)", UA_TYPES_FLOAT);
+			sprintf(Node_ID_child_str, "%s.CH%1hhu", Node_ID_str, i);
+			sprintf(Node_name, "CH%1hhu", i);
+			Morfeas_opc_ua_add_object_node(server_ptr, Node_ID_str, Node_ID_child_str, Node_name);
+			sprintf(Node_ID_child_child_str, "%s.Vout", Node_ID_child_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_child_str, Node_ID_child_child_str, "Vout(V)", UA_TYPES_FLOAT);
+			sprintf(Node_ID_child_child_str, "%s.Iout", Node_ID_child_str);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_child_str, Node_ID_child_child_str, "Iout(A)", UA_TYPES_FLOAT);
 		}
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
@@ -65,8 +65,8 @@ void IOBOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
-	char Node_ID_str[60], IOBOX_IPv4_addr_str[20], status_byte = 0;	
-	char tmp_buff[80], tmp_buff_1[50], tmp_buff_2[80];
+	char IOBOX_IPv4_addr_str[20], Node_name[30], status_byte = 0;	
+	char Node_ID_str[60], Node_ID_child_str[80], tmp_buff_1[50], tmp_buff_2[80];
 	float nan = NAN;
 	//Msg type from IOBOX_handler
 	switch(type)
@@ -100,17 +100,18 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					//Add Object for Receivers
 					sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 					Morfeas_opc_ua_add_object_node(server, IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, Node_ID_str, "Receivers");
+					
 					for(unsigned char i=1; i<=4; i++)
 					{
-						sprintf(tmp_buff, "%s.RX%hhu", Node_ID_str, i);
-						sprintf(tmp_buff_1, "RX%1hhu", i);
-						Morfeas_opc_ua_add_object_node(server, Node_ID_str, tmp_buff, tmp_buff_1);
+						sprintf(Node_ID_child_str, "%s.RX%hhu", Node_ID_str, i);
+						sprintf(Node_name, "RX%1hhu", i);
+						Morfeas_opc_ua_add_object_node(server, Node_ID_str, Node_ID_child_str, Node_name);
 						//Variables of Channels measurements
 						for(unsigned char j=1; j<=16; j++)
 						{
 							sprintf(tmp_buff_1, "IOBOX.%u.RX%hhu.CH%hhu", IPC_msg_dec->IOBOX_data.IOBOX_IPv4, i, j);
-							sprintf(tmp_buff_2, "CH%02hhu", j);
-							Morfeas_opc_ua_add_object_node(server, tmp_buff, tmp_buff_1, tmp_buff_2);
+							sprintf(Node_name, "CH%02hhu", j);
+							Morfeas_opc_ua_add_object_node(server, Node_ID_child_str, tmp_buff_1, Node_name);
 							sprintf(tmp_buff_2, "%s.meas", tmp_buff_1);
 							Morfeas_opc_ua_add_variable_node(server, tmp_buff_1, tmp_buff_2, "Value", UA_TYPES_FLOAT);
 							sprintf(tmp_buff_2, "%s.status", tmp_buff_1);
@@ -119,11 +120,11 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 							Morfeas_opc_ua_add_variable_node(server, tmp_buff_1, tmp_buff_2, "Status_value", UA_TYPES_BYTE);
 						}
 						sprintf(tmp_buff_2, "IOBOX.%u.RX%hhu.index", IPC_msg_dec->IOBOX_data.IOBOX_IPv4, i);
-						Morfeas_opc_ua_add_variable_node(server, tmp_buff, tmp_buff_2, "Index", UA_TYPES_UINT16);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_child_str, tmp_buff_2, "Index", UA_TYPES_UINT16);
 						sprintf(tmp_buff_2, "IOBOX.%u.RX%hhu.status", IPC_msg_dec->IOBOX_data.IOBOX_IPv4, i);
-						Morfeas_opc_ua_add_variable_node(server, tmp_buff, tmp_buff_2, "RX_Status", UA_TYPES_BYTE);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_child_str, tmp_buff_2, "RX_Status", UA_TYPES_BYTE);
 						sprintf(tmp_buff_2, "IOBOX.%u.RX%hhu.success", IPC_msg_dec->IOBOX_data.IOBOX_IPv4, i);
-						Morfeas_opc_ua_add_variable_node(server, tmp_buff, tmp_buff_2, "RX_success", UA_TYPES_BYTE);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_child_str, tmp_buff_2, "RX_success", UA_TYPES_BYTE);
 					}
 				}
 				else
@@ -145,7 +146,6 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 				//Load values to variables 
 				for(unsigned char i=0; i<4; i++)
 				{
-					sprintf(tmp_buff, "%s.RX%hhu", Node_ID_str, i);
 					//Variables of Channels measurements
 					for(unsigned char j=0; j<16; j++)
 					{

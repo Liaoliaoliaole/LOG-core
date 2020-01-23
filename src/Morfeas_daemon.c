@@ -295,7 +295,7 @@ void * Morfeas_thread(void *varg_pt)
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 	
 	//Report Thread call
-	printf("Thread Made for command = %s\n",system_call_str);
+	printf("Made Thread for command = %s\n",system_call_str);
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
 		loggers_path[strlen(loggers_path)] = '/';
@@ -308,7 +308,7 @@ void * Morfeas_thread(void *varg_pt)
 	Log_fd = fopen(loggers_path, "w");
 	if(Log_fd)
 		fclose(Log_fd);
-
+	usleep(10000);//sleep for a while (10ms) to leave gnu make the loggers_path file
 	//Fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
 	if(!cmd_fd)
