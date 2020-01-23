@@ -1,5 +1,5 @@
 GCC_opt=gcc -O3
-CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall -g3 #-Werror
+CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall #-g3 -Werror
 LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libmodbus libusb)
 BUILD_dir=build
 WORK_dir=work
@@ -41,14 +41,14 @@ Morfeas_MDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
-					  $(WORK_dir)/Morfeas_Logger.o 
+					  $(WORK_dir)/Morfeas_Logger.o
 
 Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/Morfeas_IOBOX_if.o \
 					   $(WORK_dir)/Morfeas_JSON.o \
 					   $(WORK_dir)/SDAQ_drv.o \
 					   $(WORK_dir)/Morfeas_IPC.o \
-					   $(WORK_dir)/Morfeas_Logger.o 
+					   $(WORK_dir)/Morfeas_Logger.o
 
 all: $(BUILD_dir)/Morfeas_daemon \
 	 $(BUILD_dir)/Morfeas_opc_ua \

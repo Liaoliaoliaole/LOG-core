@@ -37,7 +37,7 @@ void MDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 		//Add MDAQ Device name variable
 		sprintf(Node_ID_str, "%s.dev_name", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "Device Name", UA_TYPES_STRING);
-		//Set Device name		
+		//Set Device name
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_ID_str), Dev_or_Bus_name, UA_TYPES_STRING);
 		//Add status variable and set it to "Initializing"
 		sprintf(Node_ID_str, "%s.status", Dev_or_Bus_name);
@@ -46,7 +46,7 @@ void MDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 		sprintf(Node_ID_str, "%s.status_value", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "MDAQ Status Value", UA_TYPES_INT32);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_ID_str), &negative_one, UA_TYPES_INT32);
-		//Object with MDAQ Board status data 
+		//Object with MDAQ Board status data
 		sprintf(Node_ID_str, "%s.index", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "Index", UA_TYPES_FLOAT);
 		sprintf(Node_ID_str, "%s.board_temp", Dev_or_Bus_name);
@@ -57,7 +57,7 @@ void MDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
-	char MDAQ_IPv4_addr_str[20], Node_name[100], status;	
+	char MDAQ_IPv4_addr_str[20], Node_name[100], status;
 	char Node_ID_str[50], Node_ID_child_str[80], Node_ID_child_child_str[100];
 	float nan = NAN;
 	//Msg type from MDAQ_handler
@@ -81,7 +81,7 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 			break;
 		case IPC_MDAQ_channels_reg:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				//Check if node for object Channels exist 
+				//Check if node for object Channels exist
 				sprintf(Node_ID_str, "%s.Channels", IPC_msg_dec->MDAQ_data.Dev_or_Bus_name);
 				if(UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 				{
@@ -103,8 +103,8 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 							sprintf(Node_ID_child_child_str, "%s.Value%hhu", Node_ID_child_str, j);
 							sprintf(Node_name, "Value %1hhu", j);
 							Morfeas_opc_ua_add_object_node(server, Node_ID_child_str, Node_ID_child_child_str, Node_name);
-				
-							//Add variables for measurements children of Value# object 
+
+							//Add variables for measurements children of Value# object (Linkable)
 							sprintf(Node_name, "MDAQ.%u.CH%hhu.Val%hhu.meas", IPC_msg_dec->MDAQ_data.MDAQ_IPv4, i, j);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_child_child_str, Node_name, "Measurement", UA_TYPES_FLOAT);
 							sprintf(Node_name, "MDAQ.%u.CH%hhu.Val%hhu.status", IPC_msg_dec->MDAQ_data.MDAQ_IPv4, i, j);
@@ -132,16 +132,16 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 					for(unsigned char j=0; j<3; j++)
 					{
 						sprintf(Node_ID_child_str, "%s.CH%hhu.Val%hhu", Node_ID_str, i+1, j+1);
-						status = ((IPC_msg_dec->MDAQ_data.meas[i].warnings)&1<<j)?1:0;
+						status = ((IPC_msg_dec->MDAQ_data.meas[i].warnings)&1<<j)?-1:0;
 						sprintf(Node_ID_child_child_str, "%s.status_byte", Node_ID_child_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), &status, UA_TYPES_BYTE);
 						sprintf(Node_ID_child_child_str, "%s.status", Node_ID_child_str);
-						//Set .status and .meas variables according to the status of the value 
+						//Set .status and .meas variables according to the status of the value
 						if(!status)
-						{							
+						{
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), "Okay", UA_TYPES_STRING);
 							sprintf(Node_ID_child_child_str, "%s.meas", Node_ID_child_str);
-							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), 
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str),
 															   &(IPC_msg_dec->MDAQ_data.meas[i].value[j]), UA_TYPES_FLOAT);
 						}
 						else
@@ -149,7 +149,7 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), "Out of range", UA_TYPES_STRING);
 							sprintf(Node_ID_child_child_str, "%s.meas", Node_ID_child_str);
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), &nan, UA_TYPES_FLOAT);
-						}	
+						}
 					}
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);

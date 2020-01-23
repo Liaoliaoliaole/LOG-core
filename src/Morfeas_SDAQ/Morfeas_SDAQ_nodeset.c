@@ -130,26 +130,26 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 
 void SDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
-	char tmp_buff[30], tmp_buff_1[30], zero=0;
+	char Node_id_str[30], Child_Node_ID_str[60], zero=0;
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		sprintf(tmp_buff, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, "SDAQ-ifs", Dev_or_Bus_name, tmp_buff);
-		sprintf(tmp_buff, "%s.SDAQnet", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, tmp_buff, "SDAQnet");
-		sprintf(tmp_buff, "%s.BUS_util", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "BUS_Util (%)", UA_TYPES_FLOAT);
-		sprintf(tmp_buff, "%s.amount", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, tmp_buff, "Dev_on_BUS", UA_TYPES_BYTE);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_buff), &zero, UA_TYPES_BYTE);
+		sprintf(Node_id_str, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, "SDAQ-ifs", Dev_or_Bus_name, Node_id_str);
+		sprintf(Node_id_str, "%s.SDAQnet", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_id_str, "SDAQnet");
+		sprintf(Node_id_str, "%s.BUS_util", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_id_str, "BUS_Util (%)", UA_TYPES_FLOAT);
+		sprintf(Node_id_str, "%s.amount", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_id_str, "Dev_on_BUS", UA_TYPES_BYTE);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_id_str), &zero, UA_TYPES_BYTE);
 		//Object with electric status of a SDAQnet port
-		sprintf(tmp_buff, "%s.Electrics", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, tmp_buff, "Electric");
-		sprintf(tmp_buff_1, "%s.volts", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Voltage (V)", UA_TYPES_FLOAT);
-		sprintf(tmp_buff_1, "%s.amps", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Amperage (A)", UA_TYPES_FLOAT);
-		sprintf(tmp_buff_1, "%s.shunt", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, tmp_buff, tmp_buff_1, "Shunt Temp (°C)", UA_TYPES_FLOAT);
+		sprintf(Node_id_str, "%s.Electrics", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_id_str, "Electric");
+		sprintf(Child_Node_ID_str, "%s.volts", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Voltage (V)", UA_TYPES_FLOAT);
+		sprintf(Child_Node_ID_str, "%s.amps", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Amperage (A)", UA_TYPES_FLOAT);
+		sprintf(Child_Node_ID_str, "%s.shunt", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Shunt Temp (°C)", UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
