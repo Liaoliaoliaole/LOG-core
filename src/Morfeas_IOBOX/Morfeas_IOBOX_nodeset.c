@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void IOBOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	int negative_one = -1;
-	char Node_ID_str[30], Node_ID_child_str[50], Node_ID_child_child_str[80], Node_name[30];
+	char Node_name[30], Node_ID_str[30], Node_ID_child_str[50], Node_ID_child_child_str[80];
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		sprintf(Node_ID_str, "%s-if (%s)", Morfeas_IPC_handler_type_name[IOBOX], Dev_or_Bus_name);
 		Morfeas_opc_ua_add_object_node(server_ptr, "IOBOX-ifs", Dev_or_Bus_name, Node_ID_str);
