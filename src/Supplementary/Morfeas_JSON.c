@@ -206,6 +206,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 //Delete logstat file for IOBOX_handler
 int delete_logstat_IOBOX(char *logstat_path, void *stats_arg)
 {
+	int ret_val;
 	if(!logstat_path || !stats_arg)
 		return -1;
 	char *logstat_path_and_name, *slash;
@@ -215,7 +216,9 @@ int delete_logstat_IOBOX(char *logstat_path, void *stats_arg)
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_IOBOX_%s.json",logstat_path, slash, stats->dev_name);
 	//Delete logstat file
-	return unlink(logstat_path_and_name);
+	ret_val = unlink(logstat_path_and_name);
+	free(logstat_path_and_name);
+	return ret_val;
 }
 //Converting and exporting function for IOBOX Modbus register. Convert it to JSON format and save it to logstat_path
 int logstat_IOBOX(char *logstat_path, void *stats_arg)
@@ -227,6 +230,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash, date[STR_LEN];
 	char str_buff[10] = {0};
+	float value;
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 
@@ -237,7 +241,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	char *JSON_str = NULL;
 	cJSON *root = NULL;
     cJSON *pow_supp_data = NULL;
-	cJSON *RX = NULL;
+	cJSON *RX_json = NULL;
 	
 	//get and format time
 	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
@@ -263,16 +267,27 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	for(int i=0; i<4; i++)
 	{
 		sprintf(str_buff, "RX%1u", i+1);
-		cJSON_AddItemToObject(root, str_buff, RX = cJSON_CreateObject());
-		for(int j=0; j<16; j++)
+		if(stats->RX[i].status && stats->RX[i].success)
 		{
-			sprintf(str_buff, "CH%1u", j+1);
-			cJSON_AddNumberToObject(RX, str_buff, roundf(1000.0 * stats->RX[i].CH_value[j]/stats->counter)/1000.0);
-			stats->RX[i].CH_value[j] = 0;
+			cJSON_AddItemToObject(root, str_buff, RX_json = cJSON_CreateObject());
+			for(int j=0; j<16; j++)
+			{
+					
+				sprintf(str_buff, "CH%1u", j+1);
+				value = stats->RX[i].CH_value[j]/stats->counter;
+				stats->RX[i].CH_value[j] = 0;
+				if(value<1500.0)
+					cJSON_AddNumberToObject(RX_json, str_buff, roundf(100.0 * value)/100.0);
+				else
+					cJSON_AddItemToObject(RX_json, str_buff, cJSON_CreateString("No sensor"));
+			
+			}
+			cJSON_AddNumberToObject(RX_json, "Index", stats->RX[i].index);
+			cJSON_AddNumberToObject(RX_json, "Status", stats->RX[i].status);
+			cJSON_AddNumberToObject(RX_json, "Success", stats->RX[i].success);
 		}
-		cJSON_AddNumberToObject(RX, "Index", stats->RX[i].index);
-		cJSON_AddNumberToObject(RX, "Status", stats->RX[i].status);
-		cJSON_AddNumberToObject(RX, "Success", stats->RX[i].success);
+		else
+			cJSON_AddItemToObject(root, str_buff, cJSON_CreateString("Disconnected"));
 	}
 	//Reset accumulator counter
 	stats->counter = 0;
@@ -302,6 +317,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 //Delete logstat file for IOBOX_handler
 int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 {
+	int ret_val;
 	if(!logstat_path || !stats_arg)
 		return -1;
 	char *logstat_path_and_name, *slash;
@@ -311,7 +327,9 @@ int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MDAQ_%s.json",logstat_path, slash, stats->dev_name);
 	//Delete logstat file
-	return unlink(logstat_path_and_name);
+	ret_val = unlink(logstat_path_and_name);
+	free(logstat_path_and_name);
+	return ret_val;
 }
 
 //Converting and exporting function for MDAQ Modbus register. Convert it to JSON format and save it to logstat_path
