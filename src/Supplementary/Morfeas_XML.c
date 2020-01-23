@@ -160,7 +160,35 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
     return EXIT_SUCCESS;
 }
 
-#define max_arg_range 2
+//Get anchor's components as string and unsigned integer. NOTE: anchor_str is going to be modified.
+// Return 0 on success or -1 on failure.
+int get_anchor_comp(char *anchor_str,char **anchor_arg_str,unsigned int *anchor_arg_int)
+{
+	char *anchor_comp;
+	unsigned int i;
+	if(!anchor_str)
+		return EXIT_FAILURE;
+	//Replace "RX", "CH" with '.'
+	for(i=0; anchor_str[i]!='\0'; i++)
+		if(anchor_str[i] == 'R' || anchor_str[i] == 'X' || anchor_str[i] == 'C' || anchor_str[i] == 'H')
+			anchor_str[i] = '.';
+	i=0;
+	if((anchor_comp = strtok(anchor_str, ".")))
+	{
+		do{
+			anchor_arg_str[i] = anchor_comp;
+			i++;
+		}while((anchor_comp = strtok(NULL, ".")));
+	}
+	while(i)
+	{
+		i--;
+		anchor_arg_int[i] = atoi(anchor_arg_str[i]);
+	}
+	return EXIT_SUCCESS;
+}
+
+#define max_arg_range 3
 #define anchor_check_buff_size 100
 int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 {
@@ -173,8 +201,8 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		unsigned char as_byte;
 	}fl = {.as_byte = 0};
 	xmlNode *check_element, *element;
-	char *content, *iso_channel, *anchor_arg[max_arg_range] = {NULL};
-	char anchor_check[anchor_check_buff_size], arg_check[max_arg_range][anchor_check_buff_size];
+	char *content, *iso_channel, *if_type, *anchor_arg[max_arg_range] = {0};
+	char anchor_check[anchor_check_buff_size] = {0};
 	unsigned int arg_to_int[max_arg_range]= {0}, if_name_okay;
 	//Check for Empty XML nodes content and for Invalid Interface_name content
 	for(element = root_element->children; element; element = element->next)
@@ -238,7 +266,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 			}
 		}
 	}
-	//Check for invalid ANCHOR
+	//Check for invalid contents in ISO_CHANNEL and ANCHOR
 	for(check_element = root_element->children; check_element; check_element = check_element->next)
 	{
 		if((iso_channel = XML_node_get_content(check_element, "ISO_CHANNEL")))
@@ -249,25 +277,38 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 				return EXIT_FAILURE;
 			}
 		}
-		if((content = XML_node_get_content(check_element, "ANCHOR")))
+		if((content = XML_node_get_content(check_element, "ANCHOR"))
+		  &&(if_type = XML_node_get_content(check_element, "INTERFACE_TYPE")))
 		{
 			fl.as_struct.anchor = 1;
 			strcpy(anchor_check, content);
-			if(strstr(content,".CH"))
+			if(!strcmp(if_type, Morfeas_IPC_handler_type_name[IOBOX]))
 			{
-				anchor_arg[0] = strtok(anchor_check, ".");
-				anchor_arg[1] = strtok(NULL, "CH");
-				sscanf(content,"%u.CH%u", &arg_to_int[0], &arg_to_int[1]);
-				sprintf(arg_check[0], "%u", arg_to_int[0]);
-				sprintf(arg_check[1], *anchor_arg[1]=='0'?"%02u":"%u", arg_to_int[1]);
+				if(strstr(content,".RX") && strstr(content,".CH"))
+				{
+					//Get anchor's contents as strings and check them
+					get_anchor_comp(anchor_check, anchor_arg, arg_to_int);
+					fprintf(stderr,"%s,%s,%s\n",anchor_arg[0],anchor_arg[1],anchor_arg[2]);
+				}
+				if(!anchor_arg[0] || !anchor_arg[1] || !anchor_arg[2] || !arg_to_int[0] || !arg_to_int[1] || !arg_to_int[2])
+				{
+					fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
+					return EXIT_FAILURE;
+				}
 			}
-			if(!arg_to_int[0] || !arg_to_int[1])
-				goto exit;
-			if(strcmp(arg_check[0], anchor_arg[0]) || strcmp(arg_check[1], anchor_arg[1]))
+			else
 			{
-			exit:
-				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
-				return EXIT_FAILURE;
+				if(strstr(content,".CH"))
+				{
+					//Get anchor's contents as strings and check them
+					get_anchor_comp(anchor_check, anchor_arg, arg_to_int);
+				}
+				fprintf(stderr,"%s,%s,%s\n",anchor_arg[0],anchor_arg[1],anchor_arg[2]);
+				if(!anchor_arg[0] || !anchor_arg[1] || !arg_to_int[0] || !arg_to_int[1])
+				{
+					fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
+					return EXIT_FAILURE;
+				}
 			}
 		}
 	}
@@ -351,7 +392,13 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 			{
 				memccpy(&(list_cur_Links_node_data->ISO_channel_name), iso_channel_str, '\0', sizeof(list_cur_Links_node_data->ISO_channel_name));
 				memccpy(&(list_cur_Links_node_data->interface_type), dev_type_str, '\0', sizeof(list_cur_Links_node_data->interface_type));
-				sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier), &(list_cur_Links_node_data->channel));
+				if(!strcmp(dev_type_str, Morfeas_IPC_handler_type_name[IOBOX]))
+					sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
+														   &(list_cur_Links_node_data->Receiver),
+														   &(list_cur_Links_node_data->channel));
+				else
+					sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier),
+													&(list_cur_Links_node_data->channel));
 				*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
 			}
 			else

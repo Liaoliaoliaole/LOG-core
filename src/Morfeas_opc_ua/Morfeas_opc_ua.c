@@ -212,7 +212,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 									UA_Server_deleteNode(server, UA_NODEID_STRING(1, list_data->ISO_channel_name), 1);
 									t_list_ptr = t_list_ptr->next;
 								}
-								//Copy Link's data from xmlDoc to List Links
+								//Copy Links(Anchored) data from xmlDoc to List Links
 								XML_doc_to_List_ISO_Channels(root_element, &Links);
 								//Add and/or Update OPC_UA NODESet
 								for(xml_node = root_element->children; xml_node; xml_node = xml_node->next)
@@ -456,7 +456,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
 	{
 		Morfeas_opc_ua_add_object_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
-			//---Variables with update from Morfeas_ifs---//
+									//---Variables with update from Morfeas_ifs---//
 		//Status
 		sprintf(tmp_str,"%s.status",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, Status_update_value);

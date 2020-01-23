@@ -155,7 +155,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 
 void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 {
-	const char init_val = 0x80;
+	const char init_status_val = 0x80;
 	char SDAQ_anchor_str[25], tmp_str[50], tmp_str2[50], tmp_str3[70];
 	UA_NodeId out;
 	//UA_NodeId_init(&out);
@@ -200,7 +200,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Timestamp", UA_TYPES_UINT16);
 					sprintf(tmp_str3,"%s.status_byte", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Status Value", UA_TYPES_BYTE);
-					Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str3), &init_val, UA_TYPES_BYTE);
+					Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str3), &init_status_val, UA_TYPES_BYTE);
 					sprintf(tmp_str3,"%s.status", tmp_str2);
 					Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str3, "Status", UA_TYPES_STRING);
 					Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str3), "Initializing", UA_TYPES_STRING);

@@ -122,4 +122,5 @@ struct Link_entry{
 	char interface_type[10];
 	unsigned int identifier;
 	unsigned char channel;
+	unsigned char Receiver;
 };
