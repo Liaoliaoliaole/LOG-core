@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 									pthread_create(Threads_ids_ind, NULL, Morfeas_thread, &t_arg);
 								pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 								Threads_ids_ind++;
-								usleep(10000);
+								usleep(10000);//10ms delay between thread creation 
 							}
 							xmlFree(node_attr);
 							nodes_cnt++;

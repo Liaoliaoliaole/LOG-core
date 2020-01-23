@@ -46,6 +46,7 @@ struct RXs{
 struct Morfeas_IOBOX_if_stats{
 	char *IOBOX_IPv4_addr;
 	char *dev_name;
+	int error;
 	float Supply_Vin;
 	struct Power_Supply Supply_meas[4];
 	struct RXs RX[4];
@@ -60,6 +61,7 @@ struct MDAQ_Channel{
 struct Morfeas_MDAQ_if_stats{
 	char *MDAQ_IPv4_addr;
 	char *dev_name;
+	int error;
 	float meas_index;
 	float board_temp;
 	struct MDAQ_Channel meas[8];

@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <math.h>
 #include <time.h>
 
+#include <modbus.h>
+
 //Header for cJSON
 #include <cjson/cJSON.h>
 //Include Functions implementation header
@@ -233,7 +235,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	float value;
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
-
+	//Correct logstat_path_and_name
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_12345.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_IOBOX_%s.json",logstat_path, slash, stats->dev_name);
@@ -250,45 +252,52 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->IOBOX_IPv4_addr));
-	//Add Wireless_Inductive_Power_Supply data
-	cJSON_AddItemToObject(root, "Power_Supply",pow_supp_data = cJSON_CreateObject());
-	cJSON_AddNumberToObject(pow_supp_data, "Vin", roundf(100.0 * stats->Supply_Vin/stats->counter)/100.0);
-	stats->Supply_Vin = 0;
-	for(int i=0; i<4; i++)
+	if(!stats->error)
 	{
-		sprintf(str_buff, "CH%1u_Vout", i+1);
-		cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Vout/stats->counter)/100.0);
-		stats->Supply_meas[i].Vout = 0;
-		sprintf(str_buff, "CH%1u_Iout", i+1);
-		cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Iout/stats->counter)/100.0);
-		stats->Supply_meas[i].Iout = 0;
-	}
-	//Add RX_Data
-	for(int i=0; i<4; i++)
-	{
-		sprintf(str_buff, "RX%1u", i+1);
-		if(stats->RX[i].status && stats->RX[i].success)
+		//Add connection status string item in JSON
+		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));
+		//Add Wireless_Inductive_Power_Supply data
+		cJSON_AddItemToObject(root, "Power_Supply",pow_supp_data = cJSON_CreateObject());
+		cJSON_AddNumberToObject(pow_supp_data, "Vin", roundf(100.0 * stats->Supply_Vin/stats->counter)/100.0);
+		stats->Supply_Vin = 0;
+		for(int i=0; i<4; i++)
 		{
-			cJSON_AddItemToObject(root, str_buff, RX_json = cJSON_CreateObject());
-			for(int j=0; j<16; j++)
-			{
-					
-				sprintf(str_buff, "CH%1u", j+1);
-				value = stats->RX[i].CH_value[j]/stats->counter;
-				stats->RX[i].CH_value[j] = 0;
-				if(value<1500.0)
-					cJSON_AddNumberToObject(RX_json, str_buff, roundf(100.0 * value)/100.0);
-				else
-					cJSON_AddItemToObject(RX_json, str_buff, cJSON_CreateString("No sensor"));
-			
-			}
-			cJSON_AddNumberToObject(RX_json, "Index", stats->RX[i].index);
-			cJSON_AddNumberToObject(RX_json, "Status", stats->RX[i].status);
-			cJSON_AddNumberToObject(RX_json, "Success", stats->RX[i].success);
+			sprintf(str_buff, "CH%1u_Vout", i+1);
+			cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Vout/stats->counter)/100.0);
+			stats->Supply_meas[i].Vout = 0;
+			sprintf(str_buff, "CH%1u_Iout", i+1);
+			cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Iout/stats->counter)/100.0);
+			stats->Supply_meas[i].Iout = 0;
 		}
-		else
-			cJSON_AddItemToObject(root, str_buff, cJSON_CreateString("Disconnected"));
+		//Add RX_Data
+		for(int i=0; i<4; i++)
+		{
+			sprintf(str_buff, "RX%1u", i+1);
+			if(stats->RX[i].status && stats->RX[i].success)
+			{
+				cJSON_AddItemToObject(root, str_buff, RX_json = cJSON_CreateObject());
+				for(int j=0; j<16; j++)
+				{
+						
+					sprintf(str_buff, "CH%1u", j+1);
+					value = stats->RX[i].CH_value[j]/stats->counter;
+					stats->RX[i].CH_value[j] = 0;
+					if(value<1500.0)
+						cJSON_AddNumberToObject(RX_json, str_buff, roundf(100.0 * value)/100.0);
+					else
+						cJSON_AddItemToObject(RX_json, str_buff, cJSON_CreateString("No sensor"));
+				
+				}
+				cJSON_AddNumberToObject(RX_json, "Index", stats->RX[i].index);
+				cJSON_AddNumberToObject(RX_json, "Status", stats->RX[i].status);
+				cJSON_AddNumberToObject(RX_json, "Success", stats->RX[i].success);
+			}
+			else
+				cJSON_AddItemToObject(root, str_buff, cJSON_CreateString("Disconnected"));
+		}
 	}
+	else
+		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
@@ -344,7 +353,7 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	char str_buff[30] = {0};
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
-
+	//Correct logstat_path_and_name
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_12345.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MDAQ_%s.json",logstat_path, slash, stats->dev_name);
@@ -359,36 +368,42 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->MDAQ_IPv4_addr));
-	//Add MDAQ Board data
-	cJSON_AddNumberToObject(root, "Index", roundf(stats->meas_index));
-	cJSON_AddNumberToObject(root, "Board_temp", roundf(100.0 * stats->board_temp/stats->counter)/100.0);
-	stats->board_temp = 0;
-	//Add array with channels measurements on JSON
-	cJSON_AddItemToObject(root, "MDAQ_Channels",Channels_array = cJSON_CreateArray());
-	//Load MDAQ Channels Data to stats
-	for(int i=0; i<8; i++)
+	if(!stats->error)
 	{
-		Channel = cJSON_CreateObject();
-		cJSON_AddItemToObject(Channel, "Values", values = cJSON_CreateObject());
-		for(int j=0; j<4; j++)
+		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));
+		//Add MDAQ Board data
+		cJSON_AddNumberToObject(root, "Index", roundf(stats->meas_index));
+		cJSON_AddNumberToObject(root, "Board_temp", roundf(100.0 * stats->board_temp/stats->counter)/100.0);
+		stats->board_temp = 0;
+		//Add array with channels measurements on JSON
+		cJSON_AddItemToObject(root, "MDAQ_Channels",Channels_array = cJSON_CreateArray());
+		//Load MDAQ Channels Data to stats
+		for(int i=0; i<8; i++)
 		{
-			cJSON_AddNumberToObject(Channel, "Channel", i+1);
-			sprintf(str_buff, "Value%1hhu", j+1);
-			if(!((stats->meas[i].warnings>>j)&1))
-				cJSON_AddNumberToObject(values, str_buff, roundf(100.0 * stats->meas[i].value[j]/stats->counter)/100.0);
-			else
-				cJSON_AddNumberToObject(values, str_buff, NAN);
-			stats->meas[i].value[j] = 0;
+			Channel = cJSON_CreateObject();
+			cJSON_AddItemToObject(Channel, "Values", values = cJSON_CreateObject());
+			for(int j=0; j<4; j++)
+			{
+				cJSON_AddNumberToObject(Channel, "Channel", i+1);
+				sprintf(str_buff, "Value%1hhu", j+1);
+				if(!((stats->meas[i].warnings>>j)&1))
+					cJSON_AddNumberToObject(values, str_buff, roundf(100.0 * stats->meas[i].value[j]/stats->counter)/100.0);
+				else
+					cJSON_AddNumberToObject(values, str_buff, NAN);
+				stats->meas[i].value[j] = 0;
+			}
+			cJSON_AddItemToObject(Channel, "Warnings", warnings = cJSON_CreateObject());
+			cJSON_AddNumberToObject(warnings, "Warnings_value", stats->meas[i].warnings);
+			for(int j=0; j<4; j++)
+			{
+				sprintf(str_buff, "Is_Value%1hhu_valid", j+1);
+				cJSON_AddItemToObject(warnings, str_buff, cJSON_CreateBool(!((stats->meas[i].warnings>>j)&1)));
+			}
+			cJSON_AddItemToArray(Channels_array, Channel);
 		}
-		cJSON_AddItemToObject(Channel, "Warnings", warnings = cJSON_CreateObject());
-		cJSON_AddNumberToObject(warnings, "Warnings_value", stats->meas[i].warnings);
-		for(int j=0; j<4; j++)
-		{
-			sprintf(str_buff, "Is_Value%1hhu_valid", j+1);
-			cJSON_AddItemToObject(warnings, str_buff, cJSON_CreateBool(!((stats->meas[i].warnings>>j)&1)));
-		}
-		cJSON_AddItemToArray(Channels_array, Channel);
 	}
+	else
+		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File

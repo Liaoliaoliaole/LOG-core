@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.1" /*Release Version of Morfeas_MDAQ_if*/
+#define VERSION "1.0" /*Release Version of Morfeas_MDAQ_if*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ static void stopHandler(int signum)
 }
 //--- Local functions ---//
 // MDAQ_status_to_IPC function. Send Status of MDAQ to Morfeas_opc_ua via IPC
-void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats, int status);
+void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
 //Function that register MDAQ Channels to Morfeas_opc_ua via IPC
 void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
 
@@ -148,10 +148,14 @@ int main(int argc, char *argv[])
 	while(modbus_connect(ctx) && handler_run)
 	{
 		sleep(1);
-		MDAQ_status_to_IPC(FIFO_fd, &stats, errno);
+		stats.error = errno;
+		MDAQ_status_to_IPC(FIFO_fd, &stats);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
+		logstat_MDAQ(path_to_logstat_dir, &stats);
 	}
-	MDAQ_status_to_IPC(FIFO_fd, &stats, 0);
+	stats.error = 0;//load no error on stats
+	MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+	//Print Connection success message
 	Logger("Connected to MDAQ %s(%s)\n", stats.MDAQ_IPv4_addr, stats.dev_name);
 		//--- main application loop ---//
 	//Register channels on Morfeas_opc_ua via IPC
@@ -166,13 +170,17 @@ int main(int argc, char *argv[])
 		rc = modbus_read_input_registers(ctx, MDAQ_start_reg, MDAQ_imp_reg, MDAQ_regs);
 		if (rc <= 0)
 		{
-			MDAQ_status_to_IPC(FIFO_fd, &stats, errno);
+			stats.error = errno;//load errno to stats
+			MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+			logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat 
 			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
 				sleep(1);
 			Logger("Recover from Last Error\n");
-			MDAQ_status_to_IPC(FIFO_fd, &stats, 0);
+			stats.error = 0;//load no error on stats
+			MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+			logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat 
 		}
 		else
 		{
@@ -258,7 +266,7 @@ void print_usage(char *prog_name)
 }
 
 // MDAQ_status function. Send Status of MDAQ to Morfeas_opc_ua via IPC
-void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats, int status)
+void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
@@ -266,7 +274,7 @@ void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats, int st
 	IPC_msg.MDAQ_report.IPC_msg_type = IPC_MDAQ_report;
 	memccpy(IPC_msg.MDAQ_report.Dev_or_Bus_name, stats->dev_name,'\0',Dev_or_Bus_name_str_size);
 	IPC_msg.MDAQ_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
-	IPC_msg.MDAQ_report.status = status;
+	IPC_msg.MDAQ_report.status = stats->error;
 	//Send status report
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
