@@ -281,6 +281,13 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		  &&(if_type = XML_node_get_content(check_element, "INTERFACE_TYPE")))
 		{
 			fl.as_struct.anchor = 1;
+			//Reset pointers
+			for(int i=0; i<max_arg_range; i++)
+			{
+				anchor_arg[i] = NULL;
+				arg_to_int[i] = 0;
+			}
+			//Copy content to anchor_check, to maintain string of content
 			strcpy(anchor_check, content);
 			if(!strcmp(if_type, Morfeas_IPC_handler_type_name[IOBOX]))
 			{
@@ -288,7 +295,6 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 				{
 					//Get anchor's contents as strings and check them
 					get_anchor_comp(anchor_check, anchor_arg, arg_to_int);
-					fprintf(stderr,"%s,%s,%s\n",anchor_arg[0],anchor_arg[1],anchor_arg[2]);
 				}
 				if(!anchor_arg[0] || !anchor_arg[1] || !anchor_arg[2] || !arg_to_int[0] || !arg_to_int[1] || !arg_to_int[2])
 				{
@@ -303,7 +309,6 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 					//Get anchor's contents as strings and check them
 					get_anchor_comp(anchor_check, anchor_arg, arg_to_int);
 				}
-				fprintf(stderr,"%s,%s,%s\n",anchor_arg[0],anchor_arg[1],anchor_arg[2]);
 				if(!anchor_arg[0] || !anchor_arg[1] || !arg_to_int[0] || !arg_to_int[1])
 				{
 					fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
