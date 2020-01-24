@@ -59,7 +59,7 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 	UA_NodeId NodeId;
 	char MDAQ_IPv4_addr_str[20], Node_name[100], status;
 	char Node_ID_str[50], Node_ID_child_str[80], Node_ID_child_child_str[100];
-	float nan = NAN;
+	float nan = NAN; unsigned char negative_one = -1;
 	//Msg type from MDAQ_handler
 	switch(type)
 	{
@@ -73,6 +73,27 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 						break;
 					default:
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), modbus_strerror(IPC_msg_dec->MDAQ_report.status), UA_TYPES_STRING);
+						//Check if node for object Channels exist
+						sprintf(Node_ID_str, "%s.Channels", IPC_msg_dec->MDAQ_report.Dev_or_Bus_name);
+						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+						{
+							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+							for(unsigned char i=1; i<=8; i++)
+							{
+								//Change Value and status of Channels to error code
+								for(unsigned char j=1; j<=3; j++)
+								{
+									//Add variables for channels: meas, status, status_value (Linkable)
+									sprintf(Node_ID_str, "MDAQ.%u.CH%hhu.Val%hhu", IPC_msg_dec->MDAQ_report.MDAQ_IPv4, i, j);
+									sprintf(Node_ID_child_child_str, "%s.meas", Node_ID_str);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), &nan, UA_TYPES_FLOAT);
+									sprintf(Node_ID_child_child_str, "%s.status", Node_ID_str);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), "OFF-Line", UA_TYPES_STRING);
+									sprintf(Node_ID_child_child_str, "%s.status_byte", Node_ID_str);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), &negative_one, UA_TYPES_BYTE);
+								}
+							}
+						}
 						break;
 				}
 				sprintf(Node_ID_str, "%s.status_value", IPC_msg_dec->MDAQ_report.Dev_or_Bus_name);

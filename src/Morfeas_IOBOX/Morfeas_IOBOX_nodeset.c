@@ -67,7 +67,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 	UA_NodeId NodeId;
 	char IOBOX_IPv4_addr_str[20], Node_name[30], status_byte = 0;
 	char Node_ID_str[60], Node_ID_child_str[80], Node_ID_child_child_str[100], val_Node_ID_str[160];
-	float nan = NAN;
+	float nan = NAN; unsigned char negative_one = -1;
 	//Msg type from IOBOX_handler
 	switch(type)
 	{
@@ -81,6 +81,27 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						break;
 					default:
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), modbus_strerror(IPC_msg_dec->IOBOX_report.status), UA_TYPES_STRING);
+						//Check if node for object Receivers exist
+						sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_report.Dev_or_Bus_name);
+						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+						{
+							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+							for(unsigned char i=1; i<=4; i++)
+							{
+								//Change Value and status of Channels to error code
+								for(unsigned char j=1; j<=16; j++)
+								{
+									//Add variables for channels: meas, status, status_value (Linkable)
+									sprintf(Node_name, "IOBOX.%u.RX%hhu.CH%hhu", IPC_msg_dec->IOBOX_report.IOBOX_IPv4, i, j);
+									sprintf(val_Node_ID_str, "%s.meas", Node_name);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
+									sprintf(val_Node_ID_str, "%s.status", Node_name);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "OFF-Line", UA_TYPES_STRING);
+									sprintf(val_Node_ID_str, "%s.status_byte", Node_name);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &negative_one, UA_TYPES_BYTE);
+								}
+							}
+						}
 						break;
 				}
 				sprintf(Node_ID_str, "%s.status_value", IPC_msg_dec->IOBOX_report.Dev_or_Bus_name);
@@ -190,7 +211,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
 							sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "Disconnected", UA_TYPES_STRING);
-							status_byte = -1; //255 = No Telemetry connected
+							status_byte = 127; //127 = No Telemetry connected
 						}
 						sprintf(val_Node_ID_str, "%s.status_byte", Node_ID_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &status_byte, UA_TYPES_BYTE);

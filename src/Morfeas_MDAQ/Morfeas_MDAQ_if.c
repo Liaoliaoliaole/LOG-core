@@ -274,6 +274,9 @@ void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats)
 	IPC_msg.MDAQ_report.IPC_msg_type = IPC_MDAQ_report;
 	memccpy(IPC_msg.MDAQ_report.Dev_or_Bus_name, stats->dev_name,'\0',Dev_or_Bus_name_str_size);
 	IPC_msg.MDAQ_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load MDAQ IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->MDAQ_IPv4_addr, &(IPC_msg.MDAQ_report.MDAQ_IPv4));
+	//Load error code to report IPC_msg
 	IPC_msg.MDAQ_report.status = stats->error;
 	//Send status report
 	IPC_msg_TX(FIFO_fd, &IPC_msg);

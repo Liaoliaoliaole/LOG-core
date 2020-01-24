@@ -143,6 +143,7 @@ typedef struct IOBOX_channels_reg_msg_struct{
 typedef struct IOBOX_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int IOBOX_IPv4;
 	int status;	
 }IOBOX_report_msg;
 
@@ -165,6 +166,7 @@ typedef struct MDAQ_channels_reg_msg_struct{
 typedef struct MDAQ_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MDAQ_IPv4;
 	int status;	
 }MDAQ_report_msg;
 #pragma pack(pop)//Disable packing

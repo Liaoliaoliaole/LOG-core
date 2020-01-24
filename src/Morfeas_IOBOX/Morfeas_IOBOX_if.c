@@ -277,6 +277,9 @@ void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats)
 	IPC_msg.IOBOX_report.IPC_msg_type = IPC_IOBOX_report;
 	memccpy(IPC_msg.IOBOX_report.Dev_or_Bus_name, stats->dev_name,'\0',Dev_or_Bus_name_str_size);
 	IPC_msg.IOBOX_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load IOBOX IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->IOBOX_IPv4_addr, &(IPC_msg.IOBOX_report.IOBOX_IPv4));
+	//Load error code to report IPC_msg
 	IPC_msg.IOBOX_report.status = stats->error;
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
