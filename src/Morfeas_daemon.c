@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.9" /*Release Version of Morfeas_daemon*/
-#define max_num_of_threads 18
+#define max_num_of_threads 8
 #define max_lines_on_Logger 128
 
 //Define Morfeas Components programs
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 									pthread_create(Threads_ids_ind, NULL, Morfeas_thread, &t_arg);
 								pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 								Threads_ids_ind++;
-								usleep(10000);//10ms delay between thread creation 
+								usleep(10000);//10ms delay between thread creation
 							}
 							xmlFree(node_attr);
 							nodes_cnt++;
@@ -293,7 +293,7 @@ void * Morfeas_thread(void *varg_pt)
 			return NULL;
 		}
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
-	
+
 	//Report Thread call
 	printf("Made Thread for command = %s\n",system_call_str);
 	//Make correction of loggers_path
