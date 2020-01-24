@@ -491,7 +491,7 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50], *ISO_channel_name, *anchor_dec;
+	char tmp_str[50], *ISO_channel_name, *anchor_dec, *unit;
 	float t_min_max;
 	unsigned int ID, if_type;
 	unsigned char CH,RX;
@@ -533,6 +533,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING, Dev_update_value);
 		}
 		
+		
 		//Regular variables
 		sprintf(tmp_str,"%s.desc",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Description", UA_TYPES_STRING);
@@ -544,10 +545,15 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Identifier", UA_TYPES_UINT32);
 		sprintf(tmp_str,"%s.channel",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
-		if(if_type == IOBOX)
+		if(if_type == IOBOX || if_type == MDAQ || if_type == MTI)
 		{
-			sprintf(tmp_str,"%s.rx",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Receiver", UA_TYPES_BYTE);
+			sprintf(tmp_str,"%s.unit",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
+			if(if_type == IOBOX)
+			{
+				sprintf(tmp_str,"%s.rx",ISO_channel_name);
+				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Receiver", UA_TYPES_BYTE);
+			}
 		}
 	}
 	else
@@ -575,6 +581,11 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &ID, UA_TYPES_UINT32);
 	sprintf(tmp_str,"%s.channel",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &CH, UA_TYPES_BYTE);
+	if((unit = XML_node_get_content(node, "UNIT")) && (if_type == IOBOX || if_type == MDAQ || if_type == MTI))
+	{
+		sprintf(tmp_str,"%s.unit",ISO_channel_name);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), unit, UA_TYPES_STRING);
+	}
 }
 
 void Morfeas_opc_ua_add_object_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
