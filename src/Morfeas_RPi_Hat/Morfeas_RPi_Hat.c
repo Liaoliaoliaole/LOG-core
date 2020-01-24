@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -106,12 +107,12 @@ int GPIOWrite(int LED_name, int value)
 	if (-1 == fd)
 	{
 		fprintf(stderr, "Failed to open gpio value for writing!\n");
-		return(-1);
+		return -1;
 	}
 	if (1 != write(fd, &s_values_str[!value ? 0 : 1], 1))
 	{
 		fprintf(stderr, "Failed to write value!\n");
-		return(-1);
+		return -1;
 	}
 	close(fd);
 	return(0);
@@ -127,12 +128,12 @@ int GPIORead(int LED_name)
 	if (-1 == fd)
 	{
 		fprintf(stderr, "Failed to open gpio value for writing!\n");
-		return(-1);
+		return -1;
 	}
 	if (read(fd, &read_val, 1) != 1)
 	{
 		fprintf(stderr, "Failed to write value!\n");
-		return(-1);
+		return -1;
 	}
 	close(fd);
 	return(atoi(read_val));
