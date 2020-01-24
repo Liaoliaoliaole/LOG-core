@@ -119,3 +119,17 @@ unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
 		printf("Wrong amount of Bytes!!!\n");
 	return 0;
 }
+
+int if_type_str_2_num(const char * if_type_str)
+{
+	if(!strcmp(if_type_str, Morfeas_IPC_handler_type_name[SDAQ]))
+		return SDAQ;
+	else if(!strcmp(if_type_str, Morfeas_IPC_handler_type_name[MDAQ]))
+		return MDAQ;
+	else if(!strcmp(if_type_str, Morfeas_IPC_handler_type_name[IOBOX]))
+		return IOBOX;
+	else if(!strcmp(if_type_str, Morfeas_IPC_handler_type_name[MTI]))
+		return MTI;
+	else
+		return -1;
+}

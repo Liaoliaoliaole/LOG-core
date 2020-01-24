@@ -14,6 +14,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define ISO_channel_name_size 20
+
 //Default MODBus Slave address
 #define default_slave_address 10
 
@@ -118,9 +120,10 @@ struct LogBook{
 }__attribute__((packed, aligned(1)));
 //Data of the List Links, used in Morfeas_opc_ua
 struct Link_entry{
-	char ISO_channel_name[20];
+	char ISO_channel_name[ISO_channel_name_size];
 	char interface_type[10];
+	unsigned char interface_type_num;
 	unsigned int identifier;
 	unsigned char channel;
-	unsigned char Receiver;
+	unsigned char receiver_or_value;
 };

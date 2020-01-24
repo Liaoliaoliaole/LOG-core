@@ -190,6 +190,9 @@ typedef union{
 	MDAQ_report_msg MDAQ_report;
 }IPC_message;
 
+//Function that convert interface_type_string to interface_type_num
+int if_type_str_2_num(const char * if_type_str);
+
 	//----RX Functions----//
 //function for RX, return the type of the received message or 0 in failure
 //unsigned char IPC_msg_RX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr);

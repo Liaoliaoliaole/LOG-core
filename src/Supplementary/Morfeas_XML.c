@@ -160,36 +160,75 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
     return EXIT_SUCCESS;
 }
 
-//Get anchor's components as string and unsigned integer. NOTE: anchor_str is going to be modified.
+#define max_arg_range 3
+#define anchor_check_buff_size 100
+
+//Get anchor's components as string and unsigned integer.
 // Return 0 on success or -1 on failure.
-int get_anchor_comp(char *anchor_str,char **anchor_arg_str,unsigned int *anchor_arg_int)
+int get_anchor_comp(char *anchor_str, char handler_type)
 {
-	char *anchor_comp;
-	unsigned int i;
+	unsigned int anchor_arg_int[max_arg_range];
+	char *channel, *receiver_or_value;
 	if(!anchor_str)
 		return EXIT_FAILURE;
-	//Replace "RX", "CH" with '.'
-	for(i=0; anchor_str[i]!='\0'; i++)
-		if(anchor_str[i] == 'R' || anchor_str[i] == 'X' || anchor_str[i] == 'C' || anchor_str[i] == 'H')
-			anchor_str[i] = '.';
-	i=0;
-	if((anchor_comp = strtok(anchor_str, ".")))
+	//Check anchor_str for correct anchor component names
+	if(!atoi(anchor_str)) //identifier component check
+		return EXIT_FAILURE;
+	if(!(channel = strstr(anchor_str, ".CH")))//channel component check 
+		return EXIT_FAILURE;
+	if(!atoi(channel+strlen(".CH")))//Channel value check
+		return EXIT_FAILURE;
+	if(handler_type == IOBOX)
 	{
-		do{
-			anchor_arg_str[i] = anchor_comp;
-			i++;
-		}while((anchor_comp = strtok(NULL, ".")));
+		if(!(receiver_or_value = strchr(anchor_str, '.')))//Receiver component check
+			return EXIT_FAILURE;
+		if(*(receiver_or_value+1)=='R'&&*(receiver_or_value+2)=='X')
+		{
+			if(!atoi(receiver_or_value+strlen(".RX")))//Receiver value check
+				return EXIT_FAILURE;
+			if(strstr(anchor_str, ".RX")>=channel)//If Receiver exist must be before channels component
+				return EXIT_FAILURE;
+			sscanf(anchor_str, "%u.RX%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
+			if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
+				return EXIT_FAILURE;
+		}
+		else
+			return EXIT_FAILURE;
 	}
-	while(i)
+	if(handler_type == MDAQ)
 	{
-		i--;
-		anchor_arg_int[i] = atoi(anchor_arg_str[i]);
+		if(!(receiver_or_value = strstr(anchor_str, ".CH")))//Value component check
+			return EXIT_FAILURE;
+		receiver_or_value+=strlen(".CH?");
+		if(*(receiver_or_value+1)=='V'&&*(receiver_or_value+2)=='a'&&*(receiver_or_value+3)=='l')
+		{
+			if(!atoi(receiver_or_value+strlen(".CH?")))//Value's value check
+				return EXIT_FAILURE;
+			if(strstr(anchor_str, ".Val")<=channel)//If Value exist must be after channels component
+				return EXIT_FAILURE;
+			sscanf(anchor_str, "%u.CH%u.Val%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
+			if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
+				return EXIT_FAILURE;
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	else if(handler_type == SDAQ)
+	{
+		if(!(channel = strchr(anchor_str, '.')))//Channel component check
+			return EXIT_FAILURE;
+		if(*(channel+1)=='C' && *(channel+2)=='H')
+		{
+			sscanf(anchor_str, "%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1]);
+			if(!anchor_arg_int[0]||!anchor_arg_int[1])
+				return EXIT_FAILURE;
+		}
+		else
+			return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
 
-#define max_arg_range 3
-#define anchor_check_buff_size 100
 int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 {
 	union check_flags{
@@ -201,9 +240,8 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		unsigned char as_byte;
 	}fl = {.as_byte = 0};
 	xmlNode *check_element, *element;
-	char *content, *iso_channel, *if_type, *anchor_arg[max_arg_range] = {0};
-	char anchor_check[anchor_check_buff_size] = {0};
-	unsigned int arg_to_int[max_arg_range]= {0}, if_name_okay;
+	char *content, *iso_channel, *dev_type_str;
+	unsigned int if_name_okay;
 	//Check for Empty XML nodes content and for Invalid Interface_name content
 	for(element = root_element->children; element; element = element->next)
 	{
@@ -271,6 +309,11 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	{
 		if((iso_channel = XML_node_get_content(check_element, "ISO_CHANNEL")))
 		{
+			if(strlen(iso_channel)>=ISO_channel_name_size)
+			{
+				fprintf(stderr, "\nISO_CHANNEL : \"%s\" is too long (>=%u) !!!!\n\n", iso_channel, ISO_channel_name_size);
+				return EXIT_FAILURE;
+			}
 			if(strstr(iso_channel,"."))//'.' is illegal character for the ISO_Channel
 			{
 				fprintf(stderr, "\nISO_CHANNEL : \"%s\" is NOT valid (contains '.') !!!!\n\n", iso_channel);
@@ -278,42 +321,16 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 			}
 		}
 		if((content = XML_node_get_content(check_element, "ANCHOR"))
-		  &&(if_type = XML_node_get_content(check_element, "INTERFACE_TYPE")))
+		  &&(dev_type_str = XML_node_get_content(check_element, "INTERFACE_TYPE")))
 		{
 			fl.as_struct.anchor = 1;
-			//Reset pointers
-			for(int i=0; i<max_arg_range; i++)
+			//TO-DO: More checks on values
+			if(get_anchor_comp(content, if_type_str_2_num(dev_type_str)))
 			{
-				anchor_arg[i] = NULL;
-				arg_to_int[i] = 0;
-			}
-			//Copy content to anchor_check, to maintain string of content
-			strcpy(anchor_check, content);
-			if(!strcmp(if_type, Morfeas_IPC_handler_type_name[IOBOX]))
-			{
-				if(strstr(content,".RX") && strstr(content,".CH"))
-				{
-					//Get anchor's contents as strings and check them
-					get_anchor_comp(anchor_check, anchor_arg, arg_to_int);
-				}
-				if(!anchor_arg[0] || !anchor_arg[1] || !anchor_arg[2] || !arg_to_int[0] || !arg_to_int[1] || !arg_to_int[2])
-				{
-					fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
-					return EXIT_FAILURE;
-				}
-			}
-			else
-			{
-				if(strstr(content,".CH"))
-				{
-					//Get anchor's contents as strings and check them
-					get_anchor_comp(anchor_check, anchor_arg, arg_to_int);
-				}
-				if(!anchor_arg[0] || !anchor_arg[1] || !arg_to_int[0] || !arg_to_int[1])
-				{
-					fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" is NOT valid !!!!\n\n", content, iso_channel);
-					return EXIT_FAILURE;
-				}
+				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" (Type: \"%s\") is NOT valid !!!!\n\n", content, 
+																												  iso_channel, 
+																												  dev_type_str);
+				return EXIT_FAILURE;
 			}
 		}
 	}
@@ -397,11 +414,16 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 			{
 				memccpy(&(list_cur_Links_node_data->ISO_channel_name), iso_channel_str, '\0', sizeof(list_cur_Links_node_data->ISO_channel_name));
 				memccpy(&(list_cur_Links_node_data->interface_type), dev_type_str, '\0', sizeof(list_cur_Links_node_data->interface_type));
-				if(!strcmp(dev_type_str, Morfeas_IPC_handler_type_name[IOBOX]))
+				list_cur_Links_node_data->interface_type_num = if_type_str_2_num(dev_type_str);
+				if(list_cur_Links_node_data->interface_type_num == IOBOX)
 					sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
-														   &(list_cur_Links_node_data->Receiver),
+														   &(list_cur_Links_node_data->receiver_or_value),
 														   &(list_cur_Links_node_data->channel));
-				else
+				else if(list_cur_Links_node_data->interface_type_num == MDAQ)
+					sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),
+														    &(list_cur_Links_node_data->channel),
+														    &(list_cur_Links_node_data->receiver_or_value));
+				else if(list_cur_Links_node_data->interface_type_num == SDAQ)
 					sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier),
 													&(list_cur_Links_node_data->channel));
 				*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);

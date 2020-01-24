@@ -1,3 +1,4 @@
+GCC_opt=gcc -O3
 CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall -g3 #-Werror
 LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs ncurses libgtop-2.0 glib-2.0)
 BUILD_dir=build
@@ -11,17 +12,17 @@ all: $(BUILD_dir)/Morfeas_RPi_Hat
 
 #Compilation of Morfeas_RPi_Hat application
 $(BUILD_dir)/Morfeas_RPi_Hat: $(Morfeas_RPi_hat_DEP) *.h
-	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_RPi_Hat
 $(WORK_dir)/Morfeas_RPi_Hat_if.o: Morfeas_RPi_Hat_if.c
-	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_RPi_Hat.o: Morfeas_RPi_Hat.c
-	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_run_check.o: ../Supplementary/Morfeas_run_check.c
-	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 tree:
 	mkdir -p $(BUILD_dir) $(WORK_dir)

@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <math.h>
 #include <time.h>
 
+#include <arpa/inet.h>
+
 #include <modbus.h>
 
 //Header for cJSON
@@ -38,6 +40,7 @@ int delete_logstat_SDAQ(char *logstat_path, void *stats_arg)
 {
 	if(!logstat_path || !stats_arg)
 		return -1;
+	int ret_val;
 	char *logstat_path_and_name, *slash;
 	struct Morfeas_SDAQ_if_stats *stats = stats_arg;
 
@@ -45,7 +48,9 @@ int delete_logstat_SDAQ(char *logstat_path, void *stats_arg)
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_%s.json",logstat_path, slash, stats->CAN_IF_name);
 	//Delete logstat file
-	return unlink(logstat_path_and_name);
+	ret_val = unlink(logstat_path_and_name);
+	free(logstat_path_and_name);
+	return ret_val;
 }
 
 int logstat_SDAQ(char *logstat_path, void *stats_arg)
@@ -228,6 +233,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	if(!logstat_path || !stats_arg)
 		return -1;
 	struct Morfeas_IOBOX_if_stats *stats = stats_arg;
+	unsigned int Identifier;
 	FILE * pFile;
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash, date[STR_LEN];
@@ -247,11 +253,14 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	
 	//get and format time
 	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
+	//Convert IPv4 to IOBOX's Identifier
+	inet_pton(AF_INET, stats->IOBOX_IPv4_addr, &Identifier);
 	root = cJSON_CreateObject();
 	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->IOBOX_IPv4_addr));
+	cJSON_AddNumberToObject(root, "Identifier", Identifier);
 	if(!stats->error)
 	{
 		//Add connection status string item in JSON
@@ -347,6 +356,7 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	if(!logstat_path || !stats_arg)
 		return -1;
 	struct Morfeas_MDAQ_if_stats *stats = stats_arg;
+	unsigned int Identifier;
 	FILE * pFile;
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash, date[STR_LEN];
@@ -363,11 +373,14 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	
 	//get and format time
 	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
+	//Convert IPv4 to MDAQ's Identifier
+	inet_pton(AF_INET, stats->MDAQ_IPv4_addr, &Identifier);
 	root = cJSON_CreateObject();
 	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->MDAQ_IPv4_addr));
+	cJSON_AddNumberToObject(root, "Identifier", Identifier);
 	if(!stats->error)
 	{
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));

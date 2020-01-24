@@ -344,8 +344,31 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 			if(List_Links_Node)
 			{
 				Node_data = List_Links_Node->data;
+				switch(Node_data->interface_type_num)
+				{
+					case SDAQ:
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type, 
+																   Node_data->identifier, 
+																   Node_data->channel, 
+																   req_value);
+						break;
+					case MDAQ:
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type, 
+																   Node_data->identifier,															   
+																   Node_data->channel,
+																   Node_data->receiver_or_value,
+																   req_value);
+						break;
+					case IOBOX:
+						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type, 
+																   Node_data->identifier,
+																   Node_data->receiver_or_value,																   
+																   Node_data->channel, 
+																   req_value);
+						break;
+					default: return UA_STATUSCODE_GOOD;
+				}
 				//check if the source node exist
-				sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type, Node_data->identifier, Node_data->channel, req_value);
 				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 				{
 					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
@@ -415,8 +438,31 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 			if(List_Links_Node)
 			{
 				Node_data = List_Links_Node->data;
+				switch(Node_data->interface_type_num)
+				{
+					case SDAQ:
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type, 
+																   Node_data->identifier, 
+																   Node_data->channel, 
+																   req_value);
+						break;
+					case MDAQ:
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type, 
+																   Node_data->identifier,															   
+																   Node_data->channel,
+																   Node_data->receiver_or_value,
+																   req_value);
+						break;
+					case IOBOX:
+						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type, 
+																   Node_data->identifier,
+																   Node_data->receiver_or_value,																   
+																   Node_data->channel, 
+																   req_value);
+						break;
+					default: return UA_STATUSCODE_GOOD;
+				}
 				//check if the source node exist
-				sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type, Node_data->identifier, Node_data->channel, req_value);
 				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 				{
 					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
@@ -447,12 +493,13 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 {
 	char tmp_str[50], *ISO_channel_name, *anchor_dec;
 	float t_min_max;
-	unsigned int ID;
-	unsigned char CH;
+	unsigned int ID, if_type;
+	unsigned char CH,RX;
 	UA_NodeId out;
 	UA_NodeId_init(&out);
 	if(!(ISO_channel_name = XML_node_get_content(node, "ISO_CHANNEL")))
 		return;
+	if_type = if_type_str_2_num(XML_node_get_content(node, "INTERFACE_TYPE"));
 	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
 	{
 		Morfeas_opc_ua_add_object_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
@@ -464,25 +511,28 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status value", UA_TYPES_BYTE, Status_update_value);
 
 		//Channel related
-		sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME, CH_update_value);
-		sprintf(tmp_str,"%s.period",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE, CH_update_value);
 		sprintf(tmp_str,"%s.meas",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Value", UA_TYPES_FLOAT, CH_update_value);
-		sprintf(tmp_str,"%s.unit",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING, CH_update_value);
-
-		//Device related
-		sprintf(tmp_str,"%s.Address",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, Dev_update_value);
-		sprintf(tmp_str,"%s.onBus",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING, Dev_update_value);
-		sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, Dev_update_value);
-		sprintf(tmp_str,"%s.Type",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING, Dev_update_value);
-
+		if(if_type == SDAQ)
+		{
+			sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME, CH_update_value);
+			sprintf(tmp_str,"%s.period",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE, CH_update_value);
+			sprintf(tmp_str,"%s.unit",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING, CH_update_value);
+		
+			//Device related
+			sprintf(tmp_str,"%s.Address",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, Dev_update_value);
+			sprintf(tmp_str,"%s.onBus",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING, Dev_update_value);
+			sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, Dev_update_value);
+			sprintf(tmp_str,"%s.Type",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING, Dev_update_value);
+		}
+		
 		//Regular variables
 		sprintf(tmp_str,"%s.desc",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Description", UA_TYPES_STRING);
@@ -494,12 +544,24 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Identifier", UA_TYPES_UINT32);
 		sprintf(tmp_str,"%s.channel",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
+		if(if_type == IOBOX)
+		{
+			sprintf(tmp_str,"%s.rx",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Receiver", UA_TYPES_BYTE);
+		}
 	}
 	else
 		UA_clear(&out, &UA_TYPES[UA_TYPES_NODEID]);
 	//Decode Anchor from the XML_doc tree to it's elements
 	anchor_dec = XML_node_get_content(node, "ANCHOR");
-	sscanf(anchor_dec, "%u.CH%hhu", &ID, &CH);
+	if(if_type == IOBOX)
+	{
+		sscanf(anchor_dec, "%u.RX%hhu.CH%hhu", &ID, &RX, &CH);
+		sprintf(tmp_str,"%s.rx",ISO_channel_name);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &RX, UA_TYPES_BYTE);
+	}
+	else
+		sscanf(anchor_dec, "%u.CH%hhu", &ID, &CH);
 	//Update values of regular variables with data from Configuration XML
 	sprintf(tmp_str,"%s.desc",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
@@ -669,4 +731,3 @@ void Rpi_health_update (void)
 		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
-
