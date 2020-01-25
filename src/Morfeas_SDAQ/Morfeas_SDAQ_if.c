@@ -224,6 +224,8 @@ int main(int argc, char *argv[])
 	Logger("Morfeas_SDAQ_if (%s) Program Started\n",stats.CAN_IF_name);
 	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
 	flags.led_existent = led_init(stats.CAN_IF_name);
+	if(!flags.led_existent)
+		Logger(Morfeas_hat_error());
 	//Get SDAQ_NET Port config
 	stats.port = get_port_num(stats.CAN_IF_name);
 	if(stats.port>=0 && stats.port<=3)
@@ -234,10 +236,11 @@ int main(int argc, char *argv[])
 			if(!MAX9611_init(stats.port, I2C_BUS_NUM))
 				flags.port_meas_existen = 1;
 			else
-				Logger("SDAQnet Port CSA not found!!!\n");
+				Logger(Morfeas_hat_error());
+				//Logger("SDAQnet Port CSA not found!!!\n");
 		}
 		else
-			Logger("SDAQnet Port configuration EEPROM not found!!!\n");
+			Logger(Morfeas_hat_error());
 	}
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);

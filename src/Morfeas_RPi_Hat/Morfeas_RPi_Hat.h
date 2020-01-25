@@ -21,6 +21,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MAX9611_temp_scaler 0.48
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
+
+extern int Morfeas_hat_error_num;
+
+enum Morfeas_hat_error_enum{
+	port_num_err,
+//---- LEDs related ----//
+	LED_no_support,
+	GPIO_dir_error,
+//---- I2C device related ----//
+	i2c_bus_open_error,
+	ioctl_error,
+	i2c_write_err,
+	EEPROM_not_found,
+	EEPROM_is_blank,
+	EEPROM_verification_err,
+	Checksum_error
+};
+
 //Struct for EEPROM(24AA08) data
 struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 	struct last_port_calibration_date{
@@ -40,9 +58,12 @@ struct Morfeas_RPi_Hat_Port_meas{
 	unsigned short port_voltage;
 	unsigned short output;
 	unsigned short set_val;
-	unsigned short temperature;
+	short temperature;
 };
 #pragma pack(pop)//Disable packing
+
+//Function that print error on stderr
+char* Morfeas_hat_error();
 
 //Decode string CAN_if_name to Port number. Return: Port's Number or -1 on failure
 int get_port_num(char * CAN_if_name);

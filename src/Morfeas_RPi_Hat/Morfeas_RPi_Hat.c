@@ -36,6 +36,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Morfeas_Types.h"
 #include "../Supplementary/Morfeas_run_check.h"
 
+int Morfeas_hat_error_num = -1;
+
+//Function that return error message
+char* Morfeas_hat_error()
+{
+	static char error_str[256] = {0};
+	switch(Morfeas_hat_error_num)
+	{
+		case port_num_err: return "Port Number is out of range (0..3)\n";
+			//---- I2C device related ----//
+		case i2c_bus_open_error: sprintf(error_str, "Error on I2C open: %s\n",strerror(errno)); return error_str;
+		case ioctl_error: sprintf(error_str, "Error on ioctl: %s\n",strerror(errno)); return error_str;
+		case i2c_write_err: return "Error I2C_Write!!!\n";
+		case EEPROM_not_found: return "Configuration EEPROM(24AA08) Not found!!!\n";
+		case EEPROM_is_blank: return "EEPROM is Blank!!!\n";
+		case EEPROM_verification_err: return "Write_port_config: Verification Failed!!!\n";
+		case Checksum_error: return "Checksum Error!!!\n";
+			//---- LEDs related ----//
+		case LED_no_support: return "LEDs are Not supported!\n";
+		case GPIO_dir_error: return "Failed to set GPIO direction!\n";
+
+		default : return "Unknown Error !!!";
+	}
+}
+
 //Decode string CAN_if_name to Port number. Return: Port's Number or -1 on failure
 int get_port_num(char * CAN_if_name)
 {
@@ -48,7 +73,10 @@ int get_port_num(char * CAN_if_name)
 	else if(!strcmp(CAN_if_name, "can3"))
 		return 3;
 	else
+	{
+		Morfeas_hat_error_num = port_num_err;
 		return -1;
+	}
 }
 	//---- LEDs related ----//
 //Init Morfeas_RPi_Hat LEDs, return 1 if sysfs files exist, 0 otherwise.
@@ -65,7 +93,7 @@ int led_init(char *CAN_IF_name)
 			sysfs_fd = open("/sys/class/gpio/export", O_WRONLY);
 			if(sysfs_fd < 0)
 			{
-				fprintf(stderr, "LEDs are Not supported!\n");
+				Morfeas_hat_error_num = LED_no_support;
 				return 0;
 			}
 			pin = i ? YELLOW_LED : RED_LED;
@@ -82,12 +110,13 @@ int led_init(char *CAN_IF_name)
 			sysfs_fd = open(path, O_WRONLY);
 			if(sysfs_fd < 0)
 			{
-				fprintf(stderr, "LEDs are Not supported! (Direction File Error!!!)\n");
+				Morfeas_hat_error_num = LED_no_support;
+				//fprintf(stderr, "LEDs are Not supported! (Direction File Error!!!)\n");
 				return 0;
 			}
 			if (write(sysfs_fd, "out", 3)<0)
 			{
-				fprintf(stderr, "Failed to set direction!\n");
+				Morfeas_hat_error_num = GPIO_dir_error;
 				return 0;
 			}
 			close(sysfs_fd);
@@ -127,12 +156,12 @@ int GPIORead(int LED_name)
 	fd = open(path, O_WRONLY);
 	if (-1 == fd)
 	{
-		fprintf(stderr, "Failed to open gpio value for writing!\n");
+		fprintf(stderr, "Failed to open GPIO value for reading!\n");
 		return -1;
 	}
 	if (read(fd, &read_val, 1) != 1)
 	{
-		fprintf(stderr, "Failed to write value!\n");
+		fprintf(stderr, "Failed to Read GPIO value!\n");
 		return -1;
 	}
 	close(fd);
@@ -151,12 +180,12 @@ int I2C_write_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned 
 	i2c_fd = open(filename, O_RDWR);
 	if (i2c_fd < 0)
 	{
-	  perror("Error on I2C open");
+	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return -1;
 	}
 	if (ioctl(i2c_fd, I2C_SLAVE, dev_addr) < 0)
 	{
-	  perror("Error on ioctl");
+	  Morfeas_hat_error_num = ioctl_error;
 	  close(i2c_fd);
 	  return -1;
 	}
@@ -183,7 +212,7 @@ int I2C_read_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned c
 	i2c_fd = open(filename, O_RDWR);
 	if (i2c_fd < 0)
 	{
-	  perror("Error on I2C open");
+	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return -1;
 	}
 	//Allocate memory for the messages
@@ -230,7 +259,7 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 //Function that read measurements for MAX9611, store them on memory pointed by meas.
 int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, unsigned char i2c_dev_num)
 {
-	int ret_val, addr;// Address for MAX9611 connected to port
+	int ret_val, addr, i, port_meas_size;// Address for MAX9611 connected to port
 	unsigned short *meas_dec = (unsigned short *)meas;
 	switch(port)
 	{
@@ -241,10 +270,11 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 		default: return -1;
 	}
 	ret_val = I2C_read_block(i2c_dev_num, addr, 0, meas, sizeof(struct Morfeas_RPi_Hat_Port_meas));
-	for(int i=0; i<sizeof(struct Morfeas_RPi_Hat_Port_meas); i++)
+	port_meas_size = sizeof(struct Morfeas_RPi_Hat_Port_meas)/sizeof(unsigned short);
+	for(i=0; i<port_meas_size; i++)
 	{
 		*(meas_dec+i) = htons(*(meas_dec+i));
-		*(meas_dec+i) >>= 4;
+			*(meas_dec+i) >>= i<port_meas_size-1 ? 4 : 7;//Shift right 4 for all meas except temp that shift right 7. From MAX9611 datasheet
 	}
 	return ret_val;
 }
@@ -266,7 +296,7 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 	//Get data from EEPROM
 	if(I2C_read_block(i2c_dev_num, addr, 0, &config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)))
 	{
-		fprintf(stderr, "Configuration EEPROM(24AA08) Not found!!!\n");
+		Morfeas_hat_error_num = EEPROM_not_found;
 		return -1;
 	}
 	//Check if EEPROM is blank
@@ -277,14 +307,14 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 	}
 	if(blank_check == sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config))
 	{
-		fprintf(stderr, "EEPROM is Blank!!!\n");
+		Morfeas_hat_error_num = EEPROM_is_blank;
 		return 2;
 	}
 	//Calculate and compare Checksum
 	checksum = Checksum(&config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)-1);
 	if(config_read.checksum ^ checksum)
 	{
-		fprintf(stderr, "Checksum Error!!!\n");
+		Morfeas_hat_error_num = Checksum_error;
 		return 1;
 	}
 	memcpy(config, &config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config));
@@ -316,20 +346,20 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	i2c_fd = open(filename, O_RDWR);
 	if (i2c_fd < 0)
 	{
-	  perror("Error on I2C open");
+	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return 3;
 	}
 	//Set addr as I2C_SLAVE address
 	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
 	{
-	  perror("Error on ioctl");
+	  Morfeas_hat_error_num = ioctl_error;
 	  close(i2c_fd);
 	  return 4;
 	}
 	//Check device existence.
 	if(i2c_smbus_write_quick(i2c_fd, 0))
 	{
-		fprintf(stderr, "Configuration EEPROM(24AA08) Not found!!!\n");
+		Morfeas_hat_error_num = EEPROM_not_found;
 		close(i2c_fd);
 		return -1;
 	}
@@ -343,7 +373,7 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 		memcpy(data_w_reg+1, ((void *)config)+reg, len);
 		if(write(i2c_fd, data_w_reg, len) != len)
 		{
-		  fprintf(stderr, "Error I2C_Write!!!\n");
+		  Morfeas_hat_error_num = i2c_write_err;
 		  close(i2c_fd);
 		  return -1;
 		}
@@ -371,7 +401,7 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	//write reg and read the measurements
 	if(ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
 	{
-		perror("Error @ ioctl");
+		Morfeas_hat_error_num = ioctl_error;
 		close(i2c_fd);
 		free(msgset.msgs);
 		return -1;
@@ -383,7 +413,7 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	{
 		if(((unsigned char*)&read_config)[i]!=((unsigned char*)config)[i])
 		{
-			fprintf(stderr, "Write_port_config: Verification Failed!!!\n");
+			Morfeas_hat_error_num = EEPROM_verification_err;
 			return -1;
 		}
 	}
