@@ -53,10 +53,14 @@ char* Morfeas_hat_error()
 		case EEPROM_is_blank: return "EEPROM is Blank!!!\n";
 		case EEPROM_verification_err: return "Write_port_config: Verification Failed!!!\n";
 		case Checksum_error: return "Checksum Error!!!\n";
+		case unknown_slave: return "Given I2C slave address is not of any Morfeas_RPI_Hat's Devices\n";
 			//---- LEDs related ----//
 		case LED_no_support: return "LEDs are Not supported!\n";
 		case GPIO_dir_error: return "Failed to set GPIO direction!\n";
-
+		case GPIO_read_error: return "Failed to read GPIO value!!!\n";
+		case GPIO_read_file_error: return "Failed to open GPIO value file for reading!!!\n";
+		case GPIO_write_error: return "Failed to write GPIO value!!!\n";
+		case GPIO_write_file_error: return "Failed to open GPIO value file for writing!!!\n";
 		default : return "Unknown Error !!!";
 	}
 }
@@ -111,7 +115,6 @@ int led_init(char *CAN_IF_name)
 			if(sysfs_fd < 0)
 			{
 				Morfeas_hat_error_num = LED_no_support;
-				//fprintf(stderr, "LEDs are Not supported! (Direction File Error!!!)\n");
 				return 0;
 			}
 			if (write(sysfs_fd, "out", 3)<0)
@@ -135,12 +138,12 @@ int GPIOWrite(int LED_name, int value)
 	fd = open(path, O_WRONLY);
 	if (-1 == fd)
 	{
-		fprintf(stderr, "Failed to open gpio value for writing!\n");
+		Morfeas_hat_error_num = GPIO_write_file_error;
 		return -1;
 	}
 	if (1 != write(fd, &s_values_str[!value ? 0 : 1], 1))
 	{
-		fprintf(stderr, "Failed to write value!\n");
+		Morfeas_hat_error_num = GPIO_write_error;
 		return -1;
 	}
 	close(fd);
@@ -156,17 +159,18 @@ int GPIORead(int LED_name)
 	fd = open(path, O_WRONLY);
 	if (-1 == fd)
 	{
-		fprintf(stderr, "Failed to open GPIO value for reading!\n");
+		Morfeas_hat_error_num = GPIO_read_file_error;
 		return -1;
 	}
 	if (read(fd, &read_val, 1) != 1)
 	{
-		fprintf(stderr, "Failed to Read GPIO value!\n");
+		Morfeas_hat_error_num = GPIO_read_error;
 		return -1;
 	}
 	close(fd);
 	return(atoi(read_val));
 }
+
 	//---- I2C device related ----//
 //Function that write block "data" to I2C device with address "dev_addr" on I2C bus "i2c_dev_num". Return: 0 on success, -1 on failure.
 int I2C_write_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned char reg, void *data, unsigned char len)
@@ -234,7 +238,7 @@ int I2C_read_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned c
 	msgset.msgs[1].buf = data;
 	//write reg and read the measurements
 	if((ret_val = ioctl(i2c_fd, I2C_RDWR, &msgset)) < 0)
-		perror("Error @ ioctl");
+		Morfeas_hat_error_num = ioctl_error;
 	close(i2c_fd);
 	free(msgset.msgs);
 	return ret_val==msgset.nmsgs ? 0 : -1;
@@ -243,17 +247,64 @@ int I2C_read_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned c
 //Function to init the MAX9611
 int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 {
-	/*
+	struct MAX9611_config_1 conf_word1={0};
+	struct MAX9611_config_2 conf_word2={0};
+	unsigned char send_data[3];
+	char filename[30];//Path to sysfs I2C-dev
+	int i2c_fd;//I2C file descriptor
 	int addr;// Address for MAX9611 connected to port
+	//Get address of MAX9611
 	switch(port)
 	{
 		case 0: addr=0x70; break;
 		case 1: addr=0x73; break;
 		case 2: addr=0x7c; break;
 		case 3: addr=0x7f; break;
-		default: return -1;
+		default: Morfeas_hat_error_num = unknown_slave; return -1;
 	}
-	*/
+	//Open I2C-bus
+	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
+	i2c_fd = open(filename, O_RDWR);
+	if (i2c_fd < 0)
+	{
+	  Morfeas_hat_error_num = i2c_bus_open_error;
+	  return -1;
+	}
+	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
+	{
+	  Morfeas_hat_error_num = ioctl_error;
+	  close(i2c_fd);
+	  return -1;
+	}
+
+	//Prepare config word 2 for CSA with Gain x4
+	conf_word1.mode = 0b111;
+	conf_word1.mux = 1;
+
+	//load register address and config words to data, and send them.
+	send_data[0] = 0x0A;//register addres for configuration word 1
+	send_data[1] = *((unsigned char*)&conf_word1);
+	send_data[2] = *((unsigned char*)&conf_word2);
+	if(write(i2c_fd, send_data, sizeof(send_data)) != sizeof(send_data))
+	{
+		  Morfeas_hat_error_num = i2c_write_err;
+		  close(i2c_fd);
+		  return -1;
+	}
+
+	//Prepare config word 2 for CSA mode to "Read all channels sequentially every 2ms".
+	conf_word1.mux = 0b111;
+
+	//load register address and config words to data, and send them.
+	send_data[0] = 0x0A;//register addres for configuration word 1
+	send_data[1] = *((unsigned char*)&conf_word1);
+	if(write(i2c_fd, send_data, 2) != 2)
+	{
+		  Morfeas_hat_error_num = i2c_write_err;
+		  close(i2c_fd);
+		  return -1;
+	}
+	close(i2c_fd);
 	return -1;
 }
 //Function that read measurements for MAX9611, store them on memory pointed by meas.
@@ -267,7 +318,7 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 		case 1: addr=0x73; break;
 		case 2: addr=0x7c; break;
 		case 3: addr=0x7f; break;
-		default: return -1;
+		default: Morfeas_hat_error_num = unknown_slave; return -1;
 	}
 	ret_val = I2C_read_block(i2c_dev_num, addr, 0, meas, sizeof(struct Morfeas_RPi_Hat_Port_meas));
 	port_meas_size = sizeof(struct Morfeas_RPi_Hat_Port_meas)/sizeof(unsigned short);
@@ -291,7 +342,7 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 		case 1: addr=0x51; break;
 		case 2: addr=0x52; break;
 		case 3: addr=0x53; break;
-		default: return -1;
+		default: Morfeas_hat_error_num = unknown_slave; return -1;
 	}
 	//Get data from EEPROM
 	if(I2C_read_block(i2c_dev_num, addr, 0, &config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)))
@@ -339,7 +390,7 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 		case 1: addr=0x51; break;
 		case 2: addr=0x52; break;
 		case 3: addr=0x53; break;
-		default: return -1;
+		default: Morfeas_hat_error_num = unknown_slave; return -1;
 	}
 	//Open I2C-bus
 	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);

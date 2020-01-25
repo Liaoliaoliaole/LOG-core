@@ -29,10 +29,15 @@ enum Morfeas_hat_error_enum{
 //---- LEDs related ----//
 	LED_no_support,
 	GPIO_dir_error,
+	GPIO_read_error,
+	GPIO_read_file_error,
+	GPIO_write_error,
+	GPIO_write_file_error,
 //---- I2C device related ----//
 	i2c_bus_open_error,
 	ioctl_error,
 	i2c_write_err,
+	unknown_slave,
 	EEPROM_not_found,
 	EEPROM_is_blank,
 	EEPROM_verification_err,
@@ -60,9 +65,24 @@ struct Morfeas_RPi_Hat_Port_meas{
 	unsigned short set_val;
 	short temperature;
 };
+
+//Structs for MAX9611 Control registers
+struct MAX9611_config_1{
+	unsigned mux : 3;
+	unsigned shutdown : 1;
+	unsigned LP : 1;
+	unsigned mode : 3;
+};
+
+struct MAX9611_config_2{
+	unsigned _NC : 4;
+	unsigned DTIM : 1;
+	unsigned RTIM : 1;
+	unsigned _NC_ : 2;
+};
 #pragma pack(pop)//Disable packing
 
-//Function that print error on stderr
+//Function that return a string for the last error related to Morfeas_RPi_Hat
 char* Morfeas_hat_error();
 
 //Decode string CAN_if_name to Port number. Return: Port's Number or -1 on failure

@@ -236,8 +236,10 @@ int main(int argc, char *argv[])
 			if(!MAX9611_init(stats.port, I2C_BUS_NUM))
 				flags.port_meas_existen = 1;
 			else
+			{
 				Logger(Morfeas_hat_error());
-				//Logger("SDAQnet Port CSA not found!!!\n");
+				Logger("SDAQnet Port CSA not found!!!\n");
+			}
 		}
 		else
 			Logger(Morfeas_hat_error());

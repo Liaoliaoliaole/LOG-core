@@ -29,8 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 int main(int argc, char *argv[])
 {
-	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config config[4] = {0};
-	struct Morfeas_RPi_Hat_Port_meas test[4] = {0};
+	//struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config config[4] = {0};
+	//struct Morfeas_RPi_Hat_Port_meas test[4] = {0};
+	struct MAX9611_config_1 test_conf = {.LP=1, 0};
 	/*
 	unsigned char *test_ptr = (void *)&test;
 	test_ptr[0]=0x12;
@@ -39,12 +40,15 @@ int main(int argc, char *argv[])
 	printf("0x%04x\n",test.port_current);
 	*/
 	printf("Not yet Implemented\n");
+	printf("test_conf = 0x%02hhx\n",*((unsigned char*)&test_conf));
+	/*
 	if(!read_port_config(&config[0], 0, 1))
 	{
 		for(int i=0;i<sizeof(config);i++)
 			printf("%c",((unsigned char *)&config[0])[i]);
 		putchar('\n');
 	}
+	*/
 	return 0;
 }
 
