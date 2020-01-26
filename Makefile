@@ -137,21 +137,17 @@ clean:
 	rm -f $(WORK_dir)/* $(BUILD_dir)/*
 
 install:
-	@echo "Installation of executable Binaries"
-	@install $(BUILD_dir)/Morfeas_daemon -v -t /usr/local/bin/
-	@install $(BUILD_dir)/Morfeas_opc_ua -v -t /usr/local/bin/
-	@install $(BUILD_dir)/Morfeas_SDAQ_if -v -t /usr/local/bin/
-	@install $(BUILD_dir)/Morfeas_MDAQ_if -v -t /usr/local/bin/
-	@install $(BUILD_dir)/Morfeas_IOBOX_if -v -t /usr/local/bin/
-	@echo "\nInstallation of Systemd service for Morfeas_daemon"
+	@echo "Installation of executable Binaries..."
+	@install $(BUILD_dir)/* -v -t /usr/local/bin/
+	@echo "\nInstallation of Systemd service for Morfeas_daemon..."
 	cp -r -n ./systemd/* /etc/systemd/system/
-	@echo "\n If you want to run the Morfeas-System at boot, run:"
+	@echo "\n If you want to run the Morfeas-System at boot, execute:"
 	@echo  "# systemctl enable Morfeas_system.service"
 
 uninstall:
 	@echo  "Stop Morfeas_system service"
 	systemctl stop Morfeas_system.service
-	@echo  "Remove related binaries and systemd file"
+	@echo  "Remove related binaries and Systemd unit files"
 	rm /usr/local/bin/Morfeas_*
 	rm -r /etc/systemd/system/Morfeas_system*
 
