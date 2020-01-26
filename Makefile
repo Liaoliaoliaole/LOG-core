@@ -1,5 +1,5 @@
-GCC_opt=gcc -O3
-CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall #-g3 -Werror
+GCC_opt=gcc -O3 #-g3
+CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall # -Werror
 LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libmodbus libusb)
 BUILD_dir=build
 WORK_dir=work
@@ -61,7 +61,7 @@ $(BUILD_dir)/Morfeas_daemon: $(Morfeas_daemon_DEP) $(HEADERS)
 	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_dir)/Morfeas_opc_ua: $(Morfeas_opc_ua_DEP) $(HEADERS)
-	gcc $(CFLAGS) $^ -o $@ $(LDLIBS)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_dir)/Morfeas_SDAQ_if: $(Morfeas_SDAQ_if_DEP) $(HEADERS)
 	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
