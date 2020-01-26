@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.9" /*Release Version of Morfeas_daemon*/
-#define max_num_of_threads 8
+#define max_num_of_threads 16
 #define max_lines_on_Logger 128
 
 //Define Morfeas Components programs
