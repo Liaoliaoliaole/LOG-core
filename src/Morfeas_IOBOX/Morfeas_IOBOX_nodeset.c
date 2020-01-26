@@ -194,7 +194,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 							{
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str),
 																   &nan, UA_TYPES_FLOAT);
-								status_byte = 1<<7; //127 = No sensor
+								status_byte = 1; //1 = No sensor
 								sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "No sensor", UA_TYPES_STRING);
 							}
