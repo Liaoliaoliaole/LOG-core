@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	struct Morfeas_MDAQ_if_stats stats = {0};
-	unsigned short MDAQ_regs[MDAQ_imp_reg];
+	unsigned short MDAQ_regs[MDAQ_imp_reg]; float *index;
 	//FIFO file descriptor
 	int FIFO_fd;
 	//Check for call without arguments
@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
 
 	//Print welcome message
 	Logger("---- Morfeas_MDAQ_if Started ----\n",argv[0]);
+	Logger("libMODBus Version: %s\n",LIBMODBUS_VERSION_STRING);
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 
@@ -185,9 +186,10 @@ int main(int argc, char *argv[])
 		else
 		{
 			// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
+			index = (float*)MDAQ_regs;
 			//Load MDAQ Board Data
-			IPC_msg.MDAQ_data.meas_index = modbus_get_float_cdab(&MDAQ_regs[0]);//30101
-			IPC_msg.MDAQ_data.board_temp = modbus_get_float_cdab(&MDAQ_regs[6]);//30107
+			IPC_msg.MDAQ_data.meas_index = *index;//30101, modbus_get_float_cdab(&MDAQ_regs[0])
+			IPC_msg.MDAQ_data.board_temp = *((float*)(MDAQ_regs+6));//30107, modbus_get_float_cdab(&MDAQ_regs[6]);
 
 			//Load MDAQ Channels Data
 			offset = 10;
@@ -195,10 +197,10 @@ int main(int argc, char *argv[])
 			{
 				for(int j=0; j<4; j++)
 				{
-					IPC_msg.MDAQ_data.meas[i].value[j] = modbus_get_float_cdab(&MDAQ_regs[offset]);
+					IPC_msg.MDAQ_data.meas[i].value[j] = *((float*)(MDAQ_regs+offset)); // modbus_get_float_cdab(&MDAQ_regs[offset]);
 					offset+=2;
 				}
-				IPC_msg.MDAQ_data.meas[i].warnings = (unsigned char)modbus_get_float_cdab(&MDAQ_regs[offset]);
+				IPC_msg.MDAQ_data.meas[i].warnings =  (unsigned char)*((float*)(MDAQ_regs+offset));//(unsigned char)modbus_get_float_cdab(&MDAQ_regs[offset]);
 				offset+=2;
 			}
 			//Send measurements to Morfeas_opc_ua
