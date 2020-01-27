@@ -4,7 +4,7 @@ LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs ncurses libg
 BUILD_dir=build
 WORK_dir=work
 
-Morfeas_RPi_hat_DEP = $(WORK_dir)/Morfeas_RPi_Hat_if.o \
+Morfeas_RPi_hat_DEP = $(WORK_dir)/Morfeas_RPi_Hat_UI.o \
 					  $(WORK_dir)/Morfeas_RPi_Hat.o \
 					  $(WORK_dir)/Morfeas_run_check.o
 
@@ -15,7 +15,7 @@ $(BUILD_dir)/Morfeas_RPi_Hat: $(Morfeas_RPi_hat_DEP) *.h
 	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_RPi_Hat
-$(WORK_dir)/Morfeas_RPi_Hat_if.o: Morfeas_RPi_Hat_if.c
+$(WORK_dir)/Morfeas_RPi_Hat_UI.o: Morfeas_RPi_Hat_UI.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_RPi_Hat.o: Morfeas_RPi_Hat.c
