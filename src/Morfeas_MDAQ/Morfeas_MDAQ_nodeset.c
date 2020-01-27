@@ -48,7 +48,7 @@ void MDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_ID_str), &negative_one, UA_TYPES_INT32);
 		//Object with MDAQ Board status data
 		sprintf(Node_ID_str, "%s.index", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "Index", UA_TYPES_FLOAT);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "Index", UA_TYPES_UINT32);
 		sprintf(Node_ID_str, "%s.board_temp", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "Board Temperature(°C)", UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
@@ -143,7 +143,7 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				//Load Index and Board temp to OPC-UA variables
 				sprintf(Node_ID_str, "%s.index", IPC_msg_dec->MDAQ_data.Dev_or_Bus_name);
-				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MDAQ_data.meas_index), UA_TYPES_FLOAT);
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MDAQ_data.meas_index), UA_TYPES_UINT32);
 				sprintf(Node_ID_str, "%s.board_temp", IPC_msg_dec->MDAQ_data.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MDAQ_data.board_temp), UA_TYPES_FLOAT);
 				//Load Values and status for each MDAQ channel to OPC-UA variables

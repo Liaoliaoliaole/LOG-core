@@ -64,7 +64,7 @@ struct Morfeas_MDAQ_if_stats{
 	char *MDAQ_IPv4_addr;
 	char *dev_name;
 	int error;
-	float meas_index;
+	unsigned int meas_index;
 	float board_temp;
 	struct MDAQ_Channel meas[8];
 	unsigned int counter;

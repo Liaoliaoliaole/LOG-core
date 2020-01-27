@@ -222,7 +222,7 @@ void print_usage(char *prog_name)
 //Thread Function, Decode varg_pt to xmlNode and start the Morfeas Component program.
 void * Morfeas_thread(void *varg_pt)
 {
-	FILE *cmd_fd, *Log_fd;
+	FILE *cmd_fd;
 	char out_str[256] = {0}, system_call_str[512] = {0}, Logger_name[128] = {0}, *loggers_path;
 	thread_arg *t_arg = varg_pt;
 	pthread_mutex_lock(&thread_make_lock);//Lock threading making
@@ -295,20 +295,15 @@ void * Morfeas_thread(void *varg_pt)
 	pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 
 	//Report Thread call
-	printf("Made Thread for command = %s\n",system_call_str);
+	printf("New Thread for: %s\n",system_call_str);
 	//Make correction of loggers_path
 	if(loggers_path[strlen(loggers_path)-1]!='/')
 		loggers_path[strlen(loggers_path)] = '/';
 
 	//Enlarge loggers_path table to fit logger_name and copy logger_name to it
-	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+1);
+	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+2);
 	strcat(loggers_path, Logger_name);
 
-	//Build New Logger file or Delete contents from old one
-	Log_fd = fopen(loggers_path, "w");
-	if(Log_fd)
-		fclose(Log_fd);
-	usleep(10000);//sleep for a while (10ms) to leave gnu make the loggers_path file
 	//Fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
 	if(!cmd_fd)
@@ -385,6 +380,12 @@ int tranc_file_and_wrire(char *loggers_path,char *buff, unsigned int limit_lines
 		return EXIT_SUCCESS;
 	}
 	else
-		perror("fopen_error");
+	{	//Build New Logger file 
+		Log_fd = fopen(loggers_path, "w");
+		if(Log_fd)
+			fclose(Log_fd);
+		else
+			perror("fopen_error");
+	}
 	return EXIT_FAILURE;
 }

@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	struct Morfeas_MDAQ_if_stats stats = {0};
-	unsigned short MDAQ_regs[MDAQ_imp_reg]; float *index;
+	unsigned short MDAQ_regs[MDAQ_imp_reg]; float *index_dec;
 	//FIFO file descriptor
 	int FIFO_fd;
 	//Check for call without arguments
@@ -186,9 +186,9 @@ int main(int argc, char *argv[])
 		else
 		{
 			// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
-			index = (float*)MDAQ_regs;
 			//Load MDAQ Board Data
-			IPC_msg.MDAQ_data.meas_index = *index;//30101, modbus_get_float_cdab(&MDAQ_regs[0])
+			index_dec = (float*)MDAQ_regs;
+			IPC_msg.MDAQ_data.meas_index = (unsigned int)*index_dec;//30101, modbus_get_float_cdab(&MDAQ_regs[0])
 			IPC_msg.MDAQ_data.board_temp = *((float*)(MDAQ_regs+6));//30107, modbus_get_float_cdab(&MDAQ_regs[6]);
 
 			//Load MDAQ Channels Data

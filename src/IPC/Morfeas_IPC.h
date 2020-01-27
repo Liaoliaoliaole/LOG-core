@@ -152,7 +152,7 @@ typedef struct MDAQ_data_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MDAQ_IPv4;
-	float meas_index;
+	unsigned int meas_index;
 	float board_temp;
 	struct MDAQ_Channel meas[8];
 }MDAQ_data_msg;
