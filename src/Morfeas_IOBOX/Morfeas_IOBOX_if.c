@@ -43,13 +43,14 @@ static volatile unsigned char handler_run = 1;
 //Print the Usage manual
 void print_usage(char *prog_name);
 
-//Local Functions
+//Signal Handler Function
 static void stopHandler(int signum)
 {
 	if(signum == SIGPIPE)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
 	handler_run = 0;
 }
+//--- Local Functions ---//
 // IOBOX_status_to_IPC function. Send Status of IOBOX to Morfeas_opc_ua via IPC
 void IOBOX_status_to_IPC(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats);
 // Function that register IOBOX Channels to Morfeas_opc_ua via IPC

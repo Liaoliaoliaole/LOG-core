@@ -43,13 +43,18 @@ static volatile unsigned char handler_run = 1;
 //Print the Usage manual
 void print_usage(char *prog_name);
 
-//Local Functions
+//Signal Handler Function
 static void stopHandler(int signum)
 {
 	if(signum == SIGPIPE)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
 	handler_run = 0;
 }
+//--- Local functions ---//
+// MDAQ_status_to_IPC function. Send Status of MDAQ to Morfeas_opc_ua via IPC
+void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
+//Function that register MDAQ Channels to Morfeas_opc_ua via IPC
+void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
 
 int main(int argc, char *argv[])
 {

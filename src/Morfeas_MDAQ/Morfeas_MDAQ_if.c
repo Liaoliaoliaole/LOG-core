@@ -43,7 +43,7 @@ static volatile unsigned char handler_run = 1;
 //Print the Usage manual
 void print_usage(char *prog_name);
 
-//Local Functions
+//Signal Handler Function
 static void stopHandler(int signum)
 {
 	if(signum == SIGPIPE)
