@@ -124,7 +124,7 @@ struct MTI_quad_tele{
 	float channels[2];
 };
 
-//--- Extracted from MODBus Holding Registers(R/W) ---//
+//--- Extracted from MODBus Holding Registers(R/W) 40001-40008 ---//
 struct MTI_RX_config{
 	unsigned short RX_channel;
 	unsigned short Data_rate;
