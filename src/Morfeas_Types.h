@@ -35,7 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Array with stings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];
 
-//structs for IOBOX_handler
+//Structs for IOBOX_handler
 struct Power_Supply{
 	float Vout,Iout;
 };
@@ -55,7 +55,7 @@ struct Morfeas_IOBOX_if_stats{
 	unsigned int counter;
 };
 
-//structs for MDAQ_handler
+//Structs for MDAQ_handler
 struct MDAQ_Channel{
 	float value[4];
 	unsigned char warnings;
@@ -68,6 +68,68 @@ struct Morfeas_MDAQ_if_stats{
 	float board_temp;
 	struct MDAQ_Channel meas[8];
 	unsigned int counter;
+};
+
+	//Structs for MTI_handler
+//--- Extracted from MODBus Input Registers(Read only) 32001... ---//
+struct MTI_dev_status{
+	float batt_volt;
+	float batt_cap;
+	float batt_state;
+	float CPU_temp;
+	float Button_state;
+	float PWM_clock;
+	float PWM_freq;
+	float PWM_Channels[4];
+};
+struct MTI_16_temp_tele{
+	float index;
+	float rx_status;
+	float success;
+	float valid_data;
+	float valid_data_cnt;
+	float reserved[5];
+	float channels[16];
+};
+struct MTI_4_temp_tele{
+	float index;
+	float rx_status;
+	float success;
+	float valid_data;
+	float valid_data_cnt;
+	float reserved[5];
+	float channels[4];
+	float ref_1_2;
+	float ref_3_4;
+};
+struct MTI_mux_rmsw_tele{
+	float dev_type;
+	float dev_id;
+	float last_mesg;
+	float switch_status;
+	float temp;
+	float input_voltage;
+	struct{
+		float voltage;
+		float amperage;
+	}channels[2]
+};
+struct MTI_quad_tele{
+	float index;
+	float rx_status;
+	float success;
+	float sampling_rate;
+	float drift_index;
+	float reserved[5];
+	float channels[2];
+};
+
+//--- Extracted from MODBus Holding Registers(R/W) ---//
+struct MTI_RX_config{
+	unsigned short RX_channel;
+	unsigned short Data_rate;
+	unsigned short Tele_dev_type;
+	unsigned short specific_reg[5];
 };
 
 //Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
