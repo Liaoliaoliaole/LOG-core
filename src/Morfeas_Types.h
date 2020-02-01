@@ -112,7 +112,7 @@ struct MTI_mux_rmsw_tele{
 	struct{
 		float voltage;
 		float amperage;
-	}channels[2]
+	}channels[2];
 };
 struct MTI_quad_tele{
 	float index;
