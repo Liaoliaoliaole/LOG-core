@@ -25,6 +25,9 @@ This means that all the components called from a supervisor programs,
 runs as daemon type processes, and they communicating using messages established from the **Morfeas IPC protocol**
 that passing through **PIPEs**. All the project's components are written in **ANSI C**.
 
+###Documentation
+Project documentation located @:[/docs/Morfeas_project_Documentation](./docs/Morfeas_project_Documentation)
+
 #### The Morfeas-core components:
 * **Morfeas_daemon**: The supervisor.
 * **Morfeas_opc_ua**: OPC-UA server.
