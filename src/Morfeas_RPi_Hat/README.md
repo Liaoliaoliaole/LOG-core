@@ -43,4 +43,4 @@ The PCB design is licensed under TAPRv1 or later - see the [License](./Hardware/
 
 The Source code is licensed under GPLv3 or later - see the [License](../blob/master/LICENSE) file for details.
 
-The Technical manual is licensed under FDLv1.3 or later - see the [License](../fdl-1.3.md) file for details.
+The Technical manual is licensed under FDLv1.3 or later - see the [License](../../fdl-1.3.md) file for details.
