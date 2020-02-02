@@ -1,4 +1,5 @@
-![picture](./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo_cyan.png =100x)
+#![picture](./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo_cyan.png =100x)
+<img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo_cyan.png" width="100">
 # Morfeas-Core
 
 ## Preamp
