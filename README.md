@@ -1,6 +1,5 @@
-<div align="center">
-<img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo_cyan.png" width="250" >
-</div>
+<div align="center"> <img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo.png" width="250"> </div>
+
 # Morfeas-Core
 
 ## Preamp
