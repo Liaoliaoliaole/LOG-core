@@ -1,3 +1,4 @@
+![picture](./Docs/Artwork/Morfeas_logo_cyan.png)
 # Morfeas-Core
 
 ## Preamp
