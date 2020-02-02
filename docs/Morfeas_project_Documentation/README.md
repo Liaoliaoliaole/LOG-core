@@ -1,11 +1,17 @@
 # Documentation of Morfeas-Core
+This directory contains the source for the Documentation of the Morfeas Project. The source is written in LaTex.
+
+### Requirements
+For compilation of this project the following dependencies required.
+* [GNU Make](https://www.gnu.org/software/make/) - GNU make utility
+* [TeX Live](https://www.tug.org/texlive/) - Libre(free) software distribution for the TeX typesetting system.
 
 ## Compilation of the documentation
 ```
 $ make tree
 $ make -j$(nproc)
 ```
-The executable binaries located under the **./build** directory.
+The compiled documentation located under the **./build-doc** directory.
 
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
