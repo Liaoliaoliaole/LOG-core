@@ -1,4 +1,4 @@
-<div align="center"> <img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo.png" width="250"> </div>
+<div align="center"> <img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo.png" width="150"> </div>
 
 # Morfeas-Core
 
