@@ -37,7 +37,7 @@ $ make clean
 $ make -j$(nproc)
 $ sudo make install
 ```
-### Restart Morfeas_daemon (if is installed)
+### Restart Morfeas_daemon
 ```
 $ sudo service Morfeas_system restart
 ```
