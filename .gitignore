@@ -2,6 +2,7 @@
 !*/
 !*.*
 *.*#
+!**/Makefile
 docs/Morfeas_project_Documentation/src/*.*
 !docs/Morfeas_project_Documentation/src/*.tex
 **/build/
