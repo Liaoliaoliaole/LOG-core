@@ -605,23 +605,23 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 				read_bytes = fread(&data, 1, sizeof(data), fp);
 				if(read_bytes == sizeof(struct LogBook))
 				{
-					if(!(node_data = new_LogBook_entry()))
-					{
-						fprintf(stderr,"Memory Error!!!\n");
-						exit(EXIT_FAILURE);
-					}
-					checksum = Checksum(&(data.data), sizeof(data.data));
+					checksum = Checksum(&(data.payload), sizeof(data.payload));
 					if(!(data.checksum ^ checksum))
 					{
-						memcpy(node_data, &(data.data), sizeof(data.data));
+						if(!(node_data = new_LogBook_entry()))
+						{
+							fprintf(stderr,"Memory Error!!!\n");
+							exit(EXIT_FAILURE);
+						}
+						memcpy(node_data, &(data.payload), sizeof(data.payload));
 						stats->LogBook = g_slist_append(stats->LogBook, node_data);
 					}
 					else
 					{
 						g_slist_free_full(stats->LogBook, free_LogBook_entry);
 						stats->LogBook = NULL;
-						fp = freopen(stats->LogBook_file_path, "w", fp);
-						fclose(fp);
+						if((fp = freopen(stats->LogBook_file_path, "w", fp)))
+							fclose(fp);
 						return -1;
 					}
 				}
@@ -653,7 +653,10 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 				fclose(fp);
 			}
 			else
+			{
+				Logger("Error on LogBook file write!!!!\n");
 				return EXIT_FAILURE;
+			}
 		}
 	}
 	else if(!strcmp(read_write_or_append, "a"))
@@ -673,7 +676,10 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 				fclose(fp);
 			}
 			else
+			{
+				Logger("Error on LogBook file append!!!!\n");
 				return EXIT_FAILURE;
+			}
 		}
 	}
 	return 0;
