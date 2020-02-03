@@ -1001,7 +1001,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 					{
 						list_SDAQ_node_data = new_SDAQ_info_entry();
 						LogBook_node_data = new_LogBook_entry();
-						if(list_SDAQ_node_data)
+						if(list_SDAQ_node_data && LogBook_node_data)
 						{
 							//Load SDAQ data on new list_SDAQ entry
 							list_SDAQ_node_data->SDAQ_address = address_test;
