@@ -17,7 +17,7 @@ with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
 
 As the Morfeas project developed additional support added for other devices (MDAQ, IO-BOX, MTI) with different interfaces (ModBus-TCP, USB).
 
-Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web".
+Furthermore, a web interface sub-project added to the Morfeas project under the name ["Morfeas-web"](https://gitlab.com/fantomsam/morfeas_web).
 Thisof, will provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
 
 **In relation with this project [Morfeas_RPi_Hat](./src/Morfeas_RPi_Hat)**
@@ -72,7 +72,8 @@ $ cd Morfeas_core
 $ # Get Source of the submodules
 $ git submodule update --init --recursive --remote --merge
 ```
-### Compilation of the submodules
+### Compilation and installation of the submodules
+
 #### cJSON
 ```
 $ cd src/cJSON
@@ -124,6 +125,9 @@ $ sudo systemctl start Morfeas_system.service
 $ #--- Optionaly If you want to start the daemon on boot ---
 $ sudo systemctl enable Morfeas_system.service
 ```
+### Re-Compilation of the source
+Guide link [here](./RE-INSTALATION.md) 
+
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
 
