@@ -126,7 +126,7 @@ $ #--- Optionaly If you want to start the daemon on boot ---
 $ sudo systemctl enable Morfeas_system.service
 ```
 ### Re-Compilation of the source
-Guide link [here](./RE-INSTALATION.md) 
+Guide link [here](./RE-INSTALL.md) 
 
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
