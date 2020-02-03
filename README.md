@@ -28,7 +28,7 @@ runs as daemon type processes, and they communicating using messages established
 that passing through **PIPEs**. All the project's components are written in **ANSI C**.
 
 ### Documentation
-Project documentation located @:[/docs/Morfeas_project_Documentation](./docs/Morfeas_project_Documentation)
+Project documentation located @:[/Docs/Morfeas_project_Documentation](./docs/Morfeas_project_Documentation)
 
 #### The Morfeas-core components:
 * **Morfeas_daemon**: The supervisor.
