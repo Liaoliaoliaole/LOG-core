@@ -5,6 +5,7 @@ This directory contains the source for the Documentation of the Morfeas Project.
 For compilation of this project the following dependencies required.
 * [GNU Make](https://www.gnu.org/software/make/) - GNU make utility
 * [TeX Live](https://www.tug.org/texlive/) - Libre(free) software distribution for the TeX typesetting system.
+* [LaTex-mk](http://latex-mk.sourceforge.net/) - Complete system for simplifying the management of small to large sized LaTeX documents.
 
 ## Compilation of the documentation
 ```
