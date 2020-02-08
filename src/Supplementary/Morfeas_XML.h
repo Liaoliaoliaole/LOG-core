@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
-//*** All the function Returns: EXIT_SUCCESS on success, or EXIT_FAILURE or failure. Except of other notice ***//
+// *** All the function Returns: EXIT_SUCCESS on success, or EXIT_FAILURE or failure. Except of other notice *** //
 
 //-- General XML Functions --//
 //Function that parser and validate the Nodeset configuration XML

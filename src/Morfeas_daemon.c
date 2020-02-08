@@ -322,8 +322,8 @@ void * Morfeas_thread(void *varg_pt)
 		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
 	else if(daemon_run)
 		printf("Thread for command \"%s\" Exit unexpectedly !!!\n", system_call_str);
-	//Delete Logger file
-	unlink(loggers_path);
+	else
+		unlink(loggers_path); //Delete Logger file
 	//free allocated memory
 	free(loggers_path);
 	return NULL;
@@ -380,7 +380,7 @@ int tranc_file_and_wrire(char *loggers_path,char *buff, unsigned int limit_lines
 		return EXIT_SUCCESS;
 	}
 	else
-	{	//Build New Logger file 
+	{	//Build New Logger file
 		Log_fd = fopen(loggers_path, "w");
 		if(Log_fd)
 			fclose(Log_fd);
