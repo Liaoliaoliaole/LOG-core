@@ -397,7 +397,7 @@ inline void quit_signal_handler(int signum)
 
 inline void CAN_if_timer_handler (int signum)
 {
-	static unsigned char timer_ring_cnt = SYNC_INTERVAL, cleanup_trig_cnt = 1;
+	static unsigned char timer_ring_cnt = SYNC_INTERVAL, cleanup_trig_cnt = 20/SYNC_INTERVAL;
 	unsigned short time_seed;
 	struct timespec time_rep = {0,0};
 	timer_ring_cnt--;
@@ -416,10 +416,9 @@ inline void CAN_if_timer_handler (int signum)
 		{
 			// Clean up cycle trig
 			flags.Clean_flag=1;//trig a clean up of list_SDAQ.
-			cleanup_trig_cnt=1;//approximately every 20 sec
+			cleanup_trig_cnt=20/SYNC_INTERVAL;//approximately every 20 sec
 		}
-		else
-			cleanup_trig_cnt--;
+		cleanup_trig_cnt--;
 		//Send Synchronization with time_seed to all SDAQs
 		Sync(CAN_socket_num, time_seed);
 		timer_ring_cnt = SYNC_INTERVAL;//reset timer_ring_cnt
