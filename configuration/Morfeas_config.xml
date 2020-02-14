@@ -7,7 +7,7 @@
 	<LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
 	<COMPONENTS>
 		<OPC_UA_SERVER>
-			<APP_NAME>Morfeas_test_application</APP_NAME>
+			<APP_NAME>Morfeas_test(Proto)</APP_NAME>
 			<CONFIG_FILE>OPC_UA_Config.xml</CONFIG_FILE>
 		</OPC_UA_SERVER>
 		<SDAQ_HANDLER Disable="false">
