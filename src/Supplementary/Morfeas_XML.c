@@ -404,36 +404,39 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 
 	g_slist_free_full(*cur_Links, free_Link_entry);//Free List cur_Links
 	*cur_Links = NULL;
-	for(check_element = root_element->children; check_element; check_element = check_element->next)
+	if(root_element->children)
 	{
-		iso_channel_str = XML_node_get_content(check_element, "ISO_CHANNEL");
-		dev_type_str = XML_node_get_content(check_element, "INTERFACE_TYPE");
-		anchor_ptr = XML_node_get_content(check_element, "ANCHOR");
-		if(iso_channel_str && dev_type_str && anchor_ptr)
+		for(check_element = root_element->children; check_element; check_element = check_element->next)
 		{
-			list_cur_Links_node_data = new_Link_entry();
-			if(list_cur_Links_node_data)
+			iso_channel_str = XML_node_get_content(check_element, "ISO_CHANNEL");
+			dev_type_str = XML_node_get_content(check_element, "INTERFACE_TYPE");
+			anchor_ptr = XML_node_get_content(check_element, "ANCHOR");
+			if(iso_channel_str && dev_type_str && anchor_ptr)
 			{
-				memccpy(&(list_cur_Links_node_data->ISO_channel_name), iso_channel_str, '\0', sizeof(list_cur_Links_node_data->ISO_channel_name));
-				memccpy(&(list_cur_Links_node_data->interface_type), dev_type_str, '\0', sizeof(list_cur_Links_node_data->interface_type));
-				list_cur_Links_node_data->interface_type_num = if_type_str_2_num(dev_type_str);
-				if(list_cur_Links_node_data->interface_type_num == IOBOX)
-					sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
-														   &(list_cur_Links_node_data->receiver_or_value),
-														   &(list_cur_Links_node_data->channel));
-				else if(list_cur_Links_node_data->interface_type_num == MDAQ)
-					sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),
-														    &(list_cur_Links_node_data->channel),
-														    &(list_cur_Links_node_data->receiver_or_value));
-				else if(list_cur_Links_node_data->interface_type_num == SDAQ)
-					sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier),
-													&(list_cur_Links_node_data->channel));
-				*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
-			}
-			else
-			{
-				fprintf(stderr,"Memory error!\n");
-				exit(EXIT_FAILURE);
+				list_cur_Links_node_data = new_Link_entry();
+				if(list_cur_Links_node_data)
+				{
+					memccpy(&(list_cur_Links_node_data->ISO_channel_name), iso_channel_str, '\0', sizeof(list_cur_Links_node_data->ISO_channel_name));
+					memccpy(&(list_cur_Links_node_data->interface_type), dev_type_str, '\0', sizeof(list_cur_Links_node_data->interface_type));
+					list_cur_Links_node_data->interface_type_num = if_type_str_2_num(dev_type_str);
+					if(list_cur_Links_node_data->interface_type_num == IOBOX)
+						sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
+															   &(list_cur_Links_node_data->receiver_or_value),
+															   &(list_cur_Links_node_data->channel));
+					else if(list_cur_Links_node_data->interface_type_num == MDAQ)
+						sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),
+																&(list_cur_Links_node_data->channel),
+																&(list_cur_Links_node_data->receiver_or_value));
+					else if(list_cur_Links_node_data->interface_type_num == SDAQ)
+						sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier),
+														&(list_cur_Links_node_data->channel));
+					*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
+				}
+				else
+				{
+					fprintf(stderr,"Memory error!\n");
+					exit(EXIT_FAILURE);
+				}
 			}
 		}
 	}
