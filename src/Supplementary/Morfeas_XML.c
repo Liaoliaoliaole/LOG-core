@@ -242,6 +242,8 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	xmlNode *check_element, *element;
 	char *content, *iso_channel, *dev_type_str;
 	unsigned int if_name_okay;
+	if(!root_element->children)
+		return EXIT_SUCCESS;
 	//Check for Empty XML nodes content and for Invalid Interface_name content
 	for(element = root_element->children; element; element = element->next)
 	{
@@ -377,7 +379,7 @@ int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList *
 	xmlNode *check_element;
 	GSList *node;
 	char *iso_channel;
-	if(cur_Links)
+	if(cur_Links && root_element->children)
 	{
 		for(check_element = root_element->children; check_element; check_element = check_element->next)
 		{

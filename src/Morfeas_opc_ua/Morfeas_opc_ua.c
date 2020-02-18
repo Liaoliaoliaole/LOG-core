@@ -203,7 +203,9 @@ void * Nodeset_XML_reader(void *varg_pt)
 						{
 							pthread_mutex_lock(&OPC_UA_NODESET_access);
 								//Find nodes that going to be remove
+								printf("Pass!!\n");
 								Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(root_element, &Links);
+								printf("Pass!!\n");
 								t_list_ptr = Links;
 								//Remove diff nodes from OPC_UA NODESet
 								while(t_list_ptr)
@@ -214,9 +216,13 @@ void * Nodeset_XML_reader(void *varg_pt)
 								}
 								//Copy Links(Anchored) data from xmlDoc to List Links
 								XML_doc_to_List_ISO_Channels(root_element, &Links);
-								//Add and/or Update OPC_UA NODESet
-								for(xml_node = root_element->children; xml_node; xml_node = xml_node->next)
-									Morfeas_OPC_UA_add_update_ISO_Channel_node(server, xml_node);
+								//Check if root_element have children 
+								if(root_element->children)
+								{
+									//Add and/or Update OPC_UA NODESet
+									for(xml_node = root_element->children; xml_node; xml_node = xml_node->next)
+										Morfeas_OPC_UA_add_update_ISO_Channel_node(server, xml_node);
+								}
 							pthread_mutex_unlock(&OPC_UA_NODESET_access);
 						}
 						else
