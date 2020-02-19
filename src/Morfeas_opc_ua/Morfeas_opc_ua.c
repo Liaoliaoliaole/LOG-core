@@ -203,9 +203,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 						{
 							pthread_mutex_lock(&OPC_UA_NODESET_access);
 								//Find nodes that going to be remove
-								printf("Pass!!\n");
 								Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(root_element, &Links);
-								printf("Pass!!\n");
 								t_list_ptr = Links;
 								//Remove diff nodes from OPC_UA NODESet
 								while(t_list_ptr)
