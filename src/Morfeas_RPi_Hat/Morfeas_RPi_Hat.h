@@ -41,6 +41,7 @@ enum Morfeas_hat_error_enum{
 	unknown_slave,
 	EEPROM_not_found,
 	EEPROM_is_blank,
+	EEPROM_Erase_error,
 	EEPROM_verification_err,
 	Checksum_error
 };
@@ -55,6 +56,11 @@ struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 	char volt_meas_offset;
 	char curr_meas_offset;
 	float curr_meas_scaler;
+	float asd;
+	float fgh;
+	float jjk;
+	float lll;
+	
 	unsigned char checksum;
 };
 //Struct for current sense amplifier(MAX9611) data
@@ -109,7 +115,8 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, unsigned char port, unsigned char i2c_dev_num);
 //Function that write data to EEPROM, checksum calculated inside.
 int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, unsigned char port, unsigned char i2c_dev_num);
-
+//Function that erase EEPROM.
+int erase_EEPROM(unsigned char port, unsigned char i2c_dev_num);
 
 
 

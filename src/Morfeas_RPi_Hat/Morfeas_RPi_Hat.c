@@ -51,8 +51,9 @@ char* Morfeas_hat_error()
 		case i2c_write_err: return "Error I2C_Write!!!\n";
 		case EEPROM_not_found: return "Configuration EEPROM(24AA08) Not found!!!\n";
 		case EEPROM_is_blank: return "EEPROM is Blank!!!\n";
+		case EEPROM_Erase_error: return "EEPROM erase error: EEPROM is not Blank!!!\n";
 		case EEPROM_verification_err: return "Write_port_config: Verification Failed!!!\n";
-		case Checksum_error: return "Checksum Error!!!\n";
+		case Checksum_error: return "Configuration EEPROM(24AA08) Checksum Error!!!\n";
 		case unknown_slave: return "Given I2C slave address is not of any Morfeas_RPI_Hat's Devices\n";
 			//---- LEDs related ----//
 		case LED_no_support: return "LEDs are Not supported!\n";
@@ -61,7 +62,9 @@ char* Morfeas_hat_error()
 		case GPIO_read_file_error: return "Failed to open GPIO value file for reading!!!\n";
 		case GPIO_write_error: return "Failed to write GPIO value!!!\n";
 		case GPIO_write_file_error: return "Failed to open GPIO value file for writing!!!\n";
-		default : return "Unknown Error !!!";
+		default : 
+			sprintf(error_str, "Unknown Error (%d)!!!\n",Morfeas_hat_error_num);
+			return error_str;
 	}
 }
 
@@ -268,15 +271,15 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 	if (i2c_fd < 0)
 	{
 	  Morfeas_hat_error_num = i2c_bus_open_error;
-	  return -1;
+	  return EXIT_FAILURE;
 	}
 	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
 	{
 	  Morfeas_hat_error_num = ioctl_error;
 	  close(i2c_fd);
-	  return -1;
+	  return EXIT_FAILURE;
 	}
-
+	
 	//Prepare config word 2 for CSA with Gain x4
 	conf_word1.mode = 0b111;
 	conf_word1.mux = 1;
@@ -289,7 +292,7 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 	{
 		  Morfeas_hat_error_num = i2c_write_err;
 		  close(i2c_fd);
-		  return -1;
+		  return EXIT_FAILURE;
 	}
 
 	//Prepare config word 2 for CSA mode to "Read all channels sequentially every 2ms".
@@ -302,10 +305,10 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 	{
 		  Morfeas_hat_error_num = i2c_write_err;
 		  close(i2c_fd);
-		  return -1;
+		  return EXIT_FAILURE;
 	}
 	close(i2c_fd);
-	return -1;
+	return EXIT_SUCCESS;
 }
 //Function that read measurements for MAX9611, store them on memory pointed by meas.
 int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, unsigned char i2c_dev_num)
@@ -353,7 +356,7 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 	//Check if EEPROM is blank
 	for(int i=0; i<sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config); i++)
 	{
-		if(((char*)&config_read)[i]==-1)
+		if(((unsigned char*)&config_read)[i]==0xff)
 			blank_check++;
 	}
 	if(blank_check == sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config))
@@ -420,9 +423,12 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	while(reg<sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config))
 	{
 		data_w_reg[0] = reg;
-		len = sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config) - reg;
+		if(sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)<=16)
+			len = sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config) - reg;
+		else
+			len = 16;
 		memcpy(data_w_reg+1, ((void *)config)+reg, len);
-		if(write(i2c_fd, data_w_reg, len) != len)
+		if(write(i2c_fd, data_w_reg, len+1) != len+1)
 		{
 		  Morfeas_hat_error_num = i2c_write_err;
 		  close(i2c_fd);
@@ -469,5 +475,102 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 		}
 	}
 	return 0;
+}
+#define block_size 16
+//Function that erase EEPROM.
+int erase_EEPROM(unsigned char port, unsigned char i2c_dev_num)
+{
+	unsigned char zero=0, read_buff[0xff];
+	struct i2c_rdwr_ioctl_data msgset;
+	char filename[30];//Path to sysfs I2C-dev
+	int addr;// Address for 24AA08 EEPROM
+	int i2c_fd;//I2C file descriptor
+	unsigned char Blank_w_reg[17];//16 data bytes + 1 register byte
+	unsigned short reg=0;
+
+	//Calc addr for port argument
+	switch(port)
+	{
+		case 0: addr=0x50; break;
+		case 1: addr=0x51; break;
+		case 2: addr=0x52; break;
+		case 3: addr=0x53; break;
+		default: Morfeas_hat_error_num = unknown_slave; return -1;
+	}
+	//Open I2C-bus
+	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
+	i2c_fd = open(filename, O_RDWR);
+	if (i2c_fd < 0)
+	{
+	  Morfeas_hat_error_num = i2c_bus_open_error;
+	  return 3;
+	}
+	//Set addr as I2C_SLAVE address
+	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
+	{
+	  Morfeas_hat_error_num = ioctl_error;
+	  close(i2c_fd);
+	  return 4;
+	}
+	//Check device existence.
+	if(i2c_smbus_write_quick(i2c_fd, 0))
+	{
+		Morfeas_hat_error_num = EEPROM_not_found;
+		close(i2c_fd);
+		return -1;
+	}
+	//Init Blank_w_reg to 0xFF (EEPROM blank data)
+	memset(Blank_w_reg+1, 0xFF, block_size);
+	//Write data blocks to EEPROM. 
+	while(reg<0xff)
+	{
+		Blank_w_reg[0] = reg;
+		if(write(i2c_fd, Blank_w_reg, block_size+1) != block_size+1)
+		{
+		  Morfeas_hat_error_num = i2c_write_err;
+		  close(i2c_fd);
+		  return -1;
+		}
+		usleep(10000);//Sleep for 10msec
+		reg += block_size;
+	}
+	//Read data block from EEPROM.
+	//Allocate memory for the messages
+	msgset.nmsgs = 2;
+	if(!(msgset.msgs = calloc(msgset.nmsgs, sizeof(struct i2c_msg))))
+	{
+	  fprintf(stderr, "Memory error!!!\n");
+	  exit(EXIT_FAILURE);
+	}
+	//Build message for Write reg at 0
+	msgset.msgs[0].addr = addr;
+	msgset.msgs[0].flags = 0; //Write
+	msgset.msgs[0].len = 1;
+	msgset.msgs[0].buf = &zero;
+	//Build message for Read *data
+	msgset.msgs[1].addr = addr;
+	msgset.msgs[1].flags = I2C_M_RD;//Read flag
+	msgset.msgs[1].len = 0xFF;//EEPROM size
+	msgset.msgs[1].buf = (void *)&read_buff;
+	//write reg and read the measurements
+	if(ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
+	{
+		Morfeas_hat_error_num = ioctl_error;
+		close(i2c_fd);
+		free(msgset.msgs);
+		return -1;
+	}
+	close(i2c_fd);
+	free(msgset.msgs);
+	//Verification
+	for(int i=0; i<sizeof(read_buff); i++)
+	{
+		if(read_buff[i]!=0xFF)
+		{
+			Morfeas_hat_error_num = EEPROM_Erase_error;
+			return -1;
+		}
+	}
+	return 0;	
 }
 
