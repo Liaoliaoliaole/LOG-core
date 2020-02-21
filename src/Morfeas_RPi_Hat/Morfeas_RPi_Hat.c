@@ -175,6 +175,7 @@ int GPIORead(int LED_name)
 }
 
 	//---- I2C device related ----//
+/*
 //Function that write block "data" to I2C device with address "dev_addr" on I2C bus "i2c_dev_num". Return: 0 on success, -1 on failure.
 int I2C_write_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned char reg, void *data, unsigned char len)
 {
@@ -208,6 +209,7 @@ int I2C_write_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned 
 	close(i2c_fd);
 	return write_bytes == len ? 0 : -1;
 }
+*/
 //Function that read a block "data" from an I2C device with address "dev_addr" on I2C bus "i2c_dev_num". Return: 0 on success, -1 on failure.
 int I2C_read_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned char reg, void *data, unsigned char len)
 {
