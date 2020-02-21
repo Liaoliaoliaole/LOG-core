@@ -56,11 +56,6 @@ struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 	char volt_meas_offset;
 	char curr_meas_offset;
 	float curr_meas_scaler;
-	float asd;
-	float fgh;
-	float jjk;
-	float lll;
-	
 	unsigned char checksum;
 };
 //Struct for current sense amplifier(MAX9611) data

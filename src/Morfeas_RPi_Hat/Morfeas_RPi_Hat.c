@@ -423,7 +423,7 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	while(reg<sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config))
 	{
 		data_w_reg[0] = reg;
-		if(sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)<=16)
+		if(sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)-reg<16)
 			len = sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config) - reg;
 		else
 			len = 16;
@@ -453,7 +453,7 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	//Build message for Read *data
 	msgset.msgs[1].addr = addr;
 	msgset.msgs[1].flags = I2C_M_RD;//Read flag
-	msgset.msgs[1].len = len;
+	msgset.msgs[1].len = sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config);
 	msgset.msgs[1].buf = (void *)&read_config;
 	//write reg and read the measurements
 	if(ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
