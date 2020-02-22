@@ -18,23 +18,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <time.h>
+#include <signal.h>
+#include <pthread.h>
+#include <ncurses.h>
+
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <arpa/inet.h>
-
 #include "../Supplementary/Morfeas_run_check.h"
 #include "Morfeas_RPi_Hat.h"
 
 //Global variables
+unsigned char running = 1;
+struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config Ports_config[4] = {0};
+struct Morfeas_RPi_Hat_Port_meas Ports_meas[4] = {0};
+
+void sigint_signal_handler(int signum)
+{
+	running = 0;
+	return;
+}
 
 int main(int argc, char *argv[])
 {
-	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config Ports_config[4] = {0};
-	struct Morfeas_RPi_Hat_Port_meas Ports_meas[4] = {0};
-	
+	int det_ports;
+
 	//Check if program already runs.
 	if(check_already_run(argv[0]))
 	{
@@ -47,6 +59,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Morfeas_SDAQ_if detected to run, %s can't run!!!\n", argv[0]);
 		exit(EXIT_SUCCESS);
 	}
+
+	//Link signal SIGINT to quit_signal_handler
+	signal(SIGINT, sigint_signal_handler);
+
+
 /*
 //Struct for EEPROM(24AA08) data
 struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
@@ -60,8 +77,8 @@ struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 	float curr_meas_scaler;
 	unsigned char checksum;
 };
-*/	
-	
+*/
+
 	Ports_config[0].last_cal_date.year = 1;
 	Ports_config[0].last_cal_date.month = 3;
 	Ports_config[0].last_cal_date.day = 5;
@@ -70,7 +87,7 @@ struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 	Ports_config[0].curr_meas_scaler = 0.001222;
 	if(write_port_config(&Ports_config[0], 0, I2C_BUS_NUM))
 		printf("%s",Morfeas_hat_error());
-	
+
 	if(write_port_config(&Ports_config[0], 1, I2C_BUS_NUM))
 		printf("%s",Morfeas_hat_error());
 	/*
@@ -84,18 +101,18 @@ struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 			printf("%s",Morfeas_hat_error());
 	}
 	MAX9611_init(1,1);
-	while(1)
+	while(running)
 	{
 		get_port_meas(&Ports_meas[0], 0, I2C_BUS_NUM);
 		printf("\nPort0_voltage= %.1fV\n",Ports_meas[0].port_voltage*MAX9611_volt_meas_scaler);
 		printf("Port0_current= %.3fA\n",(Ports_meas[0].port_current)*0.001222);
 		printf("Die0_temperature= %.0f°C\n",Ports_meas[0].temperature*MAX9611_temp_scaler);
-		
+
 		get_port_meas(&Ports_meas[1], 1, I2C_BUS_NUM);
 		printf("\nPort1_voltage= %.1fV\n",Ports_meas[1].port_voltage*MAX9611_volt_meas_scaler);
 		printf("Port1_current= %.3fA\n",(Ports_meas[1].port_current)*0.001222);
 		printf("Die1_temperature= %.0f°C\n",Ports_meas[1].temperature*MAX9611_temp_scaler);
-		
+
 		sleep(1);
 	}
 	return 0;
