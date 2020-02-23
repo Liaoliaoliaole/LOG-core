@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 			{
 				mvwprintw(win_arg.Port_csa[i],2,2, "voltage= %.1fV", Ports_meas[i].port_voltage*MAX9611_volt_meas_scaler);
 				mvwprintw(win_arg.Port_csa[i],3,2, "current= %.3fA", (Ports_meas[i].port_current)*0.001222);
-				mvwprintw(win_arg.Port_csa[i],4,2, "Temperature= %.0f°C", Ports_meas[i].temperature*MAX9611_temp_scaler);
+				mvwprintw(win_arg.Port_csa[i],4,2, "Temperature= %.1f°C", Ports_meas[i].temperature*MAX9611_temp_scaler);
 			}
 			else
 				mvwprintw(win_arg.Port_csa[i],2,2, "Error !!!");
