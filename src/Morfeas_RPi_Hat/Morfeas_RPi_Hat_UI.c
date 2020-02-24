@@ -63,10 +63,6 @@ struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config Ports_config[4] = {0};
 struct Morfeas_RPi_Hat_Port_meas Ports_meas[4] = {0};
 
 /* --- Local Functions --- */
-void term_size_change_event(int signal_num)
-{
-	term_resize = 1;
-}
 //slice free function for history_buffs_nodes
 void history_buff_free_node(gpointer node)
 {
@@ -116,9 +112,6 @@ int main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 	
-	//Catch event for terminal size change
-	signal(SIGWINCH, term_size_change_event);
-	
 	//Init and Detect amount of CSAs and get config for each
 	win_arg.det_ports=0;
 	for(i=0;i<4;i++)
@@ -148,34 +141,25 @@ int main(int argc, char *argv[])
 	while(running)
 	{
 		pthread_mutex_lock(&ncurses_access);
-			if(term_resize) //Terminal resize event
+			getyx(win_arg.UI_term, last_cury, last_curx); 
+			curs_set(0);//Hide curson
+			for(i=0; i<win_arg.det_ports; i++)
 			{
-				w_init(&win_arg);//Re-Init windows
-				mvwprintw(win_arg.UI_term, 1, 1, "][ ");
-				term_resize = 0;
-			}
-			else
-			{
-				getyx(win_arg.UI_term, last_cury, last_curx); 
-				curs_set(0);//Hide curson
-				for(i=0; i<win_arg.det_ports; i++)
+				mvwprintw(win_arg.Port_csa[i],1,6, "Port %u (can%u)", i, i);
+				if(!get_port_meas(&Ports_meas[i], i, I2C_BUS_NUM))
 				{
-					mvwprintw(win_arg.Port_csa[i],1,6, "Port %u (can%u)", i, i);
-					if(!get_port_meas(&Ports_meas[i], i, I2C_BUS_NUM))
-					{
-						mvwprintw(win_arg.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(Ports_config[i].last_cal_date));
-						mvwprintw(win_arg.Port_csa[i],3,2, "Voltage = %.1fV", (Ports_meas[i].port_voltage - Ports_config[i].volt_meas_offset)*MAX9611_volt_meas_scaler);
-						mvwprintw(win_arg.Port_csa[i],4,2, "Current = %.3fA", (Ports_meas[i].port_current - Ports_config[i].curr_meas_offset)*Ports_config[i].curr_meas_scaler);
-						mvwprintw(win_arg.Port_csa[i],5,2, "Shunt_Temp = %.1f°C", Ports_meas[i].temperature*MAX9611_temp_scaler);
-					}
-					else
-						mvwprintw(win_arg.Port_csa[i],2,2, "Error !!!");
-					wrefresh(win_arg.Port_csa[i]);
+					mvwprintw(win_arg.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(Ports_config[i].last_cal_date));
+					mvwprintw(win_arg.Port_csa[i],3,2, "Voltage = %.1fV", (Ports_meas[i].port_voltage - Ports_config[i].volt_meas_offset)*MAX9611_volt_meas_scaler);
+					mvwprintw(win_arg.Port_csa[i],4,2, "Current = %.3fA", (Ports_meas[i].port_current - Ports_config[i].curr_meas_offset)*Ports_config[i].curr_meas_scaler);
+					mvwprintw(win_arg.Port_csa[i],5,2, "Shunt_Temp = %.1f°C", Ports_meas[i].temperature*MAX9611_temp_scaler);
 				}
-				wmove(win_arg.UI_term, last_cury, last_curx);
-				curs_set(1);//show curson
-				wrefresh(win_arg.UI_term);
+				else
+					mvwprintw(win_arg.Port_csa[i],2,2, "Error !!!");
+				wrefresh(win_arg.Port_csa[i]);
 			}
+			wmove(win_arg.UI_term, last_cury, last_curx);
+			curs_set(1);//show curson
+			wrefresh(win_arg.UI_term);
 		pthread_mutex_unlock(&ncurses_access);
 		usleep(100000);
 	}
@@ -228,14 +212,6 @@ void w_init(struct windows_init_arg *arg)
 	curs_set(1);//Show cursor
 	getmaxyx(stdscr,term_row,term_col);
 	offset = (term_col - w_csa_stat_info_width*arg->det_ports)/(2*arg->det_ports);
-	//Check if windows pre-exist, if yes delete them
-	for(i=0; i < arg->det_ports; i++)
-	{
-		if(arg->Port_csa[i])
-			delwin(arg->Port_csa[i]);
-	}
-	if(arg->UI_term)
-		delwin(arg->Port_csa[i]);
 	//Create windows for CSA measurements
 	for(i=0; i < arg->det_ports; i++)
 	{
@@ -277,28 +253,12 @@ const char shell_help_str[]={
 	"\tCtrl + I  = print used CAN-if\n"
 	"\tCtrl + Q  = Quit\n"
 	" COMMANDS:\n"
-	"\tstatus (S/N) = Print status of S/N or all pSDAQs without S/N\n"
-	"\tstatus S/N CH# = Print calibration points status of CH# at pSDAQ with S/N\n"
-	"\tget (S/N) = Get the current outputs state\n"
-	"\tset (S/N) on/off = Set a pseudo-SDAQ on or off line\n"
-	"\tset (S/N) address (# || parking) = Set pSDAQ's address\n"
-	"\tset (S/N) amount = Set the amount of channels. Range 1..16\n"
-	"\tset (S/N) (ch# || all) [no]noise = [Re]Set random noise on channel(s)\n"
-	"\tset (S/N) (ch# || all) [no]sensor = [Re]Set No sensor flag(s)\n"
-	"\tset (S/N) (ch# || all) (out || in) = [Re]Set \"out of range\" flag(s)\n"
-	"\tset (S/N) (ch# || all) Real_val = Write value to Channel(s) output\n"
-	"\tset (S/N) (ch# || all) date (now || YYYY/MM/DD) = Write Calibration Date\n"
-	"\tset (S/N) (ch# || all) points # = Write Amount of Calibration points\n"
-	"\tset (S/N) (ch# || all) period # = Write Calibration period\n"
-	"\tset (S/N) (ch# || all) unit # = Write unit code\n"
-	"\tset (S/N) ch# p(oint)# name Real_val = Set Channel's point value\n"
-	"\t\tname := Meas, Ref, Offset, Gain, C2, C3\n"
 };
 
 //SDAQ_psim shell help
 int shell_help()
 {
-	const int height = 30;
+	const int height = 25;
 	const int width = 90;
 	int starty = (LINES - height) / 2;	/* Calculating for a center placement */
 	int startx = (COLS - width) / 2;	/* of the window		*/
@@ -376,7 +336,7 @@ void *UI_shell(void *pass_arg)
 					running = 0;
 					break;
 				case 12 : //Ctrl + l
-					wclean_refresh(UI_shell_win);
+					wclean_refresh_all(win_arg);
 					mvwprintw(UI_shell_win, 1, 1, "][ %s",usr_in_buff);
 					cur_pos = end_index;
 					break;
@@ -385,11 +345,17 @@ void *UI_shell(void *pass_arg)
 					last_cury = getcury(UI_shell_win);
 					retval = shell_help();
 					if(retval)
+					{
 						wprintw(UI_shell_win, "Terminal size too small to print help!!!");
+						mvwprintw(UI_shell_win, last_cury+1, 1, "][ %s",usr_in_buff);
+						wmove(UI_shell_win, last_cury+retval, last_curx);
+					}
 					else
+					{
 						wclean_refresh_all(win_arg);//Re-Init windows
-					mvwprintw(UI_shell_win, last_cury+retval, 1, "][ %s",usr_in_buff);
-					wmove(UI_shell_win, last_cury+retval, last_curx);
+						mvwprintw(UI_shell_win, 1, 1, "][ %s",usr_in_buff);
+						wmove(UI_shell_win, 1, last_curx);
+					}
 					break;
 				case KEY_UP:
 					if((nth_node = g_queue_peek_nth(hist_buffs,history_buffs_index+1)))
@@ -474,6 +440,9 @@ void *UI_shell(void *pass_arg)
 					break;
 				case '\r' :
 				case '\n' ://return or enter : Command decode and execution
+					//clean window if is close to border
+					if(getcury(UI_shell_win) >= getmaxy(UI_shell_win)-2)
+						wclean_refresh(UI_shell_win);
 					usr_in_buff[end_index] = '\0';
 					wmove(UI_shell_win, getcury(UI_shell_win),getcurx(UI_shell_win)+(end_index-cur_pos));
 					argc = user_inp_dec(argv, usr_in_buff);
@@ -493,7 +462,7 @@ void *UI_shell(void *pass_arg)
 				default : //normal key press
 					if(isprint(key))
 					{
-						if(end_index < user_inp_buf_size-1)
+						if(end_index < user_inp_buf_size-2)//Stop store if the buffer is 1 char before the limit 
 						{	//check if cursor has moved from the user
 							if(cur_pos<end_index)
 							{	//roll right side of the buffer by one position
