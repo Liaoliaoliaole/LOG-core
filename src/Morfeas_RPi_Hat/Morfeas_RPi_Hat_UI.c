@@ -14,6 +14,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+#define DEBUG 1
+
 /* Shell command buffer */
 #define user_inp_buf_size 80
 #define max_amount_of_user_arg 20
@@ -70,7 +73,7 @@ void history_buff_free_node(gpointer node)
 }
 //Function for initialiazation of ncurses windows
 void w_init(struct windows_init_arg *arg);
-//Function for decoding printing of last the last calibration date of a Port Surrent sense amplifier. 
+//Function for decoding printing of last the last calibration date of a Port Surrent sense amplifier.
 char *last_calibration_print(struct last_port_calibration_date);
 //function for decode user input
 int user_inp_dec(char **argv, char *usr_in_buff);
@@ -111,7 +114,7 @@ int main(int argc, char *argv[])
 		printf("Terminal need to be at least %dX%d Characters\n",term_min_width,term_min_height);
 		return EXIT_SUCCESS;
 	}
-	
+
 	//Init and Detect amount of CSAs and get config for each
 	win_arg.det_ports=0;
 	for(i=0;i<4;i++)
@@ -123,15 +126,19 @@ int main(int argc, char *argv[])
 				Ports_config[i].curr_meas_scaler = 0.001222; //Default current scaler (for 22 mohm shunt)
 		}
 	}
-	//Exit if no SCA detected
-	if(!win_arg.det_ports)
-	{
-		fprintf(stderr, "No Port Detected!!!\n");
-		exit(EXIT_FAILURE);
-	}
-	
+
+	#if DEBUG
+		win_arg.det_ports=4;
+	#else
+		//Exit if no SCA detected
+		if(!win_arg.det_ports)
+		{
+			fprintf(stderr, "No Port Detected!!!\n");
+			exit(EXIT_FAILURE);
+		}
+	#endif
 	//Start ncurses
-	initscr(); // start the ncurses mode	
+	initscr(); // start the ncurses mode
 	//Init windows
 	w_init(&win_arg);
 	//Create thread for the UI_shell
@@ -141,7 +148,7 @@ int main(int argc, char *argv[])
 	while(running)
 	{
 		pthread_mutex_lock(&ncurses_access);
-			getyx(win_arg.UI_term, last_cury, last_curx); 
+			getyx(win_arg.UI_term, last_cury, last_curx);
 			curs_set(0);//Hide curson
 			for(i=0; i<win_arg.det_ports; i++)
 			{
@@ -173,12 +180,12 @@ char *last_calibration_print(struct last_port_calibration_date last_date)
 {
 	static char buff[10];
 	struct tm last_cal_tm = {0};
-	
+
 	if(!last_date.year &&
 	   !last_date.month &&
 	   !last_date.day)
 	   return "UnCal";
-	   
+
 	last_cal_tm.tm_year = last_date.year - 100;
 	last_cal_tm.tm_mon = last_date.month - 1;
 	last_cal_tm.tm_mday = last_date.day;
@@ -462,7 +469,7 @@ void *UI_shell(void *pass_arg)
 				default : //normal key press
 					if(isprint(key))
 					{
-						if(end_index < user_inp_buf_size-2)//Stop store if the buffer is 1 char before the limit 
+						if(end_index < user_inp_buf_size-2)//Stop store if the buffer is 1 char before the limit
 						{	//check if cursor has moved from the user
 							if(cur_pos<end_index)
 							{	//roll right side of the buffer by one position
