@@ -15,8 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#define DEBUG 1
-
 /* Shell command buffer */
 #define user_inp_buf_size 80
 #define max_amount_of_user_arg 20
@@ -80,7 +78,7 @@ int user_inp_dec(char **argv, char *usr_in_buff);
 //UI_Shell Function
 void *UI_shell(void *UI_term);
 //function for execution of user's command input
-//void user_com(unsigned int argc, char **argv, unsigned int start_sn, unsigned char num_of_pSDAQ, pSDAQ_memory_space *pSDAQs_mem);
+void user_com(unsigned int argc, char **argv, WINDOW *UI_term);
 //SDAQ_psim shell help, return 0 in success or 1 on failure
 int shell_help();
 
@@ -126,17 +124,13 @@ int main(int argc, char *argv[])
 				Ports_config[i].curr_meas_scaler = 0.001222; //Default current scaler (for 22 mohm shunt)
 		}
 	}
+	//Exit if no SCA detected
+	if(!win_arg.det_ports)
+	{
+		fprintf(stderr, "No Port Detected!!!\n");
+		exit(EXIT_FAILURE);
+	}
 
-	#if DEBUG
-		win_arg.det_ports=4;
-	#else
-		//Exit if no SCA detected
-		if(!win_arg.det_ports)
-		{
-			fprintf(stderr, "No Port Detected!!!\n");
-			exit(EXIT_FAILURE);
-		}
-	#endif
 	//Start ncurses
 	initscr(); // start the ncurses mode
 	//Init windows
@@ -156,9 +150,9 @@ int main(int argc, char *argv[])
 				if(!get_port_meas(&Ports_meas[i], i, I2C_BUS_NUM))
 				{
 					mvwprintw(win_arg.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(Ports_config[i].last_cal_date));
-					mvwprintw(win_arg.Port_csa[i],3,2, "Voltage = %.1fV", (Ports_meas[i].port_voltage - Ports_config[i].volt_meas_offset)*MAX9611_volt_meas_scaler);
-					mvwprintw(win_arg.Port_csa[i],4,2, "Current = %.3fA", (Ports_meas[i].port_current - Ports_config[i].curr_meas_offset)*Ports_config[i].curr_meas_scaler);
-					mvwprintw(win_arg.Port_csa[i],5,2, "Shunt_Temp = %.1f°C", Ports_meas[i].temperature*MAX9611_temp_scaler);
+					mvwprintw(win_arg.Port_csa[i],3,2, "Voltage = %5.2fV", (Ports_meas[i].port_voltage - Ports_config[i].volt_meas_offset)*MAX9611_volt_meas_scaler);
+					mvwprintw(win_arg.Port_csa[i],4,2, "Current = %5.3fA", (Ports_meas[i].port_current - Ports_config[i].curr_meas_offset)*Ports_config[i].curr_meas_scaler);
+					mvwprintw(win_arg.Port_csa[i],5,2, "Shunt_Temp = %4.1f°C", Ports_meas[i].temperature*MAX9611_temp_scaler);
 				}
 				else
 					mvwprintw(win_arg.Port_csa[i],2,2, "Error !!!");
@@ -453,7 +447,7 @@ void *UI_shell(void *pass_arg)
 					usr_in_buff[end_index] = '\0';
 					wmove(UI_shell_win, getcury(UI_shell_win),getcurx(UI_shell_win)+(end_index-cur_pos));
 					argc = user_inp_dec(argv, usr_in_buff);
-					//user_com(argc, argv, start_sn, num_of_pSDAQ, pSDAQs_mem);
+					user_com(argc, argv, UI_shell_win);
 					mvwprintw(UI_shell_win, getcury(UI_shell_win)+1, 1, "][ ");
 					end_index = 0;
 					cur_pos = 0;
@@ -469,7 +463,7 @@ void *UI_shell(void *pass_arg)
 				default : //normal key press
 					if(isprint(key))
 					{
-						if(end_index < user_inp_buf_size-2)//Stop store if the buffer is 1 char before the limit
+						if(end_index < user_inp_buf_size-2)//Stop buffering if the currsor is 1 char before the buffer limit
 						{	//check if cursor has moved from the user
 							if(cur_pos<end_index)
 							{	//roll right side of the buffer by one position
@@ -490,4 +484,38 @@ void *UI_shell(void *pass_arg)
 	}
 	g_queue_free_full(hist_buffs,history_buff_free_node);//free the allocated space of the history buffers
 	return NULL;
+}
+
+//function for execution of user's command input
+void user_com(unsigned int argc, char **argv, WINDOW *UI_term)
+{
+	box(UI_term,0,0);
+	switch(argc)
+	{
+		case 2:
+			if(!strcmp(argv[0], "get"))
+			{
+				wprintw(UI_term, "get");
+				return;
+			}
+			else if(!strcmp(argv[0], "save"))
+			{
+				
+			}
+			else if(!strcmp(argv[0], "load"))
+			{
+				
+			}
+			else if(!strcmp(argv[0], "read"))
+			{
+				
+			}
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+	}
+	wprintw(UI_term, "????");
+	return;
 }
