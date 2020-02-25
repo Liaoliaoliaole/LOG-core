@@ -254,12 +254,18 @@ const char shell_help_str[]={
 	"\tCtrl + I  = print used CAN-if\n"
 	"\tCtrl + Q  = Quit\n"
 	" COMMANDS:\n"
+	"\tset p# zero = Set port's current zero offset\n"
+	"\tset p# offset Ref_value = Calulate and Set Port's Voltage offset\n"
+	"\tset p# cgain Ref_value = Calculate and set CSA's gain at Reference value\n"
+	"\tmeas p# = Get and print measurement of Port's CSA\n"
+	"\tget p# = Print current Port's Configuration\n"
+	"\tsave p# = Save Port's configuration to EEPROM\n"
 };
 
 //SDAQ_psim shell help
 int shell_help()
 {
-	const int height = 25;
+	const int height = 20;
 	const int width = 90;
 	int starty = (LINES - height) / 2;	/* Calculating for a center placement */
 	int startx = (COLS - width) / 2;	/* of the window		*/
