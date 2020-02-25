@@ -267,8 +267,8 @@ int shell_help()
 {
 	const int height = 20;
 	const int width = 90;
-	int starty = (LINES - height) / 2;	/* Calculating for a center placement */
-	int startx = (COLS - width) / 2;	/* of the window		*/
+	int starty = (LINES - height) / 2;	
+	int startx = (COLS - width) / 2;
 	int key, scroll_lines=0;
 	if(LINES>=height && COLS>=width)
 	{
