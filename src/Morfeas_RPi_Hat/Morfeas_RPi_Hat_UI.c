@@ -105,14 +105,6 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_init_size);// get current size of terminal window
-	//Check if the terminal have the minimum size for the application
-	if(term_init_size.ws_col<term_min_width || term_init_size.ws_row<term_min_height)
-	{
-		printf("Terminal need to be at least %dX%d Characters\n",term_min_width,term_min_height);
-		return EXIT_SUCCESS;
-	}
-
 	//Init and Detect amount of CSAs and get config for each
 	win_arg.det_ports=0;
 	for(i=0;i<4;i++)
@@ -131,11 +123,19 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	//Check if the terminal have the minimum required size to run the application
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_init_size);// get current size of terminal window
+	if(term_init_size.ws_col<term_min_width || term_init_size.ws_row<term_min_height)
+	{
+		printf("Terminal need to be at least %dX%d Characters\n",term_min_width,term_min_height);
+		return EXIT_SUCCESS;
+	}
+
 	//Start ncurses
-	initscr(); // start the ncurses mode
+	initscr();
 	//Init windows
 	w_init(&win_arg);
-	//Create thread for the UI_shell
+	//Create thread to run function UI_shell
 	pthread_create(&UI_shell_Thread_id, NULL, UI_shell, &win_arg);
 	sleep(1);
 	//Main loop:Read values from Port's SCAs (MAX9611)
@@ -267,7 +267,7 @@ int shell_help()
 {
 	const int height = 20;
 	const int width = 90;
-	int starty = (LINES - height) / 2;	
+	int starty = (LINES - height) / 2;
 	int startx = (COLS - width) / 2;
 	int key, scroll_lines=0;
 	if(LINES>=height && COLS>=width)
@@ -506,15 +506,15 @@ void user_com(unsigned int argc, char **argv, WINDOW *UI_term)
 			}
 			else if(!strcmp(argv[0], "save"))
 			{
-				
+
 			}
 			else if(!strcmp(argv[0], "load"))
 			{
-				
+
 			}
 			else if(!strcmp(argv[0], "read"))
 			{
-				
+
 			}
 			break;
 		case 3:
