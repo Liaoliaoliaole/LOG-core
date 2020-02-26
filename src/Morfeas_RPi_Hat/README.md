@@ -35,6 +35,33 @@ $ sudo make install
 ```
 $ sudo make uninstall
 ```
+### Usage: Morfeas_RPi_Hat
+```
+Usage: Morfeas_RPi_Hat [Options]
+
+	Options:
+	         -h : Print Help
+	         -v : Print Version
+
+		-----Morfeas_RPi_Hat Shell-----
+KEYS:
+ 	KEY_UP    = Buffer up
+	KEY_DOWN  = Buffer Down
+	KEY_LEFT  = Cursor move left by 1
+	KEY_RIGTH = Cursor move Right by 1
+	Ctrl + C  = Clear current buffer
+	Ctrl + L  = Clear screen
+	Ctrl + I  = print used CAN-if
+	Ctrl + Q  = Quit
+COMMANDS:
+	meas p# = Print measurement of Port's CSA
+	config p# = Print current Port's Configuration
+	set p# czero = Set port's current zero offset
+	set p# vzero = Set port's voltage zero offset
+	set p# vgain Ref_value = Calculate and set CSA's voltage gain at Reference value
+	set p# cgain Ref_value = Calculate and set CSA's current gain at Reference value
+	save p# = Save Port's configuration to EEPROM
+```
 
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
