@@ -50,7 +50,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Structs def
 struct app_data{
-	int det_ports;
+	unsigned char det_ports;
+	unsigned char unsaved_fl[4];
 	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config Ports_config[4];
 	struct Morfeas_RPi_Hat_Port_meas Ports_meas[4];
 	WINDOW *Port_csa[4], *UI_term;
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
 	pthread_t UI_shell_Thread_id;
 	//Variables for ncurses
 	int last_curx, last_cury;
-	struct app_data win_arg = {0};
+	struct app_data stats = {0};
 	struct winsize term_init_size;
 
 	//Check if program already runs.
@@ -106,21 +107,21 @@ int main(int argc, char *argv[])
 	}
 
 	//Init and Detect amount of CSAs and get config for each
-	win_arg.det_ports=0;
+	stats.det_ports=0;
 	for(i=0;i<4;i++)
 	{
 		if(!MAX9611_init(i,I2C_BUS_NUM))
 		{
-			win_arg.det_ports++;
-			if(read_port_config(&(win_arg.Ports_config[i]), i, I2C_BUS_NUM))
+			stats.det_ports++;
+			if(read_port_config(&(stats.Ports_config[i]), i, I2C_BUS_NUM))
 			{
-				win_arg.Ports_config[i].curr_meas_scaler = MAX9611_default_current_meas_scaler; 
-				win_arg.Ports_config[i].volt_meas_scaler = MAX9611_default_volt_meas_scaler;
+				stats.Ports_config[i].curr_meas_scaler = MAX9611_default_current_meas_scaler; 
+				stats.Ports_config[i].volt_meas_scaler = MAX9611_default_volt_meas_scaler;
 			}
 		}
 	}
 	//Exit if no SCA detected
-	if(!win_arg.det_ports)
+	if(!stats.det_ports)
 	{
 		fprintf(stderr, "No Port Detected!!!\n");
 		exit(EXIT_FAILURE);
@@ -137,33 +138,37 @@ int main(int argc, char *argv[])
 	//Start ncurses
 	initscr();
 	//Init windows
-	w_init(&win_arg);
+	w_init(&stats);
 	//Create thread to run function UI_shell
-	pthread_create(&UI_shell_Thread_id, NULL, UI_shell, &win_arg);
+	pthread_create(&UI_shell_Thread_id, NULL, UI_shell, &stats);
 	sleep(1);
 	//Main loop:Read values from Port's SCAs (MAX9611)
 	while(running)
 	{
 		pthread_mutex_lock(&ncurses_access);
-			getyx(win_arg.UI_term, last_cury, last_curx);
+			getyx(stats.UI_term, last_cury, last_curx);
 			curs_set(0);//Hide curson
-			for(i=0; i<win_arg.det_ports; i++)
+			for(i=0; i<stats.det_ports; i++)
 			{
-				mvwprintw(win_arg.Port_csa[i],1,6, "Port %u (can%u)", i, i);
-				if(!get_port_meas(&(win_arg.Ports_meas[i]), i, I2C_BUS_NUM))
+				mvwprintw(stats.Port_csa[i],1,6, "Port %u (can%u)", i, i);
+				if(!get_port_meas(&(stats.Ports_meas[i]), i, I2C_BUS_NUM))
 				{
-					mvwprintw(win_arg.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(win_arg.Ports_config[i].last_cal_date));
-					mvwprintw(win_arg.Port_csa[i],3,2, "Voltage = %5.2fV", (win_arg.Ports_meas[i].port_voltage - win_arg.Ports_config[i].volt_meas_offset) * win_arg.Ports_config[i].volt_meas_scaler);
-					mvwprintw(win_arg.Port_csa[i],4,2, "Current = %5.3fA", (win_arg.Ports_meas[i].port_current - win_arg.Ports_config[i].curr_meas_offset) * win_arg.Ports_config[i].curr_meas_scaler);
-					mvwprintw(win_arg.Port_csa[i],5,2, "Shunt_Temp = %4.1f°C", win_arg.Ports_meas[i].temperature * MAX9611_temp_scaler);
+					mvwprintw(stats.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(stats.Ports_config[i].last_cal_date));
+					mvwprintw(stats.Port_csa[i],3,2, "Voltage = %5.2fV ", (stats.Ports_meas[i].port_voltage - stats.Ports_config[i].volt_meas_offset) * stats.Ports_config[i].volt_meas_scaler);
+					mvwprintw(stats.Port_csa[i],4,2, "Current = %5.3fA ", (stats.Ports_meas[i].port_current - stats.Ports_config[i].curr_meas_offset) * stats.Ports_config[i].curr_meas_scaler);
+					mvwprintw(stats.Port_csa[i],5,2, "Shunt_Temp = %4.1f°C ", stats.Ports_meas[i].temperature * MAX9611_temp_scaler);
+					if(stats.unsaved_fl[i])
+						mvwprintw(stats.Port_csa[i],6,2, "\tUn-Saved");
+					else
+						mvwprintw(stats.Port_csa[i],6,2, "\t\t");
 				}
 				else
-					mvwprintw(win_arg.Port_csa[i],2,2, "Error !!!");
-				wrefresh(win_arg.Port_csa[i]);
+					mvwprintw(stats.Port_csa[i],2,2, "Error !!!");
+				wrefresh(stats.Port_csa[i]);
 			}
-			wmove(win_arg.UI_term, last_cury, last_curx);
+			wmove(stats.UI_term, last_cury, last_curx);
 			curs_set(1);//show curson
-			wrefresh(win_arg.UI_term);
+			wrefresh(stats.UI_term);
 		pthread_mutex_unlock(&ncurses_access);
 		usleep(100000);
 	}
@@ -188,6 +193,17 @@ char *last_calibration_print(struct last_port_calibration_date last_date)
 	last_cal_tm.tm_mday = last_date.day;
 	strftime(buff, sizeof(buff), "%x", &last_cal_tm);
 	return buff;
+}
+
+void last_calibration(struct last_port_calibration_date *last_date)
+{
+	time_t now = time(NULL);
+	struct tm *cal_tm = gmtime(&now);
+
+	last_date->year = cal_tm->tm_year + 100;
+	last_date->month = cal_tm->tm_mon + 1;
+	last_date->day = cal_tm->tm_mday;
+	return;
 }
 
 void wclean_refresh(WINDOW *ptr)
@@ -247,8 +263,8 @@ int user_inp_dec(char **arg, char *usr_in_buff)
 
 const char shell_help_str[]={
 	"\t\t\t      -----Morfeas_RPi_Hat Shell-----\n"
-	" KEYS:"
-	"  KEY_UP    = Buffer up\n"
+	" KEYS:\n"
+	" \tKEY_UP    = Buffer up\n"
 	"\tKEY_DOWN  = Buffer Down\n"
 	"\tKEY_LEFT  = Cursor move left by 1\n"
 	"\tKEY_RIGTH = Cursor move Right by 1\n"
@@ -257,18 +273,19 @@ const char shell_help_str[]={
 	"\tCtrl + I  = print used CAN-if\n"
 	"\tCtrl + Q  = Quit\n"
 	" COMMANDS:\n"
-	"\tset p# zero = Set port's current zero offset\n"
-	"\tset p# offset Ref_value = Calulate and Set Port's Voltage offset\n"
-	"\tset p# cgain Ref_value = Calculate and set CSA's gain at Reference value\n"
-	"\tmeas p# = Get and print measurement of Port's CSA\n"
-	"\tget p# = Print current Port's Configuration\n"
+	"\tmeas p# = Print measurement of Port's CSA\n"
+	"\tconfig p# = Print current Port's Configuration\n"
+	"\tset p# czero = Set port's current zero offset\n"
+	"\tset p# vzero = Set port's voltage zero offset\n"
+	"\tset p# vgain Ref_value = Calculate and set CSA's voltage gain at Reference value\n"
+	"\tset p# cgain Ref_value = Calculate and set CSA's current gain at Reference value\n"
 	"\tsave p# = Save Port's configuration to EEPROM\n"
 };
 
 //SDAQ_psim shell help
 int shell_help()
 {
-	const int height = 20;
+	const int height = 22;
 	const int width = 90;
 	int starty = (LINES - height) / 2;
 	int startx = (COLS - width) / 2;
@@ -503,7 +520,6 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 	float val_arg;
 	if(argc>=2)
 	{
-		box(arg->UI_term,0,0);
 		if(strlen(argv[1]) == 2 &&(argv[1][0]=='p' || argv[1][0]=='P') && (argv[1][1]>='0' || argv[1][1]<='4'))
 		{
 			if((port = argv[1][1] - '0') < arg->det_ports)
@@ -511,21 +527,47 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 				switch(argc)
 				{
 					case 2:
-						if(!strcmp(argv[0], "get"))
+						if(!strcmp(argv[0], "config"))
 						{
-							
+							if(!arg->Ports_config[port].last_cal_date.year &&
+							   !arg->Ports_config[port].last_cal_date.month &&
+							   !arg->Ports_config[port].last_cal_date.day)
+							{
+								wprintw(arg->UI_term, " Default");
+								return;
+							}
+							wprintw(arg->UI_term, " Volt_meas_offset=%hhu", arg->Ports_config[port].volt_meas_offset);
+							wprintw(arg->UI_term, " Volt_meas_scale=%.2E", arg->Ports_config[port].volt_meas_scaler);
+							wprintw(arg->UI_term, " Curr_meas_offset=%hhu", arg->Ports_config[port].curr_meas_offset);
+							wprintw(arg->UI_term, " Curr_meas_scale=%.2E", arg->Ports_config[port].curr_meas_scaler);
+							return;
 						}
 						else if(!strcmp(argv[0], "save"))
 						{
-
+							if(arg->unsaved_fl[port])
+							{
+								last_calibration(&(arg->Ports_config[port].last_cal_date));
+								if(!erase_EEPROM(port, I2C_BUS_NUM))
+								{
+									if(!write_port_config(&(arg->Ports_config[port]), port, I2C_BUS_NUM))
+									{
+										wprintw(arg->UI_term, " Configuration saved");
+										arg->unsaved_fl[port]=0;
+									}
+								}
+								else
+									wprintw(arg->UI_term, " EEPROM Erasing Failed!!!");
+								return;
+							}
 						}
-						else if(!strcmp(argv[0], "load"))
+						else if(!strcmp(argv[0], "meas"))
 						{
-
-						}
-						else if(!strcmp(argv[0], "read"))
-						{
-
+							wprintw(arg->UI_term, " Volt_meas=%.2fV", (arg->Ports_meas[port].port_voltage - arg->Ports_config[port].volt_meas_offset) * arg->Ports_config[port].volt_meas_scaler);
+							wprintw(arg->UI_term, " Curr_meas=%.3fA", (arg->Ports_meas[port].port_current - arg->Ports_config[port].curr_meas_offset) * arg->Ports_config[port].curr_meas_scaler);
+							wprintw(arg->UI_term, " CSA_out=%.2fV", (arg->Ports_meas[port].output - arg->Ports_config[port].volt_meas_offset) * arg->Ports_config[port].volt_meas_scaler);
+							wprintw(arg->UI_term, " Comp_ref=%.2fmV", arg->Ports_meas[port].set_val * MAX9611_comp_scaler * MAX9611_default_volt_meas_scaler/arg->Ports_config[port].volt_meas_scaler);
+							wprintw(arg->UI_term, " Die_temp=%.1f°C", arg->Ports_meas[port].temperature * MAX9611_temp_scaler);
+							return;
 						}
 						break;
 					case 3:
@@ -534,11 +576,13 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 							if(!strcmp(argv[2], "czero"))
 							{
 								arg->Ports_config[port].curr_meas_offset = arg->Ports_meas[port].port_current;
+								arg->unsaved_fl[port]=1;
 								return;
 							}
 							else if(!strcmp(argv[2], "vzero"))
 							{
 								arg->Ports_config[port].volt_meas_offset = arg->Ports_meas[port].port_voltage;
+								arg->unsaved_fl[port]=1;
 								return;
 							}
 						}
@@ -546,23 +590,21 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 					case 4:
 						if(!strcmp(argv[0], "set"))
 						{
-							if(port>=0 && port<4)
+							val_arg = atof(argv[3]);
+							sprintf(test_buff, "%.3f", val_arg);
+							if(strstr(test_buff, argv[3]))//sanitize val_arg
 							{
-								val_arg = atof(argv[3]);
-								sprintf(test_buff, "%f", val_arg);
-								if(strstr(test_buff, argv[3]))//sanitize val_arg
+								if(!strcmp(argv[2], "vgain"))
 								{
-									if(!strcmp(argv[2], "vgain"))
-									{
-										val_arg /= arg->Ports_meas[port].port_voltage;
-										wprintw(arg->UI_term, " meas_raw= %d calc_vgain=%d", arg->Ports_meas[port].port_voltage, (int)val_arg);
-										arg->Ports_config[port].volt_meas_scaler = val_arg;
-										return;
-									}
-									else if(!strcmp(argv[2], "cgain"))
-									{
-										
-									}
+									arg->Ports_config[port].volt_meas_scaler = val_arg / (arg->Ports_meas[port].port_voltage - arg->Ports_config[port].volt_meas_offset);
+									arg->unsaved_fl[port]=1;
+									return;
+								}
+								else if(!strcmp(argv[2], "cgain"))
+								{
+									arg->Ports_config[port].curr_meas_scaler = val_arg / (arg->Ports_meas[port].port_current - arg->Ports_config[port].curr_meas_offset);
+									arg->unsaved_fl[port]=1;
+									return;
 								}
 							}
 						}
@@ -571,6 +613,6 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 			}
 		}
 	}
-	wprintw(arg->UI_term, "????");
+	wprintw(arg->UI_term, " ????");
 	return;
 }
