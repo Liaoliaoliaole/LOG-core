@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
 					{
 						if(!(status_dec->status&0x85))//Enter: if SDAQ of sdaq_id_dec->device_addr is: standby, no error and normal mode
 						{
-							if(SDAQ_data->info_collection_status < 3)//request QueryDeviceInfo on entries if no all SDAQ's info is filled
+							if(!SDAQ_data->info_collection_status)//request QueryDeviceInfo on entries if no all SDAQ's info is filled
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
