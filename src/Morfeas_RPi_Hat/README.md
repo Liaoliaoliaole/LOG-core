@@ -42,6 +42,7 @@ Usage: Morfeas_RPi_Hat [Options]
 	Options:
 	         -h : Print Help
 	         -v : Print Version
+	         -b : I2C Bus number (default 1)
 
 		-----Morfeas_RPi_Hat Shell-----
 KEYS:
@@ -55,7 +56,7 @@ KEYS:
 	Ctrl + Q  = Quit
 COMMANDS:
 	meas p# = Print measurement of Port's CSA
-	config p# = Print current Port's Configuration
+	config p# = Print Port's Configuration
 	set p# czero = Set port's current zero offset
 	set p# vzero = Set port's voltage zero offset
 	set p# vgain Ref_value = Calculate and set CSA's voltage gain at Reference value

@@ -52,6 +52,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Structs def
 struct app_data{
 	unsigned char det_ports;
+	unsigned char i2c_bus;
 	unsigned char unsaved_fl[4];
 	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config Ports_config[4];
 	struct Morfeas_RPi_Hat_Port_meas Ports_meas[4];
@@ -94,11 +95,11 @@ int main(int argc, char *argv[])
 	pthread_t UI_shell_Thread_id;
 	//Variables for ncurses
 	int last_curx, last_cury;
-	struct app_data stats = {0};
+	struct app_data stats = {.i2c_bus=I2C_BUS_NUM};
 	struct winsize term_init_size;
 
 	opterr = 1;
-	while ((c = getopt (argc, argv, "hvls:c:")) != -1)
+	while ((c = getopt (argc, argv, "hvb:")) != -1)
 	{
 		switch (c)
 		{
@@ -108,6 +109,9 @@ int main(int argc, char *argv[])
 			case 'v'://Version
 				printf(VERSION"\n");
 				exit(EXIT_SUCCESS);
+			case 'b':
+				stats.i2c_bus=atoi(optarg);
+				break;
 			case '?':
 				//print_usage(argv[0]);
 				exit(EXIT_FAILURE);
@@ -131,10 +135,10 @@ int main(int argc, char *argv[])
 	stats.det_ports=0;
 	for(i=0;i<4;i++)
 	{
-		if(!MAX9611_init(i,I2C_BUS_NUM))
+		if(!MAX9611_init(i,stats.i2c_bus))
 		{
 			stats.det_ports++;
-			if(read_port_config(&(stats.Ports_config[i]), i, I2C_BUS_NUM))
+			if(read_port_config(&(stats.Ports_config[i]), i, stats.i2c_bus))
 			{
 				stats.Ports_config[i].curr_meas_scaler = MAX9611_default_current_meas_scaler;
 				stats.Ports_config[i].volt_meas_scaler = MAX9611_default_volt_meas_scaler;
@@ -172,7 +176,7 @@ int main(int argc, char *argv[])
 			for(i=0; i<stats.det_ports; i++)
 			{
 				mvwprintw(stats.Port_csa[i],1,6, "Port %u (can%u)", i, i);
-				if(!get_port_meas(&(stats.Ports_meas[i]), i, I2C_BUS_NUM))
+				if(!get_port_meas(&(stats.Ports_meas[i]), i, stats.i2c_bus))
 				{
 					mvwprintw(stats.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(stats.Ports_config[i].last_cal_date));
 					mvwprintw(stats.Port_csa[i],3,2, "Voltage = %5.2fV ", (stats.Ports_meas[i].port_voltage - stats.Ports_config[i].volt_meas_offset) * stats.Ports_config[i].volt_meas_scaler);
@@ -285,7 +289,7 @@ int user_inp_dec(char **arg, char *usr_in_buff)
 }
 
 const char shell_help_str[]={
-	"\t\t\t      -----Morfeas_RPi_Hat Shell-----\n"
+	"\t      -----Morfeas_RPi_Hat Shell-----\n"
 	" KEYS:\n"
 	" \tKEY_UP    = Buffer up\n"
 	"\tKEY_DOWN  = Buffer Down\n"
@@ -297,7 +301,7 @@ const char shell_help_str[]={
 	"\tCtrl + Q  = Quit\n"
 	" COMMANDS:\n"
 	"\tmeas p# = Print measurement of Port's CSA\n"
-	"\tconfig p# = Print current Port's Configuration\n"
+	"\tconfig p# = Print Port's Configuration\n"
 	"\tset p# czero = Set port's current zero offset\n"
 	"\tset p# vzero = Set port's voltage zero offset\n"
 	"\tset p# vgain Ref_value = Calculate and set CSA's voltage gain at Reference value\n"
@@ -573,9 +577,9 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 							if(arg->unsaved_fl[port])
 							{
 								last_calibration(&(arg->Ports_config[port].last_cal_date));
-								if(!erase_EEPROM(port, I2C_BUS_NUM))
+								if(!erase_EEPROM(port, arg->i2c_bus))
 								{
-									if(!write_port_config(&(arg->Ports_config[port]), port, I2C_BUS_NUM))
+									if(!write_port_config(&(arg->Ports_config[port]), port, arg->i2c_bus))
 									{
 										wprintw(arg->UI_term, " Configuration saved");
 										arg->unsaved_fl[port]=0;
@@ -656,6 +660,7 @@ void print_usage(char *prog_name)
 	"\tOptions:\n"
 	"\t         -h : Print Help\n"
 	"\t         -v : Print Version\n"
+	"\t         -b : I2C Bus number (default 1)\n"
 	};
 	printf("%s\nUsage: %s [Options]\n\n%s\n%s\n", preamp, prog_name, exp, shell_help_str);
 	return;
