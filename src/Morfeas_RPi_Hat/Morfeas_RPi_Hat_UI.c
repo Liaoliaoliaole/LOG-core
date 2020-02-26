@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define VERSION "1.0" /*Release Version of Morfeas_RPi_Hat support software*/
 
 /* Shell command buffer */
 #define user_inp_buf_size 80
@@ -70,6 +71,9 @@ void history_buff_free_node(gpointer node)
 {
 	g_slice_free(history_buffer_entry, node);
 }
+//print usage function
+void print_usage(char *prog_name);
+
 //Function for initialiazation of ncurses windows
 void w_init(struct app_data *arg);
 //Function for decoding printing of last the last calibration date of a Port Surrent sense amplifier.
@@ -85,13 +89,30 @@ int shell_help();
 
 int main(int argc, char *argv[])
 {
-	int i;
+	int i,c;
 	//variables for threads
 	pthread_t UI_shell_Thread_id;
 	//Variables for ncurses
 	int last_curx, last_cury;
 	struct app_data stats = {0};
 	struct winsize term_init_size;
+
+	opterr = 1;
+	while ((c = getopt (argc, argv, "hvls:c:")) != -1)
+	{
+		switch (c)
+		{
+			case 'h'://help
+				print_usage(argv[0]);
+				exit(EXIT_SUCCESS);
+			case 'v'://Version
+				printf(VERSION"\n");
+				exit(EXIT_SUCCESS);
+			case '?':
+				//print_usage(argv[0]);
+				exit(EXIT_FAILURE);
+		}
+	}
 
 	//Check if program already runs.
 	if(check_already_run(argv[0]))
@@ -115,7 +136,7 @@ int main(int argc, char *argv[])
 			stats.det_ports++;
 			if(read_port_config(&(stats.Ports_config[i]), i, I2C_BUS_NUM))
 			{
-				stats.Ports_config[i].curr_meas_scaler = MAX9611_default_current_meas_scaler; 
+				stats.Ports_config[i].curr_meas_scaler = MAX9611_default_current_meas_scaler;
 				stats.Ports_config[i].volt_meas_scaler = MAX9611_default_volt_meas_scaler;
 			}
 		}
@@ -177,6 +198,8 @@ int main(int argc, char *argv[])
 
 	return EXIT_SUCCESS;
 }
+
+
 
 char *last_calibration_print(struct last_port_calibration_date last_date)
 {
@@ -619,3 +642,22 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 	wprintw(arg->UI_term, " ????");
 	return;
 }
+
+
+void print_usage(char *prog_name)
+{
+	const char preamp[] = {
+	"Program: Morfeas_RPi_Hat  Copyright (C) 12019-12020  Sam Harry Tzavaras\n"
+    "This program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE.\n"
+    "This is free software, and you are welcome to redistribute it\n"
+    "under certain conditions; for details see LICENSE.\n"
+	};
+	const char exp[] = {
+	"\tOptions:\n"
+	"\t         -h : Print Help\n"
+	"\t         -v : Print Version\n"
+	};
+	printf("%s\nUsage: %s [Options]\n\n%s\n%s\n", preamp, prog_name, exp, shell_help_str);
+	return;
+}
+
