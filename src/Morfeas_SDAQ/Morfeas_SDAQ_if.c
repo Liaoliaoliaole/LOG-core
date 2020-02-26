@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 			if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
 			{
 				flags.port_meas_existen = 1;
-				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month, port_meas_config.last_cal_date.day, port_meas_config.last_cal_date.year+2000);
+				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month, port_meas_config.last_cal_date.day, port_meas_config.last_cal_date.year+12000);
 			}
 			else
 				Logger(Morfeas_hat_error());
