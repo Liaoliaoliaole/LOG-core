@@ -469,7 +469,10 @@ void *UI_shell(void *pass_arg)
 				case '\n' ://return or enter : Command decode and execution
 					//clean window if is close to border
 					if(getcury(UI_shell_win) >= getmaxy(UI_shell_win)-2)
-						wclean_refresh(UI_shell_win);
+					{
+						wclean_refresh_all(app_arg);
+						mvwprintw(UI_shell_win, 1, 1, "][ %s",usr_in_buff);
+					}
 					usr_in_buff[end_index] = '\0';
 					wmove(UI_shell_win, getcury(UI_shell_win),getcurx(UI_shell_win)+(end_index-cur_pos));
 					argc = user_inp_dec(argv, usr_in_buff);

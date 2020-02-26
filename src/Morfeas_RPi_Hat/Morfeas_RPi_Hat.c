@@ -103,7 +103,7 @@ int led_init(char *CAN_IF_name)
 				Morfeas_hat_error_num = LED_no_support;
 				return 0;
 			}
-			pin = i ? YELLOW_LED : RED_LED;
+			pin = i ? BLUE_LED : RED_LED;
 			bytes_written = snprintf(buffer, 3, "%d", pin);
 			write(sysfs_fd, buffer, bytes_written);
 			close(sysfs_fd);
@@ -112,7 +112,7 @@ int led_init(char *CAN_IF_name)
 		//Set direction of GPIOs
 		for(i=0; i<2; i++)
 		{
-			pin = i ? YELLOW_LED : RED_LED;
+			pin = i ? BLUE_LED : RED_LED;
 			snprintf(path, 35, "/sys/class/gpio/gpio%d/direction", pin);
 			sysfs_fd = open(path, O_WRONLY);
 			if(sysfs_fd < 0)

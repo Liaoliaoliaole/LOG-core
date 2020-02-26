@@ -453,7 +453,7 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	if(stats->Bus_util>95.0)
 	{
 		if(flags.led_existent)
-			GPIOWrite(YELLOW_LED, 1);
+			GPIOWrite(BLUE_LED, 1);
 		if(!leds_status.Bus_util)
 			Logger("Bus Utilization is in High Level(>95%%) !!!!\n");
 		leds_status.Bus_util = 1;
@@ -461,7 +461,7 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	else if(stats->Bus_util<=80.0 && leds_status.Bus_util)
 	{
 		if(flags.led_existent)
-			GPIOWrite(YELLOW_LED, 0);
+			GPIOWrite(BLUE_LED, 0);
 		leds_status.Bus_util = 0;
 		Logger("Bus Utilization restore to Normal Level(<80%%)!!!!\n");
 	}
