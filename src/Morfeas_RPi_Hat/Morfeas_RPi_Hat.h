@@ -19,7 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define I2C_BUS_NUM 1
 #define MAX9611_temp_scaler 0.48
-#define MAX9611_volt_meas_scaler 0.014
+#define MAX9611_default_volt_meas_scaler 0.014 
+#define MAX9611_default_current_meas_scaler 0.001222 //for 22 mohm shunt
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
 
@@ -54,6 +55,7 @@ struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 		unsigned char day;
 	}last_cal_date;
 	char volt_meas_offset;
+	float volt_meas_scaler;
 	char curr_meas_offset;
 	float curr_meas_scaler;
 	unsigned char checksum;

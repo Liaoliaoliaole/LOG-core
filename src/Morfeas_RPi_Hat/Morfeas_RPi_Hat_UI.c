@@ -49,8 +49,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Morfeas_RPi_Hat.h"
 
 //Structs def
-struct windows_init_arg{
+struct app_data{
 	int det_ports;
+	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config Ports_config[4];
+	struct Morfeas_RPi_Hat_Port_meas Ports_meas[4];
 	WINDOW *Port_csa[4], *UI_term;
 };
 typedef struct{
@@ -60,8 +62,6 @@ typedef struct{
 //Global variables
 pthread_mutex_t ncurses_access = PTHREAD_MUTEX_INITIALIZER;
 volatile unsigned char running = 1, term_resize = 0;
-struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config Ports_config[4] = {0};
-struct Morfeas_RPi_Hat_Port_meas Ports_meas[4] = {0};
 
 /* --- Local Functions --- */
 //slice free function for history_buffs_nodes
@@ -70,7 +70,7 @@ void history_buff_free_node(gpointer node)
 	g_slice_free(history_buffer_entry, node);
 }
 //Function for initialiazation of ncurses windows
-void w_init(struct windows_init_arg *arg);
+void w_init(struct app_data *arg);
 //Function for decoding printing of last the last calibration date of a Port Surrent sense amplifier.
 char *last_calibration_print(struct last_port_calibration_date);
 //function for decode user input
@@ -78,7 +78,7 @@ int user_inp_dec(char **argv, char *usr_in_buff);
 //UI_Shell Function
 void *UI_shell(void *UI_term);
 //function for execution of user's command input
-void user_com(unsigned int argc, char **argv, WINDOW *UI_term);
+void user_com(unsigned int argc, char **argv, struct app_data *arg);
 //SDAQ_psim shell help, return 0 in success or 1 on failure
 int shell_help();
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 	pthread_t UI_shell_Thread_id;
 	//Variables for ncurses
 	int last_curx, last_cury;
-	struct windows_init_arg win_arg = {0};
+	struct app_data win_arg = {0};
 	struct winsize term_init_size;
 
 	//Check if program already runs.
@@ -112,8 +112,11 @@ int main(int argc, char *argv[])
 		if(!MAX9611_init(i,I2C_BUS_NUM))
 		{
 			win_arg.det_ports++;
-			if(read_port_config(&Ports_config[i], i, I2C_BUS_NUM))
-				Ports_config[i].curr_meas_scaler = 0.001222; //Default current scaler (for 22 mohm shunt)
+			if(read_port_config(&(win_arg.Ports_config[i]), i, I2C_BUS_NUM))
+			{
+				win_arg.Ports_config[i].curr_meas_scaler = MAX9611_default_current_meas_scaler; 
+				win_arg.Ports_config[i].volt_meas_scaler = MAX9611_default_volt_meas_scaler;
+			}
 		}
 	}
 	//Exit if no SCA detected
@@ -147,12 +150,12 @@ int main(int argc, char *argv[])
 			for(i=0; i<win_arg.det_ports; i++)
 			{
 				mvwprintw(win_arg.Port_csa[i],1,6, "Port %u (can%u)", i, i);
-				if(!get_port_meas(&Ports_meas[i], i, I2C_BUS_NUM))
+				if(!get_port_meas(&(win_arg.Ports_meas[i]), i, I2C_BUS_NUM))
 				{
-					mvwprintw(win_arg.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(Ports_config[i].last_cal_date));
-					mvwprintw(win_arg.Port_csa[i],3,2, "Voltage = %5.2fV", (Ports_meas[i].port_voltage - Ports_config[i].volt_meas_offset)*MAX9611_volt_meas_scaler);
-					mvwprintw(win_arg.Port_csa[i],4,2, "Current = %5.3fA", (Ports_meas[i].port_current - Ports_config[i].curr_meas_offset)*Ports_config[i].curr_meas_scaler);
-					mvwprintw(win_arg.Port_csa[i],5,2, "Shunt_Temp = %4.1f°C", Ports_meas[i].temperature*MAX9611_temp_scaler);
+					mvwprintw(win_arg.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(win_arg.Ports_config[i].last_cal_date));
+					mvwprintw(win_arg.Port_csa[i],3,2, "Voltage = %5.2fV", (win_arg.Ports_meas[i].port_voltage - win_arg.Ports_config[i].volt_meas_offset) * win_arg.Ports_config[i].volt_meas_scaler);
+					mvwprintw(win_arg.Port_csa[i],4,2, "Current = %5.3fA", (win_arg.Ports_meas[i].port_current - win_arg.Ports_config[i].curr_meas_offset) * win_arg.Ports_config[i].curr_meas_scaler);
+					mvwprintw(win_arg.Port_csa[i],5,2, "Shunt_Temp = %4.1f°C", win_arg.Ports_meas[i].temperature * MAX9611_temp_scaler);
 				}
 				else
 					mvwprintw(win_arg.Port_csa[i],2,2, "Error !!!");
@@ -195,7 +198,7 @@ void wclean_refresh(WINDOW *ptr)
 	return;
 }
 
-void wclean_refresh_all(struct windows_init_arg *arg)
+void wclean_refresh_all(struct app_data *arg)
 {
 	for(int i=0; i < arg->det_ports; i++)
 		wclean_refresh(arg->Port_csa[i]);
@@ -203,7 +206,7 @@ void wclean_refresh_all(struct windows_init_arg *arg)
 	return;
 }
 
-void w_init(struct windows_init_arg *arg)
+void w_init(struct app_data *arg)
 {
 	int term_col,term_row, offset, i;
 	noecho();//disable echo
@@ -309,8 +312,8 @@ int shell_help()
 //Implementation of the user's Interface Shell function
 void *UI_shell(void *pass_arg)
 {
-	struct windows_init_arg *win_arg = pass_arg;
-	WINDOW *UI_shell_win = win_arg->UI_term;
+	struct app_data *app_arg = pass_arg;
+	WINDOW *UI_shell_win = app_arg->UI_term;
 	unsigned int end_index=0, cur_pos=0, key, argc, last_curx, last_cury, history_buffs_index=0, retval;
 	char *argv[max_amount_of_user_arg] = {NULL};
 	GQueue *hist_buffs = g_queue_new();
@@ -343,7 +346,7 @@ void *UI_shell(void *pass_arg)
 					running = 0;
 					break;
 				case 12 : //Ctrl + l
-					wclean_refresh_all(win_arg);
+					wclean_refresh_all(app_arg);
 					mvwprintw(UI_shell_win, 1, 1, "][ %s",usr_in_buff);
 					cur_pos = end_index;
 					break;
@@ -359,7 +362,7 @@ void *UI_shell(void *pass_arg)
 					}
 					else
 					{
-						wclean_refresh_all(win_arg);//Re-Init windows
+						wclean_refresh_all(app_arg);//Re-Init windows
 						mvwprintw(UI_shell_win, 1, 1, "][ %s",usr_in_buff);
 						wmove(UI_shell_win, 1, last_curx);
 					}
@@ -453,7 +456,7 @@ void *UI_shell(void *pass_arg)
 					usr_in_buff[end_index] = '\0';
 					wmove(UI_shell_win, getcury(UI_shell_win),getcurx(UI_shell_win)+(end_index-cur_pos));
 					argc = user_inp_dec(argv, usr_in_buff);
-					user_com(argc, argv, UI_shell_win);
+					user_com(argc, argv, app_arg);
 					mvwprintw(UI_shell_win, getcury(UI_shell_win)+1, 1, "][ ");
 					end_index = 0;
 					cur_pos = 0;
@@ -493,35 +496,81 @@ void *UI_shell(void *pass_arg)
 }
 
 //function for execution of user's command input
-void user_com(unsigned int argc, char **argv, WINDOW *UI_term)
+void user_com(unsigned int argc, char **argv, struct app_data *arg)
 {
-	box(UI_term,0,0);
-	switch(argc)
+	char test_buff[user_inp_buf_size];
+	unsigned char port;
+	float val_arg;
+	if(argc>=2)
 	{
-		case 2:
-			if(!strcmp(argv[0], "get"))
+		box(arg->UI_term,0,0);
+		if(strlen(argv[1]) == 2 &&(argv[1][0]=='p' || argv[1][0]=='P') && (argv[1][1]>='0' || argv[1][1]<='4'))
+		{
+			if((port = argv[1][1] - '0') < arg->det_ports)
 			{
-				wprintw(UI_term, "get");
-				return;
-			}
-			else if(!strcmp(argv[0], "save"))
-			{
+				switch(argc)
+				{
+					case 2:
+						if(!strcmp(argv[0], "get"))
+						{
+							
+						}
+						else if(!strcmp(argv[0], "save"))
+						{
 
-			}
-			else if(!strcmp(argv[0], "load"))
-			{
+						}
+						else if(!strcmp(argv[0], "load"))
+						{
 
-			}
-			else if(!strcmp(argv[0], "read"))
-			{
+						}
+						else if(!strcmp(argv[0], "read"))
+						{
 
+						}
+						break;
+					case 3:
+						if(!strcmp(argv[0], "set"))
+						{
+							if(!strcmp(argv[2], "czero"))
+							{
+								arg->Ports_config[port].curr_meas_offset = arg->Ports_meas[port].port_current;
+								return;
+							}
+							else if(!strcmp(argv[2], "vzero"))
+							{
+								arg->Ports_config[port].volt_meas_offset = arg->Ports_meas[port].port_voltage;
+								return;
+							}
+						}
+						break;
+					case 4:
+						if(!strcmp(argv[0], "set"))
+						{
+							if(port>=0 && port<4)
+							{
+								val_arg = atof(argv[3]);
+								sprintf(test_buff, "%f", val_arg);
+								if(strstr(test_buff, argv[3]))//sanitize val_arg
+								{
+									if(!strcmp(argv[2], "vgain"))
+									{
+										val_arg /= arg->Ports_meas[port].port_voltage;
+										wprintw(arg->UI_term, " meas_raw= %d calc_vgain=%d", arg->Ports_meas[port].port_voltage, (int)val_arg);
+										arg->Ports_config[port].volt_meas_scaler = val_arg;
+										return;
+									}
+									else if(!strcmp(argv[2], "cgain"))
+									{
+										
+									}
+								}
+							}
+						}
+						break;
+				}
 			}
-			break;
-		case 3:
-			break;
-		case 4:
-			break;
+		}
 	}
-	wprintw(UI_term, "????");
+	wprintw(arg->UI_term, "????");
 	return;
 }

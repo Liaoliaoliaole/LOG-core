@@ -230,19 +230,20 @@ int main(int argc, char *argv[])
 	stats.port = get_port_num(stats.CAN_IF_name);
 	if(stats.port>=0 && stats.port<=3)
 	{
-		if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
+		//Init SDAQ_NET Port's CSA
+		if(!MAX9611_init(stats.port, I2C_BUS_NUM))
 		{
-			//Init SDAQ_NET Port's CSA
-			if(!MAX9611_init(stats.port, I2C_BUS_NUM))
+			//Read Port's CSA Configuration from EEPROM
+			if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
 				flags.port_meas_existen = 1;
 			else
-			{
 				Logger(Morfeas_hat_error());
-				Logger("SDAQnet Port CSA not found!!!\n");
-			}
 		}
 		else
+		{
 			Logger(Morfeas_hat_error());
+			Logger("SDAQnet Port CSA not found!!!\n");
+		}
 	}
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
@@ -347,7 +348,7 @@ int main(int argc, char *argv[])
 			{
 				if(!get_port_meas(&port_meas, stats.port,I2C_BUS_NUM))
 				{
-					stats.Bus_voltage = (port_meas.port_voltage - port_meas_config.volt_meas_offset) * MAX9611_volt_meas_scaler;
+					stats.Bus_voltage = (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler;
 					stats.Bus_amperage = (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler;
 					stats.Shunt_temp = port_meas.temperature * MAX9611_temp_scaler;
 				}
