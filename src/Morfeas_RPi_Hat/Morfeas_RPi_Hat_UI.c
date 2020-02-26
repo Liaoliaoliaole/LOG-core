@@ -200,7 +200,7 @@ void last_calibration(struct last_port_calibration_date *last_date)
 	time_t now = time(NULL);
 	struct tm *cal_tm = gmtime(&now);
 
-	last_date->year = cal_tm->tm_year + 100;
+	last_date->year = cal_tm->tm_year - 100;
 	last_date->month = cal_tm->tm_mon + 1;
 	last_date->day = cal_tm->tm_mday;
 	return;
@@ -568,7 +568,7 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 							wprintw(arg->UI_term, " Volt_meas=%.2fV", (arg->Ports_meas[port].port_voltage - arg->Ports_config[port].volt_meas_offset) * arg->Ports_config[port].volt_meas_scaler);
 							wprintw(arg->UI_term, " Curr_meas=%.3fA", (arg->Ports_meas[port].port_current - arg->Ports_config[port].curr_meas_offset) * arg->Ports_config[port].curr_meas_scaler);
 							wprintw(arg->UI_term, " CSA_out=%.2fV", (arg->Ports_meas[port].output - arg->Ports_config[port].volt_meas_offset) * arg->Ports_config[port].volt_meas_scaler);
-							wprintw(arg->UI_term, " Comp_ref=%.2fmV", arg->Ports_meas[port].set_val * MAX9611_comp_scaler * MAX9611_default_volt_meas_scaler/arg->Ports_config[port].volt_meas_scaler);
+							wprintw(arg->UI_term, " Comp_ref=%.2fmV", arg->Ports_meas[port].set_val * MAX9611_comp_scaler);
 							wprintw(arg->UI_term, " Die_temp=%.1f°C", arg->Ports_meas[port].temperature * MAX9611_temp_scaler);
 							return;
 						}

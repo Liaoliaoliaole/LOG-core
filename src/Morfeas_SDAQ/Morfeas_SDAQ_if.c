@@ -235,7 +235,10 @@ int main(int argc, char *argv[])
 		{
 			//Read Port's CSA Configuration from EEPROM
 			if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
+			{
 				flags.port_meas_existen = 1;
+				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month, port_meas_config.last_cal_date.day, port_meas_config.last_cal_date.year+2000);
+			}
 			else
 				Logger(Morfeas_hat_error());
 		}
@@ -307,7 +310,7 @@ int main(int argc, char *argv[])
 					{
 						if(!(status_dec->status&0x85))//Enter: if SDAQ of sdaq_id_dec->device_addr is: standby, no error and normal mode
 						{
-							if(!SDAQ_data->info_collection_status)//set QueryDeviceInfo on entries without filled info
+							if(SDAQ_data->info_collection_status < 3)//request QueryDeviceInfo on entries if no all SDAQ's info is filled
 							{
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
