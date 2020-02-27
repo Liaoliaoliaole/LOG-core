@@ -312,11 +312,12 @@ int main(int argc, char *argv[])
 						{
 							if(!SDAQ_data->info_collection_status)//request QueryDeviceInfo on entries if no all SDAQ's info is filled
 							{
+								Logger("Register new SDAQ (%s) with S/N: %010u -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
+																									  status_dec->dev_sn,
+																									  SDAQ_data->SDAQ_address);
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
-								Logger("Register new SDAQ (%s) with S/N: %010u -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
-																									   status_dec->dev_sn,
-																									   SDAQ_data->SDAQ_address);
+								
 							}
 							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
