@@ -60,7 +60,7 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	struct Morfeas_SDAQ_if_stats *stats = stats_arg;
 	FILE * pFile;
 	static unsigned char write_error = 0;
-	char *logstat_path_and_name, *slash, date[STR_LEN];
+	char *logstat_path_and_name, *slash;
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 
@@ -72,11 +72,8 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	cJSON *root = NULL;
     cJSON *logstat = NULL;
 
-	//get and format time
-	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
     //printf("Version: %s\n", cJSON_Version());
 	root = cJSON_CreateObject();
-	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
 	cJSON_AddNumberToObject(root, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
@@ -111,7 +108,6 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 
 void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 {
-	char date[STR_LEN];
 	struct Channel_date_entry *node_dec = node;
 	struct tm cal_date = {0};
 	cJSON *array = arg_pass;
@@ -122,10 +118,8 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 		cal_date.tm_year = node_dec->CH_date.year + 100;//100 = 2000 - 1900
 		cal_date.tm_mon = node_dec->CH_date.month - 1;
 		cal_date.tm_mday = node_dec->CH_date.day;
-		//format time
-		strftime(date,STR_LEN,"%Y/%m/%d",&cal_date);
+
 		cJSON_AddNumberToObject(node_data, "Channel", node_dec->Channel);
-		cJSON_AddItemToObject(node_data, "Calibration_date", cJSON_CreateString(date));
 		cJSON_AddNumberToObject(node_data, "Calibration_date_UNIX", mktime(&cal_date));
 		cJSON_AddNumberToObject(node_data, "Calibration_period", node_dec->CH_date.period);
 		cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
@@ -168,7 +162,6 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 {
-	char date[STR_LEN];
 	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *)node;
 	GSList *SDAQ_Channels_cal_dates = node_dec->SDAQ_Channels_cal_dates;
 	GSList *SDAQ_Channels_acc_meas = node_dec->SDAQ_Channels_acc_meas;
@@ -178,8 +171,6 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		list_SDAQs_array = arg_pass;
 		node_data = cJSON_CreateObject();
 		//-- Add SDAQ's general data to SDAQ's JSON object --//
-		strftime(date,STR_LEN,"%x %T",gmtime(&node_dec->last_seen));//format time
-		cJSON_AddStringToObject(node_data, "Last_seen_UTC", date);
 		cJSON_AddNumberToObject(node_data, "Last_seen_UNIX", node_dec->last_seen);
 		cJSON_AddNumberToObject(node_data, "Address", node_dec->SDAQ_address);
 		cJSON_AddNumberToObject(node_data, "Serial_number", (node_dec->SDAQ_status).dev_sn);
@@ -236,7 +227,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	unsigned int Identifier;
 	FILE * pFile;
 	static unsigned char write_error = 0;
-	char *logstat_path_and_name, *slash, date[STR_LEN];
+	char *logstat_path_and_name, *slash;
 	char str_buff[10] = {0};
 	float value;
 	//make time_t variable and get unix time
@@ -250,13 +241,10 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	cJSON *root = NULL;
     cJSON *pow_supp_data = NULL;
 	cJSON *RX_json = NULL;
-	
-	//get and format time
-	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
+
 	//Convert IPv4 to IOBOX's Identifier
 	inet_pton(AF_INET, stats->IOBOX_IPv4_addr, &Identifier);
 	root = cJSON_CreateObject();
-	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->IOBOX_IPv4_addr));
@@ -287,7 +275,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 				cJSON_AddItemToObject(root, str_buff, RX_json = cJSON_CreateObject());
 				for(int j=0; j<16; j++)
 				{
-						
+
 					sprintf(str_buff, "CH%1u", j+1);
 					value = stats->RX[i].CH_value[j]/stats->counter;
 					stats->RX[i].CH_value[j] = 0;
@@ -295,7 +283,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 						cJSON_AddNumberToObject(RX_json, str_buff, roundf(100.0 * value)/100.0);
 					else
 						cJSON_AddItemToObject(RX_json, str_buff, cJSON_CreateString("No sensor"));
-				
+
 				}
 				cJSON_AddNumberToObject(RX_json, "Index", stats->RX[i].index);
 				cJSON_AddNumberToObject(RX_json, "Status", stats->RX[i].status);
@@ -359,7 +347,7 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	unsigned int Identifier;
 	FILE * pFile;
 	static unsigned char write_error = 0;
-	char *logstat_path_and_name, *slash, date[STR_LEN];
+	char *logstat_path_and_name, *slash;
 	char str_buff[30] = {0};
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
@@ -370,13 +358,10 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	//cJSON related variables
 	char *JSON_str = NULL;
 	cJSON *root = NULL, *Channels_array = NULL, *Channel = NULL, *values = NULL, *warnings = NULL;
-	
-	//get and format time
-	strftime (date,STR_LEN,"%x %T",gmtime(&now_time));
+
 	//Convert IPv4 to MDAQ's Identifier
 	inet_pton(AF_INET, stats->MDAQ_IPv4_addr, &Identifier);
 	root = cJSON_CreateObject();
-	cJSON_AddItemToObject(root, "logstat_build_date_UTC", cJSON_CreateString(date));
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->MDAQ_IPv4_addr));
