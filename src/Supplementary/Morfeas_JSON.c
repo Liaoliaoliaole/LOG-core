@@ -81,6 +81,7 @@ int logstat_sys(char *logstat_path, void *stats_arg)
 	cJSON_AddNumberToObject(root, "Disk_Util", sys_stats->Disk_Util);
 	cJSON_AddNumberToObject(root, "Up_time", sys_stats->Up_time);
 
+	//JSON_str = cJSON_Print(root);
 	JSON_str = cJSON_PrintUnformatted(root);
 	pFile = fopen (logstat_path_and_name, "w");
 	if(pFile)
