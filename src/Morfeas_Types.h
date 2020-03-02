@@ -139,6 +139,8 @@ struct Morfeas_SDAQ_if_stats{
 	char *CAN_IF_name;
 	unsigned char port;
 	float Bus_util;
+	//Electrics and last calibration date for Morfeas_Rpi_hat
+	unsigned int Morfeas_RPi_Hat_last_cal;
 	float Bus_voltage;
 	float Bus_amperage;
 	float Shunt_temp;
@@ -188,4 +190,9 @@ struct Link_entry{
 	unsigned int identifier;
 	unsigned char channel;
 	unsigned char receiver_or_value;
+};
+//struct for system_stats
+struct system_stats{
+	float CPU_Util,RAM_Util,CPU_temp,Disk_Util;
+	unsigned int Up_time;
 };

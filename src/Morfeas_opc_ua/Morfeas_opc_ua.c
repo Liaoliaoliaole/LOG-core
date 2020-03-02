@@ -39,6 +39,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Include Functions implementation header
 #include "../Supplementary/Morfeas_run_check.h"
+#include "../Supplementary/Morfeas_JSON.h"
 #include "Morfeas_handlers_nodeset.h" //<-#include "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_XML.h"
 
@@ -60,6 +61,7 @@ pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 static volatile UA_Boolean running = true;
 static UA_Server *server = NULL;
 static GSList *Links = NULL;
+static char *logstat_path = NULL;
 
 static void stopHandler(int sign)
 {
@@ -80,7 +82,7 @@ int main(int argc, char *argv[])
 	int c;
 
 	//Get options
-	while ((c = getopt (argc, argv, "hVc:a:")) != -1)
+	while ((c = getopt (argc, argv, "hVc:a:l:")) != -1)
 	{
 		switch (c)
 		{
@@ -95,6 +97,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'a'://OPC-UA application name
 				app_name = optarg;
+				break;
+			case 'l'://Logstat path
+				logstat_path = optarg;
 				break;
 			case '?':
 				print_usage(argv[0]);
@@ -147,7 +152,7 @@ int main(int argc, char *argv[])
 	}
     UA_Server_delete(server);
 	unlink("/tmp/.Morfeas_FIFO");
-
+	delete_logstat_sys(logstat_path);//remove logstat_sys
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -166,6 +171,7 @@ void print_usage(char *prog_name)
 		"           -V : Version.\n"
 		"           -c : Path to Nodeset configuration XML file.\n"
 		"           -a : OPC-UA Application Name.\n"
+		"           -l : Path to LogStat directory.\n"
 	};
 	printf("%s\nUsage: %s [Options]\n\n%s",preamp, prog_name, manual);
 	return;
@@ -214,7 +220,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 								}
 								//Copy Links(Anchored) data from xmlDoc to List Links
 								XML_doc_to_List_ISO_Channels(root_element, &Links);
-								//Check if root_element have children 
+								//Check if root_element have children
 								if(root_element->children)
 								{
 									//Add and/or Update OPC_UA NODESet
@@ -351,23 +357,23 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 				switch(Node_data->interface_type_num)
 				{
 					case SDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type, 
-																   Node_data->identifier, 
-																   Node_data->channel, 
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type,
+																   Node_data->identifier,
+																   Node_data->channel,
 																   req_value);
 						break;
 					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type, 
-																   Node_data->identifier,															   
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type,
+																   Node_data->identifier,
 																   Node_data->channel,
 																   Node_data->receiver_or_value,
 																   req_value);
 						break;
 					case IOBOX:
-						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type, 
+						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type,
 																   Node_data->identifier,
-																   Node_data->receiver_or_value,																   
-																   Node_data->channel, 
+																   Node_data->receiver_or_value,
+																   Node_data->channel,
 																   req_value);
 						break;
 					default: return UA_STATUSCODE_GOOD;
@@ -445,23 +451,23 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 				switch(Node_data->interface_type_num)
 				{
 					case SDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type, 
-																   Node_data->identifier, 
-																   Node_data->channel, 
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type,
+																   Node_data->identifier,
+																   Node_data->channel,
 																   req_value);
 						break;
 					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type, 
-																   Node_data->identifier,															   
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type,
+																   Node_data->identifier,
 																   Node_data->channel,
 																   Node_data->receiver_or_value,
 																   req_value);
 						break;
 					case IOBOX:
-						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type, 
+						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type,
 																   Node_data->identifier,
-																   Node_data->receiver_or_value,																   
-																   Node_data->channel, 
+																   Node_data->receiver_or_value,
+																   Node_data->channel,
 																   req_value);
 						break;
 					default: return UA_STATUSCODE_GOOD;
@@ -525,7 +531,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE, CH_update_value);
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING, CH_update_value);
-		
+
 			//Device related
 			sprintf(tmp_str,"%s.Address",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, Dev_update_value);
@@ -536,8 +542,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			sprintf(tmp_str,"%s.Type",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING, Dev_update_value);
 		}
-		
-		
+
+
 		//Regular variables
 		sprintf(tmp_str,"%s.desc",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Description", UA_TYPES_STRING);
@@ -704,8 +710,7 @@ void Rpi_health_update (void)
 {
 	FILE *CPU_temp_fp;
 	char cpu_temp_str[20];
-	unsigned int Up_time;
-	float CPU_Util,RAM_Util,CPU_temp,Disk_Util;
+	struct system_stats sys_stats = {0};
 	static glibtop_cpu buff_cpuload_before={0};
 	glibtop_cpu buff_cpuload_after={0};
 	glibtop_uptime buff_uptime;
@@ -718,31 +723,32 @@ void Rpi_health_update (void)
 	glibtop_get_cpu (&buff_cpuload_after);//get cpu util
 	glibtop_get_fsusage (&buff_disk,"/");
 	//Calc CPU Utilization. Using current and old sample
-	CPU_Util=100.0*(buff_cpuload_after.user-buff_cpuload_before.user);
-	CPU_Util/=(buff_cpuload_after.total-buff_cpuload_before.total);
+	sys_stats.CPU_Util=100.0*(buff_cpuload_after.user-buff_cpuload_before.user);
+	sys_stats.CPU_Util/=(buff_cpuload_after.total-buff_cpuload_before.total);
 	//store current CPU stat sample to old
 	memcpy(&buff_cpuload_before,&buff_cpuload_after,sizeof(glibtop_cpu));
 	//Calc ram utilization
-	RAM_Util=(buff_ram.used - buff_ram.buffer - buff_ram.cached) * 100.0 / buff_ram.total;
-	Up_time=buff_uptime.uptime;
+	sys_stats.RAM_Util=(buff_ram.used - buff_ram.buffer - buff_ram.cached) * 100.0 / buff_ram.total;
+	sys_stats.Up_time=buff_uptime.uptime;
 	//Calc Disk Utilization
-	Disk_Util=(buff_disk.blocks - buff_disk.bavail) * 100.0 / buff_disk.blocks;
+	sys_stats.Disk_Util=(buff_disk.blocks - buff_disk.bavail) * 100.0 / buff_disk.blocks;
 	//Read CPU Temp from sysfs
 	CPU_temp_fp = fopen(CPU_temp_sysfs_file, "r");
 	if(CPU_temp_fp!=NULL)
 	{
 		fscanf(CPU_temp_fp, "%s", cpu_temp_str);
 		fclose(CPU_temp_fp);
-		CPU_temp = atof(cpu_temp_str) / 1E3;
+		sys_stats.CPU_temp = atof(cpu_temp_str) / 1E3;
 	}
 	else
-		CPU_temp = NAN;
+		sys_stats.CPU_temp = NAN;
 	//Update health_values to OPC_UA mem space
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&Up_time,UA_TYPES_UINT32);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&CPU_Util,UA_TYPES_FLOAT);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&RAM_Util,UA_TYPES_FLOAT);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&CPU_temp,UA_TYPES_FLOAT);
-		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&Disk_Util,UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&(sys_stats.Up_time),UA_TYPES_UINT32);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_Util"),&(sys_stats.CPU_Util),UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&(sys_stats.RAM_Util),UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&(sys_stats.CPU_temp),UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&(sys_stats.Disk_Util),UA_TYPES_FLOAT);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
+	logstat_sys(logstat_path, &sys_stats);
 }

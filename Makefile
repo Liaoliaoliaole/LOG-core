@@ -26,7 +26,8 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_MDAQ_nodeset.o \
 					  $(WORK_dir)/Morfeas_IOBOX_nodeset.o \
 					  $(WORK_dir)/Morfeas_MTI_nodeset.o \
-					  $(WORK_dir)/Morfeas_XML.o
+					  $(WORK_dir)/Morfeas_XML.o \
+					  $(WORK_dir)/Morfeas_JSON.o
 
 Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_SDAQ_if.o \

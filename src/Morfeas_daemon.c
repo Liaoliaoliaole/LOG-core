@@ -236,11 +236,12 @@ void * Morfeas_thread(void *varg_pt)
 		if(!strcmp((char *)(t_arg->component->name), "OPC_UA_SERVER"))
 		{
 			sprintf(Logger_name,"%s.log",Morfeas_opc_ua);
-			sprintf(system_call_str,"%s -a '%s' -c '%s%s%s' 2>&1", Morfeas_opc_ua,
+			sprintf(system_call_str,"%s -a '%s' -c '%s%s%s' -l '%s' 2>&1", Morfeas_opc_ua,
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
 													  t_arg->configs_Dir_path,
 													  t_arg->configs_Dir_path[strlen(t_arg->configs_Dir_path)-1]=='/'?"":"/",
-													  XML_node_get_content(t_arg->component, "CONFIG_FILE"));
+													  XML_node_get_content(t_arg->component, "CONFIG_FILE"),
+													  t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
 		{

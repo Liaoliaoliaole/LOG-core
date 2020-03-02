@@ -34,7 +34,76 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Local functions
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass);
 
-//Delete logstat file for IOBOX_handler
+
+//delete logstat file for SDAQnet_Handler
+int delete_logstat_sys(char *logstat_path)
+{
+	if(!logstat_path)
+		return -1;
+	int ret_val;
+	char *logstat_path_and_name, *slash;
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen("/logstat_sys.json") + 2);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_sys.json",logstat_path, slash);
+	//Delete logstat file
+	ret_val = unlink(logstat_path_and_name);
+	free(logstat_path_and_name);
+	return ret_val;
+}
+
+//Converting and exporting function for struct stats (Type Morfeas_sys_stats). Convert it to JSON format and save it to logstat_path
+int logstat_sys(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+
+	struct system_stats *sys_stats = stats_arg;
+	FILE * pFile;
+	static unsigned char write_error = 0;
+	char *logstat_path_and_name, *slash;
+	//make time_t variable and get unix time
+	time_t now_time = time(NULL);
+
+	//cJSON related variables
+	char *JSON_str = NULL;
+	cJSON *root = NULL;
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen("/logstat_sys.json") + 2);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_sys.json",logstat_path, slash);
+
+	root = cJSON_CreateObject();
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddNumberToObject(root, "CPU_temp", sys_stats->CPU_temp);
+	cJSON_AddNumberToObject(root, "CPU_Util", sys_stats->CPU_Util);
+	cJSON_AddNumberToObject(root, "RAM_Util", sys_stats->RAM_Util);
+	cJSON_AddNumberToObject(root, "Disk_Util", sys_stats->Disk_Util);
+	cJSON_AddNumberToObject(root, "Up_time", sys_stats->Up_time);
+
+	JSON_str = cJSON_PrintUnformatted(root);
+	pFile = fopen (logstat_path_and_name, "w");
+	if(pFile)
+	{
+		fputs(JSON_str, pFile);
+		fclose (pFile);
+		if(write_error)
+			fprintf(stderr,"Write error @ Statlog file, Restored\n");
+		write_error = 0;
+	}
+	else if(!write_error)
+	{
+		fprintf(stderr,"Write error @ Statlog file!!!\n");
+		write_error = -1;
+	}
+
+	cJSON_Delete(root);
+	free(JSON_str);
+	free(logstat_path_and_name);
+	return 0;
+}
+
+//Delete logstat file for SDAQ_handler
 int delete_logstat_SDAQ(char *logstat_path, void *stats_arg)
 {
 	if(!logstat_path || !stats_arg)
@@ -69,15 +138,20 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	//cJSON related variables
 	char *JSON_str = NULL;
 	cJSON *root = NULL;
+	cJSON *electrics = NULL;
     cJSON *logstat = NULL;
 
     //printf("Version: %s\n", cJSON_Version());
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
-	cJSON_AddNumberToObject(root, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
-	cJSON_AddNumberToObject(root, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
-	cJSON_AddNumberToObject(root, "BUS_Shunt_Res_temp", roundf(10.0 * stats->Shunt_temp)/10.0);
+	//Add electrics to LogStat JSON
+	cJSON_AddItemToObject(root, "Electrics", electrics = cJSON_CreateObject());
+	cJSON_AddNumberToObject(electrics, "Last_calibration_UNIX", stats->Morfeas_RPi_Hat_last_cal?stats->Morfeas_RPi_Hat_last_cal:NAN);
+	cJSON_AddNumberToObject(electrics, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
+	cJSON_AddNumberToObject(electrics, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
+	cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", roundf(10.0 * stats->Shunt_temp)/10.0);
+	//Add BUS_util, Amount of Detected_SDAQs, and SDAQs Data
 	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
 	cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
@@ -319,7 +393,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	return 0;
 }
 
-//Delete logstat file for IOBOX_handler
+//Delete logstat file for MDAQ_handler
 int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 {
 	int ret_val;

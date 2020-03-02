@@ -108,8 +108,9 @@ int main(int argc, char *argv[])
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
 	//Variables for CANBus Port Electric
-	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config port_meas_config;
-	struct Morfeas_RPi_Hat_Port_meas port_meas;
+	struct tm Morfeas_RPi_Hat_last_cal = {0};
+	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config port_meas_config = {0};
+	struct Morfeas_RPi_Hat_Port_meas port_meas = {0};
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	//Variables for Socket CAN and SDAQ_decoders
@@ -237,7 +238,14 @@ int main(int argc, char *argv[])
 			if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
 			{
 				flags.port_meas_existen = 1;
-				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month, port_meas_config.last_cal_date.day, port_meas_config.last_cal_date.year+12000);
+				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month,
+															  port_meas_config.last_cal_date.day,
+															  port_meas_config.last_cal_date.year+12000);
+				//Convert date from port_meas_config to struct tm Morfeas_RPi_Hat_last_cal
+				Morfeas_RPi_Hat_last_cal.tm_mon = port_meas_config.last_cal_date.month - 1;
+				Morfeas_RPi_Hat_last_cal.tm_mday = port_meas_config.last_cal_date.day;
+				Morfeas_RPi_Hat_last_cal.tm_year = port_meas_config.last_cal_date.year + 100;
+				stats.Morfeas_RPi_Hat_last_cal = mktime(&Morfeas_RPi_Hat_last_cal);//Convert Morfeas_RPi_Hat_last_cal to time_t
 			}
 			else
 				Logger(Morfeas_hat_error());
@@ -317,7 +325,7 @@ int main(int argc, char *argv[])
 																									  SDAQ_data->SDAQ_address);
 								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
 								SDAQ_data->info_collection_status = 1;
-								
+
 							}
 							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
@@ -417,7 +425,7 @@ inline void CAN_if_timer_handler (int signum)
 			time_seed -= 60000;
 		}
 		//Check if is time for Clean up
-		if(!cleanup_trig_cnt) 
+		if(!cleanup_trig_cnt)
 		{
 			// Clean up cycle trig
 			flags.Clean_flag=1;//trig a clean up of list_SDAQ.
