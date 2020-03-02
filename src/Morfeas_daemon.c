@@ -305,6 +305,10 @@ void * Morfeas_thread(void *varg_pt)
 	loggers_path = realloc(loggers_path, strlen(loggers_path)+strlen(Logger_name)+2);
 	strcat(loggers_path, Logger_name);
 
+ 	//Build New Logger file
+	if((cmd_fd = fopen(loggers_path, "w")))
+		fclose(cmd_fd);
+
 	//Fork command in system_call_str to thread
 	cmd_fd = popen(system_call_str, "re");
 	if(!cmd_fd)
@@ -313,6 +317,7 @@ void * Morfeas_thread(void *varg_pt)
         free(loggers_path);
 		return NULL;
     }
+
     //Read from stdout/err of forked command and write it to Log file
 	while(fgets(out_str, sizeof(out_str), cmd_fd))
 	{
