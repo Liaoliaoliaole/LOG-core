@@ -320,9 +320,8 @@ void * Morfeas_thread(void *varg_pt)
 
     //Read from stdout/err of forked command and write it to Log file
 	while(fgets(out_str, sizeof(out_str), cmd_fd))
-	{
 		tranc_file_and_wrire(loggers_path, out_str, max_lines_on_Logger);
-	}
+
 	//Check exit status of forked command
 	if(pclose(cmd_fd) == 256)
 		printf("Command \"%s\" Exit with Error !!!\n", system_call_str);
