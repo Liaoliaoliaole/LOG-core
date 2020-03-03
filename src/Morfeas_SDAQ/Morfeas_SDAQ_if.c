@@ -672,7 +672,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 			}
 			else
 			{
-				Logger("Error on LogBook file write!!!!\n");
+				Logger("Error on LogBook file Write !!!!\n");
 				return EXIT_FAILURE;
 			}
 		}
@@ -695,7 +695,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 			}
 			else
 			{
-				Logger("Error on LogBook file append!!!!\n");
+				Logger("Error on LogBook file Appending !!!!\n");
 				return EXIT_FAILURE;
 			}
 		}
