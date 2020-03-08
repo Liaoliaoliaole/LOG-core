@@ -1,4 +1,4 @@
-# Documentation of Morfeas-Core
+# Documentation of Morfeas RPi Hat
 This directory contains the source for the Documentation of the Morfeas RPi Hat hardware sub-project of the Morfeas Project. The source is written in LaTex.
 
 ### Requirements
