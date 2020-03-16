@@ -256,6 +256,12 @@ int main(int argc, char *argv[])
 			Logger("SDAQnet Port CSA not found!!!\n");
 		}
 	}
+	else
+	{
+		stats.Bus_voltage = NAN;
+		stats.Bus_amperage = NAN;
+		stats.Shunt_temp = NAN;
+	}
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
 	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
