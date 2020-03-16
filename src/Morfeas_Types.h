@@ -32,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include SDAQ Driver header
 #include "sdaq-worker/src/SDAQ_drv.h"
 
-//Array with stings of the Supported Interface_names.
+//Array with strings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];
 
 //Structs for IOBOX_handler
