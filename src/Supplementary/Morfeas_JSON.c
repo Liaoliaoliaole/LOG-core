@@ -146,12 +146,15 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
 	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
-	//Add electrics to LogStat JSON
-	cJSON_AddItemToObject(root, "Electrics", electrics = cJSON_CreateObject());
-	cJSON_AddNumberToObject(electrics, "Last_calibration_UNIX", stats->Morfeas_RPi_Hat_last_cal?stats->Morfeas_RPi_Hat_last_cal:NAN);
-	cJSON_AddNumberToObject(electrics, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
-	cJSON_AddNumberToObject(electrics, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
-	cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", roundf(10.0 * stats->Shunt_temp)/10.0);
+	if(stats->Morfeas_RPi_Hat_last_cal)
+	{
+		//Add electrics to LogStat JSON
+		cJSON_AddItemToObject(root, "Electrics", electrics = cJSON_CreateObject());
+		cJSON_AddNumberToObject(electrics, "Last_calibration_UNIX", stats->Morfeas_RPi_Hat_last_cal);
+		cJSON_AddNumberToObject(electrics, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
+		cJSON_AddNumberToObject(electrics, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
+		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", roundf(10.0 * stats->Shunt_temp)/10.0);
+	}
 	//Add BUS_util, Amount of Detected_SDAQs, and SDAQs Data
 	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
