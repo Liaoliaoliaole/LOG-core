@@ -306,20 +306,23 @@ int main(int argc, char *argv[])
 						time(&(SDAQ_data->last_seen));//Update last seen time
 						if(logstat_path)//Add current measurements to Average Accumulator
 							acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//add meas to acc
-						//Load meas to Current meas buffer
-						memcpy(&(SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1]), meas_dec, sizeof(struct Channel_curr_meas));
-						if(sdaq_id_dec->channel_num == SDAQ_data->SDAQ_info.num_of_ch)
-						{	//Send measurement through IPC
-							IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
-							memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name,stats.CAN_IF_name,'\0',Dev_or_Bus_name_str_size);
-							IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
-							IPC_msg.SDAQ_meas.SDAQ_serial_number = SDAQ_data->SDAQ_status.dev_sn;
-							IPC_msg.SDAQ_meas.Amount_of_channels = SDAQ_data->SDAQ_info.num_of_ch;
-							IPC_msg.SDAQ_meas.Last_Timestamp = meas_dec->timestamp;
-							memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas),
-									 SDAQ_data->SDAQ_Channels_curr_meas,
-									 sizeof(struct Channel_curr_meas)*SDAQ_data->SDAQ_info.num_of_ch);
-							IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
+						if(SDAQ_data->SDAQ_Channels_curr_meas)
+						{
+							//Load meas to Current meas buffer
+							memcpy(&(SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1]), meas_dec, sizeof(struct Channel_curr_meas));
+							if(sdaq_id_dec->channel_num == SDAQ_data->SDAQ_info.num_of_ch)
+							{	//Send measurement through IPC
+								IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
+								memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name,stats.CAN_IF_name,'\0',Dev_or_Bus_name_str_size);
+								IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+								IPC_msg.SDAQ_meas.SDAQ_serial_number = SDAQ_data->SDAQ_status.dev_sn;
+								IPC_msg.SDAQ_meas.Amount_of_channels = SDAQ_data->SDAQ_info.num_of_ch;
+								IPC_msg.SDAQ_meas.Last_Timestamp = meas_dec->timestamp;
+								memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas),
+										 SDAQ_data->SDAQ_Channels_curr_meas,
+										 sizeof(struct Channel_curr_meas)*SDAQ_data->SDAQ_info.num_of_ch);
+								IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
+							}
 						}
 					}
 					break;
