@@ -62,7 +62,7 @@ char* Morfeas_hat_error()
 		case GPIO_read_file_error: return "Failed to open GPIO value file for reading!!!\n";
 		case GPIO_write_error: return "Failed to write GPIO value!!!\n";
 		case GPIO_write_file_error: return "Failed to open GPIO value file for writing!!!\n";
-		default : 
+		default :
 			sprintf(error_str, "Unknown Error (%d)!!!\n",Morfeas_hat_error_num);
 			return error_str;
 	}
@@ -92,8 +92,10 @@ int led_init(char *CAN_IF_name)
 	char path[35];
 	char buffer[3];
 	ssize_t bytes_written;
-	int sysfs_fd, i, pin;
-	if(!strcmp(CAN_IF_name, "can0") || !strcmp(CAN_IF_name, "can1"))
+	int sysfs_fd, i, pin, port;
+
+	port = get_port_num(CAN_IF_name);
+	if(port>=0 && port<=3)
 	{	//init GPIO on sysfs
 		for(i=0; i<2; i++)
 		{
@@ -281,7 +283,7 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 	  close(i2c_fd);
 	  return EXIT_FAILURE;
 	}
-	
+
 	//Prepare config word 2 for CSA with Gain x4
 	conf_word1.mode = 0b111;
 	conf_word1.mux = 1;
@@ -523,7 +525,7 @@ int erase_EEPROM(unsigned char port, unsigned char i2c_dev_num)
 	}
 	//Init Blank_w_reg to 0xFF (EEPROM blank data)
 	memset(Blank_w_reg+1, 0xFF, block_size);
-	//Write data blocks to EEPROM. 
+	//Write data blocks to EEPROM.
 	while(reg<0xff)
 	{
 		Blank_w_reg[0] = reg;
@@ -573,6 +575,6 @@ int erase_EEPROM(unsigned char port, unsigned char i2c_dev_num)
 			return -1;
 		}
 	}
-	return 0;	
+	return 0;
 }
 
