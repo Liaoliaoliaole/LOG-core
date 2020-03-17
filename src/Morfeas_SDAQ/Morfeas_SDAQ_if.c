@@ -467,6 +467,7 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 		unsigned Bus_util : 1;
 		unsigned Max_dev_num : 1;
 	}leds_status = {0};
+
 	if(flags.led_existent)
 	{
 		if(stats->Bus_util>95.0)
