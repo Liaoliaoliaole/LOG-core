@@ -69,7 +69,7 @@ typedef struct Handler_register_struct{
 	unsigned char handler_type;
 }Handler_reg_op_msg;
 
-  //------ SDAQ + CANBus related ------//
+  //------ SDAQ + SDAQnet Port related ------//
 typedef struct SDAQ_register_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
@@ -111,8 +111,9 @@ typedef struct SDAQ_measure_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int SDAQ_serial_number;
-	unsigned char channel;
-	sdaq_meas SDAQ_channel_meas;
+	unsigned char Amount_of_channels;
+	unsigned short Last_Timestamp;
+	struct Channel_curr_meas SDAQ_channel_meas[SDAQ_MAX_AMOUNT_OF_CHANNELS-1];
 }SDAQ_meas_msg;
 
 typedef struct CAN_BUS_info_msg_struct{
@@ -144,7 +145,7 @@ typedef struct IOBOX_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int IOBOX_IPv4;
-	int status;	
+	int status;
 }IOBOX_report_msg;
 
 	//------ MDAQ related ------//
@@ -167,7 +168,7 @@ typedef struct MDAQ_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MDAQ_IPv4;
-	int status;	
+	int status;
 }MDAQ_report_msg;
 #pragma pack(pop)//Disable packing
 

@@ -304,16 +304,23 @@ int main(int argc, char *argv[])
 					if((SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 					{
 						time(&(SDAQ_data->last_seen));//Update last seen time
-						if(logstat_path)
+						if(logstat_path)//Add current measurements to Average Accumulator
 							acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//add meas to acc
-						//Send measurement through IPC
-						IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
-						memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name,stats.CAN_IF_name,'\0',Dev_or_Bus_name_str_size);
-						IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
-						IPC_msg.SDAQ_meas.SDAQ_serial_number = SDAQ_data->SDAQ_status.dev_sn;
-						IPC_msg.SDAQ_meas.channel = sdaq_id_dec->channel_num;
-						memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas), meas_dec, sizeof(sdaq_meas));
-						IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
+						//Load meas to Current meas buffer
+						memcpy(&(SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1]), meas_dec, sizeof(struct Channel_curr_meas));
+						if(sdaq_id_dec->channel_num == SDAQ_data->SDAQ_info.num_of_ch)
+						{	//Send measurement through IPC
+							IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
+							memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name,stats.CAN_IF_name,'\0',Dev_or_Bus_name_str_size);
+							IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+							IPC_msg.SDAQ_meas.SDAQ_serial_number = SDAQ_data->SDAQ_status.dev_sn;
+							IPC_msg.SDAQ_meas.Amount_of_channels = SDAQ_data->SDAQ_info.num_of_ch;
+							IPC_msg.SDAQ_meas.Last_Timestamp = meas_dec->timestamp;
+							memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas),
+									 SDAQ_data->SDAQ_Channels_curr_meas,
+									 sizeof(struct Channel_curr_meas)*SDAQ_data->SDAQ_info.num_of_ch);
+							IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
+						}
 					}
 					break;
 				case Sync_Info:
@@ -545,6 +552,11 @@ void free_SDAQ_info_entry(gpointer node)
 	node_dec->SDAQ_Channels_cal_dates = NULL;
 	g_slist_free_full(node_dec->SDAQ_Channels_acc_meas, free_channel_acc_meas_entry);
 	node_dec->SDAQ_Channels_acc_meas = NULL;
+	if(node_dec->SDAQ_Channels_curr_meas)
+	{
+		free(node_dec->SDAQ_Channels_curr_meas);
+		node_dec->SDAQ_Channels_curr_meas = NULL;
+	}
 	g_slice_free(struct SDAQ_info_entry, node);
 }
 //free a node from List LogBook
@@ -803,6 +815,14 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
 			time(&(sdaq_node->last_seen));
 			sdaq_node->info_collection_status = 2;
+			//(Release and ) Allocate memory for the Channels_current_meas
+			if(sdaq_node->SDAQ_Channels_curr_meas)
+				free(sdaq_node->SDAQ_Channels_curr_meas);
+			if(!(sdaq_node->SDAQ_Channels_curr_meas = calloc(info_dec->num_of_ch, sizeof(struct Channel_curr_meas))))
+			{
+				fprintf(stderr,"Memory error!!!\n");
+				exit(EXIT_FAILURE);
+			}
 			//Send info through IPC
 			IPC_msg.SDAQ_info.IPC_msg_type = IPC_SDAQ_info;
 			sprintf(IPC_msg.SDAQ_info.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
@@ -884,50 +904,46 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 {
 	GSList *acc_meas_list_node = NULL;
 	struct Channel_acc_meas_entry *sdaq_Channels_acc_meas_node;
-	if(sdaq_node)
+
+	acc_meas_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_acc_meas, &channel, SDAQ_Channels_acc_meas_entry_find_channel);
+	if(acc_meas_list_node)//channel is already in to the SDAQ_Channels_acc_meas list: add meas to acc.
 	{
-		acc_meas_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_acc_meas, &channel, SDAQ_Channels_acc_meas_entry_find_channel);
-		if(acc_meas_list_node)//channel is already in to the SDAQ_Channels_acc_meas list: add meas to acc.
+		sdaq_Channels_acc_meas_node = acc_meas_list_node->data;
+		sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
+		sdaq_Channels_acc_meas_node->status = meas_dec->status;
+		sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
+		sdaq_Channels_acc_meas_node->cnt++;
+		return EXIT_SUCCESS;
+	}
+	else//Channel is not in the list
+	{
+		sdaq_Channels_acc_meas_node = new_SDAQ_Channel_acc_meas_entry();
+		if(sdaq_Channels_acc_meas_node)
 		{
-			sdaq_Channels_acc_meas_node = acc_meas_list_node->data;
+			sdaq_Channels_acc_meas_node->Channel = channel;
 			sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
 			sdaq_Channels_acc_meas_node->status = meas_dec->status;
-			sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
-			sdaq_Channels_acc_meas_node->cnt++;
-			return EXIT_SUCCESS;
-		}
-		else//Channel is not in the list
-		{
-			sdaq_Channels_acc_meas_node = new_SDAQ_Channel_acc_meas_entry();
-			if(sdaq_Channels_acc_meas_node)
+			if(!(meas_dec->status & (1<<No_sensor)))
 			{
-				sdaq_Channels_acc_meas_node->Channel = channel;
-				sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
-				sdaq_Channels_acc_meas_node->status = meas_dec->status;
-				if(!(meas_dec->status & (1<<No_sensor)))
-				{
-					sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
-					sdaq_Channels_acc_meas_node->cnt++;
-				}
-				else
-				{
-					sdaq_Channels_acc_meas_node->meas_acc = 0;
-					sdaq_Channels_acc_meas_node->cnt = 0;
-				}
-				sdaq_node->SDAQ_Channels_acc_meas = g_slist_insert_sorted(sdaq_node->SDAQ_Channels_acc_meas,
-																			  sdaq_Channels_acc_meas_node,
-																		      SDAQ_Channels_acc_meas_entry_cmp);
-				return EXIT_SUCCESS;
+				sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
+				sdaq_Channels_acc_meas_node->cnt++;
 			}
 			else
 			{
-				fprintf(stderr,"Memory error!!!\n");
-				exit(EXIT_FAILURE);
+				sdaq_Channels_acc_meas_node->meas_acc = 0;
+				sdaq_Channels_acc_meas_node->cnt = 0;
 			}
+			sdaq_node->SDAQ_Channels_acc_meas = g_slist_insert_sorted(sdaq_node->SDAQ_Channels_acc_meas,
+																		  sdaq_Channels_acc_meas_node,
+																	      SDAQ_Channels_acc_meas_entry_cmp);
+			return EXIT_SUCCESS;
+		}
+		else
+		{
+			fprintf(stderr,"Memory error!!!\n");
+			exit(EXIT_FAILURE);
 		}
 	}
-	else
-		return EXIT_FAILURE;
 }
 
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM

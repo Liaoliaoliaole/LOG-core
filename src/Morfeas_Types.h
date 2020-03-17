@@ -55,7 +55,7 @@ struct Morfeas_IOBOX_if_stats{
 	unsigned int counter;
 };
 
-//Structs for MDAQ_handler
+	//Structs for MDAQ_handler
 struct MDAQ_Channel{
 	float value[4];
 	unsigned char warnings;
@@ -132,6 +132,7 @@ struct MTI_RX_config{
 	unsigned short specific_reg[5];
 };
 
+	//Structs for SDAQ_handler
 //Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
@@ -148,16 +149,29 @@ struct Morfeas_SDAQ_if_stats{
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
 };
+// Data of a current_measurements node
+struct Channel_curr_meas{
+	float meas;
+	unsigned char unit;
+	unsigned char status;
+};
 // Data of a list_SDAQs node, used in Morfeas_SDAQ_if
 struct SDAQ_info_entry{
 	unsigned char SDAQ_address;
 	short Timediff;
+	unsigned short Last_Timestamp;
 	sdaq_status SDAQ_status;
 	sdaq_info SDAQ_info;
 	GSList *SDAQ_Channels_cal_dates;
 	GSList *SDAQ_Channels_acc_meas;
+	struct Channel_curr_meas *SDAQ_Channels_curr_meas;
 	time_t last_seen;
 	unsigned info_collection_status : 2;//3 = All info collected, 2 = Only Dev_info collected, 1 = Dev_info requested, 0 = Nothing has been collected
+};
+// Data of a SDAQ_cal_dates node
+struct Channel_date_entry{
+	unsigned char Channel;
+	sdaq_calibration_date CH_date;
 };
 // Data of a SDAQ_average_meas node
 struct Channel_acc_meas_entry{
@@ -167,17 +181,12 @@ struct Channel_acc_meas_entry{
 	float meas_acc;
 	unsigned short cnt;
 };
-// Data of a SDAQ_cal_dates node
-struct Channel_date_entry{
-	unsigned char Channel;
-	sdaq_calibration_date CH_date;
-};
-// Data of a list_SDAQs node, used in Morfeas_SDAQ_if
+// Data entry of a LogBook file, used in Morfeas_SDAQ_if
 struct LogBook_entry{
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
 }__attribute__((packed, aligned(1)));
-// Data entry of a LogBook file, used in Morfeas_SDAQ_if
+// struct of LogBook entry and it's Checksum, used in Morfeas_SDAQ_if
 struct LogBook{
 	struct LogBook_entry payload;
 	unsigned char checksum;
