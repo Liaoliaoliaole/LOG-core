@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 						time(&(SDAQ_data->last_seen));//Update last seen time
 						if(logstat_path)//Add current measurements to Average Accumulator
 							acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//add meas to acc
-						if(SDAQ_data->SDAQ_Channels_curr_meas)
+						if(SDAQ_data->SDAQ_Channels_curr_meas && sdaq_id_dec->channel_num <= SDAQ_data->SDAQ_info.num_of_ch)
 						{
 							//Load meas to Current meas buffer
 							memcpy(&(SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1]), meas_dec, sizeof(struct Channel_curr_meas));
