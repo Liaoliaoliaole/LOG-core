@@ -501,12 +501,15 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50], *ISO_channel_name, *anchor_dec, *unit;
+	char tmp_str[50], *ISO_channel_name, *anchor_dec, *unit_str, *cal_date_str, *cal_period_str;
 	float t_min_max;
 	unsigned int ID, if_type;
-	unsigned char CH,RX;
+	unsigned char CH, RX, cal_period;
+	UA_DateTimeStruct cal_date_opcua_struct;
+	UA_DateTime cal_date_opcua_date;
 	UA_NodeId out;
 	UA_NodeId_init(&out);
+
 	if(!(ISO_channel_name = XML_node_get_content(node, "ISO_CHANNEL")))
 		return;
 	if_type = if_type_str_2_num(XML_node_get_content(node, "INTERFACE_TYPE"));
@@ -559,6 +562,10 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		{
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
+			sprintf(tmp_str,"%s.period",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
 			if(if_type == IOBOX)
 			{
 				sprintf(tmp_str,"%s.rx",ISO_channel_name);
@@ -591,10 +598,31 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &ID, UA_TYPES_UINT32);
 	sprintf(tmp_str,"%s.channel",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &CH, UA_TYPES_BYTE);
-	if((unit = XML_node_get_content(node, "UNIT")) && (if_type == IOBOX || if_type == MDAQ || if_type == MTI))
+	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI)
 	{
-		sprintf(tmp_str,"%s.unit",ISO_channel_name);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), unit, UA_TYPES_STRING);
+		if((unit_str = XML_node_get_content(node, "UNIT")))
+		{
+			sprintf(tmp_str,"%s.unit",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), unit_str, UA_TYPES_STRING);
+		}
+		if((cal_date_str = XML_node_get_content(node, "CAL_DATE")))
+		{
+			memset(&cal_date_opcua_struct, 0, sizeof(struct UA_DateTimeStruct));
+			if(sscanf(cal_date_str, "%4hu/%2hu/%2hu", &(cal_date_opcua_struct.year), &(cal_date_opcua_struct.month), &(cal_date_opcua_struct.day)) == 3)
+			{
+				cal_date_opcua_date = UA_DateTime_fromStruct(cal_date_opcua_struct);
+				sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_date_opcua_date, UA_TYPES_DATETIME);
+			}
+			else
+				UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Calibration Date is invalid");
+		}
+		if((cal_period_str = XML_node_get_content(node, "CAL_PERIOD")))
+		{
+			cal_period = atoi(cal_period_str);
+			sprintf(tmp_str,"%s.period",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_period, UA_TYPES_BYTE);
+		}
 	}
 }
 
