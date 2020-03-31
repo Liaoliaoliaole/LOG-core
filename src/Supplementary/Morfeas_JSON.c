@@ -133,9 +133,9 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_SDAQ_12345.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
-	sprintf(logstat_path_and_name,"%s%slogstat_%s.json",logstat_path, slash, stats->CAN_IF_name);
+	sprintf(logstat_path_and_name,"%s%slogstat_SDAQ_%s.json",logstat_path, slash, stats->CAN_IF_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
 	cJSON *root = NULL;
@@ -145,7 +145,7 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
     //printf("Version: %s\n", cJSON_Version());
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
-	cJSON_AddItemToObject(root, "CANBus-interface", cJSON_CreateString(stats->CAN_IF_name));
+	cJSON_AddItemToObject(root, "CANBus_interface", cJSON_CreateString(stats->CAN_IF_name));
 	//Add electrics to LogStat JSON, if port SCA is calibrated
 	if(stats->Morfeas_RPi_Hat_last_cal)
 	{
