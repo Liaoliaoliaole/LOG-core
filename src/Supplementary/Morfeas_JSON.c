@@ -75,10 +75,10 @@ int logstat_sys(char *logstat_path, void *stats_arg)
 
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
-	cJSON_AddNumberToObject(root, "CPU_temp", sys_stats->CPU_temp);
-	cJSON_AddNumberToObject(root, "CPU_Util", sys_stats->CPU_Util);
-	cJSON_AddNumberToObject(root, "RAM_Util", sys_stats->RAM_Util);
-	cJSON_AddNumberToObject(root, "Disk_Util", sys_stats->Disk_Util);
+	cJSON_AddNumberToObject(root, "CPU_temp", roundf(100.0 * sys_stats->CPU_temp)/100.0);
+	cJSON_AddNumberToObject(root, "CPU_Util", roundf(100.0 * sys_stats->CPU_Util)/100.0);
+	cJSON_AddNumberToObject(root, "RAM_Util", roundf(100.0 * sys_stats->RAM_Util)/100.0);
+	cJSON_AddNumberToObject(root, "Disk_Util", roundf(100.0 * sys_stats->Disk_Util)/100.0);
 	cJSON_AddNumberToObject(root, "Up_time", sys_stats->Up_time);
 
 	//JSON_str = cJSON_Print(root);
