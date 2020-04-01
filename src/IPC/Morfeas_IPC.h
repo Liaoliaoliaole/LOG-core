@@ -120,6 +120,7 @@ typedef struct CAN_BUS_info_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	float BUS_utilization;
+	unsigned char Electrics;//Boolean: false -> No Electrics info
 	float amperage;
 	float voltage;
 	float shunt_temp;
