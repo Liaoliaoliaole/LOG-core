@@ -116,7 +116,7 @@ unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
 			return type;
 	}
 	if(read_bytes != -1)
-		printf("Wrong amount of Bytes!!!\n");
+		printf("Morfeas_IPC: Wrong amount of Bytes Received!!!\n");
 	return 0;
 }
 
