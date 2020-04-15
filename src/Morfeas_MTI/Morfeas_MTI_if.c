@@ -58,6 +58,51 @@ void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
+	
+	//Check for call without arguments
+	if(argc == 1)
+	{
+		print_usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	//Get options
+	int c;
+	while ((c = getopt (argc, argv, "hV")) != -1)
+	{
+		switch (c)
+		{
+			case 'h'://help
+				print_usage(argv[0]);
+				exit(EXIT_SUCCESS);
+			case 'V'://Version
+				printf(VERSION"\n");
+				exit(EXIT_SUCCESS);
+			case '?':
+				print_usage(argv[0]);
+				exit(EXIT_FAILURE);
+		}
+	}
+	
 	printf("Not yet inmplemented\n");
 	return EXIT_SUCCESS;
+}
+
+//print the Usage manual
+void print_usage(char *prog_name)
+{
+	const char preamp[] = {
+	"\tProgram: Morfeas_MTI_if  Copyright (C) 12019-12020  Sam Harry Tzavaras\n"
+    "\tThis program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE.\n"
+    "\tThis is free software, and you are welcome to redistribute it\n"
+    "\tunder certain conditions; for details see LICENSE.\n"
+	};
+	const char manual[] = {
+		"\tDev_name: A string that related to the configuration of the MTI\n\n"
+		"\t    IPv4: The IPv4 address of MDAQ\n\n"
+		"Options:\n"
+		"           -h : Print help.\n"
+		"           -V : Version.\n"
+	};
+	printf("%s\nUsage: %s IPv4 Dev_name [/path/to/logstat/directory] [Options]\n\n%s",preamp, prog_name, manual);
+	return;
 }
