@@ -58,6 +58,8 @@ void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
+	//Apps variables
+	char *path_to_logstat_dir;
 	
 	//Check for call without arguments
 	if(argc == 1)
@@ -82,6 +84,18 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
+	
+	
+	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
+	signal(SIGINT, stopHandler);
+    signal(SIGTERM, stopHandler);
+    signal(SIGPIPE, stopHandler);
+
+	//Print welcome message
+	Logger("---- Morfeas_ΜΤΙ_if Started ----\n");
+	Logger("libMODBus Version: %s\n",LIBMODBUS_VERSION_STRING);
+	if(!path_to_logstat_dir)
+		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 	
 	printf("Not yet inmplemented\n");
 	return EXIT_SUCCESS;

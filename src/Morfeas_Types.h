@@ -71,6 +71,15 @@ struct Morfeas_MDAQ_if_stats{
 };
 
 	//Structs for MTI_handler
+struct Morfeas_ΜΤΙ_if_stats{
+	char *MDAQ_IPv4_addr;
+	char *dev_name;
+	int error;
+	unsigned int meas_index;
+	float board_temp;
+	struct MDAQ_Channel meas[8];
+	unsigned int counter;
+};
 //--- Extracted from MODBus Input Registers(Read only) 32001... ---//
 struct MTI_dev_status{
 	float batt_volt;

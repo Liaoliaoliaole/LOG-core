@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     signal(SIGPIPE, stopHandler);
 
 	//Print welcome message
-	Logger("---- Morfeas_IOBOX_if Started ----\n",argv[0]);
+	Logger("---- Morfeas_IOBOX_if Started ----\n");
 	Logger("libMODBus Version: %s\n",LIBMODBUS_VERSION_STRING);
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
