@@ -71,7 +71,7 @@ struct Morfeas_MDAQ_if_stats{
 };
 
 	//Structs for MTI_handler
-struct Morfeas_ΜΤΙ_if_stats{
+struct Morfeas_MTI_if_stats{
 	char *MDAQ_IPv4_addr;
 	char *dev_name;
 	int error;
