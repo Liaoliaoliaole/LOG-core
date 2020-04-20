@@ -100,13 +100,13 @@ int main(int argc, char *argv[])
 	//Check arguments
 	if(!stats.IOBOX_IPv4_addr || !stats.dev_name)
 	{
-		fprintf(stderr, "Mandatory Argument missing!!!\n");
+		fprintf(stderr, "Mandatory Argument(s) missing!!!\n");
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
 	if(!is_valid_IPv4(stats.IOBOX_IPv4_addr))
 	{
-		fprintf(stderr, "Argument of Device name missing!!!\n");
+		fprintf(stderr, "Argument for IPv4 is invalid!!!\n");
 		exit(EXIT_FAILURE);
 	}
 	//Check if other instance of this program already runs with same IOBOX_IPv4_addr

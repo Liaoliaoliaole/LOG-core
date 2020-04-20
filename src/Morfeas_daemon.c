@@ -268,7 +268,7 @@ void * Morfeas_thread(void *varg_pt)
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
 		{
-			printf("Not yet implemented\n");
+			printf("Port for \"MTI_HANDLER\" is Not yet implemented\n");
 			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 			free(loggers_path);
 			return NULL;

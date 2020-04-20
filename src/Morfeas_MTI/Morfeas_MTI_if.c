@@ -58,8 +58,13 @@ void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
+	//MODBus related variables
+	modbus_t *ctx;
 	//Apps variables
 	char *path_to_logstat_dir;
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	struct Morfeas_MTI_if_stats stats = {0};
 	
 	//Check for call without arguments
 	if(argc == 1)
@@ -84,8 +89,28 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
-	
-	
+	//Get arguments
+	stats.MTI_IPv4_addr = argv[optind];
+	stats.dev_name = argv[++optind];
+	path_to_logstat_dir = argv[++optind];
+	//Check arguments
+	if(!stats.MTI_IPv4_addr || !stats.dev_name)
+	{
+		fprintf(stderr, "Mandatory Argument(s) missing!!!\n");
+		print_usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	if(!is_valid_IPv4(stats.MTI_IPv4_addr))
+	{
+		fprintf(stderr, "Argument for IPv4 is invalid!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	//Check if other instance of this program already runs with same MTI_IPv4_addr
+	if(check_already_run_with_same_arg(argv[0], stats.MTI_IPv4_addr))
+	{
+		fprintf(stderr, "%s for IPv4:%s Already Running!!!\n", argv[0], stats.MTI_IPv4_addr);
+		exit(EXIT_SUCCESS);
+	}
 	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
@@ -97,7 +122,41 @@ int main(int argc, char *argv[])
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 	
+	/*
+	//----Make of FIFO file----//
+	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+	//Register handler to Morfeas_OPC-UA Server
+	Logger("Morfeas_IOBOX_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
+	//Open FIFO for Write
+	FIFO_fd = open(Data_FIFO, O_WRONLY);
+	IPC_Handler_reg_op(FIFO_fd, IOBOX, stats.dev_name, 0);
+	Logger("Morfeas_IOBOX_if (%s) Registered on OPC-UA\n",stats.dev_name);
+	*/
+	
+	//Make MODBus socket for connection
+	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
+	//Set Slave address
+	if(modbus_set_slave(ctx, default_slave_address))
+	{
+		fprintf(stderr, "Can't set slave address !!!\n");
+		modbus_free(ctx);
+		return EXIT_FAILURE;
+	}
+	
 	printf("Not yet inmplemented\n");
+	
+	//Close MODBus connection and De-allocate memory
+	modbus_close(ctx);
+	modbus_free(ctx);
+	/*
+	//Remove Registeration handler to Morfeas_OPC_UA Server
+	IPC_Handler_reg_op(FIFO_fd, IOBOX, stats.dev_name, 1);
+	Logger("Morfeas_IOBOX_if (%s) Removed from OPC-UA\n",stats.dev_name);
+	close(FIFO_fd);
+	//Delete logstat file
+	if(path_to_logstat_dir)
+		delete_logstat_MTI(path_to_logstat_dir, &stats);
+	*/
 	return EXIT_SUCCESS;
 }
 
