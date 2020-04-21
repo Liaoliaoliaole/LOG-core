@@ -52,16 +52,16 @@ static void stopHandler(int signum)
 	handler_run = 0;
 }
 //--- Local functions ---//
-// MDAQ_status_to_IPC function. Send Status of MDAQ to Morfeas_opc_ua via IPC
-void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
+/*
+// MTI_status_to_IPC function. Send Status of MDAQ to Morfeas_opc_ua via IPC
+void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 //Function that register MDAQ Channels to Morfeas_opc_ua via IPC
-void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
-
+void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
+*/
 int main(int argc, char *argv[])
 {
 	//MODBus related variables
 	modbus_t *ctx;
-	int rc;
 	//Apps variables
 	char *path_to_logstat_dir;
 	//Variables for IPC

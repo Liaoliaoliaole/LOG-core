@@ -25,7 +25,7 @@ enum MTI_Dev_type_enum{
 	Tele_4TC = 6
 };
 
-//--- Extracted from MODBus Input Registers(Read only) 32001... ---//
+//--- From MODBus Input Registers(Read only) 32001... ---//
 struct MTI_dev_status{
 	unsigned short batt_volt;
 	unsigned short batt_cap;
@@ -78,7 +78,7 @@ struct MTI_quad_tele{
 	float channels[2];
 };
 
-//--- Extracted from MODBus Holding Registers(R/W) 40001-40008 ---//
+//--- From MODBus Holding Registers(R/W) 40001-40008 ---//
 struct MTI_RX_config{
 	unsigned short RX_channel;
 	unsigned short Data_rate;

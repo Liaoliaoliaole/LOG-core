@@ -30,4 +30,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <modbus.h>
 
-#include "./MTI_func.h"
+#include "./MTI_types.h"
+
+int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
+{
+	struct MTI_dev_status cur_status;
+	
+	
+	return EXIT_FAILURE;
+	
+	return EXIT_SUCCESS;
+}

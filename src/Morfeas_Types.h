@@ -31,6 +31,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <glib.h>
 //Include SDAQ Driver header
 #include "sdaq-worker/src/SDAQ_drv.h"
+//Include MTI data type header
+#include "Morfeas_MTI/MTI_types.h"
 
 //Array with strings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];
@@ -75,9 +77,9 @@ struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
 	int error;
-	unsigned int meas_index;
-	float board_temp;
-	struct MDAQ_Channel meas[8];
+	unsigned char mode;
+	union{
+	} Tele_data;
 	unsigned int counter;
 };
 

@@ -15,5 +15,5 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-
+//MTI function that request the MTI's status and load them to stats, return 0 on success
+int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
