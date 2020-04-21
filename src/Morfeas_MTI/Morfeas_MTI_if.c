@@ -32,6 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <modbus.h>
 
+#include "./MTI_func.h"
 #include "../IPC/Morfeas_IPC.h" //<- #include "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_run_check.h"
 #include "../Supplementary/Morfeas_JSON.h"
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
 {
 	//MODBus related variables
 	modbus_t *ctx;
+	int rc;
 	//Apps variables
 	char *path_to_logstat_dir;
 	//Variables for IPC
@@ -143,7 +145,13 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 	
-	printf("Not yet inmplemented\n");
+	while(handler_run)
+	{
+	
+		
+		
+		usleep(1000000);
+	}
 	
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);

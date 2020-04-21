@@ -70,7 +70,7 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-	//Structs for MTI_handler
+	//Struct for MTI_handler
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
@@ -79,66 +79,6 @@ struct Morfeas_MTI_if_stats{
 	float board_temp;
 	struct MDAQ_Channel meas[8];
 	unsigned int counter;
-};
-//--- Extracted from MODBus Input Registers(Read only) 32001... ---//
-struct MTI_dev_status{
-	float batt_volt;
-	float batt_cap;
-	float batt_state;
-	float CPU_temp;
-	float Button_state;
-	float PWM_clock;
-	float PWM_freq;
-	float PWM_Channels[4];
-};
-struct MTI_16_temp_tele{
-	float index;
-	float rx_status;
-	float success;
-	float valid_data;
-	float valid_data_cnt;
-	float reserved[5];
-	float channels[16];
-};
-struct MTI_4_temp_tele{
-	float index;
-	float rx_status;
-	float success;
-	float valid_data;
-	float valid_data_cnt;
-	float reserved[5];
-	float channels[4];
-	float ref_1_2;
-	float ref_3_4;
-};
-struct MTI_mux_rmsw_tele{
-	float dev_type;
-	float dev_id;
-	float last_mesg;
-	float switch_status;
-	float temp;
-	float input_voltage;
-	struct{
-		float voltage;
-		float amperage;
-	}channels[2];
-};
-struct MTI_quad_tele{
-	float index;
-	float rx_status;
-	float success;
-	float sampling_rate;
-	float drift_index;
-	float reserved[5];
-	float channels[2];
-};
-
-//--- Extracted from MODBus Holding Registers(R/W) 40001-40008 ---//
-struct MTI_RX_config{
-	unsigned short RX_channel;
-	unsigned short Data_rate;
-	unsigned short Tele_dev_type;
-	unsigned short specific_reg[5];
 };
 
 	//Structs for SDAQ_handler

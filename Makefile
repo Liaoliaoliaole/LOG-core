@@ -10,7 +10,8 @@ CANif_DEP_SRC_dir = ./src/sdaq-worker/src
 HEADERS = $(SRC_dir)/IPC/*.h \
 		  $(SRC_dir)/Morfeas_opc_ua/*.h \
 		  $(SRC_dir)/Supplementary/*.h \
-		  $(SRC_dir)/Morfeas_RPi_Hat/*.h
+		  $(SRC_dir)/Morfeas_RPi_Hat/*.h \
+		  $(SRC_dir)/Morfeas_MTI/*.h
 
 Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_daemon.o \
@@ -52,7 +53,8 @@ Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/Morfeas_IPC.o \
 					   $(WORK_dir)/Morfeas_Logger.o
 
-Morfeas_MTI_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
+Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
+					 $(WORK_dir)/Morfeas_run_check.o \
 					 $(WORK_dir)/Morfeas_MTI_if.o \
 					 $(WORK_dir)/Morfeas_JSON.o \
 					 $(WORK_dir)/SDAQ_drv.o \
@@ -128,6 +130,9 @@ $(WORK_dir)/Morfeas_IOBOX_nodeset.o: $(SRC_dir)/Morfeas_IOBOX/Morfeas_IOBOX_node
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_MTI_if
+$(WORK_dir)/MTI_func.o: $(SRC_dir)/Morfeas_MTI/MTI_func.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
 $(WORK_dir)/Morfeas_MTI_if.o: $(SRC_dir)/Morfeas_MTI/Morfeas_MTI_if.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
