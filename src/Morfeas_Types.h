@@ -70,7 +70,7 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-	//Struct for MTI_handler
+	//Struct for MTI_handler --- need modification 
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
