@@ -72,13 +72,25 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-	//Struct for MTI_handler --- need modification 
+	//Structs for MTI_handler 
+struct MTI_status_struct{
+	float MTI_batt_volt;
+	float MTI_batt_capacity;
+	char *MTI_charge_status_str;
+	float MTI_CPU_temp;
+	struct{
+		unsigned char pb1:1;
+		unsigned char pb2:1;
+		unsigned char pb3:1;
+	}buttons_state;
+};
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
 	int error;
 	unsigned char mode;
-	union{
+	struct MTI_status_struct MTI_status;
+	union{//TO-DO:add structs for each telemetry device
 	} Tele_data;
 	unsigned int counter;
 };

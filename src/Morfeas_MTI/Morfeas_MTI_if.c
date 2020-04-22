@@ -57,11 +57,12 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 
 //--- Local functions ---//
 /*
-// MTI_status_to_IPC function. Send Status of MDAQ to Morfeas_opc_ua via IPC
+// MTI_status_to_IPC function. Send Status of MTI to Morfeas_opc_ua via IPC
 void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
-//Function that register MDAQ Channels to Morfeas_opc_ua via IPC
+//Function that register MTI Channels to Morfeas_opc_ua via IPC
 void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 */
+
 int main(int argc, char *argv[])
 {
 	//MODBus related variables
@@ -132,11 +133,11 @@ int main(int argc, char *argv[])
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Register handler to Morfeas_OPC-UA Server
-	Logger("Morfeas_IOBOX_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
+	Logger("Morfeas_MTI_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
 	//Open FIFO for Write
 	FIFO_fd = open(Data_FIFO, O_WRONLY);
-	IPC_Handler_reg_op(FIFO_fd, IOBOX, stats.dev_name, 0);
-	Logger("Morfeas_IOBOX_if (%s) Registered on OPC-UA\n",stats.dev_name);
+	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 0);
+	Logger("Morfeas_MTI_if (%s) Registered on OPC-UA\n",stats.dev_name);
 	*/
 	
 	//Make MODBus socket for connection
@@ -148,13 +149,25 @@ int main(int argc, char *argv[])
 		modbus_free(ctx);
 		return EXIT_FAILURE;
 	}
-	
-	while(handler_run)
+	//Attempt connection to MTI
+	while(modbus_connect(ctx) && handler_run)
 	{
+		sleep(1);
+		stats.error = errno;
+		//MTI_status_to_IPC(FIFO_fd, &stats);
+		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
+		//logstat_MDAQ(path_to_logstat_dir, &stats);
+	}
+	stats.error = 0;//load no error on stats
 	
+	
+	
+	while(handler_run)//MTI's FSM
+	{
+		get_MTI_status(ctx, &stats);
 		
-		
-		usleep(1000000);
+		sleep(1);
+		//usleep(1000000);
 	}
 	
 	//Close MODBus connection and De-allocate memory
@@ -162,8 +175,8 @@ int main(int argc, char *argv[])
 	modbus_free(ctx);
 	/*
 	//Remove Registeration handler to Morfeas_OPC_UA Server
-	IPC_Handler_reg_op(FIFO_fd, IOBOX, stats.dev_name, 1);
-	Logger("Morfeas_IOBOX_if (%s) Removed from OPC-UA\n",stats.dev_name);
+	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 1);
+	Logger("Morfeas_MTI_if (%s) Removed from OPC-UA\n",stats.dev_name);
 	close(FIFO_fd);
 	//Delete logstat file
 	if(path_to_logstat_dir)
@@ -183,7 +196,7 @@ void print_usage(char *prog_name)
 	};
 	const char manual[] = {
 		"\tDev_name: A string that related to the configuration of the MTI\n\n"
-		"\t    IPv4: The IPv4 address of MDAQ\n\n"
+		"\t    IPv4: The IPv4 address of MTI\n\n"
 		"Options:\n"
 		"           -h : Print help.\n"
 		"           -V : Version.\n"
