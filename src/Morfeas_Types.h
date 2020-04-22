@@ -32,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include SDAQ Driver header
 #include "sdaq-worker/src/SDAQ_drv.h"
 //Include MTI data type header
-#include "Morfeas_MTI/MTI_types.h"
+#include "Morfeas_MTI/MTI_Types.h"
 
 //Array with strings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];

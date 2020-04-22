@@ -32,7 +32,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <modbus.h>
 
-#include "./MTI_func.h"
 #include "../IPC/Morfeas_IPC.h" //<- #include "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_run_check.h"
 #include "../Supplementary/Morfeas_JSON.h"
@@ -51,6 +50,11 @@ static void stopHandler(int signum)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
 	handler_run = 0;
 }
+
+//-- MTI Functions --//
+//MTI function that request the MTI's status and load them to stats, return 0 on success
+int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+
 //--- Local functions ---//
 /*
 // MTI_status_to_IPC function. Send Status of MDAQ to Morfeas_opc_ua via IPC
