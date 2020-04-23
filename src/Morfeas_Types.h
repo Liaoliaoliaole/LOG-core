@@ -74,15 +74,21 @@ struct Morfeas_MDAQ_if_stats{
 
 	//Structs for MTI_handler 
 struct MTI_status_struct{
+	unsigned char Radio_CH;
+	unsigned char Modem_data_rate;
+	unsigned char Tele_Device_type;
 	float MTI_batt_volt;
 	float MTI_batt_capacity;
-	char *MTI_charge_status_str;
+	unsigned char MTI_charge_status;
 	float MTI_CPU_temp;
 	struct{
 		unsigned char pb1:1;
 		unsigned char pb2:1;
 		unsigned char pb3:1;
 	}buttons_state;
+	float PWM_gen_clock;
+	float PWM_gen_out_freq;
+	float PWM_outDuty_CHs[4];
 };
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
