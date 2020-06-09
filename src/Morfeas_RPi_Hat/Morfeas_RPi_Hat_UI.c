@@ -297,7 +297,6 @@ const char shell_help_str[]={
 	"\tKEY_RIGTH = Cursor move Right by 1\n"
 	"\tCtrl + C  = Clear current buffer\n"
 	"\tCtrl + L  = Clear screen\n"
-	"\tCtrl + I  = print used CAN-if\n"
 	"\tCtrl + Q  = Quit\n"
 	" COMMANDS:\n"
 	"\tmeas p# = Print measurement of Port's CSA\n"
