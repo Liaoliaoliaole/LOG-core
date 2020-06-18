@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
 	
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
+
 	//Set Slave address
 	if(modbus_set_slave(ctx, default_slave_address))
 	{
@@ -164,8 +165,13 @@ int main(int argc, char *argv[])
 	
 	while(handler_run)//MTI's FSM
 	{
-		get_MTI_status(ctx, &stats);
+		if(!get_MTI_status(ctx, &stats))
+		{
+			printf("MTI_temp=%.3f\n",stats.MTI_status.MTI_CPU_temp);
 		
+		}
+		else
+			Logger("Failure!!!\n");
 		sleep(1);
 		//usleep(1000000);
 	}

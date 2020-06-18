@@ -27,14 +27,14 @@ enum MTI_Dev_type_enum{
 
 //--- From MODBus Input Registers(Read only) 32001... ---//
 struct MTI_dev_status{
-	unsigned short batt_volt;
-	unsigned short batt_cap;
-	unsigned short batt_state;
-	unsigned short CPU_temp;
-	unsigned short Button_state;
-	unsigned short PWM_clock;
-	unsigned short PWM_freq;
-	unsigned short PWM_Channels[4];
+	float batt_volt;
+	float batt_cap;
+	float batt_state;
+	float CPU_temp;
+	float Button_state;
+	float PWM_clock;
+	float PWM_freq;
+	float PWM_Channels[4];
 };
 struct MTI_16_temp_tele{
 	float index;

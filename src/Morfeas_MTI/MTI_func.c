@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define MTI_STATUS_OFFSET 2001
+#define MTI_STATUS_OFFSET 2000
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,7 +38,7 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
 	struct MTI_dev_status cur_status;
 	
-	if(modbus_read_input_registers(ctx, MTI_STATUS_OFFSET, sizeof(cur_status)/sizeof(short), (short unsigned int *)&cur_status)<=0)
+	if(modbus_read_input_registers(ctx, MTI_STATUS_OFFSET, sizeof(cur_status)/sizeof(short), (unsigned short*)&cur_status)<=0)
 		return EXIT_FAILURE;
 	/*
 	struct MTI_status_struct{
@@ -54,16 +54,17 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	};
 	
 	struct MTI_dev_status{
-	unsigned short batt_volt;
-	unsigned short batt_cap;
-	unsigned short batt_state;
-	unsigned short CPU_temp;
-	unsigned short Button_state;
-	unsigned short PWM_clock;
-	unsigned short PWM_freq;
-	unsigned short PWM_Channels[4];
+		float batt_volt;
+		float batt_cap;
+		float batt_state;
+		float CPU_temp;
+		float Button_state;
+		float PWM_clock;
+		float PWM_freq;
+		float PWM_Channels[4];
 	};
 	*/
+	printf("MTI_Status CPU_temp = %f\n",cur_status.batt_volt);
 	stats->MTI_status.MTI_batt_volt = cur_status.batt_volt;
 	stats->MTI_status.MTI_batt_capacity = cur_status.batt_cap;
 	stats->MTI_status.MTI_CPU_temp = cur_status.CPU_temp;

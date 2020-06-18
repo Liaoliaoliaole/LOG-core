@@ -57,7 +57,7 @@ struct Morfeas_IOBOX_if_stats{
 	unsigned int counter;
 };
 
-	//Structs for MDAQ_handler
+//Structs for MDAQ_handler
 struct MDAQ_Channel{
 	float value[4];
 	unsigned char warnings;
@@ -72,7 +72,7 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-	//Structs for MTI_handler 
+//Structs for MTI_handler 
 struct MTI_status_struct{
 	unsigned char Radio_CH;
 	unsigned char Modem_data_rate;
@@ -101,7 +101,7 @@ struct Morfeas_MTI_if_stats{
 	unsigned int counter;
 };
 
-	//Structs for SDAQ_handler
+//Structs for SDAQ_handler
 //Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
