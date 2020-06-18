@@ -190,8 +190,8 @@ int main(int argc, char *argv[])
 		{
 			printf("\n=== RX configuration ==\n");
 			printf("RX Frequency=2.4%02dGHz\n",stats.MTI_RX_config.RX_channel);
-			printf("Data_rate=%d\n",stats.MTI_RX_config.Data_rate);
-			printf("Tele_dev_type=%d\n",stats.MTI_RX_config.Tele_dev_type);
+			printf("Data_rate=%s\n",MTI_Data_rate_str[stats.MTI_RX_config.Data_rate]);
+			printf("Tele_dev_type=%s\n",MTI_Tele_dev_type_str[stats.MTI_RX_config.Tele_dev_type]);
 			printf("=======================\n");
 		}
 		else
