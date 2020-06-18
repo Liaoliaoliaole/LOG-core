@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
+extern char *MTI_charger_state_str[];
 //--- Enumerators for MTI ---//
 enum MTI_Dev_type_enum{
 	Tele_16TC = 2,
@@ -79,7 +79,7 @@ struct MTI_quad_tele{
 };
 
 //--- From MODBus Holding Registers(R/W) 40001-40008 ---//
-struct MTI_RX_config{
+struct MTI_RX_config_struct{
 	unsigned short RX_channel;
 	unsigned short Data_rate;
 	unsigned short Tele_dev_type;

@@ -54,6 +54,8 @@ static void stopHandler(int signum)
 //-- MTI Functions --//
 //MTI function that request the MTI's status and load them to stats, return 0 on success
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+//MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
+int get_MTI_RX_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 
 //--- Local functions ---//
 /*
@@ -142,7 +144,6 @@ int main(int argc, char *argv[])
 	
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
-
 	//Set Slave address
 	if(modbus_set_slave(ctx, default_slave_address))
 	{
@@ -157,30 +158,53 @@ int main(int argc, char *argv[])
 		stats.error = errno;
 		//MTI_status_to_IPC(FIFO_fd, &stats);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
-		//logstat_MDAQ(path_to_logstat_dir, &stats);
+		//logstat_MTI(path_to_logstat_dir, &stats);
 	}
 	stats.error = 0;//load no error on stats
 	
 	
-	
 	while(handler_run)//MTI's FSM
 	{
+		printf("\n");
+		Logger("New read status request\n");
 		if(!get_MTI_status(ctx, &stats))
 		{
-			printf("MTI_temp=%.3f\n",stats.MTI_status.MTI_CPU_temp);
-		
+			printf("\n====== MTI Status =====\n");
+			printf("MTI batt=%.2fV\n",stats.MTI_status.MTI_batt_volt);
+			printf("MTI batt cap=%.2f%%\n",stats.MTI_status.MTI_batt_capacity);
+			printf("MTI batt state=%s\n",MTI_charger_state_str[stats.MTI_status.MTI_charge_status]);
+			printf("MTI cpu_temp=%.2f°C\n",stats.MTI_status.MTI_CPU_temp);
+			printf("Bt1=%d\tBt2=%d\tBt3=%d\n",
+				stats.MTI_status.buttons_state.pb1,
+				stats.MTI_status.buttons_state.pb2,
+				stats.MTI_status.buttons_state.pb3);
+			printf("MTI PWM_gen_out_freq=%.2fHz\n",stats.MTI_status.PWM_gen_out_freq);
+			for(int i=0; i<4; i++)
+				printf("MTI PWM_outDuty_CH[%d]=%.2f%%\n",i,stats.MTI_status.PWM_outDuty_CHs[i]);
+			printf("=======================\n");
 		}
 		else
-			Logger("Failure!!!\n");
-		sleep(1);
-		//usleep(1000000);
+			Logger("get_MTI_status request Failed!!!\n");
+		Logger("New get_MTI_RX_config request\n");
+		if(get_MTI_RX_config(ctx, &stats)>=0)
+		{
+			printf("\n=== RX configuration ==\n");
+			printf("RX Frequency=2.4%02dGHz\n",stats.MTI_RX_config.RX_channel);
+			printf("Data_rate=%d\n",stats.MTI_RX_config.Data_rate);
+			printf("Tele_dev_type=%d\n",stats.MTI_RX_config.Tele_dev_type);
+			printf("=======================\n");
+		}
+		else
+			Logger("get_MTI_RX_config request Failed!!!\n");
+		//sleep(1);
+		usleep(100000);
 	}
 	
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
 	/*
-	//Remove Registeration handler to Morfeas_OPC_UA Server
+	//Remove Registered handler from Morfeas_OPC_UA Server
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 1);
 	Logger("Morfeas_MTI_if (%s) Removed from OPC-UA\n",stats.dev_name);
 	close(FIFO_fd);

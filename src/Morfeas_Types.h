@@ -86,16 +86,16 @@ struct MTI_status_struct{
 		unsigned char pb2:1;
 		unsigned char pb3:1;
 	}buttons_state;
-	float PWM_gen_clock;
 	float PWM_gen_out_freq;
 	float PWM_outDuty_CHs[4];
 };
+//Morfeas_SDAQ-Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
 	int error;
-	unsigned char mode;
 	struct MTI_status_struct MTI_status;
+	struct MTI_RX_config_struct MTI_RX_config;
 	union{//TO-DO:add structs for each telemetry device
 	} Tele_data;
 	unsigned int counter;
