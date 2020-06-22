@@ -39,7 +39,7 @@ extern char *Morfeas_IPC_handler_type_name[];
 extern char *MTI_Data_rate_str[];
 extern char *MTI_Tele_dev_type_str[];
 
-//Structs for IOBOX_handler
+/*Structs for IOBOX_handler*/
 struct Power_Supply{
 	float Vout,Iout;
 };
@@ -59,7 +59,7 @@ struct Morfeas_IOBOX_if_stats{
 	unsigned int counter;
 };
 
-//Structs for MDAQ_handler
+/*Structs for MDAQ_handler*/
 struct MDAQ_Channel{
 	float value[4];
 	unsigned char warnings;
@@ -74,7 +74,7 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-//Structs for MTI_handler 
+/*Structs for MTI_handler*/ 
 struct MTI_status_struct{
 	unsigned char Radio_CH;
 	unsigned char Modem_data_rate;
@@ -103,7 +103,7 @@ struct Morfeas_MTI_if_stats{
 	unsigned int counter;
 };
 
-//Structs for SDAQ_handler
+/*Structs for SDAQ_handler*/
 //Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
@@ -171,7 +171,7 @@ struct Link_entry{
 	unsigned char channel;
 	unsigned char receiver_or_value;
 };
-//struct for system_stats
+/*struct for system_stats*/
 struct system_stats{
 	float CPU_Util,RAM_Util,CPU_temp,Disk_Util;
 	unsigned int Up_time;

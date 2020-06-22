@@ -18,11 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern char *MTI_charger_state_str[];
 //--- Enumerators for MTI ---//
 enum MTI_Dev_type_enum{
-	Tele_16TC = 2,
-	Tele_8TC = 3,
-	RM_SW_MUX = 4,
-	Tele_quad = 5,
-	Tele_4TC = 6
+	Tele_TC16 = 2,
+	Tele_TC8,
+	RM_SW_MUX,
+	Tele_quad,
+	Tele_TC4
 };
 
 //--- From MODBus Input Registers(Read only) 32001... ---//

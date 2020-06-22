@@ -56,6 +56,8 @@ static void stopHandler(int signum)
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 //MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
 int get_MTI_RX_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+//MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
+int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 
 //--- Local functions ---//
 /*
@@ -169,7 +171,7 @@ int main(int argc, char *argv[])
 		Logger("New read status request\n");
 		if(!get_MTI_status(ctx, &stats))
 		{
-			printf("\n====== MTI Status =====\n");
+			printf("====== MTI Status =====\n");
 			printf("MTI batt=%.2fV\n",stats.MTI_status.MTI_batt_volt);
 			printf("MTI batt cap=%.2f%%\n",stats.MTI_status.MTI_batt_capacity);
 			printf("MTI batt state=%s\n",MTI_charger_state_str[stats.MTI_status.MTI_charge_status]);
@@ -185,14 +187,49 @@ int main(int argc, char *argv[])
 		}
 		else
 			Logger("get_MTI_status request Failed!!!\n");
+		
 		Logger("New get_MTI_RX_config request\n");
 		if(get_MTI_RX_config(ctx, &stats)>=0)
 		{
-			printf("\n=== RX configuration ==\n");
-			printf("RX Frequency=2.4%02dGHz\n",stats.MTI_RX_config.RX_channel);
+			printf("=== RX configuration ==\n");
+			printf("RX Frequency=%.3fGHz\n",(2400+stats.MTI_RX_config.RX_channel)/1000.0);
 			printf("Data_rate=%s\n",MTI_Data_rate_str[stats.MTI_RX_config.Data_rate]);
 			printf("Tele_dev_type=%s\n",MTI_Tele_dev_type_str[stats.MTI_RX_config.Tele_dev_type]);
 			printf("=======================\n");
+		
+			Logger("New get_MTI_Tele_data request\n");
+			if(!get_MTI_Tele_data(ctx, &stats))
+			{
+				printf("\n===== Tele data =====\n");
+				if(stats.MTI_RX_config.Tele_dev_type!=RM_SW_MUX)
+				{
+					/*
+					printf("Packet Index=%d\n",(2400+stats.MTI_RX_config.RX_channel)/1000.0);
+					printf("RX Status=%d\n",MTI_Data_rate_str[stats.MTI_RX_config.Data_rate]);
+					printf("RXsuccess Ratio=%d%%\n",MTI_Tele_dev_type_str[stats.MTI_RX_config.Tele_dev_type]);
+					*/
+				}
+				switch(stats.MTI_RX_config.Tele_dev_type)
+				{
+					case Tele_TC8:
+					
+						break;
+					case Tele_TC16:
+						
+						break;
+					case Tele_TC4:
+						
+						break;
+					case Tele_quad:
+						
+						break;
+					case RM_SW_MUX:
+						break;
+				}
+				printf("=======================\n");
+			}
+			else
+				Logger("get_MTI_Tele_data request Failed!!!\n");
 		}
 		else
 			Logger("get_MTI_RX_config request Failed!!!\n");

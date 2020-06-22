@@ -14,8 +14,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+/*MTI's ModBus regions Offsets*/
 #define MTI_STATUS_OFFSET 2000
 #define MTI_CONFIG_OFFSET 0
+#define MTI_TELE_DATA_OFFSET 2050
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +67,38 @@ int get_MTI_RX_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	struct MTI_RX_config_struct cur_RX_config;
 	if(modbus_read_registers(ctx, MTI_CONFIG_OFFSET, sizeof(cur_RX_config)/sizeof(short), (unsigned short*)&cur_RX_config)<=0)
 		return EXIT_FAILURE;
+	cur_RX_config.RX_channel = cur_RX_config.RX_channel>127?0:cur_RX_config.RX_channel;//Sanitize Radio channel frequency.
+	cur_RX_config.Tele_dev_type = cur_RX_config.Tele_dev_type>Tele_TC4||cur_RX_config.Tele_dev_type<Tele_TC16?0:cur_RX_config.Tele_dev_type;//Sanitize Telemetry device type
 	memcpy(&(stats->MTI_RX_config), &cur_RX_config, sizeof(cur_RX_config));
 	return cur_RX_config.Tele_dev_type;
+}
+
+int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
+{
+	union MTI_Tele_data_union{
+		struct MTI_16_temp_tele as_TC16;
+		struct MTI_4_temp_tele as_TC4;
+		struct MTI_quad_tele as_QUAD;
+		struct MTI_mux_rmsw_tele as_MUXs_RMSWs[32];
+	}cur_MTI_Tele_data;
+	switch(stats->MTI_RX_config.Tele_dev_type)
+	{
+		case Tele_TC8:
+		case Tele_TC16:
+			if(modbus_read_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC16)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+				return EXIT_FAILURE;
+			break;
+		case Tele_TC4:
+			if(modbus_read_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC4)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+				return EXIT_FAILURE;
+			break;
+		case Tele_quad:
+			if(modbus_read_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+				return EXIT_FAILURE;
+			break;
+		case RM_SW_MUX:
+			break;
+		default: EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
 }
