@@ -38,7 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "../Morfeas_Types.h" 
 
-char *MTI_charger_state_str[]={"Discharging", "No Battery", "Full", "Charging"};
+char *MTI_charger_state_str[]={"Discharging", "Full", "No Battery", "Charging"};
 char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
 char *MTI_Tele_dev_type_str[]={"DISABLED", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20"};
 
