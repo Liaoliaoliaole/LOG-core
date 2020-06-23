@@ -62,14 +62,19 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	return EXIT_SUCCESS;
 }
 
-int get_MTI_RX_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
+int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
 	struct MTI_RX_config_struct cur_RX_config;
 	if(modbus_read_registers(ctx, MTI_CONFIG_OFFSET, sizeof(cur_RX_config)/sizeof(short), (unsigned short*)&cur_RX_config)<=0)
 		return EXIT_FAILURE;
+	//Sanitization of status values
 	cur_RX_config.RX_channel = cur_RX_config.RX_channel>127?0:cur_RX_config.RX_channel;//Sanitize Radio channel frequency.
 	cur_RX_config.Tele_dev_type = cur_RX_config.Tele_dev_type>Tele_TC4||cur_RX_config.Tele_dev_type<Tele_TC16?0:cur_RX_config.Tele_dev_type;//Sanitize Telemetry device type
-	memcpy(&(stats->MTI_RX_config), &cur_RX_config, sizeof(cur_RX_config));
+	//Convert and load values to stats struct
+	stats->MTI_Radio_config.RX_channel = cur_RX_config.RX_channel;
+	stats->MTI_Radio_config.Data_rate = cur_RX_config.Data_rate;
+	stats->MTI_Radio_config.Tele_dev_type = cur_RX_config.Tele_dev_type;
+	memcpy(&(stats->MTI_Radio_config.Specific_reg), &(cur_RX_config.Specific_reg), sizeof(stats->MTI_Radio_config.Specific_reg));
 	return cur_RX_config.Tele_dev_type;
 }
 
@@ -81,20 +86,42 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 		struct MTI_quad_tele as_QUAD;
 		struct MTI_mux_rmsw_tele as_MUXs_RMSWs[32];
 	}cur_MTI_Tele_data;
-	switch(stats->MTI_RX_config.Tele_dev_type)
+	
+	switch(stats->MTI_Radio_config.Tele_dev_type)
 	{
 		case Tele_TC8:
 		case Tele_TC16:
-			if(modbus_read_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC16)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC16)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
 				return EXIT_FAILURE;
+			stats->Tele_data.as_TC16.packet_index = (int)cur_MTI_Tele_data.as_TC16.index;
+			stats->Tele_data.as_TC16.RX_status = cur_MTI_Tele_data.as_TC16.rx_status;
+			stats->Tele_data.as_TC16.RX_Success_ratio = cur_MTI_Tele_data.as_TC16.success;
+			stats->Tele_data.as_TC16.Data_isValid = cur_MTI_Tele_data.as_TC16.valid_data;
+			memcpy(&(stats->Tele_data.as_TC16.CHs), &(cur_MTI_Tele_data.as_TC16.channels), sizeof(stats->Tele_data.as_TC16.CHs));
 			break;
 		case Tele_TC4:
-			if(modbus_read_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC4)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC4)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
 				return EXIT_FAILURE;
+			stats->Tele_data.as_TC4.packet_index = cur_MTI_Tele_data.as_TC4.index;
+			stats->Tele_data.as_TC4.RX_status = cur_MTI_Tele_data.as_TC4.rx_status;
+			stats->Tele_data.as_TC4.RX_Success_ratio = cur_MTI_Tele_data.as_TC4.success;
+			stats->Tele_data.as_TC4.Data_isValid = cur_MTI_Tele_data.as_TC4.valid_data;
+			memcpy(&(stats->Tele_data.as_TC4.CHs), &(cur_MTI_Tele_data.as_TC4.channels), sizeof(cur_MTI_Tele_data.as_TC4.channels));
 			break;
 		case Tele_quad:
-			if(modbus_read_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
 				return EXIT_FAILURE;
+			if((int)cur_MTI_Tele_data.as_QUAD.index ^ stats->Tele_data.as_QUAD.packet_index)
+			{
+				stats->Tele_data.as_QUAD.Data_isValid = 1;
+				stats->Tele_data.as_QUAD.packet_index = cur_MTI_Tele_data.as_QUAD.index;
+				stats->Tele_data.as_QUAD.RX_status = cur_MTI_Tele_data.as_QUAD.rx_status;
+				stats->Tele_data.as_QUAD.RX_Success_ratio = cur_MTI_Tele_data.as_QUAD.success;
+				stats->Tele_data.as_QUAD.CHs[0] = *(cur_MTI_Tele_data.as_QUAD.Channel_1);
+				stats->Tele_data.as_QUAD.CHs[1] = *(cur_MTI_Tele_data.as_QUAD.Channel_2);
+			}
+			else
+				stats->Tele_data.as_QUAD.Data_isValid = 0;
 			break;
 		case RM_SW_MUX:
 			break;

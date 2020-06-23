@@ -55,7 +55,7 @@ static void stopHandler(int signum)
 //MTI function that request the MTI's status and load them to stats, return 0 on success
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 //MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
-int get_MTI_RX_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 //MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 	
 	while(handler_run)//MTI's FSM
 	{
-		printf("\n");
+		printf("\n-------------------------------------------------------------------------------------\n");
 		Logger("New read status request\n");
 		if(!get_MTI_status(ctx, &stats))
 		{
@@ -188,42 +188,53 @@ int main(int argc, char *argv[])
 		else
 			Logger("get_MTI_status request Failed!!!\n");
 		
-		Logger("New get_MTI_RX_config request\n");
-		if(get_MTI_RX_config(ctx, &stats)>=0)
+		Logger("New get_MTI_Radio_config request\n");
+		if(get_MTI_Radio_config(ctx, &stats)>=0)
 		{
 			printf("=== RX configuration ==\n");
-			printf("RX Frequency=%.3fGHz\n",(2400+stats.MTI_RX_config.RX_channel)/1000.0);
-			printf("Data_rate=%s\n",MTI_Data_rate_str[stats.MTI_RX_config.Data_rate]);
-			printf("Tele_dev_type=%s\n",MTI_Tele_dev_type_str[stats.MTI_RX_config.Tele_dev_type]);
+			printf("RX Frequency=%.3fGHz\n",(2400+stats.MTI_Radio_config.RX_channel)/1000.0);
+			printf("Data_rate=%s\n",MTI_Data_rate_str[stats.MTI_Radio_config.Data_rate]);
+			printf("Tele_dev_type=%s\n",MTI_Tele_dev_type_str[stats.MTI_Radio_config.Tele_dev_type]);
+			for(int i=0; i<sizeof(stats.MTI_Radio_config.Specific_reg)/sizeof(short); i++)
+				printf("SFR[%d]=%d(0x%x)\n", i, stats.MTI_Radio_config.Specific_reg[i], stats.MTI_Radio_config.Specific_reg[i]);
 			printf("=======================\n");
 		
 			Logger("New get_MTI_Tele_data request\n");
 			if(!get_MTI_Tele_data(ctx, &stats))
 			{
 				printf("\n===== Tele data =====\n");
-				if(stats.MTI_RX_config.Tele_dev_type!=RM_SW_MUX)
+				if(stats.MTI_Radio_config.Tele_dev_type!=RM_SW_MUX)
 				{
-					/*
-					printf("Packet Index=%d\n",(2400+stats.MTI_RX_config.RX_channel)/1000.0);
-					printf("RX Status=%d\n",MTI_Data_rate_str[stats.MTI_RX_config.Data_rate]);
-					printf("RXsuccess Ratio=%d%%\n",MTI_Tele_dev_type_str[stats.MTI_RX_config.Tele_dev_type]);
-					*/
+					printf("Telemetry data is%s valid\n", stats.Tele_data.as_TC4.Data_isValid?"":" NOT");
+					printf("Packet Index=%d\n", stats.Tele_data.as_TC4.packet_index);
+					printf("RX Status=%d\n", stats.Tele_data.as_TC4.RX_status);
+					printf("RX success Ratio=%d%%\n", stats.Tele_data.as_TC4.RX_Success_ratio);
 				}
-				switch(stats.MTI_RX_config.Tele_dev_type)
+				printf("\n===== Data =====\n");
+				switch(stats.MTI_Radio_config.Tele_dev_type)
 				{
+					case Tele_TC4:
+						for(int i=0; i<sizeof(stats.Tele_data.as_TC4.CHs)/sizeof(*stats.Tele_data.as_TC4.CHs);i++)
+							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC4.CHs[i]);
+						for(int i=0; i<sizeof(stats.Tele_data.as_TC4.Refs)/sizeof(*stats.Tele_data.as_TC4.Refs);i++)
+							printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC4.Refs[i]);
+						break;
 					case Tele_TC8:
-					
+						for(int i=0; i<sizeof(stats.Tele_data.as_TC8.CHs)/sizeof(*stats.Tele_data.as_TC8.CHs);i++)
+							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC8.CHs[i]);
+						for(int i=0; i<sizeof(stats.Tele_data.as_TC8.Refs)/sizeof(*stats.Tele_data.as_TC8.Refs);i++)
+							printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC8.Refs[i]);
 						break;
 					case Tele_TC16:
-						
-						break;
-					case Tele_TC4:
-						
+						for(int i=0; i<sizeof(stats.Tele_data.as_TC16.CHs)/sizeof(*stats.Tele_data.as_TC16.CHs);i++)
+							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC16.CHs[i]);
 						break;
 					case Tele_quad:
-						
+						for(int i=0; i<sizeof(stats.Tele_data.as_QUAD.CHs)/sizeof(*stats.Tele_data.as_QUAD.CHs);i++)
+							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_QUAD.CHs[i]);
 						break;
 					case RM_SW_MUX:
+					
 						break;
 				}
 				printf("=======================\n");
@@ -232,8 +243,7 @@ int main(int argc, char *argv[])
 				Logger("get_MTI_Tele_data request Failed!!!\n");
 		}
 		else
-			Logger("get_MTI_RX_config request Failed!!!\n");
-		//sleep(1);
+			Logger("get_MTI_Radio_config request Failed!!!\n");
 		usleep(100000);
 	}
 	

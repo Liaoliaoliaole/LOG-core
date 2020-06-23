@@ -91,14 +91,60 @@ struct MTI_status_struct{
 	float PWM_gen_out_freq;
 	float PWM_outDuty_CHs[4];
 };
+struct MTI_Radio_config_status_struct{
+	unsigned RX_channel:7;
+	unsigned short Data_rate:2;
+	unsigned short Tele_dev_type:3;
+	unsigned short Specific_reg[5];
+};
+//Structs for MTI related telemetry device
+struct TC4_data_struct{
+	unsigned short packet_index;
+	unsigned RX_status:2;
+	unsigned char RX_Success_ratio;
+	unsigned Data_isValid:1;
+	float CHs[4];
+	float Refs[2];
+};
+struct TC8_data_struct{
+	unsigned short packet_index;
+	unsigned RX_status:2;
+	unsigned char RX_Success_ratio;
+	unsigned Data_isValid:1;
+	float CHs[8];
+	float Refs[8];
+};
+struct TC16_data_struct{
+	unsigned short packet_index;
+	unsigned RX_status:2;
+	unsigned char RX_Success_ratio;
+	unsigned Data_isValid:1;
+	float CHs[16];
+};
+struct QUAD_data_struct{
+	unsigned short packet_index;
+	unsigned RX_status:2;
+	unsigned char RX_Success_ratio;
+	unsigned Data_isValid:1;
+	float CHs[2];
+};
+struct RMSW_data_struct{
+	unsigned char amount;
+	struct MTI_mux_rmsw_tele det_devs[32];
+};
 //Morfeas_SDAQ-Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
 	int error;
 	struct MTI_status_struct MTI_status;
-	struct MTI_RX_config_struct MTI_RX_config;
-	union{//TO-DO:add structs for each telemetry device
+	struct MTI_Radio_config_status_struct MTI_Radio_config;
+	union MTI_Telemetry_data{
+		struct TC4_data_struct as_TC4;
+		struct TC8_data_struct as_TC8;
+		struct TC16_data_struct as_TC16;
+		struct QUAD_data_struct as_QUAD;
+		struct RMSW_data_struct as_RMSWs;
 	} Tele_data;
 	unsigned int counter;
 };

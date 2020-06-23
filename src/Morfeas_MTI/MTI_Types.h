@@ -52,9 +52,17 @@ struct MTI_4_temp_tele{
 	float valid_data;
 	float valid_data_cnt;
 	float reserved[5];
-	float channels[4];
-	float ref_1_2;
-	float ref_3_4;
+	float channels[6];
+};
+struct MTI_quad_tele{
+	float index;
+	float rx_status;
+	float success;
+	float samplerate;
+	float drift_index;
+	float reserved[5];
+	float Channel_1[5];
+	float Channel_2[5];
 };
 struct MTI_mux_rmsw_tele{
 	float dev_type;
@@ -63,19 +71,7 @@ struct MTI_mux_rmsw_tele{
 	float switch_status;
 	float temp;
 	float input_voltage;
-	struct{
-		float voltage;
-		float amperage;
-	}channels[2];
-};
-struct MTI_quad_tele{
-	float index;
-	float rx_status;
-	float success;
-	float sampling_rate;
-	float drift_index;
-	float reserved[5];
-	float channels[2];
+	float meas_data[4];
 };
 
 //--- From MODBus Holding Registers(R/W) 40001-40008 ---//
@@ -83,5 +79,5 @@ struct MTI_RX_config_struct{
 	unsigned short RX_channel;
 	unsigned short Data_rate;
 	unsigned short Tele_dev_type;
-	unsigned short specific_reg[5];
+	unsigned short Specific_reg[5];
 };
