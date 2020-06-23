@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern char *Morfeas_IPC_handler_type_name[];
 extern char *MTI_Data_rate_str[];
 extern char *MTI_Tele_dev_type_str[];
+extern char *MTI_RM_dev_type_str[];
 
 /*Structs for IOBOX_handler*/
 struct Power_Supply{
@@ -130,7 +131,7 @@ struct QUAD_data_struct{
 };
 struct RMSW_data_struct{
 	unsigned char amount;
-	struct MTI_mux_rmsw_tele det_devs[32];
+	struct MTI_mux_rmsw_tele det_devs_data[32];
 };
 //Morfeas_SDAQ-Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
 struct Morfeas_MTI_if_stats{

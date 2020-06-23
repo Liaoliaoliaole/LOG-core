@@ -16,9 +16,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 /*MTI's ModBus regions Offsets*/
-#define MTI_STATUS_OFFSET 2000
+//In holding registers region
 #define MTI_CONFIG_OFFSET 0
-#define MTI_TELE_DATA_OFFSET 2050
+//In Read registers region
+#define MTI_RMSWs_DATA_OFFSET 25 //short registers
+#define MTI_STATUS_OFFSET 2000 //float registers
+#define MTI_TELE_DATA_OFFSET 2050 //float registers
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,11 +39,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <modbus.h>
 
-#include "../Morfeas_Types.h" 
+#include "../Morfeas_Types.h"
 
 char *MTI_charger_state_str[]={"Discharging", "Full", "No Battery", "Charging"};
 char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
 char *MTI_Tele_dev_type_str[]={"DISABLED", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20"};
+char *MTI_RM_dev_type_str[]={"", "Remote Switch", "Multiplexer", "Mini Remote Switch"};
 
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
@@ -124,6 +128,8 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->Tele_data.as_QUAD.Data_isValid = 0;
 			break;
 		case RM_SW_MUX:
+			if(modbus_read_input_registers(ctx, MTI_RMSWs_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+				return EXIT_FAILURE;
 			break;
 		default: EXIT_FAILURE;
 	}

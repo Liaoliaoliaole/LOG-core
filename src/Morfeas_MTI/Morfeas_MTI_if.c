@@ -202,13 +202,18 @@ int main(int argc, char *argv[])
 			Logger("New get_MTI_Tele_data request\n");
 			if(!get_MTI_Tele_data(ctx, &stats))
 			{
-				printf("\n===== Tele data =====\n");
 				if(stats.MTI_Radio_config.Tele_dev_type!=RM_SW_MUX)
 				{
+					printf("\n===== Tele data =====\n");
 					printf("Telemetry data is%s valid\n", stats.Tele_data.as_TC4.Data_isValid?"":" NOT");
 					printf("Packet Index=%d\n", stats.Tele_data.as_TC4.packet_index);
 					printf("RX Status=%d\n", stats.Tele_data.as_TC4.RX_status);
 					printf("RX success Ratio=%d%%\n", stats.Tele_data.as_TC4.RX_Success_ratio);
+				}
+				else
+				{
+					printf("\n===== Remote Switches and Multiplexers =====\n");
+					printf("Amount of detected devices = %d\n", stats.Tele_data.as_RMSWs.amount);
 				}
 				printf("\n===== Data =====\n");
 				switch(stats.MTI_Radio_config.Tele_dev_type)

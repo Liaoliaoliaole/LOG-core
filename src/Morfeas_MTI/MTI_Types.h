@@ -65,13 +65,13 @@ struct MTI_quad_tele{
 	float Channel_2[5];
 };
 struct MTI_mux_rmsw_tele{
-	float dev_type;
-	float dev_id;
-	float last_mesg;
-	float switch_status;
-	float temp;
-	float input_voltage;
-	float meas_data[4];
+	unsigned short dev_type;
+	unsigned short dev_id;
+	unsigned short last_mesg;
+	unsigned short switch_status;
+	unsigned short temp;
+	unsigned short input_voltage;
+	unsigned short meas_data[4];
 };
 
 //--- From MODBus Holding Registers(R/W) 40001-40008 ---//
