@@ -128,9 +128,14 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->Tele_data.as_QUAD.Data_isValid = 0;
 			break;
 		case RM_SW_MUX:
-			if(modbus_read_input_registers(ctx, MTI_RMSWs_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
-				return EXIT_FAILURE;
-			break;
+			/*
+			for()
+			{
+				if(modbus_read_input_registers(ctx, MTI_RMSWs_DATA_OFFSET, MODBUS_MAX_READ_REGISTERS:sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+					return EXIT_FAILURE;
+				break;
+			}
+			*/
 		default: EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
