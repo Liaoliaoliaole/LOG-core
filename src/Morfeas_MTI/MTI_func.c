@@ -84,6 +84,7 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
+	int amount_of_data, i;
 	union MTI_Tele_data_union{
 		struct MTI_16_temp_tele as_TC16;
 		struct MTI_4_temp_tele as_TC4;
@@ -128,15 +129,21 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->Tele_data.as_QUAD.Data_isValid = 0;
 			break;
 		case RM_SW_MUX:
-			/*
-			for()
+			modbus_set_debug(ctx, 1);
+			//Get Remote controlling device data loop  
+			for(i=0, amount_of_data = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); amount_of_data>0; amount_of_data -= MODBUS_MAX_READ_REGISTERS, i++)
 			{
-				if(modbus_read_input_registers(ctx, MTI_RMSWs_DATA_OFFSET, MODBUS_MAX_READ_REGISTERS:sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+				if(modbus_read_input_registers(ctx, 
+											   i*MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET, 
+											   (amount_of_data>MODBUS_MAX_READ_REGISTERS?MODBUS_MAX_READ_REGISTERS:amount_of_data),
+											   ((unsigned short*)&cur_MTI_Tele_data)+i*MODBUS_MAX_READ_REGISTERS)<=0)
 					return EXIT_FAILURE;
-				break;
+				printf("amount_of_data=%d\n",amount_of_data);
 			}
-			*/
-		default: EXIT_FAILURE;
+			modbus_set_debug(ctx, 0);
+			break;
+		default: 
+			return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }

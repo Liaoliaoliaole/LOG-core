@@ -36,6 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Array with strings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];
+extern char *MTI_charger_state_str[];
 extern char *MTI_Data_rate_str[];
 extern char *MTI_Tele_dev_type_str[];
 extern char *MTI_RM_dev_type_str[];
@@ -73,6 +74,15 @@ struct Morfeas_MDAQ_if_stats{
 	float board_temp;
 	struct MDAQ_Channel meas[8];
 	unsigned int counter;
+};
+
+//--- Enumerators for MTI ---//
+enum MTI_Dev_type_enum{
+	Tele_TC16 = 2,
+	Tele_TC8,
+	RM_SW_MUX,
+	Tele_quad,
+	Tele_TC4
 };
 
 /*Structs for MTI_handler*/ 
@@ -129,11 +139,20 @@ struct QUAD_data_struct{
 	unsigned Data_isValid:1;
 	float CHs[2];
 };
-struct RMSW_data_struct{
-	unsigned char amount;
-	struct MTI_mux_rmsw_tele det_devs_data[32];
+struct RMSW_MUX_Mini_data_struct{
+	unsigned dev_type:2;
+	unsigned short dev_id;
+	unsigned char last_mesg;
+	unsigned short switch_status;
+	float dev_temp;
+	float input_voltage;
+	float meas_data[4];
 };
-//Morfeas_SDAQ-Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
+struct RM_devs_data_struct{
+	unsigned char amount;
+	struct RMSW_MUX_Mini_data_struct det_devs_data[32];
+};
+//Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
@@ -145,7 +164,7 @@ struct Morfeas_MTI_if_stats{
 		struct TC8_data_struct as_TC8;
 		struct TC16_data_struct as_TC16;
 		struct QUAD_data_struct as_QUAD;
-		struct RMSW_data_struct as_RMSWs;
+		struct RM_devs_data_struct as_RMSWs;
 	} Tele_data;
 	unsigned int counter;
 };

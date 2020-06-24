@@ -15,16 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern char *MTI_charger_state_str[];
-//--- Enumerators for MTI ---//
-enum MTI_Dev_type_enum{
-	Tele_TC16 = 2,
-	Tele_TC8,
-	RM_SW_MUX,
-	Tele_quad,
-	Tele_TC4
-};
-
 //--- From MODBus Input Registers(Read only) 32001... ---//
 struct MTI_dev_status{
 	float batt_volt;
