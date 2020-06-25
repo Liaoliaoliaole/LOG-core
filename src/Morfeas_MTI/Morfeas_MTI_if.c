@@ -198,54 +198,57 @@ int main(int argc, char *argv[])
 			for(int i=0; i<sizeof(stats.MTI_Radio_config.Specific_reg)/sizeof(short); i++)
 				printf("SFR[%d]=%d(0x%x)\n", i, stats.MTI_Radio_config.Specific_reg[i], stats.MTI_Radio_config.Specific_reg[i]);
 			printf("=======================\n");
-		
-			Logger("New get_MTI_Tele_data request\n");
-			if(!get_MTI_Tele_data(ctx, &stats))
+			
+			if(stats.MTI_Radio_config.Tele_dev_type)
 			{
-				if(stats.MTI_Radio_config.Tele_dev_type!=RM_SW_MUX)
+				Logger("New get_MTI_Tele_data request\n");
+				if(!get_MTI_Tele_data(ctx, &stats))
 				{
-					printf("\n===== Tele data =====\n");
-					printf("Telemetry data is%s valid\n", stats.Tele_data.as_TC4.Data_isValid?"":" NOT");
-					printf("Packet Index=%d\n", stats.Tele_data.as_TC4.packet_index);
-					printf("RX Status=%d\n", stats.Tele_data.as_TC4.RX_status);
-					printf("RX success Ratio=%d%%\n", stats.Tele_data.as_TC4.RX_Success_ratio);
+					if(stats.MTI_Radio_config.Tele_dev_type!=RM_SW_MUX)
+					{
+						printf("\n===== Tele data =====\n");
+						printf("Telemetry data is%s valid\n", stats.Tele_data.as_TC4.Data_isValid?"":" NOT");
+						printf("Packet Index=%d\n", stats.Tele_data.as_TC4.packet_index);
+						printf("RX Status=%d\n", stats.Tele_data.as_TC4.RX_status);
+						printf("RX success Ratio=%d%%\n", stats.Tele_data.as_TC4.RX_Success_ratio);
+					}
+					else
+					{
+						printf("\n===== Remote Switches and Multiplexers =====\n");
+						printf("Amount of detected devices = %d\n", stats.Tele_data.as_RMSWs.amount);
+					}
+					printf("\n===== Data =====\n");
+					switch(stats.MTI_Radio_config.Tele_dev_type)
+					{
+						case Tele_TC4:
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.CHs)/sizeof(*stats.Tele_data.as_TC4.CHs);i++)
+								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC4.CHs[i]);
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.Refs)/sizeof(*stats.Tele_data.as_TC4.Refs);i++)
+								printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC4.Refs[i]);
+							break;
+						case Tele_TC8:
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.CHs)/sizeof(*stats.Tele_data.as_TC8.CHs);i++)
+								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC8.CHs[i]);
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.Refs)/sizeof(*stats.Tele_data.as_TC8.Refs);i++)
+								printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC8.Refs[i]);
+							break;
+						case Tele_TC16:
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC16.CHs)/sizeof(*stats.Tele_data.as_TC16.CHs);i++)
+								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC16.CHs[i]);
+							break;
+						case Tele_quad:
+							for(int i=0; i<sizeof(stats.Tele_data.as_QUAD.CHs)/sizeof(*stats.Tele_data.as_QUAD.CHs);i++)
+								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_QUAD.CHs[i]);
+							break;
+						case RM_SW_MUX:
+						
+							break;
+					}
+					printf("=======================\n");
 				}
 				else
-				{
-					printf("\n===== Remote Switches and Multiplexers =====\n");
-					printf("Amount of detected devices = %d\n", stats.Tele_data.as_RMSWs.amount);
-				}
-				printf("\n===== Data =====\n");
-				switch(stats.MTI_Radio_config.Tele_dev_type)
-				{
-					case Tele_TC4:
-						for(int i=0; i<sizeof(stats.Tele_data.as_TC4.CHs)/sizeof(*stats.Tele_data.as_TC4.CHs);i++)
-							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC4.CHs[i]);
-						for(int i=0; i<sizeof(stats.Tele_data.as_TC4.Refs)/sizeof(*stats.Tele_data.as_TC4.Refs);i++)
-							printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC4.Refs[i]);
-						break;
-					case Tele_TC8:
-						for(int i=0; i<sizeof(stats.Tele_data.as_TC8.CHs)/sizeof(*stats.Tele_data.as_TC8.CHs);i++)
-							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC8.CHs[i]);
-						for(int i=0; i<sizeof(stats.Tele_data.as_TC8.Refs)/sizeof(*stats.Tele_data.as_TC8.Refs);i++)
-							printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC8.Refs[i]);
-						break;
-					case Tele_TC16:
-						for(int i=0; i<sizeof(stats.Tele_data.as_TC16.CHs)/sizeof(*stats.Tele_data.as_TC16.CHs);i++)
-							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC16.CHs[i]);
-						break;
-					case Tele_quad:
-						for(int i=0; i<sizeof(stats.Tele_data.as_QUAD.CHs)/sizeof(*stats.Tele_data.as_QUAD.CHs);i++)
-							printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_QUAD.CHs[i]);
-						break;
-					case RM_SW_MUX:
-					
-						break;
-				}
-				printf("=======================\n");
+					Logger("get_MTI_Tele_data request Failed!!!\n");
 			}
-			else
-				Logger("get_MTI_Tele_data request Failed!!!\n");
 		}
 		else
 			Logger("get_MTI_Radio_config request Failed!!!\n");

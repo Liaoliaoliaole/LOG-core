@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MODBus implementation of icraft
 
 /*MTI's ModBus regions Offsets*/
 //In holding registers region
@@ -129,18 +130,15 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->Tele_data.as_QUAD.Data_isValid = 0;
 			break;
 		case RM_SW_MUX:
-			modbus_set_debug(ctx, 1);
-			//Get Remote controlling device data loop  
-			for(i=0, amount_of_data = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); amount_of_data>0; amount_of_data -= MODBUS_MAX_READ_REGISTERS, i++)
+			//Loop that Getting The Remote controlling devices data, and store them to the cur_MTI_Tele_data struct.
+			for(i=0, amount_of_data = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); amount_of_data>0; amount_of_data -= MTI_MODBUS_MAX_READ_REGISTERS, i++)
 			{
-				if(modbus_read_input_registers(ctx, 
-											   i*MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET, 
-											   (amount_of_data>MODBUS_MAX_READ_REGISTERS?MODBUS_MAX_READ_REGISTERS:amount_of_data),
-											   ((unsigned short*)&cur_MTI_Tele_data)+i*MODBUS_MAX_READ_REGISTERS)<=0)
+				if(modbus_read_input_registers(ctx, i*MTI_MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET, 
+											  (amount_of_data>MTI_MODBUS_MAX_READ_REGISTERS?MTI_MODBUS_MAX_READ_REGISTERS:amount_of_data),
+											  ((unsigned short*)&cur_MTI_Tele_data)+i*MTI_MODBUS_MAX_READ_REGISTERS)<=0)
 					return EXIT_FAILURE;
-				printf("amount_of_data=%d\n",amount_of_data);
 			}
-			modbus_set_debug(ctx, 0);
+			//
 			break;
 		default: 
 			return EXIT_FAILURE;
