@@ -45,7 +45,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 char *MTI_charger_state_str[]={"Discharging", "Full", "No Battery", "Charging"};
 char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
 char *MTI_Tele_dev_type_str[]={"DISABLED", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20"};
-char *MTI_RM_dev_type_str[]={"", "Remote Switch", "Multiplexer", "Mini Remote Switch"};
+char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW"};
 
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
@@ -85,7 +85,7 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
-	int amount_of_data, i;
+	int remain_words, i, pos;
 	union MTI_Tele_data_union{
 		struct MTI_16_temp_tele as_TC16;
 		struct MTI_4_temp_tele as_TC4;
@@ -130,15 +130,50 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->Tele_data.as_QUAD.Data_isValid = 0;
 			break;
 		case RM_SW_MUX:
+			//Zero the amount of detected devices 
+			stats->Tele_data.as_RMSWs.amount_of_devices = 0;
 			//Loop that Getting The Remote controlling devices data, and store them to the cur_MTI_Tele_data struct.
-			for(i=0, amount_of_data = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); amount_of_data>0; amount_of_data -= MTI_MODBUS_MAX_READ_REGISTERS, i++)
+			for(i=0, remain_words = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); remain_words>0; remain_words -= MTI_MODBUS_MAX_READ_REGISTERS, i++)
 			{
 				if(modbus_read_input_registers(ctx, i*MTI_MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET, 
-											  (amount_of_data>MTI_MODBUS_MAX_READ_REGISTERS?MTI_MODBUS_MAX_READ_REGISTERS:amount_of_data),
+											  (remain_words>MTI_MODBUS_MAX_READ_REGISTERS?MTI_MODBUS_MAX_READ_REGISTERS:remain_words),
 											  ((unsigned short*)&cur_MTI_Tele_data)+i*MTI_MODBUS_MAX_READ_REGISTERS)<=0)
 					return EXIT_FAILURE;
 			}
-			//
+			//Loop that find the detected devices and load them to the stats.
+			for(i=0, pos=0; i<MAX_RMSW_DEVs; i++)
+			{
+				if(cur_MTI_Tele_data.as_MUXs_RMSWs[i].dev_type)
+				{
+					stats->Tele_data.as_RMSWs.amount_of_devices++;
+					//Convert and load data of the Detected controlling telemetry device
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].pos_offset = i;
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].dev_type = cur_MTI_Tele_data.as_MUXs_RMSWs[i].dev_type;
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].dev_id = cur_MTI_Tele_data.as_MUXs_RMSWs[i].dev_id;
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].time_from_last_mesg = cur_MTI_Tele_data.as_MUXs_RMSWs[i].time_from_last_mesg;
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].dev_temp = ((short)cur_MTI_Tele_data.as_MUXs_RMSWs[i].temp)/128.0;
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].input_voltage = cur_MTI_Tele_data.as_MUXs_RMSWs[i].input_voltage/1000.0;
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].switch_status.as_byte = cur_MTI_Tele_data.as_MUXs_RMSWs[i].switch_status;
+					switch(stats->Tele_data.as_RMSWs.det_devs_data[pos].dev_type)
+					{
+						case RMSW_2CH:
+							for(int j=0;j<4; j+=2)
+							{
+								stats->Tele_data.as_RMSWs.det_devs_data[pos].meas_data[j] = cur_MTI_Tele_data.as_MUXs_RMSWs[i].meas_data[j]/1000.0;
+								stats->Tele_data.as_RMSWs.det_devs_data[pos].meas_data[j+1] = cur_MTI_Tele_data.as_MUXs_RMSWs[i].meas_data[j+1]/1000.0;
+							}
+							break;
+						case Mini_RMSW:
+							for(int j=0;j<4; j++)
+								stats->Tele_data.as_RMSWs.det_devs_data[pos].meas_data[j] = ((short)cur_MTI_Tele_data.as_MUXs_RMSWs[i].meas_data[j])/16.0;
+							break;
+						default:
+							for(int j=0; j<4;j++)
+								stats->Tele_data.as_RMSWs.det_devs_data[pos].meas_data[j] = NAN;
+					}
+					pos++;
+				}
+			}
 			break;
 		default: 
 			return EXIT_FAILURE;

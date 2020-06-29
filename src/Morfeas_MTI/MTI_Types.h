@@ -57,7 +57,7 @@ struct MTI_quad_tele{
 struct MTI_mux_rmsw_tele{
 	unsigned short dev_type;
 	unsigned short dev_id;
-	unsigned short last_mesg;
+	unsigned short time_from_last_mesg;
 	unsigned short switch_status;
 	unsigned short temp;
 	unsigned short input_voltage;

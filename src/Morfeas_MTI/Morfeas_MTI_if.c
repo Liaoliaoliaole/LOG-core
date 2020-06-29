@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 	stats.error = 0;//load no error on stats
 	
 	
-	while(handler_run)//MTI's FSM
+	while(handler_run)//MTI printing of status and telemetry device(s)
 	{
 		printf("\n-------------------------------------------------------------------------------------\n");
 		Logger("New read status request\n");
@@ -215,33 +215,74 @@ int main(int argc, char *argv[])
 					else
 					{
 						printf("\n===== Remote Switches and Multiplexers =====\n");
-						printf("Amount of detected devices = %d\n", stats.Tele_data.as_RMSWs.amount);
+						printf("Amount of detected devices = %d\n", stats.Tele_data.as_RMSWs.amount_of_devices);
 					}
 					printf("\n===== Data =====\n");
 					switch(stats.MTI_Radio_config.Tele_dev_type)
 					{
 						case Tele_TC4:
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.CHs)/sizeof(*stats.Tele_data.as_TC4.CHs);i++)
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.CHs)/sizeof(*stats.Tele_data.as_TC4.CHs); i++)
 								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC4.CHs[i]);
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.Refs)/sizeof(*stats.Tele_data.as_TC4.Refs);i++)
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.Refs)/sizeof(*stats.Tele_data.as_TC4.Refs); i++)
 								printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC4.Refs[i]);
 							break;
 						case Tele_TC8:
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.CHs)/sizeof(*stats.Tele_data.as_TC8.CHs);i++)
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.CHs)/sizeof(*stats.Tele_data.as_TC8.CHs); i++)
 								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC8.CHs[i]);
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.Refs)/sizeof(*stats.Tele_data.as_TC8.Refs);i++)
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.Refs)/sizeof(*stats.Tele_data.as_TC8.Refs); i++)
 								printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC8.Refs[i]);
 							break;
 						case Tele_TC16:
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC16.CHs)/sizeof(*stats.Tele_data.as_TC16.CHs);i++)
+							for(int i=0; i<sizeof(stats.Tele_data.as_TC16.CHs)/sizeof(*stats.Tele_data.as_TC16.CHs); i++)
 								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC16.CHs[i]);
 							break;
 						case Tele_quad:
-							for(int i=0; i<sizeof(stats.Tele_data.as_QUAD.CHs)/sizeof(*stats.Tele_data.as_QUAD.CHs);i++)
+							for(int i=0; i<sizeof(stats.Tele_data.as_QUAD.CHs)/sizeof(*stats.Tele_data.as_QUAD.CHs); i++)
 								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_QUAD.CHs[i]);
 							break;
 						case RM_SW_MUX:
-						
+							for(int i=0; i<stats.Tele_data.as_RMSWs.amount_of_devices; i++)
+							{
+								printf("Device %d:\n",i+1);
+								printf("\tMemory offset=%u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].pos_offset);
+								printf("\tDev_type = %s\n",MTI_RM_dev_type_str[stats.Tele_data.as_RMSWs.det_devs_data[i].dev_type]);
+								printf("\tDev_ID = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].dev_id);
+								printf("\tLast_msg_before = %d sec\n",stats.Tele_data.as_RMSWs.det_devs_data[i].time_from_last_mesg);
+								printf("\tDev temp = %.2f°C\n",stats.Tele_data.as_RMSWs.det_devs_data[i].dev_temp);
+								printf("\tDev input_voltage = %.2fV\n",stats.Tele_data.as_RMSWs.det_devs_data[i].input_voltage);
+								switch(stats.Tele_data.as_RMSWs.det_devs_data[i].dev_type)
+								{
+									case RMSW_2CH:
+										printf("\tCH1 = %.2fV\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[0]);
+										printf("\tCH1 = %.3fA\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[1]);
+										printf("\tCH2 = %.2fV\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[2]);
+										printf("\tCH2 = %.3fA\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[3]);
+										break;
+									case Mini_RMSW:
+										for(int j=0;j<4; j++)
+											printf("\tCH%u = %.2f°C\n",j,stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]);
+										break;
+								}
+								printf("\tControl byte = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
+								switch(stats.Tele_data.as_RMSWs.det_devs_data[i].dev_type)
+								{
+									case RMSW_2CH:
+										printf("\t\tMain_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Main);
+										printf("\t\t CH1_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH1);
+										printf("\t\t CH2_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH2);
+										break;
+									case MUX:
+										printf("\t\t CH1_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH1);
+										printf("\t\t CH2_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH2);
+										printf("\t\t CH3_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH3);
+										printf("\t\t CH4_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH4);
+										break;
+									case Mini_RMSW:
+										printf("\t\tMain_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Main);
+										break;
+								}
+								printf("\n");
+							}
 							break;
 					}
 					printf("=======================\n");

@@ -27,6 +27,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MDAQ_start_reg 100
 #define MDAQ_imp_reg 90
 
+//Defs for MTI_handler*/
+#define MAX_RMSW_DEVs 32
+
 #include <gmodule.h>
 #include <glib.h>
 //Include SDAQ Driver header
@@ -76,13 +79,19 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-//--- Enumerators for MTI ---//
-enum MTI_Dev_type_enum{
+//--- Enumerators for MTI Telemetry types---//
+enum MTI_Telemetry_Dev_type_enum{
 	Tele_TC16 = 2,
 	Tele_TC8,
 	RM_SW_MUX,
 	Tele_quad,
 	Tele_TC4
+};
+//--- Enumerator for Controlling device ---//
+enum MTI_Controlling_Dev_type_enum{
+	RMSW_2CH = 1,
+	MUX,
+	Mini_RMSW
 };
 
 /*Structs for MTI_handler*/ 
@@ -138,19 +147,44 @@ struct QUAD_data_struct{
 	unsigned char RX_Success_ratio;
 	unsigned Data_isValid:1;
 	float CHs[2];
-};
+}; 
+
 struct RMSW_MUX_Mini_data_struct{
+	unsigned char pos_offset;
 	unsigned dev_type:2;
 	unsigned short dev_id;
-	unsigned char last_mesg;
-	unsigned short switch_status;
+	unsigned char time_from_last_mesg;
+	//unsigned short switch_status;
+	union switch_status_dec{
+		struct rmsw_switches_decoder{
+			unsigned Main:1;
+			unsigned CH1:1;
+			unsigned CH2:1;
+			unsigned reserved:4;
+			unsigned Rep_rate:1;
+		}rmsw_dec;
+		struct mux_switches_decoder{
+			unsigned CH1:1;
+			unsigned CH2:1;
+			unsigned CH3:1;
+			unsigned CH4:1;
+			unsigned reserved:3;
+			unsigned Rep_rate:1;
+		}mux_dec;
+		struct mini_rmsw_switches_decoder{
+			unsigned Main:1;
+			unsigned reserved:5;
+			unsigned Rep_rate:2;
+		}mini_dec;
+		unsigned char as_byte;
+	}switch_status;
 	float dev_temp;
 	float input_voltage;
 	float meas_data[4];
 };
 struct RM_devs_data_struct{
-	unsigned char amount;
-	struct RMSW_MUX_Mini_data_struct det_devs_data[32];
+	unsigned char amount_of_devices;
+	struct RMSW_MUX_Mini_data_struct det_devs_data[MAX_RMSW_DEVs];
 };
 //Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
 struct Morfeas_MTI_if_stats{
