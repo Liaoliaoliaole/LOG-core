@@ -286,7 +286,9 @@ int main(int argc, char *argv[])
 							break;
 					}
 					printf("=======================\n");
-					logstat_MTI(path_to_logstat_dir, &stats);
+					if(stats.counter >= 10)
+						logstat_MTI(path_to_logstat_dir, &stats);
+					stats.counter++;
 				}
 				else
 					Logger("get_MTI_Tele_data request Failed!!!\n");

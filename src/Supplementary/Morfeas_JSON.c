@@ -523,7 +523,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
-	cJSON *root = NULL, *Channels_array = NULL, *Channel = NULL, *values = NULL, *warnings = NULL;
+	cJSON *root = NULL, *MTI_health_stats = NULL;
 
 	//Convert IPv4 to MTI's Identifier
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
@@ -535,7 +535,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	if(!stats->error)
 	{
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));
-		
+		//Create MTI's_Health_stats object
 	}
 	else
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
