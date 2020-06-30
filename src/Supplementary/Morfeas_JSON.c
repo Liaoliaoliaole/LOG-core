@@ -503,3 +503,80 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	free(logstat_path_and_name);
 	return 0;
 }
+
+//Converting and exporting function for MTI's stats struct. Convert it to JSON format and save it to logstat_path
+int logstat_MTI(char *logstat_path, void *stats_arg)
+{
+		if(!logstat_path || !stats_arg)
+		return -1;
+	struct Morfeas_MTI_if_stats *stats = stats_arg;
+	unsigned int Identifier;
+	FILE * pFile;
+	static unsigned char write_error = 0;
+	char *logstat_path_and_name, *slash;
+	char str_buff[30] = {0};
+	//make time_t variable and get unix time
+	time_t now_time = time(NULL);
+	//Correct logstat_path_and_name
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_12345.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
+	//cJSON related variables
+	char *JSON_str = NULL;
+	cJSON *root = NULL, *Channels_array = NULL, *Channel = NULL, *values = NULL, *warnings = NULL;
+
+	//Convert IPv4 to MTI's Identifier
+	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
+	root = cJSON_CreateObject();
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
+	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->MTI_IPv4_addr));
+	cJSON_AddNumberToObject(root, "Identifier", Identifier);
+	if(!stats->error)
+	{
+		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));
+		
+	}
+	else
+		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
+	//Reset accumulator counter
+	stats->counter = 0;
+	//Print JSON to File
+	JSON_str = cJSON_Print(root);
+	//JSON_str = cJSON_PrintUnformatted(root);
+	pFile = fopen (logstat_path_and_name, "w");
+	if(pFile)
+	{
+		fputs(JSON_str, pFile);
+		fclose (pFile);
+		if(write_error)
+			fprintf(stderr,"Write error @ Statlog file, Restored\n");
+		write_error = 0;
+	}
+	else if(!write_error)
+	{
+		fprintf(stderr,"Write error @ Statlog file!!!\n");
+		write_error = -1;
+	}
+	cJSON_Delete(root);
+	free(JSON_str);
+	free(logstat_path_and_name);
+	return 0;
+}
+//Delete logstat file for MTI_handler
+int delete_logstat_MTI(char *logstat_path, void *stats_arg)
+{
+	int ret_val;
+	if(!logstat_path || !stats_arg)
+		return -1;
+	char *logstat_path_and_name, *slash;
+	struct Morfeas_MTI_if_stats *stats = stats_arg;
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_12345.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
+	//Delete logstat file
+	ret_val = unlink(logstat_path_and_name);
+	free(logstat_path_and_name);
+	return ret_val;
+}

@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 	//Set Slave address
 	if(modbus_set_slave(ctx, default_slave_address))
 	{
-		fprintf(stderr, "Can't set slave address !!!\n");
+		fprintf(stderr, "Can't set slave address!!!\n");
 		modbus_free(ctx);
 		return EXIT_FAILURE;
 	}
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 		stats.error = errno;
 		//MTI_status_to_IPC(FIFO_fd, &stats);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
-		//logstat_MTI(path_to_logstat_dir, &stats);
+		logstat_MTI(path_to_logstat_dir, &stats);
 	}
 	stats.error = 0;//load no error on stats
 	
@@ -286,6 +286,7 @@ int main(int argc, char *argv[])
 							break;
 					}
 					printf("=======================\n");
+					logstat_MTI(path_to_logstat_dir, &stats);
 				}
 				else
 					Logger("get_MTI_Tele_data request Failed!!!\n");
@@ -304,10 +305,10 @@ int main(int argc, char *argv[])
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 1);
 	Logger("Morfeas_MTI_if (%s) Removed from OPC-UA\n",stats.dev_name);
 	close(FIFO_fd);
+	*/
 	//Delete logstat file
 	if(path_to_logstat_dir)
 		delete_logstat_MTI(path_to_logstat_dir, &stats);
-	*/
 	return EXIT_SUCCESS;
 }
 
