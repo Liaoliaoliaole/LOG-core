@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 		if(get_MTI_Radio_config(ctx, &stats)>=0)
 		{
 			printf("=== RX configuration ==\n");
-			printf("RX Frequency=%.3fGHz\n",(2400+stats.MTI_Radio_config.RX_channel)/1000.0);
+			printf("RX Frequency=%.3fGHz\n",(2400+stats.MTI_Radio_config.RF_channel)/1000.0);
 			printf("Data_rate=%s\n",MTI_Data_rate_str[stats.MTI_Radio_config.Data_rate]);
 			printf("Tele_dev_type=%s\n",MTI_Tele_dev_type_str[stats.MTI_Radio_config.Tele_dev_type]);
 			for(int i=0; i<sizeof(stats.MTI_Radio_config.Specific_reg)/sizeof(short); i++)
@@ -288,7 +288,6 @@ int main(int argc, char *argv[])
 					printf("=======================\n");
 					if(stats.counter >= 10)
 						logstat_MTI(path_to_logstat_dir, &stats);
-					stats.counter++;
 				}
 				else
 					Logger("get_MTI_Tele_data request Failed!!!\n");
@@ -296,6 +295,7 @@ int main(int argc, char *argv[])
 		}
 		else
 			Logger("get_MTI_Radio_config request Failed!!!\n");
+		stats.counter++;
 		usleep(100000);
 	}
 	

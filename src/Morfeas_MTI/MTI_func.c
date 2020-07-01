@@ -70,16 +70,19 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
 	struct MTI_RX_config_struct cur_RX_config;
+
 	if(modbus_read_registers(ctx, MTI_CONFIG_OFFSET, sizeof(cur_RX_config)/sizeof(short), (unsigned short*)&cur_RX_config)<=0)
 		return EXIT_FAILURE;
 	//Sanitization of status values
-	cur_RX_config.RX_channel = cur_RX_config.RX_channel>127?0:cur_RX_config.RX_channel;//Sanitize Radio channel frequency.
+	cur_RX_config.RF_channel = cur_RX_config.RF_channel>127?0:cur_RX_config.RF_channel;//Sanitize Radio channel frequency.
 	cur_RX_config.Tele_dev_type = cur_RX_config.Tele_dev_type>Tele_TC4||cur_RX_config.Tele_dev_type<Tele_TC16?0:cur_RX_config.Tele_dev_type;//Sanitize Telemetry device type
 	//Convert and load values to stats struct
-	stats->MTI_Radio_config.RX_channel = cur_RX_config.RX_channel;
+	stats->MTI_Radio_config.RF_channel = cur_RX_config.RF_channel;
 	stats->MTI_Radio_config.Data_rate = cur_RX_config.Data_rate;
 	stats->MTI_Radio_config.Tele_dev_type = cur_RX_config.Tele_dev_type;
-	memcpy(&(stats->MTI_Radio_config.Specific_reg), &(cur_RX_config.Specific_reg), sizeof(stats->MTI_Radio_config.Specific_reg));
+	for(int i=0;i<sizeof(stats->MTI_Radio_config.Specific_reg)/sizeof(stats->MTI_Radio_config.Specific_reg[0]); i++)
+		stats->MTI_Radio_config.Specific_reg[i] = cur_RX_config.Specific_reg[i];
+	//memcpy(&(stats->MTI_Radio_config.Specific_reg), &(cur_RX_config.Specific_reg), sizeof(stats->MTI_Radio_config.Specific_reg));
 	return cur_RX_config.Tele_dev_type;
 }
 

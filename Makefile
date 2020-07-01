@@ -40,6 +40,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_opc_ua.o \
 					  $(WORK_dir)/Morfeas_opc_ua_config.o \
 					  $(WORK_dir)/SDAQ_drv.o \
+					  $(WORK_dir)/MTI_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
 					  $(WORK_dir)/Morfeas_MDAQ_nodeset.o \
@@ -53,6 +54,7 @@ Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
 					  $(WORK_dir)/Morfeas_RPi_Hat.o \
 					  $(WORK_dir)/SDAQ_drv.o \
+					  $(WORK_dir)/MTI_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_Logger.o \
 					  $(CANif_DEP_HEADERS_dir)
@@ -61,6 +63,7 @@ Morfeas_MDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_MDAQ_if.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
 					  $(WORK_dir)/SDAQ_drv.o \
+					  $(WORK_dir)/MTI_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_Logger.o
 
@@ -68,6 +71,7 @@ Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/Morfeas_IOBOX_if.o \
 					   $(WORK_dir)/Morfeas_JSON.o \
 					   $(WORK_dir)/SDAQ_drv.o \
+					   $(WORK_dir)/MTI_func.o \
 					   $(WORK_dir)/Morfeas_IPC.o \
 					   $(WORK_dir)/Morfeas_Logger.o
 

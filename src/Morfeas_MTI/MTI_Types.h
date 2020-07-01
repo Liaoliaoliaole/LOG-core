@@ -66,7 +66,7 @@ struct MTI_mux_rmsw_tele{
 
 //--- From MODBus Holding Registers(R/W) 40001-40008 ---//
 struct MTI_RX_config_struct{
-	unsigned short RX_channel;
+	unsigned short RF_channel;
 	unsigned short Data_rate;
 	unsigned short Tele_dev_type;
 	unsigned short Specific_reg[5];

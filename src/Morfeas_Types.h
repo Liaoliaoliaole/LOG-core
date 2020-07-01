@@ -96,9 +96,6 @@ enum MTI_Controlling_Dev_type_enum{
 
 /*Structs for MTI_handler*/ 
 struct MTI_status_struct{
-	unsigned char Radio_CH;
-	unsigned char Modem_data_rate;
-	unsigned char Tele_Device_type;
 	float MTI_batt_volt;
 	float MTI_batt_capacity;
 	unsigned char MTI_charge_status;
@@ -112,10 +109,10 @@ struct MTI_status_struct{
 	float PWM_outDuty_CHs[4];
 };
 struct MTI_Radio_config_status_struct{
-	unsigned RX_channel:7;
-	unsigned short Data_rate:2;
-	unsigned short Tele_dev_type:3;
-	unsigned short Specific_reg[5];
+	unsigned RF_channel:7;
+	unsigned Data_rate:2;
+	unsigned Tele_dev_type:3;
+	unsigned char Specific_reg[5];
 };
 //Structs for MTI related telemetry device
 struct TC4_data_struct{

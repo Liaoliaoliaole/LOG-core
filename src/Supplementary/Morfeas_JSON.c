@@ -34,7 +34,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Local functions
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass);
 
-
 //delete logstat file for SDAQnet_Handler
 int delete_logstat_sys(char *logstat_path)
 {
@@ -514,7 +513,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	FILE * pFile;
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash;
-	char str_buff[30] = {0};
+	
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 	//Correct logstat_path_and_name
@@ -523,7 +522,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
-	cJSON *root = NULL, *MTI_health_stats = NULL;
+	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL;
 
 	//Convert IPv4 to MTI's Identifier
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
@@ -535,7 +534,34 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	if(!stats->error)
 	{
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));
-		//Create MTI's_Health_stats object
+		//Create MTI's_stats object
+		cJSON_AddItemToObject(root, "MTI_status", MTI_status = cJSON_CreateObject());
+		cJSON_AddNumberToObject(MTI_status, "Radio_CH", stats->MTI_Radio_config.RF_channel);
+		cJSON_AddItemToObject(MTI_status, "Modem_data_rate", cJSON_CreateString(MTI_Data_rate_str[stats->MTI_Radio_config.Data_rate]));
+		cJSON_AddItemToObject(MTI_status, "Tele_Device_type", cJSON_CreateString(MTI_Tele_dev_type_str[stats->MTI_Radio_config.Tele_dev_type]));
+		cJSON_AddNumberToObject(MTI_status, "MTI_batt_volt", roundf(100.0 *stats->MTI_status.MTI_batt_volt)/100.0);
+		cJSON_AddNumberToObject(MTI_status, "MTI_batt_capacity", roundf(100.0 *stats->MTI_status.MTI_batt_capacity)/100.0);
+		cJSON_AddItemToObject(MTI_status, "MTI_charge_status", cJSON_CreateString(MTI_charger_state_str[stats->MTI_status.MTI_charge_status]));
+		cJSON_AddNumberToObject(MTI_status, "MTI_CPU_temp", roundf(10.0 *stats->MTI_status.MTI_CPU_temp)/10.0);
+		cJSON_AddNumberToObject(MTI_status, "PWM_gen_out_freq", roundf(1000.0 *stats->MTI_status.PWM_gen_out_freq)/1000.0);
+		cJSON_AddItemToObject(MTI_status, "PWM_CHs_outDuty", PWM_outDuty_CHs = cJSON_CreateArray());
+		for(int i=0; i<4; i++)
+			cJSON_AddItemToArray(PWM_outDuty_CHs, cJSON_CreateNumber(stats->MTI_status.PWM_outDuty_CHs[i]));
+		//Add button states on MTI_status
+		cJSON_AddItemToObject(MTI_status, "MTI_buttons_state", MTI_button_state = cJSON_CreateObject());
+		cJSON_AddItemToObject(MTI_button_state, "PB1", cJSON_CreateBool(stats->MTI_status.buttons_state.pb1));
+		cJSON_AddItemToObject(MTI_button_state, "PB2", cJSON_CreateBool(stats->MTI_status.buttons_state.pb2));
+		cJSON_AddItemToObject(MTI_button_state, "PB3", cJSON_CreateBool(stats->MTI_status.buttons_state.pb3));
+		if(stats->MTI_Radio_config.Tele_dev_type>1)
+		{
+			/*
+			//Add device specific values on MTI_status
+			switch(stats->MTI_Radio_config.Tele_dev_type)
+			{
+				
+			}
+			*/
+		}
 	}
 	else
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
