@@ -509,7 +509,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 		if(!logstat_path || !stats_arg)
 		return -1;
 	struct Morfeas_MTI_if_stats *stats = stats_arg;
-	unsigned int Identifier;
+	unsigned int Identifier, i;
 	FILE * pFile;
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash;
@@ -522,7 +522,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
-	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL;
+	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *Tele_data = NULL, *CHs = NULL, *REFs = NULL ;
 
 	//Convert IPv4 to MTI's Identifier
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
@@ -545,22 +545,59 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 		cJSON_AddNumberToObject(MTI_status, "MTI_CPU_temp", roundf(10.0 *stats->MTI_status.MTI_CPU_temp)/10.0);
 		cJSON_AddNumberToObject(MTI_status, "PWM_gen_out_freq", roundf(1000.0 *stats->MTI_status.PWM_gen_out_freq)/1000.0);
 		cJSON_AddItemToObject(MTI_status, "PWM_CHs_outDuty", PWM_outDuty_CHs = cJSON_CreateArray());
-		for(int i=0; i<4; i++)
-			cJSON_AddItemToArray(PWM_outDuty_CHs, cJSON_CreateNumber(stats->MTI_status.PWM_outDuty_CHs[i]));
+		for(i=0; i<4; i++)
+			cJSON_AddItemToArray(PWM_outDuty_CHs, cJSON_CreateNumber(roundf(10.0 *stats->MTI_status.PWM_outDuty_CHs[i])/10.0));
 		//Add button states on MTI_status
 		cJSON_AddItemToObject(MTI_status, "MTI_buttons_state", MTI_button_state = cJSON_CreateObject());
 		cJSON_AddItemToObject(MTI_button_state, "PB1", cJSON_CreateBool(stats->MTI_status.buttons_state.pb1));
 		cJSON_AddItemToObject(MTI_button_state, "PB2", cJSON_CreateBool(stats->MTI_status.buttons_state.pb2));
 		cJSON_AddItemToObject(MTI_button_state, "PB3", cJSON_CreateBool(stats->MTI_status.buttons_state.pb3));
-		if(stats->MTI_Radio_config.Tele_dev_type>1)
+		if(stats->MTI_Radio_config.Tele_dev_type>1)//transceiver enabled
 		{
-			/*
-			//Add device specific values on MTI_status
-			switch(stats->MTI_Radio_config.Tele_dev_type)
+			//Add device specific values on JSON root
+			if(stats->MTI_Radio_config.Tele_dev_type != RM_SW_MUX)
 			{
+				//Add RX status data for all the Telemetries (exception to Remote switches). Format same for all, TC4 used as reference
+				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateObject());
+				cJSON_AddNumberToObject(Tele_data, "Packet_Index", stats->Tele_data.as_TC4.packet_index);
+				cJSON_AddNumberToObject(Tele_data, "RX_Status", stats->Tele_data.as_TC4.RX_status);
+				cJSON_AddNumberToObject(Tele_data, "RX_Success_Ratio", stats->Tele_data.as_TC4.RX_Success_ratio);
+				cJSON_AddItemToObject(Tele_data, "IsValid", cJSON_CreateBool(stats->Tele_data.as_TC4.Data_isValid));
+				switch(stats->MTI_Radio_config.Tele_dev_type)
+				{
+					case Tele_TC4:
+						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
+						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
+						for(i=0; i<4; i++)
+							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC4.CHs[i]));
+						for(i=0; i<2; i++)
+							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_TC4.Refs[i]));
+						break;
+					case Tele_TC8:
+						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
+						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
+						for(i=0; i<4; i++)
+							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC8.CHs[i]));
+						for(i=0; i<4; i++)
+							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_TC8.Refs[i]));
+						break;
+					case Tele_TC16:
+						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
+						for(i=0; i<16; i++)
+							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC16.CHs[i]));
+						break;
+					case Tele_quad:
+						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
+						for(i=0; i<2; i++)
+							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_QUAD.CHs[i]));
+						break;
+				}
+			}
+			else if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
+			{
+				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateArray());
 				
 			}
-			*/
 		}
 	}
 	else
