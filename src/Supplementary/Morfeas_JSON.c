@@ -522,7 +522,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
-	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *Tele_data = NULL, *CHs = NULL, *REFs = NULL ;
+	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *Tele_data = NULL, *CHs = NULL, *REFs = NULL, *RMSW_t = NULL;
 
 	//Convert IPv4 to MTI's Identifier
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
@@ -539,14 +539,14 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 		cJSON_AddNumberToObject(MTI_status, "Radio_CH", stats->MTI_Radio_config.RF_channel);
 		cJSON_AddItemToObject(MTI_status, "Modem_data_rate", cJSON_CreateString(MTI_Data_rate_str[stats->MTI_Radio_config.Data_rate]));
 		cJSON_AddItemToObject(MTI_status, "Tele_Device_type", cJSON_CreateString(MTI_Tele_dev_type_str[stats->MTI_Radio_config.Tele_dev_type]));
-		cJSON_AddNumberToObject(MTI_status, "MTI_batt_volt", roundf(100.0 *stats->MTI_status.MTI_batt_volt)/100.0);
-		cJSON_AddNumberToObject(MTI_status, "MTI_batt_capacity", roundf(100.0 *stats->MTI_status.MTI_batt_capacity)/100.0);
+		cJSON_AddNumberToObject(MTI_status, "MTI_batt_volt", roundf(100.0*stats->MTI_status.MTI_batt_volt)/100.0);
+		cJSON_AddNumberToObject(MTI_status, "MTI_batt_capacity", roundf(100.0*stats->MTI_status.MTI_batt_capacity)/100.0);
 		cJSON_AddItemToObject(MTI_status, "MTI_charge_status", cJSON_CreateString(MTI_charger_state_str[stats->MTI_status.MTI_charge_status]));
-		cJSON_AddNumberToObject(MTI_status, "MTI_CPU_temp", roundf(10.0 *stats->MTI_status.MTI_CPU_temp)/10.0);
-		cJSON_AddNumberToObject(MTI_status, "PWM_gen_out_freq", roundf(1000.0 *stats->MTI_status.PWM_gen_out_freq)/1000.0);
+		cJSON_AddNumberToObject(MTI_status, "MTI_CPU_temp", roundf(10.0*stats->MTI_status.MTI_CPU_temp)/10.0);
+		cJSON_AddNumberToObject(MTI_status, "PWM_gen_out_freq", roundf(1000.0*stats->MTI_status.PWM_gen_out_freq)/1000.0);
 		cJSON_AddItemToObject(MTI_status, "PWM_CHs_outDuty", PWM_outDuty_CHs = cJSON_CreateArray());
 		for(i=0; i<4; i++)
-			cJSON_AddItemToArray(PWM_outDuty_CHs, cJSON_CreateNumber(roundf(10.0 *stats->MTI_status.PWM_outDuty_CHs[i])/10.0));
+			cJSON_AddItemToArray(PWM_outDuty_CHs, cJSON_CreateNumber(roundf(10.0*stats->MTI_status.PWM_outDuty_CHs[i])/10.0));
 		//Add button states on MTI_status
 		cJSON_AddItemToObject(MTI_status, "MTI_buttons_state", MTI_button_state = cJSON_CreateObject());
 		cJSON_AddItemToObject(MTI_button_state, "PB1", cJSON_CreateBool(stats->MTI_status.buttons_state.pb1));
@@ -576,9 +576,9 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 					case Tele_TC8:
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
-						for(i=0; i<4; i++)
+						for(i=0; i<8; i++)
 							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC8.CHs[i]));
-						for(i=0; i<4; i++)
+						for(i=0; i<8; i++)
 							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_TC8.Refs[i]));
 						break;
 					case Tele_TC16:
@@ -596,6 +596,55 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 			else if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 			{
 				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateArray());
+				for(i=0; i<stats->Tele_data.as_RMSWs.amount_of_devices; i++)
+				{
+					RMSW_t = cJSON_CreateObject();
+					cJSON_AddNumberToObject(RMSW_t, "Mem_offset", stats->Tele_data.as_RMSWs.det_devs_data[i].pos_offset);
+					cJSON_AddItemToObject(RMSW_t, "Dev_type", cJSON_CreateString(MTI_RM_dev_type_str[stats->Tele_data.as_RMSWs.det_devs_data[i].dev_type]));
+					cJSON_AddNumberToObject(RMSW_t, "Dev_ID", stats->Tele_data.as_RMSWs.det_devs_data[i].dev_id);
+					cJSON_AddNumberToObject(RMSW_t, "Time_from_last_msg", stats->Tele_data.as_RMSWs.det_devs_data[i].time_from_last_mesg);
+					cJSON_AddNumberToObject(RMSW_t, "Dev_temp", roundf(10.0*stats->Tele_data.as_RMSWs.det_devs_data[i].dev_temp)/10.0);
+					cJSON_AddNumberToObject(RMSW_t, "Supply_volt", roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].input_voltage)/100.0);
+					switch(stats->Tele_data.as_RMSWs.det_devs_data[i].dev_type)
+					{
+						case MUX:
+							CHs = cJSON_CreateObject();
+							cJSON_AddNumberToObject(CHs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
+							cJSON_AddItemToObject(CHs, "CH1", cJSON_CreateString(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH1?"B":"A"));
+							cJSON_AddItemToObject(CHs, "CH2", cJSON_CreateString(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH2?"B":"A"));
+							cJSON_AddItemToObject(CHs, "CH3", cJSON_CreateString(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH3?"B":"A"));
+							cJSON_AddItemToObject(CHs, "CH4", cJSON_CreateString(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH4?"B":"A"));
+							cJSON_AddItemToObject(RMSW_t, "Controls", CHs);
+							break;
+						case RMSW_2CH:
+							//Add measurements
+							CHs = cJSON_CreateArray();
+							for(int j=0; j<4; j++)
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));												
+							cJSON_AddItemToObject(RMSW_t, "CHs_meas", CHs);
+							//Add control status 
+							REFs = cJSON_CreateObject();
+							cJSON_AddNumberToObject(REFs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
+							cJSON_AddItemToObject(REFs, "Main", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Main));
+							cJSON_AddItemToObject(REFs, "CH1", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH1));
+							cJSON_AddItemToObject(REFs, "CH2", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH2));
+							cJSON_AddItemToObject(RMSW_t, "Controls", REFs);
+							break;
+						case Mini_RMSW:
+							//Add measurements
+							CHs = cJSON_CreateArray();
+							for(int j=0; j<4; j++)
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));												
+							cJSON_AddItemToObject(RMSW_t, "CHs_meas", CHs);
+							//Add control status 
+							REFs = cJSON_CreateObject();
+							cJSON_AddNumberToObject(REFs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
+							cJSON_AddItemToObject(REFs, "Main", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Main));
+							cJSON_AddItemToObject(RMSW_t, "Controls", REFs);
+							break;
+					}
+					cJSON_AddItemToArray(Tele_data, RMSW_t);
+				}
 				
 			}
 		}
@@ -605,8 +654,8 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
-	JSON_str = cJSON_Print(root);
-	//JSON_str = cJSON_PrintUnformatted(root);
+	//JSON_str = cJSON_Print(root);
+	JSON_str = cJSON_PrintUnformatted(root);
 	pFile = fopen (logstat_path_and_name, "w");
 	if(pFile)
 	{

@@ -151,7 +151,6 @@ struct RMSW_MUX_Mini_data_struct{
 	unsigned dev_type:2;
 	unsigned short dev_id;
 	unsigned char time_from_last_mesg;
-	//unsigned short switch_status;
 	union switch_status_dec{
 		struct rmsw_switches_decoder{
 			unsigned Main:1;
