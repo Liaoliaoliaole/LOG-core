@@ -268,16 +268,17 @@ void * Morfeas_thread(void *varg_pt)
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
 		{
+			/*
 			printf("Port for \"MTI_HANDLER\" is Not yet implemented\n");
 			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
 			free(loggers_path);
 			return NULL;
-			/*
-			sprintf(Logger_name,"%s_%s.log",Morfeas_MTI_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
-			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_MTI_if,
-												XML_node_get_content(t_arg->component, "IPv4_ADDR"),
-												t_arg->logstat_path);
 			*/
+			sprintf(Logger_name,"%s_%s.log",Morfeas_MTI_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_MTI_if,
+												XML_node_get_content(t_arg->component, "IPv4_ADDR"),
+												XML_node_get_content(t_arg->component, "DEV_NAME"),
+												t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
 		{

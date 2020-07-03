@@ -37,6 +37,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_JSON.h"
 #include "../Supplementary/Morfeas_Logger.h"
 
+enum Morfeas_MTI_FSM_States{
+	error,
+	get_status_config_data
+};
+
 //Global variables
 static volatile unsigned char handler_run = 1;
 
@@ -52,12 +57,9 @@ static void stopHandler(int signum)
 }
 
 //-- MTI Functions --//
-//MTI function that request the MTI's status and load them to stats, return 0 on success
-int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
-//MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
-int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
-//MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
-int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's status and load them to stats, return 0 on success
+int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
+int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
 
 //--- Local functions ---//
 /*
@@ -72,7 +74,7 @@ int main(int argc, char *argv[])
 	//MODBus related variables
 	modbus_t *ctx;
 	//Apps variables
-	char *path_to_logstat_dir;
+	char *path_to_logstat_dir, state = get_status_config_data;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	struct Morfeas_MTI_if_stats stats = {0};
@@ -163,139 +165,51 @@ int main(int argc, char *argv[])
 		logstat_MTI(path_to_logstat_dir, &stats);
 	}
 	stats.error = 0;//load no error on stats
-	
-	
-	while(handler_run)//MTI printing of status and telemetry device(s)
+	//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+	//Print Connection success message
+	Logger("Connected to MTI %s(%s)\n", stats.MTI_IPv4_addr, stats.dev_name);
+	while(handler_run)//Application's FSM
 	{
-		printf("\n-------------------------------------------------------------------------------------\n");
-		Logger("New read status request\n");
-		if(!get_MTI_status(ctx, &stats))
+		switch(state)
 		{
-			printf("====== MTI Status =====\n");
-			printf("MTI batt=%.2fV\n",stats.MTI_status.MTI_batt_volt);
-			printf("MTI batt cap=%.2f%%\n",stats.MTI_status.MTI_batt_capacity);
-			printf("MTI batt state=%s\n",MTI_charger_state_str[stats.MTI_status.MTI_charge_status]);
-			printf("MTI cpu_temp=%.2f°C\n",stats.MTI_status.MTI_CPU_temp);
-			printf("Bt1=%d\tBt2=%d\tBt3=%d\n",
-				stats.MTI_status.buttons_state.pb1,
-				stats.MTI_status.buttons_state.pb2,
-				stats.MTI_status.buttons_state.pb3);
-			printf("MTI PWM_gen_out_freq=%.2fHz\n",stats.MTI_status.PWM_gen_out_freq);
-			for(int i=0; i<4; i++)
-				printf("MTI PWM_outDuty_CH[%d]=%.2f%%\n",i,stats.MTI_status.PWM_outDuty_CHs[i]);
-			printf("=======================\n");
-		}
-		else
-			Logger("get_MTI_status request Failed!!!\n");
-		
-		Logger("New get_MTI_Radio_config request\n");
-		if(get_MTI_Radio_config(ctx, &stats)>=0)
-		{
-			printf("=== RX configuration ==\n");
-			printf("RX Frequency=%.3fGHz\n",(2400+stats.MTI_Radio_config.RF_channel)/1000.0);
-			printf("Data_rate=%s\n",MTI_Data_rate_str[stats.MTI_Radio_config.Data_rate]);
-			printf("Tele_dev_type=%s\n",MTI_Tele_dev_type_str[stats.MTI_Radio_config.Tele_dev_type]);
-			for(int i=0; i<sizeof(stats.MTI_Radio_config.Specific_reg)/sizeof(short); i++)
-				printf("SFR[%d]=%d(0x%x)\n", i, stats.MTI_Radio_config.Specific_reg[i], stats.MTI_Radio_config.Specific_reg[i]);
-			printf("=======================\n");
-			
-			if(stats.MTI_Radio_config.Tele_dev_type)
-			{
-				Logger("New get_MTI_Tele_data request\n");
-				if(!get_MTI_Tele_data(ctx, &stats))
+			case error:	
+				stats.error = errno;//load errno to stats
+				//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+				logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat 
+				Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
+				//Attempt to reconnect
+				while(modbus_connect(ctx) && handler_run)
+					sleep(1);
+				Logger("Recover from last Error\n");
+				stats.error = 0;//load no error on stats
+				//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+				logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat 
+				state = get_status_config_data;
+				break;
+			case get_status_config_data:
+				if(!get_MTI_status(ctx, &stats))
 				{
-					if(stats.MTI_Radio_config.Tele_dev_type!=RM_SW_MUX)
+					if(!get_MTI_Radio_config(ctx, &stats))
 					{
-						printf("\n===== Tele data =====\n");
-						printf("Telemetry data is%s valid\n", stats.Tele_data.as_TC4.Data_isValid?"":" NOT");
-						printf("Packet Index=%d\n", stats.Tele_data.as_TC4.packet_index);
-						printf("RX Status=%d\n", stats.Tele_data.as_TC4.RX_status);
-						printf("RX success Ratio=%d%%\n", stats.Tele_data.as_TC4.RX_Success_ratio);
-					}
-					else
-					{
-						printf("\n===== Remote Switches and Multiplexers =====\n");
-						printf("Amount of detected devices = %d\n", stats.Tele_data.as_RMSWs.amount_of_devices);
-					}
-					printf("\n===== Data =====\n");
-					switch(stats.MTI_Radio_config.Tele_dev_type)
-					{
-						case Tele_TC4:
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.CHs)/sizeof(*stats.Tele_data.as_TC4.CHs); i++)
-								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC4.CHs[i]);
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC4.Refs)/sizeof(*stats.Tele_data.as_TC4.Refs); i++)
-								printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC4.Refs[i]);
-							break;
-						case Tele_TC8:
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.CHs)/sizeof(*stats.Tele_data.as_TC8.CHs); i++)
-								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC8.CHs[i]);
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC8.Refs)/sizeof(*stats.Tele_data.as_TC8.Refs); i++)
-								printf("REF%2d -> %.3f\n",i,stats.Tele_data.as_TC8.Refs[i]);
-							break;
-						case Tele_TC16:
-							for(int i=0; i<sizeof(stats.Tele_data.as_TC16.CHs)/sizeof(*stats.Tele_data.as_TC16.CHs); i++)
-								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_TC16.CHs[i]);
-							break;
-						case Tele_quad:
-							for(int i=0; i<sizeof(stats.Tele_data.as_QUAD.CHs)/sizeof(*stats.Tele_data.as_QUAD.CHs); i++)
-								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_QUAD.CHs[i]);
-							break;
-						case RM_SW_MUX:
-							for(int i=0; i<stats.Tele_data.as_RMSWs.amount_of_devices; i++)
+						if(stats.MTI_Radio_config.Tele_dev_type>1)// Execute if MTI's transceiver is enabled
+						{
+							if(get_MTI_Tele_data(ctx, &stats))
 							{
-								printf("Device %d:\n",i+1);
-								printf("\tMemory offset=%u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].pos_offset);
-								printf("\tDev_type = %s\n",MTI_RM_dev_type_str[stats.Tele_data.as_RMSWs.det_devs_data[i].dev_type]);
-								printf("\tDev_ID = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].dev_id);
-								printf("\tLast_msg_before = %d sec\n",stats.Tele_data.as_RMSWs.det_devs_data[i].time_from_last_mesg);
-								printf("\tDev temp = %.2f°C\n",stats.Tele_data.as_RMSWs.det_devs_data[i].dev_temp);
-								printf("\tDev input_voltage = %.2fV\n",stats.Tele_data.as_RMSWs.det_devs_data[i].input_voltage);
-								switch(stats.Tele_data.as_RMSWs.det_devs_data[i].dev_type)
-								{
-									case RMSW_2CH:
-										printf("\tCH1 = %.2fV\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[0]);
-										printf("\tCH1 = %.3fA\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[1]);
-										printf("\tCH2 = %.2fV\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[2]);
-										printf("\tCH2 = %.3fA\n",stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[3]);
-										break;
-									case Mini_RMSW:
-										for(int j=0;j<4; j++)
-											printf("\tCH%u = %.2f°C\n",j,stats.Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]);
-										break;
-								}
-								printf("\tControl byte = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
-								switch(stats.Tele_data.as_RMSWs.det_devs_data[i].dev_type)
-								{
-									case RMSW_2CH:
-										printf("\t\tMain_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Main);
-										printf("\t\t CH1_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH1);
-										printf("\t\t CH2_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH2);
-										break;
-									case MUX:
-										printf("\t\t CH1_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH1);
-										printf("\t\t CH2_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH2);
-										printf("\t\t CH3_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH3);
-										printf("\t\t CH4_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH4);
-										break;
-									case Mini_RMSW:
-										printf("\t\tMain_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Main);
-										break;
-								}
-								printf("\n");
+								state = error;
+								break;
 							}
-							break;
+						}
+						//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+						if(stats.counter >= 10)
+							logstat_MTI(path_to_logstat_dir, &stats);
+						else
+							stats.counter++;
+						break;
 					}
-					printf("=======================\n");
-					if(stats.counter >= 10)
-						logstat_MTI(path_to_logstat_dir, &stats);
 				}
-				else
-					Logger("get_MTI_Tele_data request Failed!!!\n");
-			}
+				state = error;
+				break;
 		}
-		else
-			Logger("get_MTI_Radio_config request Failed!!!\n");
-		stats.counter++;
 		usleep(100000);
 	}
 	

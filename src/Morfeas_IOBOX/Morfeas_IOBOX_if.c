@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
 				sleep(1);
-			Logger("Recover from Last Error\n");
+			Logger("Recover from last Error\n");
 			stats.error = 0;//load no error on stats
 			IOBOX_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 			logstat_IOBOX(path_to_logstat_dir, &stats);//report error on logstat

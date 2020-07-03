@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
 				sleep(1);
-			Logger("Recover from Last Error\n");
+			Logger("Recover from last Error\n");
 			stats.error = 0;//load no error on stats
 			MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 			logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat 
@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
 			// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
 			//Load MDAQ Board Data
 			index_dec = (float*)MDAQ_regs;
-			IPC_msg.MDAQ_data.meas_index = (unsigned int)*index_dec;//30101, modbus_get_float_cdab(&MDAQ_regs[0])
-			IPC_msg.MDAQ_data.board_temp = *((float*)(MDAQ_regs+6));//30107, modbus_get_float_cdab(&MDAQ_regs[6]);
+			IPC_msg.MDAQ_data.meas_index = (unsigned int)*index_dec;//30101
+			IPC_msg.MDAQ_data.board_temp = *((float*)(MDAQ_regs+6));//30107
 
 			//Load MDAQ Channels Data
 			offset = 10;
@@ -197,10 +197,10 @@ int main(int argc, char *argv[])
 			{
 				for(int j=0; j<4; j++)
 				{
-					IPC_msg.MDAQ_data.meas[i].value[j] = *((float*)(MDAQ_regs+offset)); // modbus_get_float_cdab(&MDAQ_regs[offset]);
+					IPC_msg.MDAQ_data.meas[i].value[j] = *((float*)(MDAQ_regs+offset));
 					offset+=2;
 				}
-				IPC_msg.MDAQ_data.meas[i].warnings =  (unsigned char)*((float*)(MDAQ_regs+offset));//(unsigned char)modbus_get_float_cdab(&MDAQ_regs[offset]);
+				IPC_msg.MDAQ_data.meas[i].warnings =  (unsigned char)*((float*)(MDAQ_regs+offset));
 				offset+=2;
 			}
 			//Send measurements to Morfeas_opc_ua

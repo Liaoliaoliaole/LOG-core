@@ -52,7 +52,10 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	struct MTI_dev_status cur_status;
 	
 	if(modbus_read_input_registers(ctx, MTI_STATUS_OFFSET, sizeof(cur_status)/sizeof(short), (unsigned short*)&cur_status)<=0)
+	{
+		stats->error = errno;
 		return EXIT_FAILURE;
+	}
 	//Convert and load MTI_status to stats struct
 	stats->MTI_status.MTI_batt_volt = cur_status.batt_volt;
 	stats->MTI_status.MTI_batt_capacity = cur_status.batt_cap;
@@ -72,7 +75,10 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	struct MTI_RX_config_struct cur_RX_config;
 
 	if(modbus_read_registers(ctx, MTI_CONFIG_OFFSET, sizeof(cur_RX_config)/sizeof(short), (unsigned short*)&cur_RX_config)<=0)
+	{
+		stats->error = errno;
 		return EXIT_FAILURE;
+	}
 	//Sanitization of status values
 	cur_RX_config.RF_channel = cur_RX_config.RF_channel>127?0:cur_RX_config.RF_channel;//Sanitize Radio channel frequency.
 	cur_RX_config.Tele_dev_type = cur_RX_config.Tele_dev_type>Tele_TC4||cur_RX_config.Tele_dev_type<Tele_TC16?0:cur_RX_config.Tele_dev_type;//Sanitize Telemetry device type
@@ -82,8 +88,8 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	stats->MTI_Radio_config.Tele_dev_type = cur_RX_config.Tele_dev_type;
 	for(int i=0;i<sizeof(stats->MTI_Radio_config.Specific_reg)/sizeof(stats->MTI_Radio_config.Specific_reg[0]); i++)
 		stats->MTI_Radio_config.Specific_reg[i] = cur_RX_config.Specific_reg[i];
-	//memcpy(&(stats->MTI_Radio_config.Specific_reg), &(cur_RX_config.Specific_reg), sizeof(stats->MTI_Radio_config.Specific_reg));
-	return cur_RX_config.Tele_dev_type;
+	return EXIT_SUCCESS;
+	//return cur_RX_config.Tele_dev_type;
 }
 
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
@@ -101,7 +107,10 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 		case Tele_TC8:
 		case Tele_TC16:
 			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC16)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+			{
+				stats->error = errno;
 				return EXIT_FAILURE;
+			}
 			stats->Tele_data.as_TC16.packet_index = cur_MTI_Tele_data.as_TC16.index;
 			stats->Tele_data.as_TC16.RX_status = cur_MTI_Tele_data.as_TC16.rx_status;
 			stats->Tele_data.as_TC16.RX_Success_ratio = cur_MTI_Tele_data.as_TC16.success;
@@ -110,7 +119,10 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			break;
 		case Tele_TC4:
 			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC4)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+			{
+				stats->error = errno;
 				return EXIT_FAILURE;
+			}
 			stats->Tele_data.as_TC4.packet_index = cur_MTI_Tele_data.as_TC4.index;
 			stats->Tele_data.as_TC4.RX_status = cur_MTI_Tele_data.as_TC4.rx_status;
 			stats->Tele_data.as_TC4.RX_Success_ratio = cur_MTI_Tele_data.as_TC4.success;
@@ -119,7 +131,10 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			break;
 		case Tele_quad:
 			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+			{
+				stats->error = errno;
 				return EXIT_FAILURE;
+			}
 			if((int)cur_MTI_Tele_data.as_QUAD.index ^ stats->Tele_data.as_QUAD.packet_index)
 			{
 				stats->Tele_data.as_QUAD.Data_isValid = 1;
@@ -141,7 +156,10 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				if(modbus_read_input_registers(ctx, i*MTI_MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET, 
 											  (remain_words>MTI_MODBUS_MAX_READ_REGISTERS?MTI_MODBUS_MAX_READ_REGISTERS:remain_words),
 											  ((unsigned short*)&cur_MTI_Tele_data)+i*MTI_MODBUS_MAX_READ_REGISTERS)<=0)
+				{
+					stats->error = errno;
 					return EXIT_FAILURE;
+				}
 			}
 			//Loop that find the detected devices and load them to the stats.
 			for(i=0, pos=0; i<MAX_RMSW_DEVs; i++)
@@ -179,7 +197,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			}
 			break;
 		default: 
-			return EXIT_FAILURE;
+			return -EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
