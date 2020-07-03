@@ -30,8 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <errno.h>
 #include <arpa/inet.h>
 
-#include <modbus.h>
-
+#include "MTI_func.h"//<- #include <modbus.h>
 #include "../IPC/Morfeas_IPC.h" //<- #include "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_run_check.h"
 #include "../Supplementary/Morfeas_JSON.h"
@@ -55,11 +54,6 @@ static void stopHandler(int signum)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
 	handler_run = 0;
 }
-
-//-- MTI Functions --//
-int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's status and load them to stats, return 0 on success
-int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
-int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
 
 //--- Local functions ---//
 /*

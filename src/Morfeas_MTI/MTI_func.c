@@ -47,8 +47,9 @@ char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
 char *MTI_Tele_dev_type_str[]={"DISABLED", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20"};
 char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW"};
 
-int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
+int get_MTI_status(modbus_t *ctx, void *arg)
 {
+	struct Morfeas_MTI_if_stats *stats = arg;
 	struct MTI_dev_status cur_status;
 	
 	if(modbus_read_input_registers(ctx, MTI_STATUS_OFFSET, sizeof(cur_status)/sizeof(short), (unsigned short*)&cur_status)<=0)
@@ -70,8 +71,9 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	return EXIT_SUCCESS;
 }
 
-int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
+int get_MTI_Radio_config(modbus_t *ctx, void *arg)
 {
+	struct Morfeas_MTI_if_stats *stats = arg;
 	struct MTI_RX_config_struct cur_RX_config;
 
 	if(modbus_read_registers(ctx, MTI_CONFIG_OFFSET, sizeof(cur_RX_config)/sizeof(short), (unsigned short*)&cur_RX_config)<=0)
@@ -92,8 +94,9 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	//return cur_RX_config.Tele_dev_type;
 }
 
-int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
+int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 {
+	struct Morfeas_MTI_if_stats *stats = arg;
 	int remain_words, i, pos;
 	union MTI_Tele_data_union{
 		struct MTI_16_temp_tele as_TC16;
