@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
 								break;
 							}
 						}
-						//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+						//IPC_msg_TX(FIFO_fd, &IPC_msg);//Send measurements to Morfeas_opc_ua
 						if(stats.counter >= 10)
 							logstat_MTI(path_to_logstat_dir, &stats);
 						else
