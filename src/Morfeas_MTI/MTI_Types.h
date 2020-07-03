@@ -71,6 +71,7 @@ struct MTI_RX_config_struct{
 	unsigned short Tele_dev_type;
 	unsigned short Specific_reg[5];
 };
+/*
 //--- From MODBus Holding Registers(R/W) 40026-40036 ---//
 struct MTI_PWM_config_struct{
 	unsigned short PWM_out_freq;
@@ -78,3 +79,4 @@ struct MTI_PWM_config_struct{
 	short Tele_dev_type;
 	unsigned short Specific_reg[5];
 };
+*/

@@ -557,7 +557,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 			//Add device specific values on JSON root
 			if(stats->MTI_Radio_config.Tele_dev_type != RM_SW_MUX)
 			{
-				//Add RX status data for all the Telemetries (exception to Remote switches). Format same for all, TC4 used as reference
+				//Add RX status data for all the Telemetries (exception to Remote switches). Format and position same for all, TC4 used as reference
 				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateObject());
 				cJSON_AddNumberToObject(Tele_data, "Packet_Index", stats->Tele_data.as_TC4.packet_index);
 				cJSON_AddNumberToObject(Tele_data, "RX_Status", stats->Tele_data.as_TC4.RX_status);

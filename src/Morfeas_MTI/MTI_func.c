@@ -102,7 +102,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 		case Tele_TC16:
 			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_TC16)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
 				return EXIT_FAILURE;
-			stats->Tele_data.as_TC16.packet_index = (int)cur_MTI_Tele_data.as_TC16.index;
+			stats->Tele_data.as_TC16.packet_index = cur_MTI_Tele_data.as_TC16.index;
 			stats->Tele_data.as_TC16.RX_status = cur_MTI_Tele_data.as_TC16.rx_status;
 			stats->Tele_data.as_TC16.RX_Success_ratio = cur_MTI_Tele_data.as_TC16.success;
 			stats->Tele_data.as_TC16.Data_isValid = cur_MTI_Tele_data.as_TC16.valid_data;
