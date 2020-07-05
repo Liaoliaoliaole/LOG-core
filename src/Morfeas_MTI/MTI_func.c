@@ -42,7 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "../Morfeas_Types.h"
 
-char *MTI_charger_state_str[]={"Discharging", "Full", "No Battery", "Charging"};
+char *MTI_charger_state_str[]={"Discharging", "Full", "", "Charging"};
 char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
 char *MTI_Tele_dev_type_str[]={"DISABLED", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20"};
 char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW"};
@@ -51,7 +51,7 @@ int get_MTI_status(modbus_t *ctx, void *arg)
 {
 	struct Morfeas_MTI_if_stats *stats = arg;
 	struct MTI_dev_status cur_status;
-	
+
 	if(modbus_read_input_registers(ctx, MTI_STATUS_OFFSET, sizeof(cur_status)/sizeof(short), (unsigned short*)&cur_status)<=0)
 	{
 		stats->error = errno;
@@ -60,7 +60,7 @@ int get_MTI_status(modbus_t *ctx, void *arg)
 	//Convert and load MTI_status to stats struct
 	stats->MTI_status.MTI_batt_volt = cur_status.batt_volt;
 	stats->MTI_status.MTI_batt_capacity = cur_status.batt_cap;
-	stats->MTI_status.MTI_charge_status = (unsigned char)cur_status.batt_state; 
+	stats->MTI_status.MTI_charge_status = (unsigned char)cur_status.batt_state;
 	stats->MTI_status.MTI_CPU_temp = cur_status.CPU_temp;
 	stats->MTI_status.buttons_state.pb1 = cur_status.Button_state==4.0;
 	stats->MTI_status.buttons_state.pb2 = cur_status.Button_state==2.0;
@@ -104,7 +104,7 @@ int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 		struct MTI_quad_tele as_QUAD;
 		struct MTI_mux_rmsw_tele as_MUXs_RMSWs[32];
 	}cur_MTI_Tele_data;
-	
+
 	switch(stats->MTI_Radio_config.Tele_dev_type)
 	{
 		case Tele_TC8:
@@ -151,12 +151,12 @@ int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 				stats->Tele_data.as_QUAD.Data_isValid = 0;
 			break;
 		case RM_SW_MUX:
-			//Zero the amount of detected devices 
+			//Zero the amount of detected devices
 			stats->Tele_data.as_RMSWs.amount_of_devices = 0;
 			//Loop that Getting The Remote controlling devices data, and store them to the cur_MTI_Tele_data struct.
 			for(i=0, remain_words = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); remain_words>0; remain_words -= MTI_MODBUS_MAX_READ_REGISTERS, i++)
 			{
-				if(modbus_read_input_registers(ctx, i*MTI_MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET, 
+				if(modbus_read_input_registers(ctx, i*MTI_MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET,
 											  (remain_words>MTI_MODBUS_MAX_READ_REGISTERS?MTI_MODBUS_MAX_READ_REGISTERS:remain_words),
 											  ((unsigned short*)&cur_MTI_Tele_data)+i*MTI_MODBUS_MAX_READ_REGISTERS)<=0)
 				{
@@ -199,7 +199,7 @@ int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 				}
 			}
 			break;
-		default: 
+		default:
 			return -EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

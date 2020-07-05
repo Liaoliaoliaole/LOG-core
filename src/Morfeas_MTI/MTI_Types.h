@@ -71,12 +71,16 @@ struct MTI_RX_config_struct{
 	unsigned short Tele_dev_type;
 	unsigned short Specific_reg[5];
 };
-/*
+
 //--- From MODBus Holding Registers(R/W) 40026-40036 ---//
 struct MTI_PWM_config_struct{
 	unsigned short PWM_out_freq;
-	int PLL_Control;
-	short Tele_dev_type;
-	unsigned short Specific_reg[5];
+	short PLL_Control_high;
+	short PLL_Control_low;
+	struct PWM_Channels_control_struct{
+		unsigned short cnt_max;
+		unsigned short cnt_min;
+		unsigned short middle_val;
+		unsigned short cnt_mode;
+	}CHs[2];
 };
-*/
