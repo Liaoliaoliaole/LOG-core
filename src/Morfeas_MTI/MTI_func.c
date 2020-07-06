@@ -14,16 +14,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MTI's MODBus implementation 
-
-/*MTI's ModBus regions Offsets*/
-//In holding registers region
-#define MTI_CONFIG_OFFSET 0
-//In Read registers region
-#define MTI_RMSWs_DATA_OFFSET 25 //short registers
-#define MTI_PULSE_GEN_OFFSET 1050 //int registers
-#define MTI_STATUS_OFFSET 2000 //float registers
-#define MTI_TELE_DATA_OFFSET 2050 //float registers
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -140,7 +130,7 @@ int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 				stats->error = errno;
 				return EXIT_FAILURE;
 			}
-			//Convert data and load them to stats 
+			//Convert data and load them to stats
 			if((int)cur_MTI_Tele_data.as_QUAD.index ^ stats->Tele_data.as_QUAD.packet_index)
 			{
 				stats->Tele_data.as_QUAD.Data_isValid = 1;

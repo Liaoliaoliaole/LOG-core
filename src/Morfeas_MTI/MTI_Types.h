@@ -15,6 +15,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MTI's MODBus implementation
+
+/*MTI's ModBus regions Offsets*/
+//In holding registers region
+#define MTI_CONFIG_OFFSET 0
+//In Read registers region
+#define MTI_RMSWs_DATA_OFFSET 25 //short registers
+#define MTI_PULSE_GEN_OFFSET 1050 //int registers
+#define MTI_STATUS_OFFSET 2000 //float registers
+#define MTI_TELE_DATA_OFFSET 2050 //float registers
+
 //--- From MODBus Input Registers(Read only) 32001... ---//
 struct MTI_dev_status{
 	float batt_volt;
