@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MTI_CONFIG_OFFSET 0
 //In Read registers region
 #define MTI_RMSWs_DATA_OFFSET 25 //short registers
+#define MTI_PULSE_GEN_OFFSET 25 //Short registers
 #define MTI_STATUS_OFFSET 2000 //float registers
 #define MTI_TELE_DATA_OFFSET 2050 //float registers
 
@@ -98,6 +99,7 @@ int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 {
 	struct Morfeas_MTI_if_stats *stats = arg;
 	int remain_words, i, pos;
+	struct MTI_PWM_config_struct Pulse_gen_conf;
 	union MTI_Tele_data_union{
 		struct MTI_16_temp_tele as_TC16;
 		struct MTI_4_temp_tele as_TC4;
@@ -133,11 +135,13 @@ int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 			memcpy(&(stats->Tele_data.as_TC4.CHs), &(cur_MTI_Tele_data.as_TC4.channels), sizeof(cur_MTI_Tele_data.as_TC4.channels));
 			break;
 		case Tele_quad:
+			//Get Quadrature telemetry data
 			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
 			{
 				stats->error = errno;
 				return EXIT_FAILURE;
 			}
+			//Convert data and load them to stats 
 			if((int)cur_MTI_Tele_data.as_QUAD.index ^ stats->Tele_data.as_QUAD.packet_index)
 			{
 				stats->Tele_data.as_QUAD.Data_isValid = 1;
@@ -149,6 +153,13 @@ int get_MTI_Tele_data(modbus_t *ctx, void *arg)
 			}
 			else
 				stats->Tele_data.as_QUAD.Data_isValid = 0;
+			//Get Pulse Generators Configuration
+			if(modbus_read_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(Pulse_gen_conf)/sizeof(short), (unsigned short*)&Pulse_gen_conf)<=0)
+			{
+				stats->error = errno;
+				return EXIT_FAILURE;
+			}
+			//TODO: Convert pulse generators config and load it to stats
 			break;
 		case RM_SW_MUX:
 			//Zero the amount of detected devices

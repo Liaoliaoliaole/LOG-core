@@ -563,6 +563,11 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 				cJSON_AddNumberToObject(Tele_data, "RX_Status", stats->Tele_data.as_TC4.RX_status);
 				cJSON_AddNumberToObject(Tele_data, "RX_Success_Ratio", stats->Tele_data.as_TC4.RX_Success_ratio);
 				cJSON_AddItemToObject(Tele_data, "IsValid", cJSON_CreateBool(stats->Tele_data.as_TC4.Data_isValid));
+				if(stats->MTI_Radio_config.Specific_reg[0]==49)//Check if validation mode register is set. From MTI Doc
+				{
+					cJSON_AddNumberToObject(Tele_data, "Samples_toValid", stats->MTI_Radio_config.Specific_reg[1]);
+					cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", stats->MTI_Radio_config.Specific_reg[2]);
+				}
 				switch(stats->MTI_Radio_config.Tele_dev_type)
 				{
 					case Tele_TC4:

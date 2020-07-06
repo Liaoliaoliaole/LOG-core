@@ -138,11 +138,17 @@ struct TC16_data_struct{
 	unsigned Data_isValid:1;
 	float CHs[16];
 };
+struct QUAD_tele_config_struct{
+	char unit[5];
+	float scaler;
+	float offset;
+};
 struct QUAD_data_struct{
 	unsigned short packet_index;
 	unsigned RX_status:2;
 	unsigned char RX_Success_ratio;
 	unsigned Data_isValid:1;
+	struct QUAD_tele_config_struct config;
 	float CHs[2];
 }; 
 

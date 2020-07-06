@@ -687,7 +687,9 @@ inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_
 
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 {
-    UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+    unsigned char i=0;
+	char handler_name_str[20];
+	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
     //Root of the object "ISO_Channels"
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ISO Channels");
     UA_Server_addObjectNode(server_ptr,
@@ -707,14 +709,13 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             UA_QUALIFIEDNAME(1, "Morfeas_Handlers"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
                             oAttr, NULL, NULL);
-	//Add SDAQ-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "SDAQ-ifs", "SDAQ-ifs");
-	//Add MDAQ-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "MDAQ-ifs", "MDAQ-ifs");
-	//Add IOBOX-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "IOBOX-ifs", "IOBOX-ifs");
-	//Add MTI-if object node under Morfeas_Handlers
-	Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", "MTI-ifs", "MTI-ifs");
+	
+	//Add Handlers object nodes under Morfeas_Handlers node
+	while(Morfeas_IPC_handler_type_name[i])
+	{
+		sprintf(handler_name_str, "%s-ifs", Morfeas_IPC_handler_type_name[i++]);
+		Morfeas_opc_ua_add_object_node(server_ptr, "Morfeas_Handlers", handler_name_str, handler_name_str);
+	}
     //Root of the object "Rpi Health Status"
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "RPi Health status");
     UA_Server_addObjectNode(server_ptr,
