@@ -14,14 +14,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MODBus implementation of icraft
+#define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MTI's MODBus implementation 
 
 /*MTI's ModBus regions Offsets*/
 //In holding registers region
 #define MTI_CONFIG_OFFSET 0
 //In Read registers region
 #define MTI_RMSWs_DATA_OFFSET 25 //short registers
-#define MTI_PULSE_GEN_OFFSET 25 //Short registers
+#define MTI_PULSE_GEN_OFFSET 1050 //int registers
 #define MTI_STATUS_OFFSET 2000 //float registers
 #define MTI_TELE_DATA_OFFSET 2050 //float registers
 
@@ -92,7 +92,6 @@ int get_MTI_Radio_config(modbus_t *ctx, void *arg)
 	for(int i=0;i<sizeof(stats->MTI_Radio_config.Specific_reg)/sizeof(stats->MTI_Radio_config.Specific_reg[0]); i++)
 		stats->MTI_Radio_config.Specific_reg[i] = cur_RX_config.Specific_reg[i];
 	return EXIT_SUCCESS;
-	//return cur_RX_config.Tele_dev_type;
 }
 
 int get_MTI_Tele_data(modbus_t *ctx, void *arg)
