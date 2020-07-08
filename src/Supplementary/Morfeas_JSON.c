@@ -157,9 +157,11 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	//Add BUS_util, Amount of Detected_SDAQs, and SDAQs Data
 	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
-	cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
-	g_slist_foreach(stats->list_SDAQs, extract_list_SDAQnode_data, logstat);
-
+	if(stats->detected_SDAQs)
+	{
+		cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
+		g_slist_foreach(stats->list_SDAQs, extract_list_SDAQnode_data, logstat);
+	}
 	//JSON_str = cJSON_Print(root);
 	JSON_str = cJSON_PrintUnformatted(root);
 	pFile = fopen (logstat_path_and_name, "w");
