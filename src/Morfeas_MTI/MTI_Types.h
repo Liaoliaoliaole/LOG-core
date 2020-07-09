@@ -80,7 +80,7 @@ struct MTI_RX_config_struct{
 	unsigned short RF_channel;
 	unsigned short Data_rate;
 	unsigned short Tele_dev_type;
-	unsigned short Specific_reg[5];
+	unsigned short Specific_reg[22];
 };
 
 //--- From MODBus Holding Registers(R/W) 41051-41071 ---//

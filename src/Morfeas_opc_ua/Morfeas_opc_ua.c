@@ -53,7 +53,7 @@ void * Nodeset_XML_reader(void *varg_pt);
 void Rpi_health_update(void);
 //OPC_UA local Functions
 void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
-//Function that adds a child object under the OPC-UA node "ISO_Channels". building according to Wartsila's specification.
+//Function that adds a child object under the OPC-UA node "ISO_Channels".
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server, xmlNode *node);
 
 //Global variables

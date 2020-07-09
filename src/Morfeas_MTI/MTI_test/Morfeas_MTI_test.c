@@ -51,21 +51,13 @@ static void stopHandler(int signum)
 	handler_run = 0;
 }
 
-//-- MTI Functions --//
+	//-- MTI Functions --//
 //MTI function that request the MTI's status and load them to stats, return 0 on success
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 //MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
 int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 //MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
-
-//--- Local functions ---//
-/*
-// MTI_status_to_IPC function. Send Status of MTI to Morfeas_opc_ua via IPC
-void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
-//Function that register MTI Channels to Morfeas_opc_ua via IPC
-void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
-*/
 
 int main(int argc, char *argv[])
 {
@@ -181,10 +173,26 @@ int main(int argc, char *argv[])
 			printf("RX Frequency=%.3fGHz\n",(2400+stats.MTI_Radio_config.RF_channel)/1000.0);
 			printf("Data_rate=%s\n",MTI_Data_rate_str[stats.MTI_Radio_config.Data_rate]);
 			printf("Tele_dev_type=%s\n",MTI_Tele_dev_type_str[stats.MTI_Radio_config.Tele_dev_type]);
+			switch(stats.MTI_Radio_config.Tele_dev_type)
+			{
+				case Tele_TC4:
+				case Tele_TC8:
+				case Tele_TC16:
+					printf("Samples until set valid = %d\n", stats.MTI_Radio_config.sreg.for_temp_tele.StV);
+					printf("Samples until reset valid = %d\n", stats.MTI_Radio_config.sreg.for_temp_tele.StF);
+					break;
+				case RM_SW_MUX:
+					printf("Manual_button = %d\n", stats.MTI_Radio_config.sreg.for_rmsw_dev.manual_button);
+					printf("Sleep_button = %d\n", stats.MTI_Radio_config.sreg.for_rmsw_dev.sleep_button);
+					printf("Global_switch = %d\n", stats.MTI_Radio_config.sreg.for_rmsw_dev.global_switch);
+					printf("Global_speed = %d\n", stats.MTI_Radio_config.sreg.for_rmsw_dev.global_speed);
+					break;
+			}
+			/*
 			for(int i=0; i<sizeof(stats.MTI_Radio_config.Specific_reg)/sizeof(short); i++)
 				printf("SFR[%d]=%d(0x%x)\n", i, stats.MTI_Radio_config.Specific_reg[i], stats.MTI_Radio_config.Specific_reg[i]);
+			*/
 			printf("=======================\n");
-			
 			if(stats.MTI_Radio_config.Tele_dev_type)
 			{
 				Logger("New get_MTI_Tele_data request\n");
@@ -253,17 +261,28 @@ int main(int argc, char *argv[])
 								switch(stats.Tele_data.as_RMSWs.det_devs_data[i].dev_type)
 								{
 									case RMSW_2CH:
+										printf("\t\tTX_rate = %d sec\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Rep_rate?2:20);
 										printf("\t\tMain_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Main);
 										printf("\t\t CH1_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH1);
 										printf("\t\t CH2_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH2);
 										break;
 									case MUX:
+										printf("\t\tTX_rate = %d sec\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.Rep_rate?2:20);
 										printf("\t\t CH1_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH1);
 										printf("\t\t CH2_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH2);
 										printf("\t\t CH3_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH3);
 										printf("\t\t CH4_SW -> %c\n",'A'+stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH4);
 										break;
 									case Mini_RMSW:
+										printf("\t\tTX_rate = ");
+										switch(stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Rep_rate)
+										{
+											case 0: printf("20"); break;
+											case 2: printf("2"); break;
+											case 3:
+											case 1: printf(".2"); break;
+										}
+										printf(" sec\n");
 										printf("\t\tMain_SW = %u\n",stats.Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Main);
 										break;
 								}

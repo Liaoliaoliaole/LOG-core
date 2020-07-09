@@ -109,11 +109,25 @@ struct MTI_status_struct{
 	float PWM_gen_out_freq;
 	float PWM_outDuty_CHs[4];
 };
+union MTI_specific_regs{
+	struct dec_for_temperature_telemetries{
+		unsigned char StV;//Sample to set valid flag
+		unsigned char StF;//samples to reset valid flag
+	}for_temp_tele;
+	struct dec_for_controlling_devices{
+		unsigned manual_button:1;
+		unsigned sleep_button:1;
+		unsigned reserver:6;
+		unsigned global_switch:1;
+		unsigned global_speed:1;//global switch for repetition of transmission 
+	}for_rmsw_dev;
+	unsigned char as_array[2];
+};
 struct MTI_Radio_config_status_struct{
 	unsigned RF_channel:7;
 	unsigned Data_rate:2;
 	unsigned Tele_dev_type:3;
-	unsigned char Specific_reg[5];
+	union MTI_specific_regs sreg;
 };
 //Structs for MTI related telemetry device
 struct TC4_data_struct{
@@ -139,17 +153,24 @@ struct TC16_data_struct{
 	unsigned Data_isValid:1;
 	float CHs[16];
 };
-struct QUAD_tele_config_struct{
-	char unit[5];
-	float scaler;
-	float offset;
+struct Gen_config_struct{
+	unsigned int max;
+	unsigned int min;
+	union generator_mode{
+		struct decoder_for_generator_mode{
+			unsigned saturation:1;
+			unsigned reserved:6;
+			unsigned fixed_freq:1;
+		}dec;
+		unsigned char as_byte;
+	}pwm_mode;
 };
 struct QUAD_data_struct{
 	unsigned short packet_index;
 	unsigned RX_status:2;
 	unsigned char RX_Success_ratio;
 	unsigned Data_isValid:1;
-	struct QUAD_tele_config_struct config;
+	struct Gen_config_struct gen_config[2];
 	float CHs[2];
 }; 
 

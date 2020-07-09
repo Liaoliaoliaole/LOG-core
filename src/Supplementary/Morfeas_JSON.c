@@ -524,7 +524,8 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
-	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *Tele_data = NULL, *CHs = NULL, *REFs = NULL, *RMSW_t = NULL;
+	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *PWM_config = NULL, 
+	      *Tele_data = NULL, *CHs = NULL, *REFs = NULL, *RMSW_t = NULL;
 
 	//Convert IPv4 to MTI's Identifier
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
@@ -565,11 +566,8 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 				cJSON_AddNumberToObject(Tele_data, "RX_Status", stats->Tele_data.as_TC4.RX_status);
 				cJSON_AddNumberToObject(Tele_data, "RX_Success_Ratio", stats->Tele_data.as_TC4.RX_Success_ratio);
 				cJSON_AddItemToObject(Tele_data, "IsValid", cJSON_CreateBool(stats->Tele_data.as_TC4.Data_isValid));
-				if(stats->MTI_Radio_config.Specific_reg[0]==49)//Check if validation mode register is set. From MTI Doc
-				{
-					cJSON_AddNumberToObject(Tele_data, "Samples_toValid", stats->MTI_Radio_config.Specific_reg[1]);
-					cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", stats->MTI_Radio_config.Specific_reg[2]);
-				}
+				cJSON_AddNumberToObject(Tele_data, "Samples_toValid", stats->MTI_Radio_config.sreg.for_temp_tele.StV);
+				cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", stats->MTI_Radio_config.sreg.for_temp_tele.StF);
 				switch(stats->MTI_Radio_config.Tele_dev_type)
 				{
 					case Tele_TC4:
@@ -594,6 +592,16 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC16.CHs[i]));
 						break;
 					case Tele_quad:
+						cJSON_AddItemToObject(MTI_status, "PWMs_config", PWM_config = cJSON_CreateArray());
+						for(i=0; i<2; i++)
+						{
+							CHs = cJSON_CreateObject();
+							cJSON_AddNumberToObject(CHs, "PWM_max", stats->Tele_data.as_QUAD.gen_config[i].max);
+							cJSON_AddNumberToObject(CHs, "PWM_min", stats->Tele_data.as_QUAD.gen_config[i].min);
+							cJSON_AddItemToObject(CHs, "Saturation_mode", cJSON_CreateBool(stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.saturation));
+							cJSON_AddItemToObject(CHs, "Fixed_freq", cJSON_CreateBool(stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.fixed_freq));
+							cJSON_AddItemToArray(PWM_config, CHs);							
+						}
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 						for(i=0; i<2; i++)
 							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_QUAD.CHs[i]));
@@ -602,6 +610,11 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 			}
 			else if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 			{
+				cJSON_AddItemToObject(MTI_button_state, "Manual_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button));
+				cJSON_AddItemToObject(MTI_button_state, "Sleep_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.sleep_button));
+				cJSON_AddItemToObject(MTI_button_state, "Global_switch_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_switch));
+				cJSON_AddItemToObject(MTI_button_state, "Global_speed_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_speed));
+				//Add remote switch data to JSON
 				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateArray());
 				for(i=0; i<stats->Tele_data.as_RMSWs.amount_of_devices; i++)
 				{
@@ -617,6 +630,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						case MUX:
 							CHs = cJSON_CreateObject();
 							cJSON_AddNumberToObject(CHs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
+							cJSON_AddNumberToObject(CHs, "TX_Rate", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.Rep_rate?2:20);
 							cJSON_AddItemToObject(CHs, "CH1", cJSON_CreateString(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH1?"B":"A"));
 							cJSON_AddItemToObject(CHs, "CH2", cJSON_CreateString(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH2?"B":"A"));
 							cJSON_AddItemToObject(CHs, "CH3", cJSON_CreateString(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mux_dec.CH3?"B":"A"));
@@ -632,6 +646,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							//Add control status 
 							REFs = cJSON_CreateObject();
 							cJSON_AddNumberToObject(REFs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
+							cJSON_AddNumberToObject(REFs, "TX_Rate", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Rep_rate?2:20);
 							cJSON_AddItemToObject(REFs, "Main", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Main));
 							cJSON_AddItemToObject(REFs, "CH1", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH1));
 							cJSON_AddItemToObject(REFs, "CH2", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.CH2));
@@ -646,6 +661,13 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							//Add control status 
 							REFs = cJSON_CreateObject();
 							cJSON_AddNumberToObject(REFs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
+							switch(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Rep_rate)
+							{
+								case 0: cJSON_AddNumberToObject(REFs, "TX_Rate", 20); break;
+								case 2: cJSON_AddNumberToObject(REFs, "TX_Rate", 2); break;
+								case 3:
+								case 1: cJSON_AddNumberToObject(REFs, "TX_Rate", .2); break;
+							}
 							cJSON_AddItemToObject(REFs, "Main", cJSON_CreateBool(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Main));
 							cJSON_AddItemToObject(RMSW_t, "Controls", REFs);
 							break;

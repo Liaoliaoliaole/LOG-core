@@ -77,8 +77,25 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	stats->MTI_Radio_config.RF_channel = cur_RX_config.RF_channel;
 	stats->MTI_Radio_config.Data_rate = cur_RX_config.Data_rate;
 	stats->MTI_Radio_config.Tele_dev_type = cur_RX_config.Tele_dev_type;
-	for(int i=0;i<sizeof(stats->MTI_Radio_config.Specific_reg)/sizeof(stats->MTI_Radio_config.Specific_reg[0]); i++)
-		stats->MTI_Radio_config.Specific_reg[i] = cur_RX_config.Specific_reg[i];
+	switch(cur_RX_config.Tele_dev_type)
+	{
+		case Tele_TC8:
+		case Tele_TC16:
+		case Tele_TC4:
+			if(cur_RX_config.Specific_reg[0]==49)//Check if Message validation is enable. From MTI's Documentation.
+			{
+				stats->MTI_Radio_config.sreg.for_temp_tele.StV = cur_RX_config.Specific_reg[1];
+				stats->MTI_Radio_config.sreg.for_temp_tele.StF = cur_RX_config.Specific_reg[2];
+			}
+			else
+				for(int i=0; i<sizeof(stats->MTI_Radio_config.sreg.as_array);i++)
+					stats->MTI_Radio_config.sreg.as_array[i]=0;
+			break;
+		case RM_SW_MUX:
+			stats->MTI_Radio_config.sreg.as_array[0] = cur_RX_config.Specific_reg[0];
+			stats->MTI_Radio_config.sreg.as_array[1] = cur_RX_config.Specific_reg[21];
+			break;
+	}
 	return EXIT_SUCCESS;
 }
 
@@ -145,7 +162,13 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->error = errno;
 				return EXIT_FAILURE;
 			}
-			//TODO: Convert pulse generators config and load it to stats
+			//Convert pulse generators config and load it to stats
+			for(i=0;i>sizeof(stats->Tele_data.as_QUAD.gen_config)/sizeof(stats->Tele_data.as_QUAD.gen_config[0]);i++)
+			{
+				stats->Tele_data.as_QUAD.gen_config[i].max = Pulse_gen_conf.CHs[i].cnt_max;
+				stats->Tele_data.as_QUAD.gen_config[i].min = Pulse_gen_conf.CHs[i].cnt_min;
+				stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.as_byte = Pulse_gen_conf.CHs[i].cnt_mode;
+			}
 			break;
 		case RM_SW_MUX:
 			//Zero the amount of detected devices
