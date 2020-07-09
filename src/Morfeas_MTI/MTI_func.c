@@ -163,7 +163,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				return EXIT_FAILURE;
 			}
 			//Convert pulse generators config and load it to stats
-			for(i=0;i>sizeof(stats->Tele_data.as_QUAD.gen_config)/sizeof(stats->Tele_data.as_QUAD.gen_config[0]);i++)
+			for(i=0; i<sizeof(stats->Tele_data.as_QUAD.gen_config)/sizeof(stats->Tele_data.as_QUAD.gen_config[0]); i++)
 			{
 				stats->Tele_data.as_QUAD.gen_config[i].max = Pulse_gen_conf.CHs[i].cnt_max;
 				stats->Tele_data.as_QUAD.gen_config[i].min = Pulse_gen_conf.CHs[i].cnt_min;

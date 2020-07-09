@@ -566,8 +566,11 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 				cJSON_AddNumberToObject(Tele_data, "RX_Status", stats->Tele_data.as_TC4.RX_status);
 				cJSON_AddNumberToObject(Tele_data, "RX_Success_Ratio", stats->Tele_data.as_TC4.RX_Success_ratio);
 				cJSON_AddItemToObject(Tele_data, "IsValid", cJSON_CreateBool(stats->Tele_data.as_TC4.Data_isValid));
-				cJSON_AddNumberToObject(Tele_data, "Samples_toValid", stats->MTI_Radio_config.sreg.for_temp_tele.StV);
-				cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", stats->MTI_Radio_config.sreg.for_temp_tele.StF);
+				if(stats->MTI_Radio_config.Tele_dev_type != Tele_quad)
+				{
+					cJSON_AddNumberToObject(Tele_data, "Samples_toValid", stats->MTI_Radio_config.sreg.for_temp_tele.StV);
+					cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", stats->MTI_Radio_config.sreg.for_temp_tele.StF);
+				}
 				switch(stats->MTI_Radio_config.Tele_dev_type)
 				{
 					case Tele_TC4:
