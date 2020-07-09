@@ -32,6 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <gmodule.h>
 #include <glib.h>
+
 //Include SDAQ Driver header
 #include "sdaq-worker/src/SDAQ_drv.h"
 //Include MTI data type header

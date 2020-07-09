@@ -177,7 +177,7 @@ $(WORK_dir)/Morfeas_run_check.o: $(SRC_dir)/Supplementary/Morfeas_run_check.c
 tree:
 	mkdir -p $(BUILD_dir) $(WORK_dir)
 
-delete-the-tree:
+delete-tree:
 	rm -f -r $(WORK_dir) $(BUILD_dir)
 
 clean:
@@ -198,6 +198,6 @@ uninstall:
 	rm /usr/local/bin/Morfeas_*
 	rm -r /etc/systemd/system/Morfeas_system*
 
-.PHONY: all clean clean-tree
+.PHONY: all clean delete-tree
 
 

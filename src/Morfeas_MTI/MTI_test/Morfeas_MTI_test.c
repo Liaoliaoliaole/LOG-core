@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.1" /*Release Version of Morfeas_MTI_if*/
+#define VERSION "1.0" /*Release Version of Morfeas_MTI_if*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,10 +32,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <modbus.h>
 
-#include "../IPC/Morfeas_IPC.h" //<- #include "Morfeas_Types.h"
-#include "../Supplementary/Morfeas_run_check.h"
-#include "../Supplementary/Morfeas_JSON.h"
-#include "../Supplementary/Morfeas_Logger.h"
+#include "../../IPC/Morfeas_IPC.h" //<- #include "Morfeas_Types.h"
+#include "../../Supplementary/Morfeas_run_check.h"
+#include "../../Supplementary/Morfeas_JSON.h"
+#include "../../Supplementary/Morfeas_Logger.h"
 
 //Global variables
 static volatile unsigned char handler_run = 1;
@@ -73,8 +73,6 @@ int main(int argc, char *argv[])
 	modbus_t *ctx;
 	//Apps variables
 	char *path_to_logstat_dir;
-	//Variables for IPC
-	IPC_message IPC_msg = {0};
 	struct Morfeas_MTI_if_stats stats = {0};
 	
 	//Check for call without arguments
@@ -133,17 +131,6 @@ int main(int argc, char *argv[])
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 	
-	/*
-	//----Make of FIFO file----//
-	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	//Register handler to Morfeas_OPC-UA Server
-	Logger("Morfeas_MTI_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
-	//Open FIFO for Write
-	FIFO_fd = open(Data_FIFO, O_WRONLY);
-	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 0);
-	Logger("Morfeas_MTI_if (%s) Registered on OPC-UA\n",stats.dev_name);
-	*/
-	
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
 	//Set Slave address
@@ -163,7 +150,6 @@ int main(int argc, char *argv[])
 		logstat_MTI(path_to_logstat_dir, &stats);
 	}
 	stats.error = 0;//load no error on stats
-	
 	
 	while(handler_run)//MTI printing of status and telemetry device(s)
 	{
@@ -302,12 +288,6 @@ int main(int argc, char *argv[])
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
-	/*
-	//Remove Registered handler from Morfeas_OPC_UA Server
-	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 1);
-	Logger("Morfeas_MTI_if (%s) Removed from OPC-UA\n",stats.dev_name);
-	close(FIFO_fd);
-	*/
 	//Delete logstat file
 	if(path_to_logstat_dir)
 		delete_logstat_MTI(path_to_logstat_dir, &stats);
@@ -318,7 +298,7 @@ int main(int argc, char *argv[])
 void print_usage(char *prog_name)
 {
 	const char preamp[] = {
-	"\tProgram: Morfeas_MTI_if  Copyright (C) 12019-12020  Sam Harry Tzavaras\n"
+	"\tProgram: Morfeas_MTI_test  Copyright (C) 12019-12020  Sam Harry Tzavaras\n"
     "\tThis program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE.\n"
     "\tThis is free software, and you are welcome to redistribute it\n"
     "\tunder certain conditions; for details see LICENSE.\n"
