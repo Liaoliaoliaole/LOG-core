@@ -1,5 +1,5 @@
 /*
-File: Morfeas_MTI_if.c, Implementation of Morfeas MTI (MODBus) handler, Part of Morfeas_project.
+File: Morfeas_MTI_test.c, Implementation of Morfeas MTI (MODBus) handler, Part of Morfeas_project.
 Copyright (C) 12019-12020  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "1.0" /*Release Version of Morfeas_MTI_if*/
+#define VERSION "1.0" /*Release Version of Morfeas_MTI_test*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -203,7 +203,15 @@ int main(int argc, char *argv[])
 						printf("\n===== Tele data =====\n");
 						printf("Telemetry data is%s valid\n", stats.Tele_data.as_TC4.Data_isValid?"":" NOT");
 						printf("Packet Index=%d\n", stats.Tele_data.as_TC4.packet_index);
-						printf("RX Status=%d\n", stats.Tele_data.as_TC4.RX_status);
+						printf("RX Status=");
+						switch(stats.Tele_data.as_TC4.RX_status)
+						{
+							case 0: printf("No signal"); break;
+							case 1: 
+							case 2: printf("RX %d",stats.Tele_data.as_TC4.RX_status); break;
+							case 3: printf("Both RXs"); break;
+						}
+						printf("\n");
 						printf("RX success Ratio=%d%%\n", stats.Tele_data.as_TC4.RX_Success_ratio);
 					}
 					else
@@ -232,7 +240,14 @@ int main(int argc, char *argv[])
 							break;
 						case Tele_quad:
 							for(int i=0; i<sizeof(stats.Tele_data.as_QUAD.CHs)/sizeof(*stats.Tele_data.as_QUAD.CHs); i++)
-								printf("CH%2d -> %.3f\n",i,stats.Tele_data.as_QUAD.CHs[i]);
+							{
+								printf("\tCH%2d\n",i);
+								printf("PWM_max = %d\n", stats.Tele_data.as_QUAD.gen_config[i].max);
+								printf("PWM_min = %d\n", stats.Tele_data.as_QUAD.gen_config[i].min);
+								printf("Saturation_mode = %d\n", stats.Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.saturation);
+								printf("Fixed_freq = %d\n", stats.Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.fixed_freq);
+								printf("Cnt_Value -> %.3f\n", stats.Tele_data.as_QUAD.CHs[i]);
+							}
 							break;
 						case RM_SW_MUX:
 							for(int i=0; i<stats.Tele_data.as_RMSWs.amount_of_devices; i++)
