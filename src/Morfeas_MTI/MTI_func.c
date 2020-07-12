@@ -18,16 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <time.h>
 #include <math.h>
-#include <signal.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <errno.h>
-#include <arpa/inet.h>
 
 #include <modbus.h>
 

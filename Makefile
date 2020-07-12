@@ -78,6 +78,7 @@ Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_run_check.o \
 					 $(WORK_dir)/Morfeas_MTI_if.o \
+					 $(WORK_dir)/Morfeas_MTI_DBus.o \
 					 $(WORK_dir)/Morfeas_JSON.o \
 					 $(WORK_dir)/SDAQ_drv.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
@@ -152,10 +153,13 @@ $(WORK_dir)/Morfeas_IOBOX_nodeset.o: $(SRC_dir)/Morfeas_IOBOX/Morfeas_IOBOX_node
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_MTI_if
-$(WORK_dir)/MTI_func.o: $(SRC_dir)/Morfeas_MTI/MTI_func.c
+$(WORK_dir)/Morfeas_MTI_if.o: $(SRC_dir)/Morfeas_MTI/Morfeas_MTI_if.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_MTI_if.o: $(SRC_dir)/Morfeas_MTI/Morfeas_MTI_if.c
+$(WORK_dir)/Morfeas_MTI_DBus.o: $(SRC_dir)/Morfeas_MTI/Morfeas_MTI_DBus.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/MTI_func.o: $(SRC_dir)/Morfeas_MTI/MTI_func.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_MTI_nodeset.o: $(SRC_dir)/Morfeas_MTI/Morfeas_MTI_nodeset.c
