@@ -22,3 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <errno.h>
 
 #include <modbus.h>
+
+#include "../Morfeas_Types.h"
+#include "../Supplementary/Morfeas_Logger.h"
+
+
+	//--- MTI's Functions ---//
+//MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise. 
+int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs);

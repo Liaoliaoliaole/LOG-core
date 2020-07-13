@@ -57,13 +57,9 @@ static void stopHandler(int signum)
 }
 
 	//--- MTI's Functions ---//
-//MTI Read Functions
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's status and load them to stats, return 0 on success
 int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
-
-//MTI Write Functions
-int set_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that sending a new Radio configuration. Return 0 on success
 
 //--- Local functions ---//
 /*
