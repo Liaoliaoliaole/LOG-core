@@ -14,17 +14,37 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include <modbus.h>
 
 #define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MTI's MODBus implementation
 
 /*MTI's ModBus regions Offsets*/
-//In holding registers region
+//Holding registers region
+#define TRX_MODE_REG 3
 #define MTI_CONFIG_OFFSET 0
-//In Read registers region
+//Read registers region
 #define MTI_RMSWs_DATA_OFFSET 25 //short registers
 #define MTI_PULSE_GEN_OFFSET 1050 //int registers
 #define MTI_STATUS_OFFSET 2000 //float registers
 #define MTI_TELE_DATA_OFFSET 2050 //float registers
+
+//--- Enumerators for MTI Telemetry types---//
+enum MTI_Telemetry_Dev_type_enum{
+	Tele_TC16 = 2,
+	Tele_TC8,
+	RM_SW_MUX,
+	Tele_quad,
+	Tele_TC4,
+	//Limits
+	Dev_type_min = Tele_TC16,
+	Dev_type_max = Tele_TC4,
+};
+//--- Enumerator for Controlling device ---//
+enum MTI_Controlling_Dev_type_enum{
+	RMSW_2CH = 1,
+	MUX,
+	Mini_RMSW
+};
 
 //--- From MODBus Input Registers(Read only) 32001... ---//
 struct MTI_dev_status{
@@ -94,4 +114,11 @@ struct MTI_PWM_config_struct{
 		unsigned int middle_val;
 		unsigned int cnt_mode;
 	}CHs[2];
+};
+
+//Struct used to passing arguments to D-Bus listener 
+struct thread_arguments_passer
+{
+	modbus_t **ctx;
+	struct Morfeas_MTI_if_stats *stats;
 };

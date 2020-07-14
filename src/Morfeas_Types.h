@@ -80,21 +80,6 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-//--- Enumerators for MTI Telemetry types---//
-enum MTI_Telemetry_Dev_type_enum{
-	Tele_TC16 = 2,
-	Tele_TC8,
-	RM_SW_MUX,
-	Tele_quad,
-	Tele_TC4
-};
-//--- Enumerator for Controlling device ---//
-enum MTI_Controlling_Dev_type_enum{
-	RMSW_2CH = 1,
-	MUX,
-	Mini_RMSW
-};
-
 /*Structs for MTI_handler*/ 
 struct MTI_status_struct{
 	float MTI_batt_volt;

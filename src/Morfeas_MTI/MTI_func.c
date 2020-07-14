@@ -216,3 +216,38 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	}
 	return EXIT_SUCCESS;
 }
+
+int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs)
+{
+	/*
+	unsigned short RF_channel;
+	unsigned short Tele_dev_type;
+	unsigned short Specific_reg[22];
+	*/
+	struct MTI_RX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
+	
+	//Disable MTI's Transceiver
+	if(modbus_write_register(ctx, TRX_MODE_REG, 0)<=0)
+		return errno;
+	//preparing specific registers for new MTI config 
+	switch(new_mode)
+	{
+		case Tele_TC4:
+		case Tele_TC8:
+		case Tele_TC16:
+			if(new_sregs->for_temp_tele.StV && new_sregs->for_temp_tele.StF)
+			{
+				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI validation mechanism 
+				new_Radio_config.Specific_reg[1] = new_sregs->for_temp_tele.StV;
+				new_Radio_config.Specific_reg[2] = new_sregs->for_temp_tele.StF;
+			}
+			break;
+		case RM_SW_MUX:
+			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0
+			new_Radio_config.Specific_reg[21] = new_sregs->as_array[1];//Global Switch State Register
+			break;
+	}
+	if(modbus_write_registers(ctx, MTI_CONFIG_OFFSET, sizeof(new_Radio_config)/sizeof(short), (unsigned short*)&new_Radio_config)<=0)
+		return errno;
+	return EXIT_SUCCESS;
+}

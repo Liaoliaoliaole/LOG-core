@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <time.h>
 #include <math.h>
 #include <signal.h>
+#include <pthread.h>
 #include <sys/time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -37,13 +38,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_JSON.h"
 #include "../Supplementary/Morfeas_Logger.h"
 
+//Enumerator for the FSM's state 
 enum Morfeas_MTI_FSM_States{
 	error,
 	get_status_config_data
 };
 
 //Global variables
-static volatile unsigned char handler_run = 1;
+unsigned char handler_run = 1;
+pthread_mutex_t MTI_access = PTHREAD_MUTEX_INITIALIZER;
 
 //Print the Usage manual
 void print_usage(char *prog_name);
@@ -56,10 +59,13 @@ static void stopHandler(int signum)
 	handler_run = 0;
 }
 
-	//--- MTI's Functions ---//
+//--- MTI's Functions ---//
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's status and load them to stats, return 0 on success
 int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type". 
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
+
+//--- D-Bus Listener function ---//
+void * MTI_DBus_listener(void *varg_pt);//Thread function.
 
 //--- Local functions ---//
 /*
@@ -75,9 +81,14 @@ int main(int argc, char *argv[])
 	modbus_t *ctx;
 	//Apps variables
 	char *path_to_logstat_dir, state = get_status_config_data;
+	struct Morfeas_MTI_if_stats stats = {0};
+	//Variables for threads
+	pthread_t DBus_listener_Thread_id;
+	struct thread_arguments_passer passer = {&ctx, &stats};
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	struct Morfeas_MTI_if_stats stats = {0};
+	//FIFO file descriptor
+	int FIFO_fd;
 	
 	//Check for call without arguments
 	if(argc == 1)
@@ -124,6 +135,12 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s for IPv4:%s Already Running!!!\n", argv[0], stats.MTI_IPv4_addr);
 		exit(EXIT_SUCCESS);
 	}
+	//Check if other instance of this program already runs with same Device Name
+	if(check_already_run_with_same_arg(argv[0], stats.dev_name))
+	{
+		fprintf(stderr, "%s with Dev_name:%s Already Running!!!\n", argv[0], stats.dev_name);
+		exit(EXIT_SUCCESS);
+	}
 	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
@@ -135,17 +152,17 @@ int main(int argc, char *argv[])
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 	
-	/*
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	//Register handler to Morfeas_OPC-UA Server
-	Logger("Morfeas_MTI_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
 	//Open FIFO for Write
 	FIFO_fd = open(Data_FIFO, O_WRONLY);
+	/*
+	//Register handler to Morfeas_OPC-UA Server
+	Logger("Morfeas_MTI_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 0);
 	Logger("Morfeas_MTI_if (%s) Registered on OPC-UA\n",stats.dev_name);
 	*/
-	
+		
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
 	//Set Slave address
@@ -155,19 +172,30 @@ int main(int argc, char *argv[])
 		modbus_free(ctx);
 		return EXIT_FAILURE;
 	}
+		
 	//Attempt connection to MTI
 	while(modbus_connect(ctx) && handler_run)
 	{
-		sleep(1);
 		stats.error = errno;
 		//MTI_status_to_IPC(FIFO_fd, &stats);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
 		logstat_MTI(path_to_logstat_dir, &stats);
+		pthread_mutex_unlock(&MTI_access);
+			sleep(1);
+		pthread_mutex_lock(&MTI_access);
 	}
 	stats.error = 0;//load no error on stats
 	//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-	//Print Connection success message
-	Logger("Connected to MTI %s(%s)\n", stats.MTI_IPv4_addr, stats.dev_name);
+	
+	//Start D-Bus listener function in a thread
+	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);
+	
+	if(handler_run)	
+	{
+		//Print Connection success message
+		Logger("Connected to MTI %s(%s)\n", stats.MTI_IPv4_addr, stats.dev_name);
+	}
+	
 	while(handler_run)//Application's FSM
 	{
 		switch(state)
@@ -179,7 +207,12 @@ int main(int argc, char *argv[])
 				Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 				//Attempt to reconnect
 				while(modbus_connect(ctx) && handler_run)
-					sleep(1);
+				{
+					stats.error = errno;
+					pthread_mutex_unlock(&MTI_access);
+						sleep(1);
+					pthread_mutex_lock(&MTI_access);
+				}
 				Logger("Recover from last Error\n");
 				stats.error = 0;//load no error on stats
 				//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
@@ -191,7 +224,7 @@ int main(int argc, char *argv[])
 				{
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
-						if(stats.MTI_Radio_config.Tele_dev_type>1)// Execute if MTI's transceiver is enabled
+						if(stats.MTI_Radio_config.Tele_dev_type >= Dev_type_min && stats.MTI_Radio_config.Tele_dev_type <= Dev_type_max)// Execute if MTI's transceiver is enabled
 						{
 							if(get_MTI_Tele_data(ctx, &stats))
 							{
@@ -201,7 +234,10 @@ int main(int argc, char *argv[])
 						}
 						//IPC_msg_TX(FIFO_fd, &IPC_msg);//Send measurements to Morfeas_opc_ua
 						if(stats.counter >= 10)
+						{
 							logstat_MTI(path_to_logstat_dir, &stats);
+							stats.counter = 0;
+						}
 						else
 							stats.counter++;
 						break;
@@ -213,15 +249,18 @@ int main(int argc, char *argv[])
 		usleep(100000);
 	}
 	
-	//Close MODBus connection and De-allocate memory
+	pthread_join(DBus_listener_Thread_id, NULL);// wait DBus_listener thread to end
+	pthread_detach(DBus_listener_Thread_id);//deallocate DBus_listener thread's memory
+	
+	//Close MODBus connection and deallocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
-	/*
 	//Remove Registered handler from Morfeas_OPC_UA Server
+	/*
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 1);
 	Logger("Morfeas_MTI_if (%s) Removed from OPC-UA\n",stats.dev_name);
-	close(FIFO_fd);
 	*/
+	close(FIFO_fd);
 	//Delete logstat file
 	if(path_to_logstat_dir)
 		delete_logstat_MTI(path_to_logstat_dir, &stats);

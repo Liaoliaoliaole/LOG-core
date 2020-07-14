@@ -115,6 +115,12 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s for IPv4:%s Already Running!!!\n", argv[0], stats.IOBOX_IPv4_addr);
 		exit(EXIT_SUCCESS);
 	}
+	//Check if other instance of this program already runs with same Device Name
+	if(check_already_run_with_same_arg(argv[0], stats.dev_name))
+	{
+		fprintf(stderr, "%s with Dev_name:%s Already Running!!!\n", argv[0], stats.dev_name);
+		exit(EXIT_SUCCESS);
+	}
 	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);

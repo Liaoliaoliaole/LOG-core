@@ -36,7 +36,8 @@ int check_already_run(const char *prog_name)
 int check_already_run_with_same_arg(const char *called_prog_name,const char *arg_check)
 {
 	const char *prog_name = called_prog_name;
-	char out_str[1024] = {0}, *cmd, *buff, *tok, i=1;
+	char out_str[1024] = {0}, *cmd, *buff, *tok, *word;
+	unsigned int i=0;
 	//Allocate memory for buff, where is the size of called_prog_name
 	if(!(buff = calloc(strlen(called_prog_name)+1, sizeof(*buff))))
 	{
@@ -50,26 +51,33 @@ int check_already_run_with_same_arg(const char *called_prog_name,const char *arg
 		while((tok = strtok(NULL, "/")))
 			prog_name = tok;
 	}
-	//allocate memory for cmd, where is sizes of "prog_name" and "arg_check" + 50 (41+3 round to 50)
-	if(!(cmd = calloc(strlen(prog_name)+strlen(arg_check)+50, sizeof(*cmd))))
+	//Allocate memory for cmd, where is sizes of "prog_name" + 50 chars -> for string "ps aux | grep --color=none -E '([0-9] |/)%s'"
+	if(!(cmd = calloc(strlen(prog_name)+50, sizeof(*cmd))))
 	{
 		fprintf(stderr, "Memory error!!!\n");
 		free(buff);
 		exit(EXIT_FAILURE);
 	}
 	//Construct cmd
-	sprintf(cmd, "ps aux | grep --color=none -E '([0-9] |/)%s %s'",prog_name, arg_check);
+	sprintf(cmd, "ps aux | grep --color=none -E '([0-9] |/)%s'", prog_name);
 	//fork cmd and get stdout through pipe to out_str
 	FILE *out = popen(cmd, "r");
 	fread(out_str, sizeof(out_str), sizeof(*out_str), out);
 	pclose(out);
-	// split out_str with delimiter "\n", count the amount of slices
-	tok = strtok(out_str, "\n");
-	while((tok = strtok(NULL, "\n")))
-		i++;
+	// split out_str with delimiter "\n"
+	if((tok = strtok(out_str, "\n")))
+	{
+		do{
+			if((word = strstr(tok, arg_check)))//check if arg_check is in line
+			{
+				if(*(word+-1)==' ' && (*(word+strlen(arg_check))==' ' || *(word+strlen(arg_check))=='\0'))//Check if the founded is a wholly word
+					i++;
+			}
+		}while((tok = strtok(NULL, "\n")));
+	}
 	free(cmd);
 	free(buff);
-	return i>1? EXIT_FAILURE : EXIT_SUCCESS;
+	return i>1 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 unsigned char Checksum(void *data, size_t data_size)
