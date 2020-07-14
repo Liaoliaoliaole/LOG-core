@@ -104,7 +104,7 @@ union MTI_specific_regs{
 		unsigned sleep_button:1;
 		unsigned reserver:6;
 		unsigned global_switch:1;
-		unsigned global_speed:1;//global switch for repetition of transmission 
+		unsigned global_speed:1;//global switch for RMSWs report speed 
 	}for_rmsw_dev;
 	unsigned char as_array[2];
 };

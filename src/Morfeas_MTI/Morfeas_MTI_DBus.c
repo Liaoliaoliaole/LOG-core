@@ -37,6 +37,8 @@ extern pthread_mutex_t MTI_access;
 	//--- MTI's Functions ---//
 //MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise. 
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs);
+//MTI function that set the Global switches. Return 0 on success, errno otherwise. 
+int set_MTI_Global_switches(modbus_t *ctx, unsigned char global_power, unsigned char global_speed);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.

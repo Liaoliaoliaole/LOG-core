@@ -219,17 +219,12 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs)
 {
-	/*
-	unsigned short RF_channel;
-	unsigned short Tele_dev_type;
-	unsigned short Specific_reg[22];
-	*/
 	struct MTI_RX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
 	
 	//Disable MTI's Transceiver
 	if(modbus_write_register(ctx, TRX_MODE_REG, 0)<=0)
 		return errno;
-	//preparing specific registers for new MTI config 
+	//Preparing specific registers for new MTI config 
 	switch(new_mode)
 	{
 		case Tele_TC4:
@@ -237,17 +232,69 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 		case Tele_TC16:
 			if(new_sregs->for_temp_tele.StV && new_sregs->for_temp_tele.StF)
 			{
-				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI validation mechanism 
+				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI's validation mechanism 
 				new_Radio_config.Specific_reg[1] = new_sregs->for_temp_tele.StV;
 				new_Radio_config.Specific_reg[2] = new_sregs->for_temp_tele.StF;
 			}
 			break;
 		case RM_SW_MUX:
 			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0
-			new_Radio_config.Specific_reg[21] = new_sregs->as_array[1];//Global Switch State Register
 			break;
 	}
-	if(modbus_write_registers(ctx, MTI_CONFIG_OFFSET, sizeof(new_Radio_config)/sizeof(short), (unsigned short*)&new_Radio_config)<=0)
+	if(modbus_write_registers(ctx, MTI_CONFIG_OFFSET, 8, (unsigned short*)&new_Radio_config)<=0)//write only the first 8 holding registers
+		return errno;
+	return EXIT_SUCCESS;
+}
+
+int set_MTI_Global_switches(modbus_t *ctx, unsigned char global_power, unsigned char global_speed)
+{
+	unsigned short global_reg = 0;
+
+	global_reg |= global_power ? 1 : 0;
+	global_reg |= global_speed ? 2 : 0;
+	if(modbus_write_register(ctx, GLOBAL_SW_REG, global_reg)<=0)
+		return errno;
+	return EXIT_SUCCESS;
+}
+
+/*
+struct Gen_config_struct{
+	unsigned int max;
+	unsigned int min;
+	union generator_mode{
+		struct decoder_for_generator_mode{
+			unsigned saturation:1;
+			unsigned reserved:6;
+			unsigned fixed_freq:1;
+		}dec;
+		unsigned char as_byte;
+	}pwm_mode;
+};
+
+struct MTI_PWM_config_struct{
+	unsigned int PWM_out_freq;
+	int PLL_Control_high;
+	int PLL_Control_low;
+	struct PWM_Channels_control_struct{
+		unsigned int cnt_max;
+		unsigned int cnt_min;
+		unsigned int middle_val;
+		unsigned int cnt_mode;
+	}CHs[2];
+};
+*/
+
+int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct **new_Config)
+{
+	struct MTI_PWM_config_struct new_PWM_config = {.PWM_out_freq=10000};
+	for(int i=0; i<2; i++)
+	{
+		new_PWM_config.CHs[i].cnt_max = new_Config[i]->max;
+		new_PWM_config.CHs[i].cnt_min = new_Config[i]->min;
+		new_PWM_config.CHs[i].middle_val = (new_Config[i]->max - new_Config[i]->min)/2;
+		new_PWM_config.CHs[i].cnt_mode = new_Config[i]->pwm_mode.as_byte | 1<<7;//set fixed_freq flag always
+	}
+	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }
