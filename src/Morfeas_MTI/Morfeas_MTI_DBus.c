@@ -35,21 +35,21 @@ extern volatile unsigned char handler_run;
 extern pthread_mutex_t MTI_access;
 
 	//--- MTI's Functions ---//
-//MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise. 
+//MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise.
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs);
-//MTI function that set the Global switches. Return 0 on success, errno otherwise. 
+//MTI function that set the Global switches. Return 0 on success, errno otherwise.
 int set_MTI_Global_switches(modbus_t *ctx, unsigned char global_power, unsigned char global_speed);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
 {
 	//Decoded variables from passer
-	modbus_t *ctx = *(((struct thread_arguments_passer *)varg_pt)->ctx);
-	struct Morfeas_MTI_if_stats *stats = ((struct thread_arguments_passer *)varg_pt)->stats;
-	//Local MTI structs 
+	modbus_t *ctx = *(((struct MTI_DBus_thread_arguments_passer *)varg_pt)->ctx);
+	struct Morfeas_MTI_if_stats *stats = ((struct MTI_DBus_thread_arguments_passer *)varg_pt)->stats;
+	//Local MTI structs
 	union MTI_specific_regs sregs;
 	struct Gen_config_struct PWM_gens_config;
-	
+
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
 

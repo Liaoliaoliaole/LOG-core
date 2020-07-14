@@ -117,8 +117,8 @@ struct MTI_PWM_config_struct{
 	}CHs[2];
 };
 
-//Struct used to passing arguments to D-Bus listener 
-struct thread_arguments_passer
+//Struct used to passing arguments to D-Bus listener
+struct MTI_DBus_thread_arguments_passer
 {
 	modbus_t **ctx;
 	struct Morfeas_MTI_if_stats *stats;
