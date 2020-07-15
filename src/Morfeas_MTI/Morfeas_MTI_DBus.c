@@ -34,11 +34,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern volatile unsigned char handler_run;
 extern pthread_mutex_t MTI_access;
 
-	//--- MTI's Functions ---//
+	//--- MTI's Write Functions ---//
 //MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise.
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs);
 //MTI function that set the Global switches. Return 0 on success, errno otherwise.
 int set_MTI_Global_switches(modbus_t *ctx, unsigned char global_power, unsigned char global_speed);
+//MTI function that write a new configuration for PWM generators, Return 0 on success, errno otherwise.
+int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct **new_Config);
+//MTI function that controlling the state of a controllable telemetry(RMSW, MUX, Mini), Return 0 on success, errno otherwise.
+int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, unsigned char new_state);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
@@ -56,7 +60,6 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	Logger("Thread for D-Bus listener Started\n");
 	while(handler_run)
 	{
-
 		sleep(1);
 	}
 	Logger("D-Bus listener thread terminated\n");

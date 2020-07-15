@@ -217,6 +217,8 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 	return EXIT_SUCCESS;
 }
 
+								//----- MTI write functions -----//
+
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs)
 {
 	struct MTI_RX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
@@ -295,6 +297,29 @@ int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct **new_Config)
 		new_PWM_config.CHs[i].cnt_mode = new_Config[i]->pwm_mode.as_byte | 1<<7;//set fixed_freq flag always
 	}
 	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
+		return errno;
+	return EXIT_SUCCESS;
+}
+
+int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, unsigned char new_state)
+{
+	union state_register{
+		union switch_status_dec enc;
+		unsigned short as_short;
+	}new_status = {0};
+	
+	switch(dev_type)
+	{
+		case RMSW_2CH:
+			break;
+		case MUX:
+			break;
+		case Mini_RMSW:
+			break;
+		default:
+			return EXIT_FAILURE;
+	}
+	if(modbus_write_register(ctx, MTI_RMSWs_SWITCH_OFFSET*(mem_pos+1), new_status.as_short)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }

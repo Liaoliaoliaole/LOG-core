@@ -41,7 +41,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Enumerator for the FSM's state
 enum Morfeas_MTI_FSM_States{
 	error,
-	get_status_config_data
+	get_status_config_data/*,
+	get_status,
+	get_config,
+	get_data,
+	sleep
+	*/
 };
 
 //Global variables
@@ -180,9 +185,7 @@ int main(int argc, char *argv[])
 		//MTI_status_to_IPC(FIFO_fd, &stats);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
 		logstat_MTI(path_to_logstat_dir, &stats);
-		pthread_mutex_unlock(&MTI_access);
-			sleep(1);
-		pthread_mutex_lock(&MTI_access);
+		sleep(1);
 	}
 	stats.error = 0;//load no error on stats
 	//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
