@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Array with strings of the Supported Interface_names.
 extern char *Morfeas_IPC_handler_type_name[];
+//Arrays with MTI related strings
 extern char *MTI_charger_state_str[];
 extern char *MTI_Data_rate_str[];
 extern char *MTI_Tele_dev_type_str[];

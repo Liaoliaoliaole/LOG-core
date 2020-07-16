@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <math.h>
 #include <errno.h>
@@ -218,7 +219,6 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 }
 
 								//----- MTI write functions -----//
-
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs)
 {
 	struct MTI_RX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
@@ -240,7 +240,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 			}
 			break;
 		case RM_SW_MUX:
-			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0
+			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0, Global switches config
 			break;
 	}
 	if(modbus_write_registers(ctx, MTI_CONFIG_OFFSET, 8, (unsigned short*)&new_Radio_config)<=0)//write only the first 8 holding registers
@@ -248,78 +248,81 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 	return EXIT_SUCCESS;
 }
 
-int set_MTI_Global_switches(modbus_t *ctx, unsigned char global_power, unsigned char global_speed)
+int set_MTI_Global_switches(modbus_t *ctx, bool global_power)
 {
-	unsigned short global_reg = 0;
-
-	global_reg |= global_power ? 1 : 0;
-	global_reg |= global_speed ? 2 : 0;
+	unsigned short global_reg = global_power;
+	
 	if(modbus_write_register(ctx, GLOBAL_SW_REG, global_reg)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }
 
-/*
-struct Gen_config_struct{
-	unsigned int max;
-	unsigned int min;
-	union generator_mode{
-		struct decoder_for_generator_mode{
-			unsigned saturation:1;
-			unsigned reserved:6;
-			unsigned fixed_freq:1;
-		}dec;
-		unsigned char as_byte;
-	}pwm_mode;
-};
-
-struct MTI_PWM_config_struct{
-	unsigned int PWM_out_freq;
-	int PLL_Control_high;
-	int PLL_Control_low;
-	struct PWM_Channels_control_struct{
-		unsigned int cnt_max;
-		unsigned int cnt_min;
-		unsigned int middle_val;
-		unsigned int cnt_mode;
-	}CHs[2];
-};
-*/
-
-int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct **new_Config)
+int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
 {
 	struct MTI_PWM_config_struct new_PWM_config = {.PWM_out_freq=10000};
 	for(int i=0; i<2; i++)
 	{
-		new_PWM_config.CHs[i].cnt_max = new_Config[i]->max;
-		new_PWM_config.CHs[i].cnt_min = new_Config[i]->min;
-		new_PWM_config.CHs[i].middle_val = (new_Config[i]->max - new_Config[i]->min)/2;
-		new_PWM_config.CHs[i].cnt_mode = new_Config[i]->pwm_mode.as_byte | 1<<7;//set fixed_freq flag always
+		new_PWM_config.CHs[i].cnt_max = new_Config[i].max;
+		new_PWM_config.CHs[i].cnt_min = new_Config[i].min;
+		new_PWM_config.CHs[i].middle_val = (new_Config[i].max - new_Config[i].min)/2;
+		new_PWM_config.CHs[i].cnt_mode = new_Config[i].pwm_mode.as_byte | 1<<7;//set fixed_freq flag always
 	}
 	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }
 
-int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, unsigned char new_state)
+int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state)
 {
 	union state_register{
 		union switch_status_dec enc;
 		unsigned short as_short;
-	}new_status = {0};
+	}new_status;
+	
+	//Read current states of switches 
+	if(modbus_read_registers(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, 1, &(new_status.as_short))<=0)
+		return errno;
 	
 	switch(dev_type)
 	{
 		case RMSW_2CH:
+			new_status.enc.rmsw_dec.Rep_rate = 1; //Set rep_rate to high speed; 
+			switch(sw_name)
+			{
+				case Main_SW:
+					new_status.enc.rmsw_dec.Main = new_state; break;
+				case SW_1:
+					new_status.enc.rmsw_dec.CH1 = new_state; break;
+				case SW_2:
+					new_status.enc.rmsw_dec.CH2 = new_state; break;
+				default:
+					return EXIT_FAILURE;
+			}
 			break;
 		case MUX:
+			new_status.enc.mux_dec.Rep_rate = 1; //Set rep_rate to high speed;
+			switch(sw_name)
+			{
+				case Sel_1:
+					new_status.enc.mux_dec.CH1 = new_state; break;
+				case Sel_2:
+					new_status.enc.mux_dec.CH2 = new_state; break;
+				case Sel_3:
+					new_status.enc.mux_dec.CH3 = new_state; break;
+				case Sel_4:
+					new_status.enc.mux_dec.CH4 = new_state; break;
+				default:
+					return EXIT_FAILURE;
+			}
 			break;
 		case Mini_RMSW:
+			new_status.enc.mini_dec.Rep_rate = 1; //Set rep_rate to high speed;
+			new_status.enc.mini_dec.Main = new_state;
 			break;
 		default:
 			return EXIT_FAILURE;
 	}
-	if(modbus_write_register(ctx, MTI_RMSWs_SWITCH_OFFSET*(mem_pos+1), new_status.as_short)<=0)
+	if(modbus_write_register(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, new_status.as_short)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }

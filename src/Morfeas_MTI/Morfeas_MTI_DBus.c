@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <dbus/dbus.h>
 
 #include <modbus.h>
+#include <cjson/cJSON.h>
 
 #include "../Morfeas_Types.h"
 #include "../Supplementary/Morfeas_Logger.h"
@@ -37,31 +38,108 @@ extern pthread_mutex_t MTI_access;
 	//--- MTI's Write Functions ---//
 //MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise.
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs);
-//MTI function that set the Global switches. Return 0 on success, errno otherwise.
-int set_MTI_Global_switches(modbus_t *ctx, unsigned char global_power, unsigned char global_speed);
+//MTI function that write the Global power switch. Return 0 on success, errno otherwise.
+int set_MTI_Global_switches(modbus_t *ctx, bool global_power);
 //MTI function that write a new configuration for PWM generators, Return 0 on success, errno otherwise.
-int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct **new_Config);
+int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config);
 //MTI function that controlling the state of a controllable telemetry(RMSW, MUX, Mini), Return 0 on success, errno otherwise.
-int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, unsigned char new_state);
+int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state);
+
+static const char *const INTERFACE_NAME = "Morfeas.MTI.DBus_if";
+static const char *const SERVER_BUS_NAME = "Morfeas.MTI.DBus_Server";
+static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
+static const char *const METHOD_NAMES[] = {"new_MTI_config", "MTI_Global_SWs", "new_PWM_config", "ctrl_tele_SWs", "test_method"};
+static DBusError dbus_error;
+
+//Local DBus Error Logging function
+void Log_DBus_error(char *str);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
 {
+	/*
 	//Decoded variables from passer
 	modbus_t *ctx = *(((struct MTI_DBus_thread_arguments_passer *)varg_pt)->ctx);
 	struct Morfeas_MTI_if_stats *stats = ((struct MTI_DBus_thread_arguments_passer *)varg_pt)->stats;
-	//Local MTI structs
+	//Local variables and structures
 	union MTI_specific_regs sregs;
-	struct Gen_config_struct PWM_gens_config;
+	struct Gen_config_struct PWM_gens_config[2];
+	*/
+	int ret;
+	DBusConnection *conn;
+	DBusMessage *message, *reply;
+	DBusMessageIter iter;
+	
+	char *ptr = "Reply!!!!\n";
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
-
+	
 	Logger("Thread for D-Bus listener Started\n");
+	
+	//Connects to a bus daemon and registers with it. 
+    dbus_error_init (&dbus_error);
+	if(!(conn=dbus_bus_get(DBUS_BUS_SESSION, &dbus_error)))
+	{
+		Log_DBus_error("dbus_bus_get() Failed");
+		return NULL;
+	}
+	
+	// Get a well known name
+    ret = dbus_bus_request_name (conn, SERVER_BUS_NAME, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
+    if (dbus_error_is_set (&dbus_error))
+        Log_DBus_error("dbus_bus_request_name() Failed");
+
+    if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+        Logger("Dbus: not primary owner, ret = %d\n", ret);
+        return NULL;
+    }
+	
+	// Handle request from clients
 	while(handler_run)
 	{
-		sleep(1);
+		//Wait for incoming messages, timeout in 1 sec 
+        if(dbus_connection_read_write_dispatch (conn, 1000))
+		{
+			if((message = dbus_connection_pop_message(conn)))
+			{
+				//Analyze received message for methods call
+				if(dbus_message_is_method_call(message, INTERFACE_NAME, METHOD_NAMES[4]))//Check for "test_method" call
+				{
+					//Send reply
+                    if(!(reply = dbus_message_new_method_return(message))) 
+					{
+                        fprintf (stderr, "Error in dbus_message_new_method_return\n");
+                        return NULL;
+                    }
+                    dbus_message_iter_init_append (reply, &iter);
+    
+                    if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &ptr)) 
+					{
+                        fprintf (stderr, "Error in dbus_message_iter_append_basic\n");
+                        return NULL;
+                    }
+                    if (!dbus_connection_send(conn, reply, NULL)) 
+					{
+                        fprintf (stderr, "Error in dbus_connection_send\n");
+                        return NULL;
+                    }
+                    dbus_connection_flush (conn);
+                    dbus_message_unref (reply);
+				}
+			}
+		}
+		//Logger("Loop\n");
 	}
+	
+	dbus_error_free (&dbus_error);
+	
 	Logger("D-Bus listener thread terminated\n");
 	return NULL;
+}
+
+void Log_DBus_error(char *str) 
+{
+    Logger("%s: %s\n", str, dbus_error.message);
+    dbus_error_free (&dbus_error);
 }

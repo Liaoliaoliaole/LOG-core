@@ -64,10 +64,13 @@ static void stopHandler(int signum)
 	handler_run = 0;
 }
 
-//--- MTI's Functions ---//
-int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's status and load them to stats, return 0 on success
-int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request the MTI's RX configuration. Load configuration status stats and return "telemetry type".
-int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);//MTI function that request from MTI the telemetry data. Load this data to stats. Return 0 in success
+	//--- MTI's Read Functions ---//
+//MTI function that request the MTI's status and load them to stats. Return 0 on success.
+int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+//MTI function that request the MTI's RX configuration and load it to stats. Return 0 in success.
+int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+//MTI function that request from MTI the telemetry data and load them to stats. Return 0 in success.
+int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 
 //--- D-Bus Listener function ---//
 void * MTI_DBus_listener(void *varg_pt);//Thread function.
@@ -192,7 +195,7 @@ int main(int argc, char *argv[])
 
 	//Start D-Bus listener function in a thread
 	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);
-
+	
 	if(handler_run)
 	{
 		//Print Connection success message

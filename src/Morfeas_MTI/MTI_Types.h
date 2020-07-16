@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MTI's MODBus implementation
 
 /*MTI's ModBus regions Offsets*/
+#define RMSW_MEM_SIZE 10
 //Holding registers region
 #define TRX_MODE_REG 3
 #define GLOBAL_SW_REG 24
@@ -41,11 +42,25 @@ enum MTI_Telemetry_Dev_type_enum{
 	Dev_type_min = Tele_TC16,
 	Dev_type_max = Tele_TC4,
 };
-//--- Enumerator for Controlling device ---//
+//--- Enumerator for Controlling telemetry device ---//
 enum MTI_Controlling_Dev_type_enum{
 	RMSW_2CH = 1,
 	MUX,
 	Mini_RMSW
+};
+//--- Enumerators for switch names ---//
+//For RMSW_2CH
+enum RMSW_switches_names{
+	Main_SW,
+	SW_1,
+	SW_2
+};
+//For Multiplexers
+enum MUX_switches_names{
+	Sel_1,
+	Sel_2,
+	Sel_3,
+	Sel_4,
 };
 
 //--- From MODBus Input Registers(Read only) 32001... ---//
