@@ -111,7 +111,7 @@ The executable binaries located under the **./build** directory.
 ```
 $ sudo make install
 ```
-### Configuration for the Morfeas_daemon and Systemd service
+### Configuration for the Morfeas_daemon, D-Bus and Systemd service
 ```
 $ #--- Optionaly copy the configuration directory to your home ---
 $ cp -r configuration ~/
@@ -121,6 +121,8 @@ $ #Make the nececery modifications on the Unit file of the Morfeas_daemon servic
 $ sudo systemctl edit Morfeas_system.service --full
 $ #Also modify the configuration file of the Morfeas_daemon service
 $ sudo vim /etc/systemd/system/Morfeas_system.service.d/Morfeas_system.conf
+$ #Modify the D-Bus configuration for the Morfeas system
+$ sudo vim /etc/dbus-1/system.d/Morfeas_system.conf
 $ #Start the systemd service daemon
 $ sudo systemctl start Morfeas_system.service
 $ #--- Optionaly If you want to start the daemon on boot ---

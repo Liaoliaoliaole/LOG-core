@@ -70,7 +70,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	DBusMessage *message, *reply;
 	DBusMessageIter iter;
 	
-	char *ptr = "Reply!!!!\n";
+	char *ptr = "Reply!!!!";
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -79,7 +79,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	
 	//Connects to a bus daemon and registers with it. 
     dbus_error_init (&dbus_error);
-	if(!(conn=dbus_bus_get(DBUS_BUS_SESSION, &dbus_error)))
+	if(!(conn=dbus_bus_get(DBUS_BUS_SYSTEM, &dbus_error)))
 	{
 		Log_DBus_error("dbus_bus_get() Failed");
 		return NULL;

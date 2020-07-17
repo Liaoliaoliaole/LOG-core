@@ -190,6 +190,8 @@ clean:
 install:
 	@echo "Installation of executable Binaries..."
 	@install $(BUILD_dir)/* -v -t /usr/local/bin/
+	@echo "Instalation of D-Bus configuration"
+	cp -r -n ./dbus/* /etc/dbus-1/system.d/
 	@echo "\nInstallation of Systemd service for Morfeas_daemon..."
 	cp -r -n ./systemd/* /etc/systemd/system/
 	@echo "\n If you want to run the Morfeas-System at boot, execute:"
