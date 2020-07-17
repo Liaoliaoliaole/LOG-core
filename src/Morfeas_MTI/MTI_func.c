@@ -286,7 +286,8 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_typ
 	switch(dev_type)
 	{
 		case RMSW_2CH:
-			new_status.enc.rmsw_dec.Rep_rate = 1; //Set rep_rate to high speed; 
+			new_status.enc.rmsw_dec.reserved = 0;//Clean unused bits
+			new_status.enc.rmsw_dec.Rep_rate = 1;//Set rep_rate to high speed; 
 			switch(sw_name)
 			{
 				case Main_SW:
@@ -300,7 +301,8 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_typ
 			}
 			break;
 		case MUX:
-			new_status.enc.mux_dec.Rep_rate = 1; //Set rep_rate to high speed;
+			new_status.enc.mux_dec.reserved = 0;//Clean unused bits
+			new_status.enc.mux_dec.Rep_rate = 1;//Set rep_rate to high speed;
 			switch(sw_name)
 			{
 				case Sel_1:
@@ -316,7 +318,8 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_typ
 			}
 			break;
 		case Mini_RMSW:
-			new_status.enc.mini_dec.Rep_rate = 1; //Set rep_rate to high speed;
+			new_status.enc.mini_dec.reserved = 0;//Clean unused bits
+			new_status.enc.mini_dec.Rep_rate = 1;//Set rep_rate to high speed;
 			new_status.enc.mini_dec.Main = new_state;
 			break;
 		default:

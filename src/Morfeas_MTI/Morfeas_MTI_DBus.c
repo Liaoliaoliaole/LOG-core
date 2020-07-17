@@ -47,12 +47,14 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_typ
 
 static const char *const INTERFACE_NAME = "Morfeas.MTI.DBus_if";
 static const char *const SERVER_BUS_NAME = "Morfeas.MTI.DBus_Server";
-static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
+//static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
 static const char *const METHOD_NAMES[] = {"new_MTI_config", "MTI_Global_SWs", "new_PWM_config", "ctrl_tele_SWs", "test_method"};
 static DBusError dbus_error;
 
 //Local DBus Error Logging function
 void Log_DBus_error(char *str);
+int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str);
+int DBus_reply_error_msg(DBusConnection *conn, DBusMessage *message, char *reply_str);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
@@ -67,10 +69,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	*/
 	int ret;
 	DBusConnection *conn;
-	DBusMessage *message, *reply;
-	DBusMessageIter iter;
-	
-	char *ptr = "Reply!!!!";
+	DBusMessage *message;
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -81,14 +80,14 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
     dbus_error_init (&dbus_error);
 	if(!(conn=dbus_bus_get(DBUS_BUS_SYSTEM, &dbus_error)))
 	{
-		Log_DBus_error("dbus_bus_get() Failed");
+		Log_DBus_error("dbus_bus_get() Failed!!!");
 		return NULL;
 	}
 	
 	// Get a well known name
-    ret = dbus_bus_request_name (conn, SERVER_BUS_NAME, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
+    ret = dbus_bus_request_name(conn, SERVER_BUS_NAME, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
     if (dbus_error_is_set (&dbus_error))
-        Log_DBus_error("dbus_bus_request_name() Failed");
+        Log_DBus_error("dbus_bus_request_name() Failed!!!");
 
     if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
         Logger("Dbus: not primary owner, ret = %d\n", ret);
@@ -99,37 +98,19 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	while(handler_run)
 	{
 		//Wait for incoming messages, timeout in 1 sec 
-        if(dbus_connection_read_write_dispatch (conn, 1000))
+        if(dbus_connection_read_write_dispatch(conn, 1000))
 		{
 			if((message = dbus_connection_pop_message(conn)))
 			{
 				//Analyze received message for methods call
 				if(dbus_message_is_method_call(message, INTERFACE_NAME, METHOD_NAMES[4]))//Check for "test_method" call
 				{
-					//Send reply
-                    if(!(reply = dbus_message_new_method_return(message))) 
-					{
-                        fprintf (stderr, "Error in dbus_message_new_method_return\n");
-                        return NULL;
-                    }
-                    dbus_message_iter_init_append (reply, &iter);
-    
-                    if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &ptr)) 
-					{
-                        fprintf (stderr, "Error in dbus_message_iter_append_basic\n");
-                        return NULL;
-                    }
-                    if (!dbus_connection_send(conn, reply, NULL)) 
-					{
-                        fprintf (stderr, "Error in dbus_connection_send\n");
-                        return NULL;
-                    }
-                    dbus_connection_flush (conn);
-                    dbus_message_unref (reply);
+					DBus_reply_msg(conn, message, "Reply to test_method call!!!");
 				}
+				else
+					DBus_reply_error_msg(conn, message, "Unknown Method called!!!");
 			}
 		}
-		//Logger("Loop\n");
 	}
 	
 	dbus_error_free (&dbus_error);
@@ -142,4 +123,49 @@ void Log_DBus_error(char *str)
 {
     Logger("%s: %s\n", str, dbus_error.message);
     dbus_error_free (&dbus_error);
+}
+
+int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
+{
+	DBusMessage *reply;
+	static DBusMessageIter iter;
+	//Send reply
+	if(!(reply = dbus_message_new_method_return(message))) 
+	{
+		Logger("Error in dbus_message_new_method_return()\n");
+		return EXIT_FAILURE;
+	}
+	
+	dbus_message_iter_init_append(reply, &iter);
+
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &reply_str)) 
+	{
+		Logger("Error in dbus_message_iter_append_basic()\n");
+		return EXIT_FAILURE;
+	}
+	if (!dbus_connection_send(conn, reply, NULL)) 
+	{
+		Logger("Error in dbus_connection_send()\n");
+		return EXIT_FAILURE;
+	}
+	dbus_connection_flush(conn);
+	dbus_message_unref(reply);
+	return EXIT_SUCCESS;
+}
+
+int DBus_reply_error_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
+{
+	DBusMessage *dbus_error_msg;
+	if ((dbus_error_msg = dbus_message_new_error (message, DBUS_ERROR_FAILED, reply_str)) == NULL) 
+	{
+		Logger("Error in dbus_message_new_error()\n");
+		return EXIT_FAILURE;
+	}
+	if (!dbus_connection_send (conn, dbus_error_msg, NULL)) {
+		Logger("Error in dbus_connection_send()\n");
+		return EXIT_FAILURE;
+	}
+	dbus_connection_flush (conn);
+	dbus_message_unref (dbus_error_msg);
+	return EXIT_SUCCESS;
 }
