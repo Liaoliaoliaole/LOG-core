@@ -127,7 +127,7 @@ void Log_DBus_error(char *str)
 
 int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
 {
-	DBusMessage *reply;
+	static DBusMessage *reply;
 	static DBusMessageIter iter;
 	//Send reply
 	if(!(reply = dbus_message_new_method_return(message))) 
@@ -155,7 +155,7 @@ int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
 
 int DBus_reply_error_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
 {
-	DBusMessage *dbus_error_msg;
+	static DBusMessage *dbus_error_msg;
 	if ((dbus_error_msg = dbus_message_new_error (message, DBUS_ERROR_FAILED, reply_str)) == NULL) 
 	{
 		Logger("Error in dbus_message_new_error()\n");
