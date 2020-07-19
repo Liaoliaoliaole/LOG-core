@@ -190,17 +190,15 @@ int main(int argc, char *argv[])
 		logstat_MTI(path_to_logstat_dir, &stats);
 		sleep(1);
 	}
+	if(!handler_run)
+		goto Exit;
+	//Print Connection success message
+	Logger("Connected to MTI %s(%s)\n", stats.MTI_IPv4_addr, stats.dev_name);
 	stats.error = 0;//load no error on stats
 	//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 
 	//Start D-Bus listener function in a thread
 	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);
-	
-	if(handler_run)
-	{
-		//Print Connection success message
-		Logger("Connected to MTI %s(%s)\n", stats.MTI_IPv4_addr, stats.dev_name);
-	}
 
 	while(handler_run)//Application's FSM
 	{
@@ -257,7 +255,7 @@ int main(int argc, char *argv[])
 
 	pthread_join(DBus_listener_Thread_id, NULL);// wait DBus_listener thread to end
 	pthread_detach(DBus_listener_Thread_id);//deallocate DBus_listener thread's memory
-
+Exit:
 	//Close MODBus connection and deallocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
