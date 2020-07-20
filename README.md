@@ -79,7 +79,7 @@ $ git submodule update --init --recursive --remote --merge
 ```
 $ cd src/cJSON
 $ mkdir build && cd build
-$ cmake ..
+$ cmake BUILD_SHARED_LIBS=ON ..
 $ make -j$(nproc)
 $ sudo make install
 $ sudo ldconfig
@@ -129,7 +129,7 @@ $ #--- Optionaly If you want to start the daemon on boot ---
 $ sudo systemctl enable Morfeas_system.service
 ```
 ### Re-Compilation of the source
-Guide link [here](./RE-INSTALL.md) 
+Guide link [here](./RE-INSTALL.md)
 
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*

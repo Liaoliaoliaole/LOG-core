@@ -121,7 +121,11 @@ int main(int argc, char *argv[])
 	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
 	"\t------ Morfeas OPC-UA Server Started ------");
 	//Setup config for Morfeas_OPC_UA Server
-	retval = Morfeas_OPC_UA_config(&conf, app_name, VERSION);
+	if((retval = Morfeas_OPC_UA_config(&conf, app_name, VERSION)))
+	{
+		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Morfeas_OPC_UA_config() Failed!!!!");
+		goto Exit;
+	}
 	//Init OPC_UA Server
 	server = UA_Server_newWithConfig(&conf);
 	//Add Morfeas application base node set to server
@@ -151,6 +155,7 @@ int main(int argc, char *argv[])
 		pthread_detach(Threads_ids[i]);
 	}
     UA_Server_delete(server);
+Exit:
 	unlink("/tmp/.Morfeas_FIFO");
 	delete_logstat_sys(logstat_path);//remove logstat_sys
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -709,7 +714,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             UA_QUALIFIEDNAME(1, "Morfeas_Handlers"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
                             oAttr, NULL, NULL);
-	
+
 	//Add Handlers object nodes under Morfeas_Handlers node
 	while(Morfeas_IPC_handler_type_name[i])
 	{
