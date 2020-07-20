@@ -70,7 +70,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	int ret;
 	DBusConnection *conn;
 	DBusMessage *message;
-	DBusObjectPathVTable vtable;
+	DBusObjectPathVTable vtable[1]={0};
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -95,7 +95,8 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
         return NULL;
     }
 
-	if(!dbus_connection_try_register_fallback(conn, OBJECT_PATH_NAME, &vtable, NULL, &dbus_error))	
+	dbus_connection_try_register_fallback(conn, OBJECT_PATH_NAME, vtable, NULL, &dbus_error);
+	if (dbus_error_is_set (&dbus_error))		
 		Log_DBus_error("dbus_connection_try_register_fallback() Failed!!!");
 	
 	// Handle request from clients
@@ -109,7 +110,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 				//Analyze received message for methods call
 				if(dbus_message_is_method_call(message, INTERFACE_NAME, METHOD_NAMES[4]))//Check for "test_method" call
 				{
-					DBus_reply_msg(conn, message, "Reply to test_method call!!!");
+					DBus_reply_msg(conn, message, "Reply to test_method call!!!\n");
 				}
 				//else
 					//DBus_reply_error_msg(conn, message, "Unknown Method called!!!");
@@ -118,7 +119,6 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	}
 
 	dbus_error_free(&dbus_error);
-	//dbus_connection_close(conn);
 
 	Logger("D-Bus listener thread terminated\n");
 	return NULL;
