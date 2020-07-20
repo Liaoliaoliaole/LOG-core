@@ -47,7 +47,7 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_typ
 
 static const char *const INTERFACE_NAME = "Morfeas.MTI.DBus_if";
 static const char *const SERVER_BUS_NAME = "Morfeas.MTI.DBus_Server";
-//static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
+static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
 static const char *const METHOD_NAMES[] = {"new_MTI_config", "MTI_Global_SWs", "new_PWM_config", "ctrl_tele_SWs", "test_method"};
 static DBusError dbus_error;
 
@@ -70,6 +70,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	int ret;
 	DBusConnection *conn;
 	DBusMessage *message;
+	DBusObjectPathVTable vtable;
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -94,6 +95,9 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
         return NULL;
     }
 
+	if(!dbus_connection_try_register_fallback(conn, OBJECT_PATH_NAME, &vtable, NULL, &dbus_error))	
+		Log_DBus_error("dbus_connection_try_register_fallback() Failed!!!");
+	
 	// Handle request from clients
 	while(handler_run)
 	{
@@ -113,7 +117,8 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 		}
 	}
 
-	dbus_error_free (&dbus_error);
+	dbus_error_free(&dbus_error);
+	//dbus_connection_close(conn);
 
 	Logger("D-Bus listener thread terminated\n");
 	return NULL;
