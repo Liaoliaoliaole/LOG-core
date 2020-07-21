@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#define MORFEAS_DBUS_NAME "org.freedesktop.Morfeas"
-#define IF_NAME_PROTO "org.freedesktop.Morfeas.MTI."
+#define MORFEAS_DBUS_NAME_PROTO "org.freedesktop.Morfeas.MTI."
+#define IF_NAME_PROTO "Morfeas.MTI."
 
 
 #include <stdio.h>
@@ -65,11 +65,10 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	modbus_t *ctx = *(((struct MTI_DBus_thread_arguments_passer *)varg_pt)->ctx);
 	struct Morfeas_MTI_if_stats *stats = ((struct MTI_DBus_thread_arguments_passer *)varg_pt)->stats;
 	//D-Bus related variables
-	char *dbus_if_name;
+	char *dbus_server_name_if;
 	int ret;
 	DBusConnection *conn;
 	DBusMessage *message;
-	DBusObjectPathVTable vtable[1]={0};
 	/*
 	//Local variables and structures
 	union MTI_specific_regs sregs;
@@ -87,8 +86,16 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 		Log_DBus_error("dbus_bus_get() Failed!!!");
 		return NULL;
 	}
-
-    ret = dbus_bus_request_name(conn, MORFEAS_DBUS_NAME, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
+	//Allocate space and create dbus_server_name
+	if(!(dbus_server_name_if = calloc(sizeof(char), strlen(MORFEAS_DBUS_NAME_PROTO)+strlen(stats->dev_name)+1)))
+	{
+		fprintf(stderr,"Memory error!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	sprintf(dbus_server_name_if, "%s%s", MORFEAS_DBUS_NAME_PROTO, stats->dev_name);
+	Logger("Thread's DBus_Name:\"%s\"\n", dbus_server_name_if);
+	
+    ret = dbus_bus_request_name(conn, dbus_server_name_if, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
     if(dbus_error_is_set (&dbus_error))
         Log_DBus_error("dbus_bus_request_name() Failed!!!");
 
@@ -96,15 +103,17 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
         Logger("Dbus: not primary owner, ret = %d\n", ret);
         return NULL;
     }
-
-	//Allocate space and create dbus_if_name
-	if(!(dbus_if_name = calloc(sizeof(char), strlen(IF_NAME_PROTO)+strlen(stats->dev_name)+1)))
+	//free dbus_server_name_if
+	free(dbus_server_name_if);
+	
+	//Allocate space and create dbus_server_if
+	if(!(dbus_server_name_if = calloc(sizeof(char), strlen(IF_NAME_PROTO)+strlen(stats->dev_name)+1)))
 	{
 		fprintf(stderr,"Memory error!!!\n");
 		exit(EXIT_FAILURE);
 	}
-	sprintf(dbus_if_name, "%s%s", IF_NAME_PROTO, stats->dev_name);
-	Logger("Thread's DBus-if:\"%s\"\n", dbus_if_name);
+	sprintf(dbus_server_name_if, "%s%s", IF_NAME_PROTO, stats->dev_name);
+	Logger("Listening @ interface:\"%s\"\n", dbus_server_name_if);
 
 	// Handle request from clients
 	while(handler_run)
@@ -115,7 +124,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 			if((message = dbus_connection_pop_message(conn)))
 			{
 				//Analyze received message for methods call
-				if(dbus_message_is_method_call(message, dbus_if_name, Method[4]))//Check for "test_method" call
+				if(dbus_message_is_method_call(message, dbus_server_name_if, Method[4]))//Check for "test_method" call
 				{
 					DBus_reply_msg(conn, message, "Reply to test_method call!!!\n");
 				}
@@ -124,7 +133,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	}
 
 	dbus_error_free(&dbus_error);
-	free(dbus_if_name);
+	free(dbus_server_name_if);
 	Logger("D-Bus listener thread terminated\n");
 	return NULL;
 }

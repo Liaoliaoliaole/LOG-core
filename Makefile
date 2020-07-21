@@ -203,6 +203,8 @@ uninstall:
 	@echo  "Remove related binaries and Systemd unit files"
 	rm /usr/local/bin/Morfeas_*
 	rm -r /etc/systemd/system/Morfeas_system*
+	@echo  "\nRemove D-Bus configuration"
+	rm /etc/dbus-1/system.d/Morfeas_system.conf
 
 .PHONY: all clean delete-tree
 
