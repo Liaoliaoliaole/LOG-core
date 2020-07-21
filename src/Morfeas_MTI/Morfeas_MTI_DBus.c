@@ -55,8 +55,8 @@ static DBusError dbus_error;
 
 //Local DBus Error Logging function
 void Log_DBus_error(char *str);
-int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str);
-int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *message, char *reply_str);
+int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str);
+int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *reply_str);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
@@ -68,7 +68,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	char *dbus_server_name_if;
 	int ret;
 	DBusConnection *conn;
-	DBusMessage *message;
+	DBusMessage *msg;
 	/*
 	//Local variables and structures
 	union MTI_specific_regs sregs;
@@ -113,7 +113,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 		exit(EXIT_FAILURE);
 	}
 	sprintf(dbus_server_name_if, "%s%s", IF_NAME_PROTO, stats->dev_name);
-	Logger("Listening @ interface:\"%s\"\n", dbus_server_name_if);
+	Logger("\t Interface:\"%s\"\n", dbus_server_name_if);
 
 	// Handle request from clients
 	while(handler_run)
@@ -121,12 +121,12 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 		//Wait for incoming messages, timeout in 1 sec
         if(dbus_connection_read_write_dispatch(conn, 1000))
 		{
-			if((message = dbus_connection_pop_message(conn)))
+			if((msg = dbus_connection_pop_message(conn)))
 			{
 				//Analyze received message for methods call
-				if(dbus_message_is_method_call(message, dbus_server_name_if, Method[4]))//Check for "test_method" call
+				if(dbus_message_is_method_call(msg, dbus_server_name_if, Method[4]))//Check for "echo" call
 				{
-					DBus_reply_msg(conn, message, "Reply to test_method call!!!\n");
+					DBus_reply_msg(conn, msg, "Reply to test_method call!!!\n");
 				}
 			}
 		}
@@ -144,20 +144,20 @@ void Log_DBus_error(char *str)
     dbus_error_free (&dbus_error);
 }
 
-int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
+int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str)
 {
 	DBusMessage *reply;
-	DBusMessageIter iter;
+	DBusMessageIter args;
 	//Send reply
-	if(!(reply = dbus_message_new_method_return(message)))
+	if(!(reply = dbus_message_new_method_return(msg)))
 	{
 		Logger("Error in dbus_message_new_method_return()\n");
 		return EXIT_FAILURE;
 	}
+	
+	dbus_message_iter_init_append(reply, &args);
 
-	dbus_message_iter_init_append(reply, &iter);
-
-	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &reply_str))
+	if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &reply_str))
 	{
 		Logger("Error in dbus_message_iter_append_basic()\n");
 		return EXIT_FAILURE;
@@ -172,10 +172,10 @@ int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
 	return EXIT_SUCCESS;
 }
 
-int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *message, char *reply_str)
+int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *reply_str)
 {
 	DBusMessage *dbus_error_msg;
-	if ((dbus_error_msg = dbus_message_new_error (message, DBUS_ERROR_FAILED, reply_str)) == NULL)
+	if ((dbus_error_msg = dbus_message_new_error (msg, DBUS_ERROR_FAILED, reply_str)) == NULL)
 	{
 		Logger("Error in dbus_message_new_error()\n");
 		return EXIT_FAILURE;
