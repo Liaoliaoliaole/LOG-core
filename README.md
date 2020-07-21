@@ -79,7 +79,7 @@ $ git submodule update --init --recursive --remote --merge
 ```
 $ cd src/cJSON
 $ mkdir build && cd build
-$ cmake BUILD_SHARED_LIBS=ON ..
+$ cmake -D BUILD_SHARED_LIBS=ON ..
 $ make -j$(nproc)
 $ sudo make install
 $ sudo ldconfig

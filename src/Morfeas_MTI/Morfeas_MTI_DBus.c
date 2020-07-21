@@ -15,6 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#define MORFEAS_DBUS_NAME "org.freedesktop.Morfeas"
+#define IF_NAME_PROTO "org.freedesktop.Morfeas.MTI."
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,60 +49,63 @@ int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config);
 //MTI function that controlling the state of a controllable telemetry(RMSW, MUX, Mini), Return 0 on success, errno otherwise.
 int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state);
 
-static const char *const INTERFACE_NAME = "Morfeas.MTI.DBus_if";
-static const char *const SERVER_BUS_NAME = "Morfeas.MTI.DBus_Server";
-static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
-static const char *const METHOD_NAMES[] = {"new_MTI_config", "MTI_Global_SWs", "new_PWM_config", "ctrl_tele_SWs", "test_method"};
+//static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
+static const char *const Method[] = {"new_MTI_config", "MTI_Global_SWs", "new_PWM_config", "ctrl_tele_SWs", "echo"};
 static DBusError dbus_error;
 
 //Local DBus Error Logging function
 void Log_DBus_error(char *str);
 int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str);
-int DBus_reply_error_msg(DBusConnection *conn, DBusMessage *message, char *reply_str);
+int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *message, char *reply_str);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
 {
-	/*
 	//Decoded variables from passer
 	modbus_t *ctx = *(((struct MTI_DBus_thread_arguments_passer *)varg_pt)->ctx);
 	struct Morfeas_MTI_if_stats *stats = ((struct MTI_DBus_thread_arguments_passer *)varg_pt)->stats;
-	//Local variables and structures
-	union MTI_specific_regs sregs;
-	struct Gen_config_struct PWM_gens_config[2];
-	*/
+	//D-Bus related variables
+	char *dbus_if_name;
 	int ret;
 	DBusConnection *conn;
 	DBusMessage *message;
 	DBusObjectPathVTable vtable[1]={0};
-
+	/*
+	//Local variables and structures
+	union MTI_specific_regs sregs;
+	struct Gen_config_struct PWM_gens_config[2];
+	*/
+	
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
 
+	dbus_error_init (&dbus_error);
 	Logger("Thread for D-Bus listener Started\n");
-
 	//Connects to a bus daemon and registers with it.
-    dbus_error_init (&dbus_error);
 	if(!(conn=dbus_bus_get(DBUS_BUS_SYSTEM, &dbus_error)))
 	{
 		Log_DBus_error("dbus_bus_get() Failed!!!");
 		return NULL;
 	}
 
-	// Get a well known name
-    ret = dbus_bus_request_name(conn, SERVER_BUS_NAME, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
-    if (dbus_error_is_set (&dbus_error))
+    ret = dbus_bus_request_name(conn, MORFEAS_DBUS_NAME, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
+    if(dbus_error_is_set (&dbus_error))
         Log_DBus_error("dbus_bus_request_name() Failed!!!");
 
-    if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+    if(ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
         Logger("Dbus: not primary owner, ret = %d\n", ret);
         return NULL;
     }
 
-	dbus_connection_try_register_fallback(conn, OBJECT_PATH_NAME, vtable, NULL, &dbus_error);
-	if (dbus_error_is_set (&dbus_error))		
-		Log_DBus_error("dbus_connection_try_register_fallback() Failed!!!");
-	
+	//Allocate space and create dbus_if_name
+	if(!(dbus_if_name = calloc(sizeof(char), strlen(IF_NAME_PROTO)+strlen(stats->dev_name)+1)))
+	{
+		fprintf(stderr,"Memory error!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	sprintf(dbus_if_name, "%s%s", IF_NAME_PROTO, stats->dev_name);
+	Logger("Thread's DBus-if:\"%s\"\n", dbus_if_name);
+
 	// Handle request from clients
 	while(handler_run)
 	{
@@ -108,18 +115,16 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 			if((message = dbus_connection_pop_message(conn)))
 			{
 				//Analyze received message for methods call
-				if(dbus_message_is_method_call(message, INTERFACE_NAME, METHOD_NAMES[4]))//Check for "test_method" call
+				if(dbus_message_is_method_call(message, dbus_if_name, Method[4]))//Check for "test_method" call
 				{
 					DBus_reply_msg(conn, message, "Reply to test_method call!!!\n");
 				}
-				//else
-					//DBus_reply_error_msg(conn, message, "Unknown Method called!!!");
 			}
 		}
 	}
 
 	dbus_error_free(&dbus_error);
-
+	free(dbus_if_name);
 	Logger("D-Bus listener thread terminated\n");
 	return NULL;
 }
@@ -132,8 +137,8 @@ void Log_DBus_error(char *str)
 
 int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
 {
-	static DBusMessage *reply;
-	static DBusMessageIter iter;
+	DBusMessage *reply;
+	DBusMessageIter iter;
 	//Send reply
 	if(!(reply = dbus_message_new_method_return(message)))
 	{
@@ -158,9 +163,9 @@ int DBus_reply_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
 	return EXIT_SUCCESS;
 }
 
-int DBus_reply_error_msg(DBusConnection *conn, DBusMessage *message, char *reply_str)
+int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *message, char *reply_str)
 {
-	static DBusMessage *dbus_error_msg;
+	DBusMessage *dbus_error_msg;
 	if ((dbus_error_msg = dbus_message_new_error (message, DBUS_ERROR_FAILED, reply_str)) == NULL)
 	{
 		Logger("Error in dbus_message_new_error()\n");

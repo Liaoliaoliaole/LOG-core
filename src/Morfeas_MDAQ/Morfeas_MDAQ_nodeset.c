@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define no_sensor -909.0 //-909.0 is meas code for no sensor
+#define no_sensor -909.0 //Error code for no sensor
 
 #include <math.h>
 #include <arpa/inet.h>

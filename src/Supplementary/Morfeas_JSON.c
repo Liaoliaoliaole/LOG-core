@@ -112,9 +112,9 @@ int delete_logstat_SDAQ(char *logstat_path, void *stats_arg)
 	char *logstat_path_and_name, *slash;
 	struct Morfeas_SDAQ_if_stats *stats = stats_arg;
 
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_SDAQs_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
-	sprintf(logstat_path_and_name,"%s%slogstat_%s.json",logstat_path, slash, stats->CAN_IF_name);
+	sprintf(logstat_path_and_name,"%s%slogstat_SDAQs_%s.json",logstat_path, slash, stats->CAN_IF_name);
 	//Delete logstat file
 	ret_val = unlink(logstat_path_and_name);
 	free(logstat_path_and_name);
@@ -132,7 +132,7 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_SDAQs_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_SDAQs_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_SDAQs_%s.json",logstat_path, slash, stats->CAN_IF_name);
 	//cJSON related variables
@@ -288,7 +288,7 @@ int delete_logstat_IOBOX(char *logstat_path, void *stats_arg)
 	char *logstat_path_and_name, *slash;
 	struct Morfeas_IOBOX_if_stats *stats = stats_arg;
 
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_IOBOX_%s.json",logstat_path, slash, stats->dev_name);
 	//Delete logstat file
@@ -311,7 +311,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 	//Correct logstat_path_and_name
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_IOBOX_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
@@ -407,7 +407,7 @@ int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 	char *logstat_path_and_name, *slash;
 	struct Morfeas_MDAQ_if_stats *stats = stats_arg;
 
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MDAQ_%s.json",logstat_path, slash, stats->dev_name);
 	//Delete logstat file
@@ -430,7 +430,7 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 	//Correct logstat_path_and_name
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MDAQ_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
@@ -519,7 +519,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 	//Correct logstat_path_and_name
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
@@ -716,7 +716,7 @@ int delete_logstat_MTI(char *logstat_path, void *stats_arg)
 	char *logstat_path_and_name, *slash;
 	struct Morfeas_MTI_if_stats *stats = stats_arg;
 
-	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_12345.json") + 1);
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//Delete logstat file
