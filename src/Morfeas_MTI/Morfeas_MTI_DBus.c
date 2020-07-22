@@ -49,8 +49,10 @@ int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config);
 //MTI function that controlling the state of a controllable telemetry(RMSW, MUX, Mini), Return 0 on success, errno otherwise.
 int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state);
 
+//--- Local Enumerators and constants---//
 //static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
-static const char *const Method[] = {"new_MTI_config", "MTI_Global_SWs", "new_PWM_config", "ctrl_tele_SWs", "echo"};
+static const char *const Method[] = {"new_MTI_config", "MTI_Global_SWs", "new_PWM_config", "ctrl_tele_SWs", "echo", NULL};
+enum Method_enum{new_MTI_config, MTI_Global_SWs, new_PWM_config, ctrl_tele_SWs, echo};
 static DBusError dbus_error;
 
 //Local DBus Error Logging function
@@ -64,11 +66,14 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	//Decoded variables from passer
 	modbus_t *ctx = *(((struct MTI_DBus_thread_arguments_passer *)varg_pt)->ctx);
 	struct Morfeas_MTI_if_stats *stats = ((struct MTI_DBus_thread_arguments_passer *)varg_pt)->stats;
+	//JSON objects
+	cJSON *JSON_args = NULL;
 	//D-Bus related variables
-	char *dbus_server_name_if;
-	int ret;
+	char *dbus_server_name_if, *param;
+	int i;
 	DBusConnection *conn;
 	DBusMessage *msg;
+	DBusMessageIter call_args;
 	/*
 	//Local variables and structures
 	union MTI_specific_regs sregs;
@@ -95,15 +100,14 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	sprintf(dbus_server_name_if, "%s%s", MORFEAS_DBUS_NAME_PROTO, stats->dev_name);
 	Logger("Thread's DBus_Name:\"%s\"\n", dbus_server_name_if);
 	
-    ret = dbus_bus_request_name(conn, dbus_server_name_if, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
+    i = dbus_bus_request_name(conn, dbus_server_name_if, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
     if(dbus_error_is_set (&dbus_error))
         Log_DBus_error("dbus_bus_request_name() Failed!!!");
 
-    if(ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-        Logger("Dbus: not primary owner, ret = %d\n", ret);
+    if(i != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+        Logger("Dbus: not primary owner, ret = %d\n", i);
         return NULL;
     }
-	//free dbus_server_name_if
 	free(dbus_server_name_if);
 	
 	//Allocate space and create dbus_server_if
@@ -115,7 +119,6 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	sprintf(dbus_server_name_if, "%s%s", IF_NAME_PROTO, stats->dev_name);
 	Logger("\t Interface:\"%s\"\n", dbus_server_name_if);
 
-	// Handle request from clients
 	while(handler_run)
 	{
 		//Wait for incoming messages, timeout in 1 sec
@@ -124,9 +127,45 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 			if((msg = dbus_connection_pop_message(conn)))
 			{
 				//Analyze received message for methods call
-				if(dbus_message_is_method_call(msg, dbus_server_name_if, Method[4]))//Check for "echo" call
+				i=0;
+				while(Method[i])
 				{
-					DBus_reply_msg(conn, msg, "Reply to test_method call!!!\n");
+					if(dbus_message_is_method_call(msg, dbus_server_name_if, Method[i]))//Validate the method of the call
+					{
+						//Read the arguments of the call
+						if (!dbus_message_iter_init(msg, &call_args))//Validate for zero amount of arguments
+						  DBus_reply_msg(conn, msg, "Zero arguments!!!");
+						else if (DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&call_args))//Validate for not string argument
+						  DBus_reply_msg(conn, msg, "Argument is NOT a string!!!");
+						else
+						{
+							dbus_message_iter_get_basic(&call_args, &param);//Get first argument.
+							if(i==echo)//Check for echo method
+							{
+								DBus_reply_msg(conn, msg, param);
+								break;
+							}
+							if(!(JSON_args = cJSON_Parse(param)))
+							{
+								DBus_reply_msg(conn, msg, "JSON Parsing failed!!!");
+								break;
+							}
+							switch(i)//Method execution
+							{
+								case new_MTI_config:
+									break;
+								case MTI_Global_SWs:
+									break;
+								case new_PWM_config:
+									break;
+								case ctrl_tele_SWs:
+									break;									
+							}
+							cJSON_Delete(JSON_args);
+						}
+						break;
+					}
+					i++;
 				}
 			}
 		}
@@ -147,7 +186,7 @@ void Log_DBus_error(char *str)
 int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str)
 {
 	DBusMessage *reply;
-	DBusMessageIter args;
+	DBusMessageIter reply_args;
 	//Send reply
 	if(!(reply = dbus_message_new_method_return(msg)))
 	{
@@ -155,9 +194,9 @@ int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str)
 		return EXIT_FAILURE;
 	}
 	
-	dbus_message_iter_init_append(reply, &args);
+	dbus_message_iter_init_append(reply, &reply_args);
 
-	if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &reply_str))
+	if (!dbus_message_iter_append_basic(&reply_args, DBUS_TYPE_STRING, &reply_str))
 	{
 		Logger("Error in dbus_message_iter_append_basic()\n");
 		return EXIT_FAILURE;
