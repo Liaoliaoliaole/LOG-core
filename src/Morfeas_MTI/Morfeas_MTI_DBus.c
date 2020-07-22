@@ -79,7 +79,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	union MTI_specific_regs sregs;
 	struct Gen_config_struct PWM_gens_config[2];
 	*/
-	
+
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
 
@@ -99,7 +99,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	}
 	sprintf(dbus_server_name_if, "%s%s", MORFEAS_DBUS_NAME_PROTO, stats->dev_name);
 	Logger("Thread's DBus_Name:\"%s\"\n", dbus_server_name_if);
-	
+
     i = dbus_bus_request_name(conn, dbus_server_name_if, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
     if(dbus_error_is_set (&dbus_error))
         Log_DBus_error("dbus_bus_request_name() Failed!!!");
@@ -109,7 +109,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
         return NULL;
     }
 	free(dbus_server_name_if);
-	
+
 	//Allocate space and create dbus_server_if
 	if(!(dbus_server_name_if = calloc(sizeof(char), strlen(IF_NAME_PROTO)+strlen(stats->dev_name)+1)))
 	{
@@ -159,7 +159,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 								case new_PWM_config:
 									break;
 								case ctrl_tele_SWs:
-									break;									
+									break;
 							}
 							cJSON_Delete(JSON_args);
 						}
@@ -193,7 +193,7 @@ int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str)
 		Logger("Error in dbus_message_new_method_return()\n");
 		return EXIT_FAILURE;
 	}
-	
+
 	dbus_message_iter_init_append(reply, &reply_args);
 
 	if (!dbus_message_iter_append_basic(&reply_args, DBUS_TYPE_STRING, &reply_str))
@@ -214,16 +214,16 @@ int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str)
 int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *reply_str)
 {
 	DBusMessage *dbus_error_msg;
-	if ((dbus_error_msg = dbus_message_new_error (msg, DBUS_ERROR_FAILED, reply_str)) == NULL)
+	if ((dbus_error_msg = dbus_message_new_error(msg, DBUS_ERROR_FAILED, reply_str)) == NULL)
 	{
 		Logger("Error in dbus_message_new_error()\n");
 		return EXIT_FAILURE;
 	}
-	if (!dbus_connection_send (conn, dbus_error_msg, NULL)) {
+	if (!dbus_connection_send(conn, dbus_error_msg, NULL)) {
 		Logger("Error in dbus_connection_send()\n");
 		return EXIT_FAILURE;
 	}
-	dbus_connection_flush (conn);
-	dbus_message_unref (dbus_error_msg);
+	dbus_connection_flush(conn);
+	dbus_message_unref(dbus_error_msg);
 	return EXIT_SUCCESS;
 }
