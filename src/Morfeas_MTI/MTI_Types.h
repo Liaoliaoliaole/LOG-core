@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 /*MTI's ModBus regions Offsets*/
 #define RMSW_MEM_SIZE 10
 //Holding registers region
-#define TRX_MODE_REG 3
+#define TRX_MODE_REG 2
 #define GLOBAL_SW_REG 24
 #define MTI_RMSWs_SWITCH_OFFSET 28
 #define MTI_CONFIG_OFFSET 0

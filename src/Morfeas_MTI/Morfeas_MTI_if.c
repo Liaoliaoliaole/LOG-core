@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.5" /*Release Version of Morfeas_MTI_if*/
+#define VERSION "0.7" /*Release Version of Morfeas_MTI_if*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,14 +40,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Enumerator for the FSM's state
 enum Morfeas_MTI_FSM_States{
-	error,
-	get_status_config_data/*,
-	get_status,
+	wait,
 	get_config,
 	get_data,
-	sleep
-	*/
+	get_status,
+	error
 };
+//static const char *states_str[] = {"wait","get_config","get_data","get_status","error"};
 
 //Global variables
 unsigned char handler_run = 1;
@@ -75,7 +74,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 //--- D-Bus Listener function ---//
 void * MTI_DBus_listener(void *varg_pt);//Thread function.
 
-//--- Local functions ---//
+//--- Local Morfeas_IPC functions ---//
 /*
 // MTI_status_to_IPC function. Send Status of MTI to Morfeas_opc_ua via IPC
 void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
@@ -88,7 +87,9 @@ int main(int argc, char *argv[])
 	//MODBus related variables
 	modbus_t *ctx;
 	//Apps variables
-	char *path_to_logstat_dir, state = get_status_config_data;
+	int ret, tcp_port = MODBUS_TCP_DEFAULT_PORT, modbus_addr = default_slave_address;
+	char *path_to_logstat_dir;
+	unsigned char state = get_config;
 	struct Morfeas_MTI_if_stats stats = {0};
 	//Variables for threads
 	pthread_t DBus_listener_Thread_id;
@@ -106,7 +107,7 @@ int main(int argc, char *argv[])
 	}
 	//Get options
 	int c;
-	while ((c = getopt (argc, argv, "hV")) != -1)
+	while ((c = getopt (argc, argv, "hVp:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -116,6 +117,20 @@ int main(int argc, char *argv[])
 			case 'V'://Version
 				printf(VERSION"\n");
 				exit(EXIT_SUCCESS);
+			case 'p':
+				if(!(tcp_port = atoi(optarg)))
+				{
+					fprintf(stderr, "argument of -p option is invalid!!!!\n");
+					exit(1);
+				}
+				break;
+			case 'a':
+				if(!(modbus_addr = atoi(optarg)))
+				{
+					fprintf(stderr, "argument of -a option is invalid!!!!\n");
+					exit(1);
+				}
+				break;
 			case '?':
 				print_usage(argv[0]);
 				exit(EXIT_FAILURE);
@@ -160,21 +175,21 @@ int main(int argc, char *argv[])
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);
 
-	//----Make of FIFO file----//
+	//---- Make of FIFO file ----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Open FIFO for Write
 	FIFO_fd = open(Data_FIFO, O_WRONLY);
-	/*
 	//Register handler to Morfeas_OPC-UA Server
+	/*
 	Logger("Morfeas_MTI_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 0);
 	Logger("Morfeas_MTI_if (%s) Registered on OPC-UA\n",stats.dev_name);
 	*/
 
 	//Make MODBus socket for connection
-	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
+	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, tcp_port);
 	//Set Slave address
-	if(modbus_set_slave(ctx, default_slave_address))
+	if(modbus_set_slave(ctx, modbus_addr))
 	{
 		fprintf(stderr, "Can't set slave address!!!\n");
 		modbus_free(ctx);
@@ -193,7 +208,7 @@ int main(int argc, char *argv[])
 	if(!handler_run)
 		goto Exit;
 	//Print Connection success message
-	Logger("Connected to MTI %s(%s)\n", stats.MTI_IPv4_addr, stats.dev_name);
+	Logger("Connected to %s(%s:%d@%d)\n", stats.dev_name, stats.MTI_IPv4_addr, tcp_port, modbus_addr);
 	stats.error = 0;//load no error on stats
 	//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 
@@ -202,55 +217,67 @@ int main(int argc, char *argv[])
 
 	while(handler_run)//Application's FSM
 	{
+		//Logger("Next_state = %s(%d)\n",states_str[state],state);
 		switch(state)
 		{
 			case error:
-				stats.error = errno;//load errno to stats
-				//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-				logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat
 				Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
-				//Attempt to reconnect
-				while(modbus_connect(ctx) && handler_run)
-				{
-					stats.error = errno;
-					pthread_mutex_unlock(&MTI_access);
-						sleep(1);
+				do{
 					pthread_mutex_lock(&MTI_access);
-				}
+						stats.error = errno;//Load errno to stats
+						//MTI_status_to_IPC(FIFO_fd, &stats);//Send status report to Morfeas_opc_ua via IPC
+						logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat
+						if((ret = modbus_connect(ctx)))//Attempt to reconnect and sleep on failure
+							sleep(1);
+						else
+							stats.error = 0;//load no error on stats
+					pthread_mutex_unlock(&MTI_access);
+				}while(ret && handler_run);
+				if(!handler_run)
+					break;
 				Logger("Recover from last Error\n");
-				stats.error = 0;//load no error on stats
-				//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-				logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat
-				state = get_status_config_data;
+				stats.counter = 0;//Reset sample counter
+				state = get_config;
 				break;
-			case get_status_config_data:
-				if(!get_MTI_status(ctx, &stats))
-				{
+			case get_config:
+				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
-						if(stats.MTI_Radio_config.Tele_dev_type >= Dev_type_min && stats.MTI_Radio_config.Tele_dev_type <= Dev_type_max)// Execute if MTI's transceiver is enabled
+						if(stats.counter < 10)
 						{
-							if(get_MTI_Tele_data(ctx, &stats))
-							{
-								state = error;
-								break;
-							}
-						}
-						//IPC_msg_TX(FIFO_fd, &IPC_msg);//Send measurements to Morfeas_opc_ua
-						if(stats.counter >= 10)
-						{
-							logstat_MTI(path_to_logstat_dir, &stats);
-							stats.counter = 0;
+							//Check transceiver state; if ON, next state is get_data, otherwise wait.
+							state = (stats.MTI_Radio_config.Tele_dev_type>=Dev_type_min && stats.MTI_Radio_config.Tele_dev_type<=Dev_type_max) ? get_data : wait;
+							stats.counter++;
 						}
 						else
-							stats.counter++;
-						break;
+							state = get_status;
 					}
-				}
-				state = error;
+					else
+						state = error;
+				pthread_mutex_unlock(&MTI_access);
+				break;
+			case get_data:
+				pthread_mutex_lock(&MTI_access);
+					state = get_MTI_Tele_data(ctx, &stats) ? error : wait;
+				pthread_mutex_unlock(&MTI_access);
+				break;
+			case get_status:
+				pthread_mutex_lock(&MTI_access);
+					if(!get_MTI_status(ctx, &stats))
+					{
+						logstat_MTI(path_to_logstat_dir, &stats);
+						stats.counter = 0;
+						state = wait;
+					}
+					else
+						state = error;
+				pthread_mutex_unlock(&MTI_access);
+				break;
+			case wait:
+				usleep(100000);
+				state = get_config;
 				break;
 		}
-		usleep(100000);
 	}
 
 	pthread_join(DBus_listener_Thread_id, NULL);// wait DBus_listener thread to end
@@ -286,6 +313,8 @@ void print_usage(char *prog_name)
 		"Options:\n"
 		"           -h : Print help.\n"
 		"           -V : Version.\n"
+		"           -p : TCP port(default:502)\n"
+		"           -a : Modbus Slave address(default:10)\n"
 	};
 	printf("%s\nUsage: %s IPv4 Dev_name [/path/to/logstat/directory] [Options]\n\n%s",preamp, prog_name, manual);
 	return;

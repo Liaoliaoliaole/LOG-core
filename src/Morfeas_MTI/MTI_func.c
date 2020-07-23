@@ -222,7 +222,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs)
 {
 	struct MTI_RX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
-	
+	unsigned char amount = 3;//default amount of configuration registers 
 	//Disable MTI's Transceiver
 	if(modbus_write_register(ctx, TRX_MODE_REG, 0)<=0)
 		return errno;
@@ -237,13 +237,16 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI's validation mechanism 
 				new_Radio_config.Specific_reg[1] = new_sregs->for_temp_tele.StV;
 				new_Radio_config.Specific_reg[2] = new_sregs->for_temp_tele.StF;
+				amount = 6;//Including configuration for MTI's validation mechanism 
 			}
 			break;
 		case RM_SW_MUX:
-			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0, Global switches config
+			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0, Global switches configuration
+			amount = 4;//Including Global control register
 			break;
+		default: return EXIT_SUCCESS;
 	}
-	if(modbus_write_registers(ctx, MTI_CONFIG_OFFSET, 8, (unsigned short*)&new_Radio_config)<=0)//write only the first 8 holding registers
+	if(modbus_write_registers(ctx, MTI_CONFIG_OFFSET, amount, (unsigned short*)&new_Radio_config)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }

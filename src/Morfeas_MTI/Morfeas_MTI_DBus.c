@@ -18,7 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MORFEAS_DBUS_NAME_PROTO "org.freedesktop.Morfeas.MTI."
 #define IF_NAME_PROTO "Morfeas.MTI."
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,15 +69,14 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	cJSON *JSON_args = NULL;
 	//D-Bus related variables
 	char *dbus_server_name_if, *param;
-	int i;
+	int i, err;
 	DBusConnection *conn;
 	DBusMessage *msg;
 	DBusMessageIter call_args;
-	/*
 	//Local variables and structures
-	union MTI_specific_regs sregs;
-	struct Gen_config_struct PWM_gens_config[2];
-	*/
+	unsigned char new_RF_CH, new_mode;
+	union MTI_specific_regs sregs = {0};
+	//struct Gen_config_struct PWM_gens_config[2];
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -105,7 +103,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
         Log_DBus_error("dbus_bus_request_name() Failed!!!");
 
     if(i != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-        Logger("Dbus: not primary owner, ret = %d\n", i);
+        Logger("DBus: Name not primary owner, ret = %d\n", i);
         return NULL;
     }
 	free(dbus_server_name_if);
@@ -150,17 +148,78 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 								DBus_reply_msg(conn, msg, "JSON Parsing failed!!!");
 								break;
 							}
+							err = 0;//Reset error state
 							switch(i)//Method execution
 							{
 								case new_MTI_config:
+									//Validate data in argument
+									if(!cJSON_HasObjectItem(JSON_args,"new_RF_CH")||
+									   !cJSON_HasObjectItem(JSON_args,"new_mode"))
+									{
+										DBus_reply_msg(conn, msg, "Method's Arguments are Invalid");
+										break;
+									}
+									new_RF_CH = cJSON_GetObjectItem(JSON_args,"new_RF_CH")->valueint;
+									new_mode = cJSON_GetObjectItem(JSON_args,"new_mode")->valueint;
+									if(new_mode != RM_SW_MUX && new_mode != Tele_quad)
+									{
+										sregs.for_temp_tele.StV = cJSON_HasObjectItem(JSON_args,"StV") ? cJSON_GetObjectItem(JSON_args,"StV")->valueint:0;
+										sregs.for_temp_tele.StF = cJSON_HasObjectItem(JSON_args,"StF") ? cJSON_GetObjectItem(JSON_args,"StF")->valueint:0;
+									}
+									else if(new_mode == RM_SW_MUX)
+									{
+										if(cJSON_HasObjectItem(JSON_args,"G_SWitch") && cJSON_HasObjectItem(JSON_args,"G_SLeep"))
+										{
+											sregs.for_rmsw_dev.manual_button = cJSON_GetObjectItem(JSON_args,"G_SWitch")->valueint;
+											sregs.for_rmsw_dev.sleep_button = cJSON_GetObjectItem(JSON_args,"G_SLeep")->valueint;
+										}
+										else
+										{
+											DBus_reply_msg(conn, msg, "Missing Arguments");
+											break;
+										}
+									}	
+									//Sent config to MTI
+									pthread_mutex_lock(&MTI_access);
+										if(!(err = stats->error))
+										{
+											if(!(err = set_MTI_Radio_config(ctx, 
+																			new_RF_CH, 
+																			new_mode, 
+																			&sregs)))
+											DBus_reply_msg(conn, msg, "new_MTI_config() Success");
+										}
+									pthread_mutex_unlock(&MTI_access);
 									break;
+								/*
 								case MTI_Global_SWs:
+									pthread_mutex_lock(&MTI_access);
+										if(!(err = stats->error))
+										{
+											err = set_MTI_Global_switches(ctx, bool global_power);
+										}
+									pthread_mutex_unlock(&MTI_access);
 									break;
 								case new_PWM_config:
+									pthread_mutex_lock(&MTI_access);
+										if(!(err = stats->error))
+										{
+											err = set_MTI_PWM_gens(ctx, PWM_gens_config);
+										}
+									pthread_mutex_unlock(&MTI_access);
 									break;
 								case ctrl_tele_SWs:
+									pthread_mutex_lock(&MTI_access);
+										if(!(err = stats->error))
+										{
+											err = ctrl_tele_switch(ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state);
+										}
+									pthread_mutex_unlock(&MTI_access);
 									break;
+								*/
 							}
+							if(err)//if true, MTI in Error
+								DBus_reply_msg(conn, msg, "MTI Error!!!");
 							cJSON_Delete(JSON_args);
 						}
 						break;
@@ -170,7 +229,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 			}
 		}
 	}
-
+	//Free memory
 	dbus_error_free(&dbus_error);
 	free(dbus_server_name_if);
 	Logger("D-Bus listener thread terminated\n");
