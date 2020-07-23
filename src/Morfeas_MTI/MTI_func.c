@@ -28,8 +28,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 char *MTI_charger_state_str[]={"Discharging", "Full", "", "Charging"};
 char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
-char *MTI_Tele_dev_type_str[]={"DISABLED", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20"};
-char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW"};
+char *MTI_Tele_dev_type_str[]={"DISABLED", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20", NULL};
+char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW", NULL};
 
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
@@ -222,11 +222,11 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs)
 {
 	struct MTI_RX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
-	unsigned char amount = 3;//default amount of configuration registers 
+	unsigned char amount = 3;//default amount of configuration registers
 	//Disable MTI's Transceiver
 	if(modbus_write_register(ctx, TRX_MODE_REG, 0)<=0)
 		return errno;
-	//Preparing specific registers for new MTI config 
+	//Preparing specific registers for new MTI config
 	switch(new_mode)
 	{
 		case Tele_TC4:
@@ -234,10 +234,10 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 		case Tele_TC16:
 			if(new_sregs->for_temp_tele.StV && new_sregs->for_temp_tele.StF)
 			{
-				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI's validation mechanism 
+				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI's validation mechanism
 				new_Radio_config.Specific_reg[1] = new_sregs->for_temp_tele.StV;
 				new_Radio_config.Specific_reg[2] = new_sregs->for_temp_tele.StF;
-				amount = 6;//Including configuration for MTI's validation mechanism 
+				amount = 6;//Including configuration for MTI's validation mechanism
 			}
 			break;
 		case RM_SW_MUX:
@@ -254,7 +254,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 int set_MTI_Global_switches(modbus_t *ctx, bool global_power)
 {
 	unsigned short global_reg = global_power;
-	
+
 	if(modbus_write_register(ctx, GLOBAL_SW_REG, global_reg)<=0)
 		return errno;
 	return EXIT_SUCCESS;
@@ -281,16 +281,16 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_typ
 		union switch_status_dec enc;
 		unsigned short as_short;
 	}new_status;
-	
-	//Read current states of switches 
+
+	//Read current states of switches
 	if(modbus_read_registers(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, 1, &(new_status.as_short))<=0)
 		return errno;
-	
+
 	switch(dev_type)
 	{
 		case RMSW_2CH:
 			new_status.enc.rmsw_dec.reserved = 0;//Clean unused bits
-			new_status.enc.rmsw_dec.Rep_rate = 1;//Set rep_rate to high speed; 
+			new_status.enc.rmsw_dec.Rep_rate = 1;//Set rep_rate to high speed;
 			switch(sw_name)
 			{
 				case Main_SW:

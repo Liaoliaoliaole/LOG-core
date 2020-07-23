@@ -75,6 +75,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	DBusMessageIter call_args;
 	//Local variables and structures
 	unsigned char new_RF_CH, new_mode;
+	char *buf;
 	union MTI_specific_regs sregs = {0};
 	//struct Gen_config_struct PWM_gens_config[2];
 
@@ -160,7 +161,13 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 										break;
 									}
 									new_RF_CH = cJSON_GetObjectItem(JSON_args,"new_RF_CH")->valueint;
-									new_mode = cJSON_GetObjectItem(JSON_args,"new_mode")->valueint;
+									buf = cJSON_GetObjectItem(JSON_args,"new_mode")->valuestring;
+									for(new_mode=0; MTI_Tele_dev_type_str[new_mode]&&strcmp(buf, MTI_Tele_dev_type_str[new_mode]); new_mode++)
+										if(new_mode>Dev_type_max)
+										{
+											DBus_reply_msg(conn, msg, "newMode is Invalid!!!");
+											break;
+										}
 									if(new_mode != RM_SW_MUX && new_mode != Tele_quad)
 									{
 										sregs.for_temp_tele.StV = cJSON_HasObjectItem(JSON_args,"StV") ? cJSON_GetObjectItem(JSON_args,"StV")->valueint:0;
@@ -178,14 +185,14 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 											DBus_reply_msg(conn, msg, "Missing Arguments");
 											break;
 										}
-									}	
+									}
 									//Sent config to MTI
 									pthread_mutex_lock(&MTI_access);
 										if(!(err = stats->error))
 										{
-											if(!(err = set_MTI_Radio_config(ctx, 
-																			new_RF_CH, 
-																			new_mode, 
+											if(!(err = set_MTI_Radio_config(ctx,
+																			new_RF_CH,
+																			new_mode,
 																			&sregs)))
 											DBus_reply_msg(conn, msg, "new_MTI_config() Success");
 										}
@@ -196,7 +203,10 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_lock(&MTI_access);
 										if(!(err = stats->error))
 										{
-											err = set_MTI_Global_switches(ctx, bool global_power);
+											if(!(err = set_MTI_Global_switches(ctx, bool global_power)))
+											{
+
+											}
 										}
 									pthread_mutex_unlock(&MTI_access);
 									break;
@@ -220,7 +230,9 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 							}
 							if(err)//if true, MTI in Error
 								DBus_reply_msg(conn, msg, "MTI Error!!!");
+							//free allocated memory
 							cJSON_Delete(JSON_args);
+      						dbus_message_unref(msg);
 						}
 						break;
 					}
@@ -232,6 +244,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	//Free memory
 	dbus_error_free(&dbus_error);
 	free(dbus_server_name_if);
+	//dbus_connection_close(conn);
 	Logger("D-Bus listener thread terminated\n");
 	return NULL;
 }
