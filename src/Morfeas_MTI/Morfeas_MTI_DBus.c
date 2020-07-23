@@ -170,8 +170,8 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									{
 										if(cJSON_HasObjectItem(JSON_args,"G_SWitch") && cJSON_HasObjectItem(JSON_args,"G_SLeep"))
 										{
-											sregs.for_rmsw_dev.manual_button = cJSON_GetObjectItem(JSON_args,"G_SWitch")->valueint;
-											sregs.for_rmsw_dev.sleep_button = cJSON_GetObjectItem(JSON_args,"G_SLeep")->valueint;
+											sregs.for_rmsw_dev.manual_button = cJSON_GetObjectItem(JSON_args,"G_SWitch")->valueint?1:0;
+											sregs.for_rmsw_dev.sleep_button = cJSON_GetObjectItem(JSON_args,"G_SLeep")->valueint?1:0;
 										}
 										else
 										{
