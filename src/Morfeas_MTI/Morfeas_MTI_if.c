@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 				do{
 					pthread_mutex_lock(&MTI_access);
 						ret = modbus_connect(ctx);//Attempt to reconnect and sleep on failure
-						stats.error = errno;//Load errno to stats
+						stats.error = ret?errno:0;//Load errno to stats
 						//MTI_status_to_IPC(FIFO_fd, &stats);//Send status report to Morfeas_opc_ua via IPC
 						logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat
 					pthread_mutex_unlock(&MTI_access);

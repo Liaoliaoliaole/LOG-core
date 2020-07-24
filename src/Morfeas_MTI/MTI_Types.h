@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define MTI_MODBUS_MAX_READ_REGISTERS (MODBUS_MAX_READ_REGISTERS-1) //Correction for the wrong MTI's MODBus implementation
 
+#define MTI_TELE_MODE_ERROR MODBUS_ENOBASE-1
+
 /*MTI's ModBus regions Offsets*/
 #define RMSW_MEM_SIZE 10
 //Holding registers region

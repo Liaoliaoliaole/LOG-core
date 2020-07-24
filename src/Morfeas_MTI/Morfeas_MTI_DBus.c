@@ -46,10 +46,10 @@ int set_MTI_Global_switches(modbus_t *ctx, bool global_power, bool global_sleep)
 //MTI function that write a new configuration for PWM generators, Return 0 on success, errno otherwise.
 int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config);
 //MTI function that controlling the state of a controllable telemetry(RMSW, MUX, Mini), Return 0 on success, errno otherwise.
-int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state);
+int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char tele_type, unsigned char sw_name, bool new_state);
 
 	//--- Local Functions ---//
-int get_rmswORmux_sw_name(unsigned char tele_type, char *buf);//Function that decoding sw_name from string. Return sw_name's enum on succsess. -1 otherwise.
+unsigned char get_rmswORmux_sw_name(unsigned char tele_type, char *buf);//String Decoder for sw_name. Return sw_name's enum on success. 0xff otherwise.
 
 //--- Local Enumerators and constants---//
 //static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
@@ -251,7 +251,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									buf = cJSON_GetObjectItem(JSON_args,"tele_type")->valuestring;
 									for(tele_type=0; MTI_RM_dev_type_str[tele_type]&&strcmp(buf, MTI_RM_dev_type_str[tele_type]); tele_type++)
 										;
-									if(tele_type>Tele_type_min)//Check if tele_type is valid
+									if(tele_type>Tele_type_max)//Check if tele_type is valid
 									{
 										DBus_reply_msg(conn, msg, "new_MTI_config(): tele_type is Unknown");
 										break;
@@ -262,7 +262,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 										break;
 									}
 									buf = cJSON_GetObjectItem(JSON_args,"sw_name")->valuestring;
-									if((char)(sw_name = get_rmswORmux_sw_name(tele_type, buf)) == -1)
+									if((sw_name = get_rmswORmux_sw_name(tele_type, buf)) == 0xff)
 									{
 										DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): sw_name is Unknown");
 										break;
@@ -279,7 +279,11 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 																			cJSON_GetObjectItem(JSON_args,"new_state")->valueint?1:0)))
 													DBus_reply_msg(conn, msg, "ctrl_tele_SWs() Success");
 											}
-											//DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): tele_type[mem_pos] != tele_type");
+											if(err == MTI_TELE_MODE_ERROR)
+											{
+												DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): tele_type[mem_pos] != tele_type");
+												err = 0;
+											}
 										}
 										else
 											DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Mode isn't RMSW/MUX");
@@ -368,7 +372,7 @@ int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *repl
 	return EXIT_SUCCESS;
 }
 
-int get_rmswORmux_sw_name(unsigned char tele_type, char *buf)
+unsigned char get_rmswORmux_sw_name(unsigned char tele_type, char *buf)
 {
 	switch(tele_type)
 	{

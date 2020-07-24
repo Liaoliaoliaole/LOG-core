@@ -275,18 +275,23 @@ int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
 	return EXIT_SUCCESS;
 }
 
-int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state)
+int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char tele_type, unsigned char sw_name, bool new_state)
 {
 	union state_register{
 		union switch_status_dec enc;
 		unsigned short as_short;
 	}new_status;
-
+	unsigned short MTI_tele_type;
+	
+	if(modbus_read_registers(ctx, MTI_RMSWs_DATA_OFFSET + mem_pos * RMSW_MEM_SIZE, 1, &MTI_tele_type)<=0)
+		return errno;
+	if(MTI_tele_type != tele_type)
+		return MTI_TELE_MODE_ERROR;
+	
 	//Read current states of switches
 	if(modbus_read_registers(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, 1, &(new_status.as_short))<=0)
 		return errno;
-
-	switch(dev_type)
+	switch(tele_type)
 	{
 		case RMSW_2CH:
 			new_status.enc.rmsw_dec.reserved = 0;//Clean unused bits
