@@ -224,26 +224,27 @@ int main(int argc, char *argv[])
 				Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 				do{
 					pthread_mutex_lock(&MTI_access);
+						ret = modbus_connect(ctx);//Attempt to reconnect and sleep on failure
 						stats.error = errno;//Load errno to stats
 						//MTI_status_to_IPC(FIFO_fd, &stats);//Send status report to Morfeas_opc_ua via IPC
 						logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat
-						if((ret = modbus_connect(ctx)))//Attempt to reconnect and sleep on failure
-							sleep(1);
-						else
-							stats.error = 0;//load no error on stats
 					pthread_mutex_unlock(&MTI_access);
+					if(ret)
+						sleep(1);
 				}while(ret && handler_run);
 				if(!handler_run)
 					break;
 				Logger("Recover from last Error\n");
-				stats.counter = 0;//Reset sample counter
+				pthread_mutex_lock(&MTI_access);
+					stats.counter = 0;//Reset sample counter
+				pthread_mutex_unlock(&MTI_access);
 				state = get_config;
 				break;
 			case get_config:
 				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
-						if(stats.counter < 10)
+						if(stats.counter < 10)//approx every second
 						{
 							//Check transceiver state; if ON, next state is get_data, otherwise wait.
 							state = (stats.MTI_Radio_config.Tele_dev_type>=Dev_type_min && stats.MTI_Radio_config.Tele_dev_type<=Dev_type_max) ? get_data : wait;

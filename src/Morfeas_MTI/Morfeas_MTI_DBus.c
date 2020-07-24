@@ -42,11 +42,14 @@ extern pthread_mutex_t MTI_access;
 //MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise.
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs);
 //MTI function that write the Global power switch. Return 0 on success, errno otherwise.
-int set_MTI_Global_switches(modbus_t *ctx, bool global_power);
+int set_MTI_Global_switches(modbus_t *ctx, bool global_power, bool global_sleep);
 //MTI function that write a new configuration for PWM generators, Return 0 on success, errno otherwise.
 int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config);
 //MTI function that controlling the state of a controllable telemetry(RMSW, MUX, Mini), Return 0 on success, errno otherwise.
 int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state);
+
+	//--- Local Functions ---//
+int get_rmswORmux_sw_name(unsigned char tele_type, char *buf);//Function that decoding sw_name from string. Return sw_name's enum on succsess. -1 otherwise.
 
 //--- Local Enumerators and constants---//
 //static const char *const OBJECT_PATH_NAME = "/Morfeas/MTI/DBUS_server_app";
@@ -74,8 +77,8 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	DBusMessage *msg;
 	DBusMessageIter call_args;
 	//Local variables and structures
-	unsigned char new_RF_CH, new_mode;
 	char *buf;
+	unsigned char new_RF_CH, new_mode, mem_pos, tele_type, sw_name;
 	union MTI_specific_regs sregs = {0};
 	//struct Gen_config_struct PWM_gens_config[2];
 
@@ -125,7 +128,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 		{
 			if((msg = dbus_connection_pop_message(conn)))
 			{
-				//Analyze received message for methods call
+				//Analyze received message
 				i=0;
 				while(Method[i])
 				{
@@ -157,17 +160,23 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									if(!cJSON_HasObjectItem(JSON_args,"new_RF_CH")||
 									   !cJSON_HasObjectItem(JSON_args,"new_mode"))
 									{
-										DBus_reply_msg(conn, msg, "Method's Arguments are Invalid");
+										DBus_reply_msg(conn, msg, "new_MTI_config(): Method's Arguments are Invalid");
 										break;
 									}
 									new_RF_CH = cJSON_GetObjectItem(JSON_args,"new_RF_CH")->valueint;
+									if(cJSON_GetObjectItem(JSON_args,"new_mode")->type != cJSON_String)//Check if new_mode is string
+									{
+										DBus_reply_msg(conn, msg, "new_MTI_config(): new_mode is NOT a string");
+										break;
+									}
 									buf = cJSON_GetObjectItem(JSON_args,"new_mode")->valuestring;
 									for(new_mode=0; MTI_Tele_dev_type_str[new_mode]&&strcmp(buf, MTI_Tele_dev_type_str[new_mode]); new_mode++)
-										if(new_mode>Dev_type_max)
-										{
-											DBus_reply_msg(conn, msg, "newMode is Invalid!!!");
-											break;
-										}
+										;
+									if(new_mode>Dev_type_max)//Check if new_mode is valid
+									{
+										DBus_reply_msg(conn, msg, "new_MTI_config(): new_mode is Unknown");
+										break;
+									}
 									if(new_mode != RM_SW_MUX && new_mode != Tele_quad)
 									{
 										sregs.for_temp_tele.StV = cJSON_HasObjectItem(JSON_args,"StV") ? cJSON_GetObjectItem(JSON_args,"StV")->valueint:0;
@@ -175,14 +184,14 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									}
 									else if(new_mode == RM_SW_MUX)
 									{
-										if(cJSON_HasObjectItem(JSON_args,"G_SWitch") && cJSON_HasObjectItem(JSON_args,"G_SLeep"))
+										if(cJSON_HasObjectItem(JSON_args,"G_SW") && cJSON_HasObjectItem(JSON_args,"G_SL"))
 										{
-											sregs.for_rmsw_dev.manual_button = cJSON_GetObjectItem(JSON_args,"G_SWitch")->valueint?1:0;
-											sregs.for_rmsw_dev.sleep_button = cJSON_GetObjectItem(JSON_args,"G_SLeep")->valueint?1:0;
+											sregs.for_rmsw_dev.manual_button = cJSON_GetObjectItem(JSON_args,"G_SW")->valueint?1:0;
+											sregs.for_rmsw_dev.sleep_button = cJSON_GetObjectItem(JSON_args,"G_SL")->valueint?1:0;
 										}
 										else
 										{
-											DBus_reply_msg(conn, msg, "Missing Arguments");
+											DBus_reply_msg(conn, msg, "new_MTI_config(): Missing Arguments");
 											break;
 										}
 									}
@@ -194,50 +203,109 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 																			new_RF_CH,
 																			new_mode,
 																			&sregs)))
-											DBus_reply_msg(conn, msg, "new_MTI_config() Success");
+												DBus_reply_msg(conn, msg, "new_MTI_config(): Success");
 										}
 									pthread_mutex_unlock(&MTI_access);
 									break;
-								/*
 								case MTI_Global_SWs:
+									if(!cJSON_HasObjectItem(JSON_args,"G_P_state") || !cJSON_HasObjectItem(JSON_args,"G_S_state"))
+									{
+										DBus_reply_msg(conn, msg, "MTI_Global_SWs(): Missing Arguments");
+										break;
+									}
 									pthread_mutex_lock(&MTI_access);
-										if(!(err = stats->error))
+										if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 										{
-											if(!(err = set_MTI_Global_switches(ctx, bool global_power)))
+											if(!(err = stats->error))
 											{
-
+												if(!(err = set_MTI_Global_switches(ctx, 
+																				   cJSON_GetObjectItem(JSON_args,"G_P_state")->valueint?1:0,
+																				   cJSON_GetObjectItem(JSON_args,"G_S_state")->valueint?1:0)))
+													DBus_reply_msg(conn, msg, "MTI_Global_SWs(): Success");
 											}
 										}
+										else
+											DBus_reply_msg(conn, msg, "MTI_Global_SWs(): Mode isn't RMSW/MUX");
 									pthread_mutex_unlock(&MTI_access);
-									break;
+									break;	
+								case ctrl_tele_SWs:
+									if(!cJSON_HasObjectItem(JSON_args,"mem_pos")|| 
+									   !cJSON_HasObjectItem(JSON_args,"tele_type")||
+									   !cJSON_HasObjectItem(JSON_args,"sw_name")||
+									   !cJSON_HasObjectItem(JSON_args,"new_state"))
+									{
+										DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Missing Arguments");
+										break;
+									}
+									if(cJSON_GetObjectItem(JSON_args,"mem_pos")->type != cJSON_Number)
+									{
+										DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): mem_pos is NAN");
+										break;
+									}
+									mem_pos = cJSON_GetObjectItem(JSON_args,"mem_pos")->valueint;
+									if(cJSON_GetObjectItem(JSON_args,"tele_type")->type != cJSON_String)
+									{
+										DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): tele_type isn't string");
+										break;
+									}
+									buf = cJSON_GetObjectItem(JSON_args,"tele_type")->valuestring;
+									for(tele_type=0; MTI_RM_dev_type_str[tele_type]&&strcmp(buf, MTI_RM_dev_type_str[tele_type]); tele_type++)
+										;
+									if(tele_type>Tele_type_min)//Check if tele_type is valid
+									{
+										DBus_reply_msg(conn, msg, "new_MTI_config(): tele_type is Unknown");
+										break;
+									}
+									if(cJSON_GetObjectItem(JSON_args,"sw_name")->type != cJSON_String)
+									{
+										DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): sw_name isn't string");
+										break;
+									}
+									buf = cJSON_GetObjectItem(JSON_args,"sw_name")->valuestring;
+									if((char)(sw_name = get_rmswORmux_sw_name(tele_type, buf)) == -1)
+									{
+										DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): sw_name is Unknown");
+										break;
+									}
+									pthread_mutex_lock(&MTI_access);
+										if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
+										{
+											if(!(err = stats->error))
+											{
+												if(!(err = ctrl_tele_switch(ctx, 
+																			mem_pos, 
+																			tele_type, 
+																			sw_name, 
+																			cJSON_GetObjectItem(JSON_args,"new_state")->valueint?1:0)))
+													DBus_reply_msg(conn, msg, "ctrl_tele_SWs() Success");
+											}
+											//DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): tele_type[mem_pos] != tele_type");
+										}
+										else
+											DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Mode isn't RMSW/MUX");
+									pthread_mutex_unlock(&MTI_access);
+									break;		
+								/*
 								case new_PWM_config:
 									pthread_mutex_lock(&MTI_access);
 										if(!(err = stats->error))
 										{
-											err = set_MTI_PWM_gens(ctx, PWM_gens_config);
-										}
-									pthread_mutex_unlock(&MTI_access);
-									break;
-								case ctrl_tele_SWs:
-									pthread_mutex_lock(&MTI_access);
-										if(!(err = stats->error))
-										{
-											err = ctrl_tele_switch(ctx, unsigned char mem_pos, unsigned char dev_type, unsigned char sw_name, bool new_state);
+											if(!(err = set_MTI_PWM_gens(ctx, PWM_gens_config)))
+												DBus_reply_msg(conn, msg, "new_PWM_config() Success");
 										}
 									pthread_mutex_unlock(&MTI_access);
 									break;
 								*/
 							}
 							if(err)//if true, MTI in Error
-								DBus_reply_msg(conn, msg, "MTI Error!!!");
-							//free allocated memory
+								DBus_reply_msg(conn, msg, "MODBUS Error!!!");
 							cJSON_Delete(JSON_args);
-      						dbus_message_unref(msg);
 						}
 						break;
 					}
 					i++;
 				}
+				dbus_message_unref(msg);
 			}
 		}
 	}
@@ -298,4 +366,35 @@ int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *repl
 	dbus_connection_flush(conn);
 	dbus_message_unref(dbus_error_msg);
 	return EXIT_SUCCESS;
+}
+
+int get_rmswORmux_sw_name(unsigned char tele_type, char *buf)
+{
+	switch(tele_type)
+	{
+		case MUX:
+			if(!strcmp(buf,"Sel_1"))
+				return Sel_1;
+			else if(!strcmp(buf,"Sel_2"))
+				return Sel_2;
+			else if(!strcmp(buf,"Sel_3"))
+				return Sel_3;
+			else if(!strcmp(buf,"Sel_4"))
+				return Sel_4;
+			break;
+		case RMSW_2CH:
+			if(!strcmp(buf,"Main_SW"))
+				return Main_SW;
+			else if(!strcmp(buf,"SW_1"))
+				return SW_1;
+			else if(!strcmp(buf,"SW_2"))
+				return SW_2;
+			break;
+		case Mini_RMSW:
+			if(!strcmp(buf,"Main_SW"))
+				return Main_SW;
+			break;
+		default : return -1;
+	}
+	return -1;
 }

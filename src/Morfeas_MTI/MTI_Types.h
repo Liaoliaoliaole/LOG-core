@@ -46,7 +46,10 @@ enum MTI_Telemetry_Dev_type_enum{
 enum MTI_Controlling_Dev_type_enum{
 	RMSW_2CH = 1,
 	MUX,
-	Mini_RMSW
+	Mini_RMSW,
+	//Limits
+	Tele_type_min = RMSW_2CH,
+	Tele_type_max = Mini_RMSW,
 };
 //--- Enumerators for switch names ---//
 //For RMSW_2CH

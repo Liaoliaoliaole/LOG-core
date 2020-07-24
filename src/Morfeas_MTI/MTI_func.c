@@ -251,9 +251,9 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 	return EXIT_SUCCESS;
 }
 
-int set_MTI_Global_switches(modbus_t *ctx, bool global_power)
+int set_MTI_Global_switches(modbus_t *ctx, bool global_power, bool global_sleep)
 {
-	unsigned short global_reg = global_power;
+	unsigned short global_reg = global_power | global_sleep<<1;
 
 	if(modbus_write_register(ctx, GLOBAL_SW_REG, global_reg)<=0)
 		return errno;
