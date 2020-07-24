@@ -229,6 +229,8 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 	//Preparing specific registers for new MTI config
 	switch(new_mode)
 	{
+		case Tele_quad:
+			break;
 		case Tele_TC4:
 		case Tele_TC8:
 		case Tele_TC16:
@@ -244,7 +246,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0, Global switches configuration
 			amount = 4;//Including Global control register
 			break;
-		default: return EXIT_SUCCESS;
+		default: return EXIT_FAILURE;
 	}
 	if(modbus_write_registers(ctx, MTI_CONFIG_OFFSET, amount, (unsigned short*)&new_Radio_config)<=0)
 		return errno;
@@ -256,21 +258,6 @@ int set_MTI_Global_switches(modbus_t *ctx, bool global_power, bool global_sleep)
 	unsigned short global_reg = global_power | global_sleep<<1;
 
 	if(modbus_write_register(ctx, GLOBAL_SW_REG, global_reg)<=0)
-		return errno;
-	return EXIT_SUCCESS;
-}
-
-int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
-{
-	struct MTI_PWM_config_struct new_PWM_config = {.PWM_out_freq=10000};
-	for(int i=0; i<2; i++)
-	{
-		new_PWM_config.CHs[i].cnt_max = new_Config[i].max;
-		new_PWM_config.CHs[i].cnt_min = new_Config[i].min;
-		new_PWM_config.CHs[i].middle_val = (new_Config[i].max - new_Config[i].min)/2;
-		new_PWM_config.CHs[i].cnt_mode = new_Config[i].pwm_mode.as_byte | 1<<7;//set fixed_freq flag always
-	}
-	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }
@@ -334,6 +321,21 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char tele_ty
 			return EXIT_FAILURE;
 	}
 	if(modbus_write_register(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, new_status.as_short)<=0)
+		return errno;
+	return EXIT_SUCCESS;
+}
+
+int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
+{
+	struct MTI_PWM_config_struct new_PWM_config = {.PWM_out_freq=10000};
+	for(int i=0; i<2; i++)
+	{
+		new_PWM_config.CHs[i].cnt_max = new_Config[i].max;
+		new_PWM_config.CHs[i].cnt_min = new_Config[i].min;
+		new_PWM_config.CHs[i].middle_val = (new_Config[i].max - new_Config[i].min)/2;
+		new_PWM_config.CHs[i].cnt_mode = new_Config[i].pwm_mode.as_byte | 1<<7;//set fixed_freq flag always
+	}
+	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }

@@ -79,8 +79,8 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	//Local variables and structures
 	char *buf;
 	unsigned char new_RF_CH, new_mode, mem_pos, tele_type, sw_name;
-	union MTI_specific_regs sregs = {0};
-	//struct Gen_config_struct PWM_gens_config[2];
+	union MTI_specific_regs sregs;
+	struct Gen_config_struct PWM_gens_config[2];
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -289,17 +289,23 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 											DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Mode isn't RMSW/MUX");
 									pthread_mutex_unlock(&MTI_access);
 									break;		
-								/*
 								case new_PWM_config:
+									
+									/*
 									pthread_mutex_lock(&MTI_access);
-										if(!(err = stats->error))
+										if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 										{
-											if(!(err = set_MTI_PWM_gens(ctx, PWM_gens_config)))
-												DBus_reply_msg(conn, msg, "new_PWM_config() Success");
+											if(!(err = stats->error))
+											{
+												if(!(err = set_MTI_PWM_gens(ctx, PWM_gens_config)))
+													DBus_reply_msg(conn, msg, "new_PWM_config() Success");
+											}
 										}
+										else
+											DBus_reply_msg(conn, msg, "new_PWM_config(): Mode isn't 2CH_QUAD");
 									pthread_mutex_unlock(&MTI_access);
+									*/
 									break;
-								*/
 							}
 							if(err)//if true, MTI in Error
 								DBus_reply_msg(conn, msg, "MODBUS Error!!!");
