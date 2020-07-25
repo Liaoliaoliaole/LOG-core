@@ -264,63 +264,64 @@ int set_MTI_Global_switches(modbus_t *ctx, bool global_power, bool global_sleep)
 
 int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char tele_type, unsigned char sw_name, bool new_state)
 {
-	union state_register{
-		union switch_status_dec enc;
-		unsigned short as_short;
-	}new_status;
-	unsigned short MTI_tele_type;
-	
-	if(modbus_read_registers(ctx, MTI_RMSWs_DATA_OFFSET + mem_pos * RMSW_MEM_SIZE, 1, &MTI_tele_type)<=0)
+	struct MTI_RMSW_cnrl_mem{
+		unsigned short MTI_tele_type;
+		unsigned short reserved;
+		union state_register{
+			union switch_status_dec enc;
+			unsigned short as_short;
+		}new_status;
+	}mem;
+
+	//Read tele_type and current switches states registers
+	if(modbus_read_registers(ctx, MTI_RMSWs_DATA_OFFSET + mem_pos * RMSW_MEM_SIZE, 3, (unsigned short*)&mem)<=0)
 		return errno;
-	if(MTI_tele_type != tele_type)
+	if(mem.MTI_tele_type != tele_type)
 		return MTI_TELE_MODE_ERROR;
-	
-	//Read current states of switches
-	if(modbus_read_registers(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, 1, &(new_status.as_short))<=0)
-		return errno;
+
 	switch(tele_type)
 	{
 		case RMSW_2CH:
-			new_status.enc.rmsw_dec.reserved = 0;//Clean unused bits
-			new_status.enc.rmsw_dec.Rep_rate = 1;//Set rep_rate to high speed;
+			mem.new_status.enc.rmsw_dec.reserved = 0;//Clean unused bits
+			mem.new_status.enc.rmsw_dec.Rep_rate = 1;//Set rep_rate to high speed;
 			switch(sw_name)
 			{
 				case Main_SW:
-					new_status.enc.rmsw_dec.Main = new_state; break;
+					mem.new_status.enc.rmsw_dec.Main = new_state; break;
 				case SW_1:
-					new_status.enc.rmsw_dec.CH1 = new_state; break;
+					mem.new_status.enc.rmsw_dec.CH1 = new_state; break;
 				case SW_2:
-					new_status.enc.rmsw_dec.CH2 = new_state; break;
+					mem.new_status.enc.rmsw_dec.CH2 = new_state; break;
 				default:
 					return EXIT_FAILURE;
 			}
 			break;
 		case MUX:
-			new_status.enc.mux_dec.reserved = 0;//Clean unused bits
-			new_status.enc.mux_dec.Rep_rate = 1;//Set rep_rate to high speed;
+			mem.new_status.enc.mux_dec.reserved = 0;//Clean unused bits
+			mem.new_status.enc.mux_dec.Rep_rate = 1;//Set rep_rate to high speed;
 			switch(sw_name)
 			{
 				case Sel_1:
-					new_status.enc.mux_dec.CH1 = new_state; break;
+					mem.new_status.enc.mux_dec.CH1 = new_state; break;
 				case Sel_2:
-					new_status.enc.mux_dec.CH2 = new_state; break;
+					mem.new_status.enc.mux_dec.CH2 = new_state; break;
 				case Sel_3:
-					new_status.enc.mux_dec.CH3 = new_state; break;
+					mem.new_status.enc.mux_dec.CH3 = new_state; break;
 				case Sel_4:
-					new_status.enc.mux_dec.CH4 = new_state; break;
+					mem.new_status.enc.mux_dec.CH4 = new_state; break;
 				default:
 					return EXIT_FAILURE;
 			}
 			break;
 		case Mini_RMSW:
-			new_status.enc.mini_dec.reserved = 0;//Clean unused bits
-			new_status.enc.mini_dec.Rep_rate = 1;//Set rep_rate to high speed;
-			new_status.enc.mini_dec.Main = new_state;
+			mem.new_status.enc.mini_dec.reserved = 0;//Clean unused bits
+			mem.new_status.enc.mini_dec.Rep_rate = 1;//Set rep_rate to high speed;
+			mem.new_status.enc.mini_dec.Main = new_state;
 			break;
 		default:
 			return EXIT_FAILURE;
 	}
-	if(modbus_write_register(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, new_status.as_short)<=0)
+	if(modbus_write_register(ctx, MTI_RMSWs_SWITCH_OFFSET + mem_pos * RMSW_MEM_SIZE, mem.new_status.as_short)<=0)
 		return errno;
 	return EXIT_SUCCESS;
 }
