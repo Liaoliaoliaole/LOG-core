@@ -333,7 +333,7 @@ int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
 	{
 		new_PWM_config.CHs[i].cnt_max = new_Config[i].max;
 		new_PWM_config.CHs[i].cnt_min = new_Config[i].min;
-		new_PWM_config.CHs[i].middle_val = (new_Config[i].max - new_Config[i].min)/2;
+		new_PWM_config.CHs[i].middle_val = new_Config[i].min + (new_Config[i].max - new_Config[i].min)/2;
 		new_PWM_config.CHs[i].cnt_mode = new_Config[i].pwm_mode.as_byte | 1<<7;//set fixed_freq flag always
 	}
 	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
