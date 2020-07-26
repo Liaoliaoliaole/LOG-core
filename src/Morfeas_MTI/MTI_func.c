@@ -56,7 +56,7 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 
 int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
-	struct MTI_RX_config_struct cur_RX_config;
+	struct MTI_RTX_config_struct cur_RX_config;
 
 	if(modbus_read_registers(ctx, MTI_CONFIG_OFFSET, sizeof(cur_RX_config)/sizeof(short), (unsigned short*)&cur_RX_config)<=0)
 	{
@@ -221,7 +221,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 								//----- MTI write functions -----//
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs)
 {
-	struct MTI_RX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
+	struct MTI_RTX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
 	unsigned char amount = 3;//default amount of configuration registers
 	//Disable MTI's Transceiver
 	if(modbus_write_register(ctx, TRX_MODE_REG, 0)<=0)
@@ -230,11 +230,19 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 	switch(new_mode)
 	{
 		case Tele_quad:
+			amount = 6;
 			break;
 		case Tele_TC4:
 		case Tele_TC8:
 		case Tele_TC16:
-			if(new_sregs->for_temp_tele.StV && new_sregs->for_temp_tele.StF)
+			if((char)new_sregs->for_temp_tele.StV ==-1 && (char)new_sregs->for_temp_tele.StF ==-1)
+			{
+				new_Radio_config.Specific_reg[0] = 0;//Disable the MTI's validation mechanism
+				new_Radio_config.Specific_reg[1] = 0;
+				new_Radio_config.Specific_reg[2] = 0;
+				amount = 6;//Including configuration for MTI's validation mechanism
+			}
+			else if(new_sregs->for_temp_tele.StV && new_sregs->for_temp_tele.StF)
 			{
 				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI's validation mechanism
 				new_Radio_config.Specific_reg[1] = new_sregs->for_temp_tele.StV;
@@ -244,7 +252,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 			break;
 		case RM_SW_MUX:
 			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0, Global switches configuration
-			amount = 4;//Including Global control register
+			amount = 6;//Including Global control register
 			break;
 		default: return EXIT_FAILURE;
 	}

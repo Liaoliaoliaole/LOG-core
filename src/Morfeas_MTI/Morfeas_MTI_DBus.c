@@ -367,8 +367,20 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 		return "new_MTI_config(): new_mode is Unknown";
 	if(*new_mode != RM_SW_MUX && *new_mode != Tele_quad)
 	{
-		sregs->for_temp_tele.StV = cJSON_HasObjectItem(JSON_args,"StV") ? cJSON_GetObjectItem(JSON_args,"StV")->valueint:0;
-		sregs->for_temp_tele.StF = cJSON_HasObjectItem(JSON_args,"StF") ? cJSON_GetObjectItem(JSON_args,"StF")->valueint:0;
+		if(cJSON_HasObjectItem(JSON_args,"StV") && cJSON_HasObjectItem(JSON_args,"StF"))
+		{
+			if(cJSON_GetObjectItem(JSON_args,"StV")->type != cJSON_Number)
+				return "new_MTI_config(): StV is NAN";
+			if(cJSON_GetObjectItem(JSON_args,"StF")->type != cJSON_Number)
+				return "new_MTI_config(): StF is NAN";
+			sregs->for_temp_tele.StV = cJSON_GetObjectItem(JSON_args,"StV")->valueint;
+			sregs->for_temp_tele.StF = cJSON_GetObjectItem(JSON_args,"StF")->valueint;
+		}
+		else
+		{
+			sregs->for_temp_tele.StV = 0;
+			sregs->for_temp_tele.StF = 0;
+		}
 	}
 	else if(*new_mode == RM_SW_MUX)
 	{
@@ -451,20 +463,3 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 	}
 	return NULL;
 }
-
-/*
-struct Gen_config_struct{
-	unsigned int max;
-	unsigned int min;
-	union generator_mode{
-		struct decoder_for_generator_mode{
-			unsigned saturation:1;
-			unsigned reserved:6;
-			unsigned fixed_freq:1;
-		}dec;
-		unsigned char as_byte;
-	}pwm_mode;
-};
-*/
-
-
