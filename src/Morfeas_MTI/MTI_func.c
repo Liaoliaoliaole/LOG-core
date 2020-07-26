@@ -235,13 +235,8 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 		case Tele_TC4:
 		case Tele_TC8:
 		case Tele_TC16:
-			if((short)new_sregs->for_temp_tele.StV ==-1 && (short)new_sregs->for_temp_tele.StF ==-1)
-			{
-				new_Radio_config.Specific_reg[0] = 0;//Disable the MTI's validation mechanism
-				new_Radio_config.Specific_reg[1] = 0;
-				new_Radio_config.Specific_reg[2] = 0;
-				amount = 6;//Including configuration for MTI's validation mechanism
-			}
+			if((short)new_sregs->for_temp_tele.StV ==-1 && (short)new_sregs->for_temp_tele.StF ==-1)//In case of both arg are -1, Disable the validation mechanism
+				amount = 6;
 			else if(new_sregs->for_temp_tele.StV && new_sregs->for_temp_tele.StF)
 			{
 				new_Radio_config.Specific_reg[0] = 49;//Enable the MTI's validation mechanism
