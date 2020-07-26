@@ -235,7 +235,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 		case Tele_TC4:
 		case Tele_TC8:
 		case Tele_TC16:
-			if((char)new_sregs->for_temp_tele.StV ==-1 && (char)new_sregs->for_temp_tele.StF ==-1)
+			if((short)new_sregs->for_temp_tele.StV ==-1 && (short)new_sregs->for_temp_tele.StF ==-1)
 			{
 				new_Radio_config.Specific_reg[0] = 0;//Disable the MTI's validation mechanism
 				new_Radio_config.Specific_reg[1] = 0;

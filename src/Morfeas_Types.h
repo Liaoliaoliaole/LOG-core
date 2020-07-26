@@ -81,7 +81,7 @@ struct Morfeas_MDAQ_if_stats{
 	unsigned int counter;
 };
 
-/*Structs for MTI_handler*/ 
+/*Structs for MTI_handler*/
 struct MTI_status_struct{
 	float MTI_batt_volt;
 	float MTI_batt_capacity;
@@ -97,17 +97,17 @@ struct MTI_status_struct{
 };
 union MTI_specific_regs{
 	struct dec_for_temperature_telemetries{
-		unsigned char StV;//Sample to set valid flag
-		unsigned char StF;//samples to reset valid flag
+		unsigned short StV;//Sample to set valid flag
+		unsigned short StF;//samples to reset valid flag
 	}for_temp_tele;
 	struct dec_for_controlling_devices{
 		unsigned manual_button:1;
 		unsigned sleep_button:1;
 		unsigned reserver:6;
 		unsigned global_switch:1;
-		unsigned global_speed:1;//global switch for RMSWs report speed 
+		unsigned global_speed:1;//global switch for RMSWs report speed
 	}for_rmsw_dev;
-	unsigned char as_array[2];
+	unsigned char as_array[4];
 };
 struct MTI_Radio_config_status_struct{
 	unsigned RF_channel:7;
@@ -158,7 +158,7 @@ struct QUAD_data_struct{
 	unsigned Data_isValid:1;
 	struct Gen_config_struct gen_config[2];
 	float CHs[2];
-}; 
+};
 
 union switch_status_dec{
 	struct rmsw_switches_decoder{

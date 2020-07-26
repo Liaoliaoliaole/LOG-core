@@ -138,9 +138,9 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 					{
 						//Read the arguments of the call
 						if (!dbus_message_iter_init(msg, &call_args))//Validate for zero amount of arguments
-						  DBus_reply_msg(conn, msg, "Zero arguments!!!");
+						  DBus_reply_msg(conn, msg, "Call with NO argument!!!");
 						else if (DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&call_args))//Validate for not string argument
-						  DBus_reply_msg(conn, msg, "Argument is NOT a string!!!");
+						  DBus_reply_msg(conn, msg, "Method's argument is NOT a string!!!");
 						else
 						{
 							dbus_message_iter_get_basic(&call_args, &param);//Get first argument.
@@ -149,7 +149,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 								DBus_reply_msg(conn, msg, param);
 								break;
 							}
-							if(!(JSON_args = cJSON_Parse(param)))
+							if(!(JSON_args = cJSON_Parse(param)))//Parser called argument as JSON.
 							{
 								DBus_reply_msg(conn, msg, "JSON Parsing failed!!!");
 								break;
@@ -386,6 +386,7 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 	{
 		if(cJSON_HasObjectItem(JSON_args,"G_SW") && cJSON_HasObjectItem(JSON_args,"G_SL"))
 		{
+			sregs->for_rmsw_dev.reserver = 0;//reset reserved bits
 			sregs->for_rmsw_dev.manual_button = cJSON_GetObjectItem(JSON_args,"G_SW")->valueint?1:0;
 			sregs->for_rmsw_dev.sleep_button = cJSON_GetObjectItem(JSON_args,"G_SL")->valueint?1:0;
 		}
@@ -451,15 +452,14 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].min is NAN", i);
 			return ret_str;
 		}
-		if(cJSON_GetObjectItem(JSON_element,"saturation")->type != cJSON_False &&
-		   cJSON_GetObjectItem(JSON_element,"saturation")->type != cJSON_True )
+		if(cJSON_GetObjectItem(JSON_element,"saturation")->type != cJSON_Number)
 		{
-			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].saturation isn't Boolean", i);
+			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].saturation is NAN", i);
 			return ret_str;
 		}
 		PWM_gens_config[i].max = cJSON_GetObjectItem(JSON_element,"max")->valueint;
 		PWM_gens_config[i].min = cJSON_GetObjectItem(JSON_element,"min")->valueint;
-		PWM_gens_config[i].pwm_mode.dec.saturation = cJSON_GetObjectItem(JSON_element,"saturation")->valueint;
+		PWM_gens_config[i].pwm_mode.dec.saturation = cJSON_GetObjectItem(JSON_element,"saturation")->valueint?1:0;
 	}
 	return NULL;
 }
