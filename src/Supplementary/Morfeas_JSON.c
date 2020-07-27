@@ -676,7 +676,12 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							//Add measurements
 							CHs = cJSON_CreateArray();
 							for(int j=0; j<4; j++)
-								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));												
+							{
+								if(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]<2047.0)
+									cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));
+								else
+									cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
+							}
 							cJSON_AddItemToObject(RMSW_t, "CHs_meas", CHs);
 							//Add control status 
 							REFs = cJSON_CreateObject();
