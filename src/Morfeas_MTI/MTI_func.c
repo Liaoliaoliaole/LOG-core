@@ -276,8 +276,8 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char tele_ty
 			union switch_status_dec enc;
 			unsigned short as_short;
 		}new_status;
-	}__attribute__((packed, aligned(1))) mem;
-	
+	}mem;
+
 	//Read tele_type and current switches states registers
 	if(modbus_read_registers(ctx, MTI_RMSWs_DATA_OFFSET + mem_pos * RMSW_MEM_SIZE, sizeof(mem)/sizeof(short), (unsigned short*)&mem)<=0)
 		return errno;

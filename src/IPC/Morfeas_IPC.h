@@ -192,6 +192,7 @@ typedef union{
 	MDAQ_data_msg MDAQ_data;
 	MDAQ_channels_reg_msg MDAQ_channels_reg;
 	MDAQ_report_msg MDAQ_report;
+	//MTI related
 }IPC_message;
 
 //Function that convert interface_type_string to interface_type_num

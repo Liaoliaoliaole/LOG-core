@@ -147,6 +147,11 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
+	if(strlen(stats.dev_name)>Dev_or_Bus_name_str_size)
+	{
+		fprintf(stderr, "Dev_name too big (>=%d)\n",Dev_or_Bus_name_str_size);
+		exit(EXIT_FAILURE);
+	}
 	if(!is_valid_IPv4(stats.MTI_IPv4_addr))
 	{
 		fprintf(stderr, "Argument for IPv4 is invalid!!!\n");

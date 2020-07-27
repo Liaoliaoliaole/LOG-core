@@ -104,6 +104,11 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
+	if(strlen(stats.dev_name)>=Dev_or_Bus_name_str_size)
+	{
+		fprintf(stderr, "Dev_name too big (>=%d)\n",Dev_or_Bus_name_str_size);
+		exit(EXIT_FAILURE);
+	}
 	if(!is_valid_IPv4(stats.MDAQ_IPv4_addr))
 	{
 		fprintf(stderr, "Argument for IPv4 is invalid!!!\n");
@@ -183,7 +188,7 @@ int main(int argc, char *argv[])
 			{
 				stats.error = errno;//load errno to stats
 				MDAQ_status_to_IPC(FIFO_fd, &stats); //send status report to Morfeas_opc_ua via IPC
-				logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat 
+				logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat
 				sleep(1);
 			}
 			Logger("Recover from last Error\n");
