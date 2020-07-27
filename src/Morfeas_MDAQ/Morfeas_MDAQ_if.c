@@ -154,11 +154,11 @@ int main(int argc, char *argv[])
 	//Attempt connection to MDAQ
 	while(modbus_connect(ctx) && handler_run)
 	{
-		sleep(1);
 		stats.error = errno;
 		MDAQ_status_to_IPC(FIFO_fd, &stats);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
 		logstat_MDAQ(path_to_logstat_dir, &stats);
+		sleep(1);
 	}
 	stats.error = 0;//load no error on stats
 	MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
@@ -177,17 +177,17 @@ int main(int argc, char *argv[])
 		rc = modbus_read_input_registers(ctx, MDAQ_start_reg, MDAQ_imp_reg, MDAQ_regs);
 		if (rc <= 0)
 		{
-			stats.error = errno;//load errno to stats
-			MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-			logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat 
 			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
 			//Attempt to reconnection
 			while(modbus_connect(ctx) && handler_run)
+			{
+				stats.error = errno;//load errno to stats
+				MDAQ_status_to_IPC(FIFO_fd, &stats); //send status report to Morfeas_opc_ua via IPC
+				logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat 
 				sleep(1);
+			}
 			Logger("Recover from last Error\n");
 			stats.error = 0;//load no error on stats
-			MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-			logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat 
 		}
 		else
 		{
