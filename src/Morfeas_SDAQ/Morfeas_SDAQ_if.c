@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 	}
 	if(strlen(argv[1])>=Dev_or_Bus_name_str_size)//Check if the size of the CAN-IF is bigger than the limit
 	{
-		fprintf(stderr, "Dev_name too big (>=%d)\n",Dev_or_Bus_name_str_size);
+		fprintf(stderr, "Interface name too big (>=%d)\n",Dev_or_Bus_name_str_size);
 		exit(EXIT_FAILURE);
 	}
 	//Link interface name to socket
