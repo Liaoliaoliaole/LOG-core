@@ -204,19 +204,24 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_lock(&MTI_access);
 										if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 										{
-											if(!(err = stats->error))
+											if(stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button)
+												DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Global control is enabled");
+											else
 											{
-												if(!(err = ctrl_tele_switch(ctx,
-																			mem_pos,
-																			tele_type,
-																			sw_name,
-																			cJSON_GetObjectItem(JSON_args,"new_state")->valueint?1:0)))
-													DBus_reply_msg(conn, msg, "ctrl_tele_SWs() Success");
-											}
-											if(err == MTI_TELE_MODE_ERROR)
-											{
-												DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): tele_type[mem_pos] != tele_type");
-												err = 0;
+												if(!(err = stats->error))
+												{
+													if(!(err = ctrl_tele_switch(ctx,
+																				mem_pos,
+																				tele_type,
+																				sw_name,
+																				cJSON_GetObjectItem(JSON_args,"new_state")->valueint?1:0)))
+														DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Success");
+												}
+												if(err == MTI_TELE_MODE_ERROR)
+												{
+													DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): tele_type[mem_pos] != tele_type");
+													err = 0;
+												}
 											}
 										}
 										else
@@ -371,8 +376,12 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 		{
 			if(cJSON_GetObjectItem(JSON_args,"StV")->type != cJSON_Number)
 				return "new_MTI_config(): StV is NAN";
+			if(cJSON_GetObjectItem(JSON_args,"StV")->valueint > 0xff)
+				return "new_MTI_config(): StV is invalid (>0xff)";
 			if(cJSON_GetObjectItem(JSON_args,"StF")->type != cJSON_Number)
 				return "new_MTI_config(): StF is NAN";
+			if(cJSON_GetObjectItem(JSON_args,"StF")->valueint > 0xff)
+				return "new_MTI_config(): StF is invalid (>0xff)";
 			sregs->for_temp_tele.StV = cJSON_GetObjectItem(JSON_args,"StV")->valueint;
 			sregs->for_temp_tele.StF = cJSON_GetObjectItem(JSON_args,"StF")->valueint;
 		}
@@ -411,7 +420,7 @@ char * ctrl_tele_SWs_argValidator(cJSON *JSON_args, unsigned char *mem_pos, unsi
 	*mem_pos = cJSON_GetObjectItem(JSON_args,"mem_pos")->valueint;
 	if(cJSON_GetObjectItem(JSON_args,"tele_type")->type != cJSON_String)
 		return "ctrl_tele_SWs(): tele_type isn't string";
-	buf = cJSON_GetObjectItem(JSON_args,"tele_typePWM_gens_config")->valuestring;
+	buf = cJSON_GetObjectItem(JSON_args,"tele_type")->valuestring;
 	for(*tele_type=0; MTI_RM_dev_type_str[*tele_type]&&strcmp(buf, MTI_RM_dev_type_str[*tele_type]); *tele_type+=1)
 		;
 	if(*tele_type>Tele_type_max)//Check if tele_type is valid
@@ -452,13 +461,13 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].min is NAN", i);
 			return ret_str;
 		}
-		if(cJSON_GetObjectItem(JSON_element,"saturation")->type != cJSON_Number)
-		{
-			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].saturation is NAN", i);
-			return ret_str;
-		}
 		PWM_gens_config[i].max = cJSON_GetObjectItem(JSON_element,"max")->valueint;
 		PWM_gens_config[i].min = cJSON_GetObjectItem(JSON_element,"min")->valueint;
+		if(PWM_gens_config[i].max<=PWM_gens_config[i].min)
+		{
+			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].max <= PWM_gens_config[%u].min", i, i);
+			return ret_str;
+		}
 		PWM_gens_config[i].pwm_mode.dec.saturation = cJSON_GetObjectItem(JSON_element,"saturation")->valueint?1:0;
 	}
 	return NULL;

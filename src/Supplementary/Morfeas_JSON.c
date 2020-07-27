@@ -525,7 +525,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	//cJSON related variables
 	char *JSON_str = NULL;
 	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *PWM_config = NULL, 
-	      *Tele_data = NULL, *CHs = NULL, *REFs = NULL, *RMSW_t = NULL;
+	      *MTI_global_state = NULL, *Tele_data = NULL, *CHs = NULL, *REFs = NULL, *RMSW_t = NULL;
 
 	//Convert IPv4 to MTI's Identifier
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
@@ -577,7 +577,12 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
 						for(i=0; i<4; i++)
-							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC4.CHs[i]));
+						{
+							if(stats->Tele_data.as_TC4.CHs[i]<2047.0)
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC4.CHs[i]));
+							else
+								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
+						}
 						for(i=0; i<2; i++)
 							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_TC4.Refs[i]));
 						break;
@@ -585,14 +590,24 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
 						for(i=0; i<8; i++)
-							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC8.CHs[i]));
+						{
+							if(stats->Tele_data.as_TC8.CHs[i]<2047.0)
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC8.CHs[i]));
+							else
+								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
+						}
 						for(i=0; i<8; i++)
 							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_TC8.Refs[i]));
 						break;
 					case Tele_TC16:
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 						for(i=0; i<16; i++)
-							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC16.CHs[i]));
+						{
+							if(stats->Tele_data.as_TC16.CHs[i]<2047.0)
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC16.CHs[i]));
+							else
+								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
+						}
 						break;
 					case Tele_quad:
 						cJSON_AddItemToObject(MTI_status, "PWMs_config", PWM_config = cJSON_CreateArray());
@@ -613,10 +628,12 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 			}
 			else if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 			{
-				cJSON_AddItemToObject(MTI_button_state, "Manual_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button));
-				cJSON_AddItemToObject(MTI_button_state, "Sleep_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.sleep_button));
-				cJSON_AddItemToObject(MTI_button_state, "Global_switch_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_switch));
-				cJSON_AddItemToObject(MTI_button_state, "Global_speed_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_speed));
+				//Add MTI_global_state to MTI_status
+				cJSON_AddItemToObject(MTI_status, "MTI_Global_state", MTI_global_state = cJSON_CreateObject());
+				cJSON_AddItemToObject(MTI_global_state, "Manual_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button));
+				cJSON_AddItemToObject(MTI_global_state, "Sleep_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.sleep_button));
+				cJSON_AddItemToObject(MTI_global_state, "Global_switch_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_switch));
+				cJSON_AddItemToObject(MTI_global_state, "Global_speed_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_speed));
 				//Add remote switch data to JSON
 				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateArray());
 				for(i=0; i<stats->Tele_data.as_RMSWs.amount_of_devices; i++)

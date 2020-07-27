@@ -97,8 +97,8 @@ struct MTI_status_struct{
 };
 union MTI_specific_regs{
 	struct dec_for_temperature_telemetries{
-		unsigned short StV;//Sample to set valid flag
-		unsigned short StF;//samples to reset valid flag
+		unsigned char StV;//Sample to set valid flag
+		unsigned char StF;//samples to reset valid flag
 	}for_temp_tele;
 	struct dec_for_controlling_devices{
 		unsigned manual_button:1;
@@ -167,7 +167,7 @@ union switch_status_dec{
 		unsigned CH2:1;
 		unsigned reserved:4;
 		unsigned Rep_rate:1;
-	}rmsw_dec;
+	}__attribute__((packed, aligned(1))) rmsw_dec;
 	struct mux_switches_decoder{
 		unsigned CH1:1;
 		unsigned CH2:1;
@@ -175,12 +175,12 @@ union switch_status_dec{
 		unsigned CH4:1;
 		unsigned reserved:3;
 		unsigned Rep_rate:1;
-	}mux_dec;
+	}__attribute__((packed, aligned(1))) mux_dec;
 	struct mini_rmsw_switches_decoder{
 		unsigned Main:1;
 		unsigned reserved:5;
 		unsigned Rep_rate:2;
-	}mini_dec;
+	}__attribute__((packed, aligned(1))) mini_dec;
 	unsigned char as_byte;
 };
 struct RMSW_MUX_Mini_data_struct{

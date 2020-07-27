@@ -235,7 +235,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 		case Tele_TC4:
 		case Tele_TC8:
 		case Tele_TC16:
-			if((short)new_sregs->for_temp_tele.StV ==-1 && (short)new_sregs->for_temp_tele.StF ==-1)//In case of both arg are -1, Disable the validation mechanism
+			if(new_sregs->for_temp_tele.StV == 0xff || new_sregs->for_temp_tele.StF == 0xff)//In case of both arg are -1, Disable the validation mechanism
 				amount = 6;
 			else if(new_sregs->for_temp_tele.StV && new_sregs->for_temp_tele.StF)
 			{
@@ -246,6 +246,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 			}
 			break;
 		case RM_SW_MUX:
+			new_Radio_config.RF_channel = 0;//Remote controlling device always listening at channel 0 (2400MHz)
 			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0, Global switches configuration
 			amount = 6;//Including Global control register
 			break;
@@ -269,15 +270,16 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char tele_ty
 {
 	struct MTI_RMSW_cnrl_mem{
 		unsigned short MTI_tele_type;
+		unsigned short Tele_dev_ID;
 		unsigned short reserved;
 		union state_register{
 			union switch_status_dec enc;
 			unsigned short as_short;
 		}new_status;
-	}mem;
-
+	}__attribute__((packed, aligned(1))) mem;
+	
 	//Read tele_type and current switches states registers
-	if(modbus_read_registers(ctx, MTI_RMSWs_DATA_OFFSET + mem_pos * RMSW_MEM_SIZE, 3, (unsigned short*)&mem)<=0)
+	if(modbus_read_registers(ctx, MTI_RMSWs_DATA_OFFSET + mem_pos * RMSW_MEM_SIZE, sizeof(mem)/sizeof(short), (unsigned short*)&mem)<=0)
 		return errno;
 	if(mem.MTI_tele_type != tele_type)
 		return MTI_TELE_MODE_ERROR;
