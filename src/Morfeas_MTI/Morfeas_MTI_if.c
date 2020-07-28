@@ -46,7 +46,6 @@ enum Morfeas_MTI_FSM_States{
 	get_status,
 	error
 };
-//static const char *states_str[] = {"wait","get_config","get_data","get_status","error"};
 
 //Global variables
 unsigned char handler_run = 1;
@@ -75,12 +74,10 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 void * MTI_DBus_listener(void *varg_pt);//Thread function.
 
 //--- Local Morfeas_IPC functions ---//
-/*
 // MTI_status_to_IPC function. Send Status of MTI to Morfeas_opc_ua via IPC
 void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 //Function that register MTI Channels to Morfeas_opc_ua via IPC
 void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
-*/
 
 int main(int argc, char *argv[])
 {
@@ -94,8 +91,6 @@ int main(int argc, char *argv[])
 	//Variables for threads
 	pthread_t DBus_listener_Thread_id;
 	struct MTI_DBus_thread_arguments_passer passer = {&ctx, &stats};
-	//Variables for IPC
-	IPC_message IPC_msg = {0};
 	//FIFO file descriptor
 	int FIFO_fd;
 
@@ -185,11 +180,9 @@ int main(int argc, char *argv[])
 	//Open FIFO for Write
 	FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
-	/*
 	Logger("Morfeas_MTI_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 0);
 	Logger("Morfeas_MTI_if (%s) Registered on OPC-UA\n",stats.dev_name);
-	*/
 
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, tcp_port);
@@ -205,7 +198,7 @@ int main(int argc, char *argv[])
 	while(modbus_connect(ctx) && handler_run)
 	{
 		stats.error = errno;
-		//MTI_status_to_IPC(FIFO_fd, &stats);
+		MTI_status_to_IPC(FIFO_fd, &stats);
 		Logger("Connection Error (%d): %s\n", errno, modbus_strerror(errno));
 		logstat_MTI(path_to_logstat_dir, &stats);
 		sleep(1);
@@ -215,14 +208,13 @@ int main(int argc, char *argv[])
 	//Print Connection success message
 	Logger("Connected to %s(%s:%d@%d)\n", stats.dev_name, stats.MTI_IPv4_addr, tcp_port, modbus_addr);
 	stats.error = 0;//load no error on stats
-	//MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+	MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 
 	//Start D-Bus listener function in a thread
 	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);
 
 	while(handler_run)//Application's FSM
 	{
-		//Logger("Next_state = %s(%d)\n",states_str[state],state);
 		switch(state)
 		{
 			case error:
@@ -230,8 +222,8 @@ int main(int argc, char *argv[])
 				do{
 					pthread_mutex_lock(&MTI_access);
 						ret = modbus_connect(ctx);//Attempt to reconnect and sleep on failure
-						stats.error = ret?errno:0;//Load errno to stats
-						//MTI_status_to_IPC(FIFO_fd, &stats);//Send status report to Morfeas_opc_ua via IPC
+						stats.error = ret?errno:OK_status;//Load errno to stats
+						MTI_status_to_IPC(FIFO_fd, &stats);//Send status report to Morfeas_opc_ua via IPC
 						logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat
 					pthread_mutex_unlock(&MTI_access);
 					if(ret)
@@ -271,7 +263,7 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_status(ctx, &stats))
 					{
-						logstat_MTI(path_to_logstat_dir, &stats);
+						logstat_MTI(path_to_logstat_dir, &stats);//Export logstat
 						stats.counter = 0;
 						state = wait;
 					}
@@ -293,10 +285,8 @@ Exit:
 	modbus_close(ctx);
 	modbus_free(ctx);
 	//Remove Registered handler from Morfeas_OPC_UA Server
-	/*
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 1);
 	Logger("Morfeas_MTI_if (%s) Removed from OPC-UA\n",stats.dev_name);
-	*/
 	close(FIFO_fd);
 	//Delete logstat file
 	if(path_to_logstat_dir)
@@ -324,4 +314,21 @@ void print_usage(char *prog_name)
 	};
 	printf("%s\nUsage: %s IPv4 Dev_name [/path/to/logstat/directory] [Options]\n\n%s",preamp, prog_name, manual);
 	return;
+}
+
+// MTI_status function. Send Status of MTI to Morfeas_opc_ua via IPC
+void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
+{
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	//scale measurements and send them to Morfeas_opc_ua via IPC
+	IPC_msg.MTI_report.IPC_msg_type = IPC_MTI_report;
+	memccpy(IPC_msg.MTI_report.Dev_or_Bus_name, stats->dev_name,'\0',Dev_or_Bus_name_str_size);
+	IPC_msg.MTI_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load MTI IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->MTI_IPv4_addr, &(IPC_msg.MTI_report.MTI_IPv4));
+	//Load error code to report IPC_msg
+	IPC_msg.MTI_report.status = stats->error;
+	//Send status report
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }

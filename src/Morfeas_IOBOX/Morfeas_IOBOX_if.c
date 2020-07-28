@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	if(strlen(stats.dev_name)>Dev_or_Bus_name_str_size)
+	if(strlen(stats.dev_name)>=Dev_or_Bus_name_str_size)
 	{
 		fprintf(stderr, "Dev_name too big (>=%d)\n",Dev_or_Bus_name_str_size);
 		exit(EXIT_FAILURE);
@@ -190,8 +190,12 @@ int main(int argc, char *argv[])
 				logstat_IOBOX(path_to_logstat_dir, &stats);//report error on logstat
 				sleep(1);
 			}
-			Logger("Recover from last Error\n");
-			stats.error = 0;//load no error on stats
+			if(handler_run)
+			{
+				Logger("Recover from last Error\n");
+				stats.error = OK_status;
+				IOBOX_status_to_IPC(FIFO_fd, &stats);
+			}
 		}
 		else
 		{

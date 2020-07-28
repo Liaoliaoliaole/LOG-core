@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define OK_status 0
 #define Dev_or_Bus_name_str_size 20
 #define Data_FIFO "/tmp/.Morfeas_handlers_FIFO"
 
@@ -40,6 +41,10 @@ enum Morfeas_IPC_msg_type{
 	IPC_MDAQ_data,
 	IPC_MDAQ_channels_reg,
 	IPC_MDAQ_report,
+	//MTI_related IPC messages
+	IPC_MTI_data,
+	IPC_MTI_channels_reg,
+	IPC_MTI_report,
 	//Set MIN/MAX_num_type, (Min and Max for each IPC_handler_type)
 	//---SDAQ---//
 	Morfeas_IPC_SDAQ_MIN_type = IPC_SDAQ_register_or_update,
@@ -50,8 +55,11 @@ enum Morfeas_IPC_msg_type{
 	//---MDAQ---//
 	Morfeas_IPC_MDAQ_MIN_type = IPC_MDAQ_data,
 	Morfeas_IPC_MDAQ_MAX_type = IPC_MDAQ_report,
+	//---MTI---//
+	Morfeas_IPC_MTI_MIN_type = IPC_MTI_data,
+	Morfeas_IPC_MTI_MAX_type = IPC_MTI_report,
 	//MAX number of any type of IPC message
-	Morfeas_IPC_MAX_type = IPC_MDAQ_report
+	Morfeas_IPC_MAX_type = IPC_MTI_report
 };
 
 enum Morfeas_IPC_handler_type{
@@ -171,6 +179,30 @@ typedef struct MDAQ_report_msg_struct{
 	unsigned int MDAQ_IPv4;
 	int status;
 }MDAQ_report_msg;
+
+	//------ MTI related ------//
+/*
+typedef struct MTI_data_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MTI_IPv4;
+	unsigned int meas_index;
+	float board_temp;
+	struct MTI_Channel meas[8];
+}MTI_data_msg;
+
+typedef struct MTI_channels_reg_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MTI_IPv4;
+}MTI_channels_reg_msg;
+*/
+typedef struct MTI_report_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MTI_IPv4;
+	int status;
+}MTI_report_msg;
 #pragma pack(pop)//Disable packing
 
 //--IPC_MESSAGE--//
@@ -193,6 +225,11 @@ typedef union{
 	MDAQ_channels_reg_msg MDAQ_channels_reg;
 	MDAQ_report_msg MDAQ_report;
 	//MTI related
+	/*
+	MTI_data_msg MTI_data;
+	MTI_channels_reg_msg MTI_channels_reg;
+	*/
+	MTI_report_msg MTI_report;
 }IPC_message;
 
 //Function that convert interface_type_string to interface_type_num
@@ -200,7 +237,6 @@ int if_type_str_2_num(const char * if_type_str);
 
 	//----RX Functions----//
 //function for RX, return the type of the received message or 0 in failure
-//unsigned char IPC_msg_RX(const char *path_to_FIFO, IPC_message *IPC_msg_ptr);
 unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr);
 
 	//----TX Functions----//

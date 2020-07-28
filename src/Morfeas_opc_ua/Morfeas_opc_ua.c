@@ -287,6 +287,7 @@ void* IPC_Receiver(void *varg_pt)
 						    IOBOX_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
 						case MTI:
+							MTI_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
 					}
 					break;
@@ -305,6 +306,8 @@ void* IPC_Receiver(void *varg_pt)
 						IPC_msg_from_IOBOX_handler(server, type, &IPC_msg_dec);//mutex inside
 					else if(type>=Morfeas_IPC_MDAQ_MIN_type && type<=Morfeas_IPC_MDAQ_MAX_type)//Msg type from MDAQ_handler
 						IPC_msg_from_MDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
+					else if(type>=Morfeas_IPC_MTI_MIN_type && type<=Morfeas_IPC_MTI_MAX_type)//Msg type from MTI_handler
+						IPC_msg_from_MTI_handler(server, type, &IPC_msg_dec);//mutex inside
 					break;
 			}
 		}
@@ -740,7 +743,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 		Morfeas_opc_ua_add_variable_node(server_ptr, "Health_status", health_status_str[1][i], health_status_str[0][i], !i?UA_TYPES_UINT32:UA_TYPES_FLOAT);
 }
 
-void Rpi_health_update (void)
+void Rpi_health_update(void)
 {
 	FILE *CPU_temp_fp;
 	char cpu_temp_str[20];

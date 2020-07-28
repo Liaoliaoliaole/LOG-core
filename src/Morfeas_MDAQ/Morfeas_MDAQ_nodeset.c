@@ -68,7 +68,7 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				switch(IPC_msg_dec->MDAQ_report.status)
 				{
-					case 0:
+					case OK_status:
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), "Okay", UA_TYPES_STRING);
 						break;
 					default:

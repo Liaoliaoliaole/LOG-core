@@ -46,3 +46,6 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type,IPC_messag
 //MDAQ's Handler related
 void MDAQ_handler_reg(UA_Server *server, char *dev_name);
 void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);
+//MTI's Handler related
+void MTI_handler_reg(UA_Server *server, char *dev_name);
+void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);

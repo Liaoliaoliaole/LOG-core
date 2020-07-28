@@ -43,7 +43,11 @@ size_t Morfeas_IPC_msg_size[]={
 	//MDAQ_related IPC messages sizes
 	sizeof(MDAQ_data_msg),
 	sizeof(MDAQ_channels_reg_msg),
-	sizeof(MDAQ_report_msg)
+	sizeof(MDAQ_report_msg),
+	//MTI_related IPC messages sizes
+	/*sizeof(MTI_data_msg),
+	sizeof(MTI_channels_reg_msg),*/
+	sizeof(MTI_report_msg)
 };
 
 char *Morfeas_IPC_handler_type_name[]={

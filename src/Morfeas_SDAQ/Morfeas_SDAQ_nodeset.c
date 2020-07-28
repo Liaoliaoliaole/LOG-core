@@ -21,6 +21,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
+void SDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
+{
+	char Node_id_str[30], Child_Node_ID_str[60], zero=0;
+	pthread_mutex_lock(&OPC_UA_NODESET_access);
+		sprintf(Node_id_str, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, "SDAQ-ifs", Dev_or_Bus_name, Node_id_str);
+		sprintf(Node_id_str, "%s.SDAQnet", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_id_str, "SDAQnet");
+		sprintf(Node_id_str, "%s.BUS_util", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_id_str, "BUS_Util (%)", UA_TYPES_FLOAT);
+		sprintf(Node_id_str, "%s.amount", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_id_str, "Dev_on_BUS", UA_TYPES_BYTE);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_id_str), &zero, UA_TYPES_BYTE);
+		if(!strstr(Dev_or_Bus_name, "vcan"))
+		{	//Object with electric status of a SDAQnet port
+			sprintf(Node_id_str, "%s.Electrics", Dev_or_Bus_name);
+			Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_id_str, "Electric");
+			sprintf(Child_Node_ID_str, "%s.volts", Dev_or_Bus_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Voltage (V)", UA_TYPES_FLOAT);
+			sprintf(Child_Node_ID_str, "%s.amps", Dev_or_Bus_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Amperage (A)", UA_TYPES_FLOAT);
+			sprintf(Child_Node_ID_str, "%s.shunt", Dev_or_Bus_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Shunt Temp (°C)", UA_TYPES_FLOAT);
+		}
+	pthread_mutex_unlock(&OPC_UA_NODESET_access);
+}
+
 void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
@@ -130,33 +157,6 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 	}
-}
-
-void SDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
-{
-	char Node_id_str[30], Child_Node_ID_str[60], zero=0;
-	pthread_mutex_lock(&OPC_UA_NODESET_access);
-		sprintf(Node_id_str, "%s-if (%s)", Morfeas_IPC_handler_type_name[SDAQ], Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, "SDAQ-ifs", Dev_or_Bus_name, Node_id_str);
-		sprintf(Node_id_str, "%s.SDAQnet", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_id_str, "SDAQnet");
-		sprintf(Node_id_str, "%s.BUS_util", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_id_str, "BUS_Util (%)", UA_TYPES_FLOAT);
-		sprintf(Node_id_str, "%s.amount", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_id_str, "Dev_on_BUS", UA_TYPES_BYTE);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_id_str), &zero, UA_TYPES_BYTE);
-		if(!strstr(Dev_or_Bus_name, "vcan"))
-		{	//Object with electric status of a SDAQnet port
-			sprintf(Node_id_str, "%s.Electrics", Dev_or_Bus_name);
-			Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_id_str, "Electric");
-			sprintf(Child_Node_ID_str, "%s.volts", Dev_or_Bus_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Voltage (V)", UA_TYPES_FLOAT);
-			sprintf(Child_Node_ID_str, "%s.amps", Dev_or_Bus_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Amperage (A)", UA_TYPES_FLOAT);
-			sprintf(Child_Node_ID_str, "%s.shunt", Dev_or_Bus_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Shunt Temp (°C)", UA_TYPES_FLOAT);
-		}
-	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
 
 void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)

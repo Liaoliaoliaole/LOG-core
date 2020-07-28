@@ -191,8 +191,12 @@ int main(int argc, char *argv[])
 				logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat
 				sleep(1);
 			}
-			Logger("Recover from last Error\n");
-			stats.error = 0;//load no error on stats
+			if(handler_run)
+			{
+				Logger("Recover from last Error\n");
+				stats.error = OK_status;
+				MDAQ_status_to_IPC(FIFO_fd, &stats);
+			}
 		}
 		else
 		{
