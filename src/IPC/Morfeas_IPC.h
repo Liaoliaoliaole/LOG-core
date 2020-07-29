@@ -15,12 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define OK_status 0
+#define REG 0
+#define UNREG 1
 #define Dev_or_Bus_name_str_size 20
 #define Data_FIFO "/tmp/.Morfeas_handlers_FIFO"
 
 #include "../Morfeas_Types.h"
-
-extern size_t Morfeas_IPC_msg_size[];
 
 enum Morfeas_IPC_msg_type{
 	IPC_Handler_register = 1,
@@ -43,7 +43,9 @@ enum Morfeas_IPC_msg_type{
 	IPC_MDAQ_report,
 	//MTI_related IPC messages
 	IPC_MTI_data,
-	IPC_MTI_channels_reg,
+	IPC_MTI_tree_reg,
+	IPC_MTI_Update_Health,
+	IPC_MTI_Update_Radio,
 	IPC_MTI_report,
 	//Set MIN/MAX_num_type, (Min and Max for each IPC_handler_type)
 	//---SDAQ---//
@@ -190,13 +192,30 @@ typedef struct MTI_data_msg_struct{
 	float board_temp;
 	struct MTI_Channel meas[8];
 }MTI_data_msg;
+*/
+typedef struct MTI_Update_Health_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	float cpu_temp;
+	float batt_capacity;
+	float batt_voltage;
+	unsigned char batt_state; 
+}MTI_Update_Health_msg;
+
+typedef struct MTI_Update_Radio_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned char RF_channel;
+	unsigned Data_rate:2;
+	unsigned Tele_dev_type:3;
+}MTI_Update_Radio_msg;
 
 typedef struct MTI_channels_reg_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MTI_IPv4;
-}MTI_channels_reg_msg;
-*/
+}MTI_tree_reg_msg;
+
 typedef struct MTI_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
@@ -225,11 +244,11 @@ typedef union{
 	MDAQ_channels_reg_msg MDAQ_channels_reg;
 	MDAQ_report_msg MDAQ_report;
 	//MTI related
-	/*
-	MTI_data_msg MTI_data;
-	MTI_channels_reg_msg MTI_channels_reg;
-	*/
+	MTI_tree_reg_msg MTI_tree_reg;
 	MTI_report_msg MTI_report;
+	MTI_Update_Health_msg MTI_Update_Health;
+	MTI_Update_Radio_msg MTI_Update_Radio;
+	//MTI_data_msg MTI_data;
 }IPC_message;
 
 //Function that convert interface_type_string to interface_type_num

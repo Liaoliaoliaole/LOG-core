@@ -25,35 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Morfeas_IPC.h"
 
-size_t Morfeas_IPC_msg_size[]={
-	sizeof(Handler_reg_op_msg),
-	sizeof(Handler_reg_op_msg),
-	//SDAQ_related IPC messages sizes
-	sizeof(SDAQ_reg_update_msg),
-	sizeof(CAN_BUS_info_msg),
-	sizeof(SDAQ_clear_msg),
-	sizeof(SDAQ_info_msg),
-	sizeof(SDAQ_cal_date_msg),
-	sizeof(SDAQ_timediff_msg),
-	sizeof(SDAQ_meas_msg),
-	//IOBOX_related IPC messages sizes
-	sizeof(IOBOX_data_msg),
-	sizeof(IOBOX_channels_reg_msg),
-	sizeof(IOBOX_report_msg),
-	//MDAQ_related IPC messages sizes
-	sizeof(MDAQ_data_msg),
-	sizeof(MDAQ_channels_reg_msg),
-	sizeof(MDAQ_report_msg),
-	//MTI_related IPC messages sizes
-	/*sizeof(MTI_data_msg),
-	sizeof(MTI_channels_reg_msg),*/
-	sizeof(MTI_report_msg)
-};
-
 char *Morfeas_IPC_handler_type_name[]={
 	"SDAQ","MDAQ","IOBOX","MTI",NULL //,"NOX","CPAD"
 };
-
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
 size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr)//const char *path_to_FIFO,

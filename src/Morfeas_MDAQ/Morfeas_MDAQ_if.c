@@ -140,11 +140,11 @@ int main(int argc, char *argv[])
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Register handler to Morfeas_OPC-UA Server
-	Logger("Morfeas_MDAQ_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
+	Logger("Morfeas_MDAQ_if(%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
 	//Open FIFO for Write
 	FIFO_fd = open(Data_FIFO, O_WRONLY);
-	IPC_Handler_reg_op(FIFO_fd, MDAQ, stats.dev_name, 0);
-	Logger("Morfeas_MDAQ_if (%s) Registered on OPC-UA\n",stats.dev_name);
+	IPC_Handler_reg_op(FIFO_fd, MDAQ, stats.dev_name, REG);
+	Logger("Morfeas_MDAQ_if(%s) Registered on OPC-UA\n",stats.dev_name);
 
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.MDAQ_IPv4_addr, MODBUS_TCP_DEFAULT_PORT);
@@ -165,7 +165,9 @@ int main(int argc, char *argv[])
 		logstat_MDAQ(path_to_logstat_dir, &stats);
 		sleep(1);
 	}
-	stats.error = 0;//load no error on stats
+	if(!handler_run)
+		goto Exit;
+	stats.error = OK_status;
 	MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 	//Print Connection success message
 	Logger("Connected to MDAQ %s(%s)\n", stats.MDAQ_IPv4_addr, stats.dev_name);
@@ -249,11 +251,12 @@ int main(int argc, char *argv[])
 		}
 		usleep(100000);
 	}
+Exit:
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
 	//Remove Registeration handler to Morfeas_OPC_UA Server
-	IPC_Handler_reg_op(FIFO_fd, MDAQ, stats.dev_name, 1);
+	IPC_Handler_reg_op(FIFO_fd, MDAQ, stats.dev_name, UNREG);
 	Logger("Morfeas_MDAQ_if (%s) Removed from OPC-UA\n",stats.dev_name);
 	close(FIFO_fd);
 	//Delete logstat file

@@ -76,8 +76,12 @@ void * MTI_DBus_listener(void *varg_pt);//Thread function.
 //--- Local Morfeas_IPC functions ---//
 // MTI_status_to_IPC function. Send Status of MTI to Morfeas_opc_ua via IPC
 void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
-//Function that register MTI Channels to Morfeas_opc_ua via IPC
-void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
+//Function that register MTI methods and properties tree to Morfeas_opc_ua via IPC
+void IPC_reg_MTI_tree(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
+//Function that send Health status of MTI to Morfeas_opc_ua via IPC
+void IPC_Update_Health_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
+//Function that send Radio configuration to Morfeas_opc_ua via IPC
+void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
@@ -180,9 +184,9 @@ int main(int argc, char *argv[])
 	//Open FIFO for Write
 	FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
-	Logger("Morfeas_MTI_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
+	Logger("Morfeas_MTI_if(%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 0);
-	Logger("Morfeas_MTI_if (%s) Registered on OPC-UA\n",stats.dev_name);
+	Logger("Morfeas_MTI_if(%s) Registered on OPC-UA\n",stats.dev_name);
 
 	//Make MODBus socket for connection
 	ctx = modbus_new_tcp(stats.MTI_IPv4_addr, tcp_port);
@@ -207,9 +211,10 @@ int main(int argc, char *argv[])
 		goto Exit;
 	//Print Connection success message
 	Logger("Connected to %s(%s:%d@%d)\n", stats.dev_name, stats.MTI_IPv4_addr, tcp_port, modbus_addr);
+	IPC_reg_MTI_tree(FIFO_fd, &stats);//Send MTI tree registration message to Morfeas_OPC_UA via IPC
 	stats.error = 0;//load no error on stats
 	MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-
+	
 	//Start D-Bus listener function in a thread
 	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);
 
@@ -241,10 +246,12 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
+						IPC_Update_Radio_status(FIFO_fd, &stats);
 						if(stats.counter < 10)//approx every second
 						{
 							//Check transceiver state; if ON, next state is get_data, otherwise wait.
-							state = (stats.MTI_Radio_config.Tele_dev_type>=Dev_type_min && stats.MTI_Radio_config.Tele_dev_type<=Dev_type_max) ? get_data : wait;
+							state = (stats.MTI_Radio_config.Tele_dev_type>=Dev_type_min&& 
+									 stats.MTI_Radio_config.Tele_dev_type<=Dev_type_max) ? get_data : wait;
 							stats.counter++;
 						}
 						else
@@ -263,6 +270,7 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_status(ctx, &stats))
 					{
+						IPC_Update_Health_status(FIFO_fd, &stats);
 						logstat_MTI(path_to_logstat_dir, &stats);//Export logstat
 						stats.counter = 0;
 						state = wait;
@@ -330,5 +338,58 @@ void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 	//Load error code to report IPC_msg
 	IPC_msg.MTI_report.status = stats->error;
 	//Send status report
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
+}
+
+//Function that register MTI tree to Morfeas_opc_ua via IPC
+void IPC_reg_MTI_tree(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
+{
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	//--- Load necessary message data to IPC_message ---/
+	IPC_msg.MTI_tree_reg.IPC_msg_type = IPC_MTI_tree_reg; //Message type
+	//Load Device name to IPC_message
+	memccpy(IPC_msg.MTI_tree_reg.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_msg.MTI_tree_reg.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load MTI's IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->MTI_IPv4_addr, &(IPC_msg.MTI_tree_reg.MTI_IPv4));
+	//Send status report to Morfeas_opc_ua
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
+}
+
+//Function that send MTI's Health status to Morfeas_opc_ua via IPC
+void IPC_Update_Health_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
+{
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	//--- Load necessary message data to IPC_message ---/
+	IPC_msg.MTI_Update_Health.IPC_msg_type = IPC_MTI_Update_Health; //Message type
+	//Load Device name to IPC_message
+	memccpy(IPC_msg.MTI_Update_Health.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_msg.MTI_Update_Health.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load Health status data to IPC_msg
+	IPC_msg.MTI_Update_Health.cpu_temp = stats->MTI_status.MTI_CPU_temp;
+	IPC_msg.MTI_Update_Health.batt_capacity = stats->MTI_status.MTI_batt_capacity;
+	IPC_msg.MTI_Update_Health.batt_voltage = stats->MTI_status.MTI_batt_volt;
+	IPC_msg.MTI_Update_Health.batt_state = stats->MTI_status.MTI_charge_status;
+	//Send status report to Morfeas_opc_ua
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
+}
+
+//Function that send Radio configuration to Morfeas_opc_ua via IPC
+void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
+{
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	//--- Load necessary message data to IPC_message ---/
+	IPC_msg.MTI_Update_Radio.IPC_msg_type = IPC_MTI_Update_Radio; //Message type
+	//Load Device name to IPC_message
+	memccpy(IPC_msg.MTI_Update_Radio.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_msg.MTI_Update_Radio.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load Health status data to IPC_msg
+	IPC_msg.MTI_Update_Radio.RF_channel = stats->MTI_Radio_config.RF_channel;
+	IPC_msg.MTI_Update_Radio.Data_rate = stats->MTI_Radio_config.Data_rate;
+	IPC_msg.MTI_Update_Radio.Tele_dev_type = stats->MTI_Radio_config.Tele_dev_type;
+	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
