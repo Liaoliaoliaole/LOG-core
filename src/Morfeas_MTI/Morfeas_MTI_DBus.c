@@ -321,8 +321,8 @@ int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *repl
 	dbus_message_unref(dbus_error_msg);
 	return EXIT_SUCCESS;
 }
-
-unsigned char get_rmswORmux_sw_name(unsigned char tele_type, char *buf)//String Decoder for sw_name. Return sw_name's enum on success. 0xff otherwise.
+//String Decoder for sw_name. Return sw_name's enum on success. 0xff otherwise.
+unsigned char get_rmswORmux_sw_name(unsigned char tele_type, char *buf)
 {
 	switch(tele_type)
 	{
@@ -452,7 +452,9 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 		return "new_PWM_config(): PWM_gens_config wrong size Array";
 	for(int i=0; (JSON_element = cJSON_GetArrayItem(JSON_Array, i)) && i<2; i++)
 	{
-		if(!cJSON_HasObjectItem(JSON_element,"max") || !cJSON_HasObjectItem(JSON_element,"min") || !cJSON_HasObjectItem(JSON_element,"saturation"))
+		if(!cJSON_HasObjectItem(JSON_element,"max") || 
+		   !cJSON_HasObjectItem(JSON_element,"min")|| 
+		   !cJSON_HasObjectItem(JSON_element,"saturation"))
 			return "new_PWM_config(): Missing Arguments";
 		if(cJSON_GetObjectItem(JSON_element,"max")->type != cJSON_Number)
 		{

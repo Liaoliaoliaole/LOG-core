@@ -183,16 +183,19 @@ typedef struct MDAQ_report_msg_struct{
 }MDAQ_report_msg;
 
 	//------ MTI related ------//
-/*
-typedef struct MTI_data_msg_struct{
+typedef struct MTI_tree_reg_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MTI_IPv4;
-	unsigned int meas_index;
-	float board_temp;
-	struct MTI_Channel meas[8];
-}MTI_data_msg;
-*/
+}MTI_tree_reg_msg;
+
+typedef struct MTI_report_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MTI_IPv4;
+	int status;
+}MTI_report_msg;
+
 typedef struct MTI_Update_Health_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
@@ -208,20 +211,17 @@ typedef struct MTI_Update_Radio_msg_struct{
 	unsigned char RF_channel;
 	unsigned Data_rate:2;
 	unsigned Tele_dev_type:3;
+	unsigned new_config:1;
 }MTI_Update_Radio_msg;
 
-typedef struct MTI_channels_reg_msg_struct{
+/*typedef struct MTI_data_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MTI_IPv4;
-}MTI_tree_reg_msg;
-
-typedef struct MTI_report_msg_struct{
-	unsigned char IPC_msg_type;
-	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
-	unsigned int MTI_IPv4;
-	int status;
-}MTI_report_msg;
+	unsigned int meas_index;
+	float board_temp;
+	struct MTI_Channel meas[8];
+}MTI_data_msg;*/
 #pragma pack(pop)//Disable packing
 
 //--IPC_MESSAGE--//

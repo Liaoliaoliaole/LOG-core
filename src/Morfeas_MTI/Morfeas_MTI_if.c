@@ -81,7 +81,7 @@ void IPC_reg_MTI_tree(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 //Function that send Health status of MTI to Morfeas_opc_ua via IPC
 void IPC_Update_Health_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 //Function that send Radio configuration to Morfeas_opc_ua via IPC
-void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
+void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, unsigned char new_config);
 
 int main(int argc, char *argv[])
 {
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	//Apps variables
 	int ret, tcp_port = MODBUS_TCP_DEFAULT_PORT, modbus_addr = default_slave_address;
 	char *path_to_logstat_dir;
-	unsigned char state = get_config, prev_RF_CH=0, prev_dev_type=0;
+	unsigned char state = get_config, prev_RF_CH=-1, prev_dev_type=-1;
 	struct Morfeas_MTI_if_stats stats = {0};
 	//Variables for threads
 	pthread_t DBus_listener_Thread_id;
@@ -246,9 +246,10 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
-						if(prev_RF_CH^stats.MTI_Radio_config.RF_channel || prev_dev_type^stats.MTI_Radio_config.Tele_dev_type)
+						if(prev_RF_CH^stats.MTI_Radio_config.RF_channel|| 
+						   prev_dev_type^stats.MTI_Radio_config.Tele_dev_type)
 						{							
-							IPC_Update_Radio_status(FIFO_fd, &stats);
+							IPC_Update_Radio_status(FIFO_fd, &stats, prev_dev_type^stats.MTI_Radio_config.Tele_dev_type?1:0);
 							prev_RF_CH = stats.MTI_Radio_config.RF_channel;
 							prev_dev_type = stats.MTI_Radio_config.Tele_dev_type;
 						}
@@ -381,7 +382,7 @@ void IPC_Update_Health_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 }
 
 //Function that send Radio configuration to Morfeas_opc_ua via IPC
-void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
+void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, unsigned char new_config)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
@@ -394,6 +395,7 @@ void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 	IPC_msg.MTI_Update_Radio.RF_channel = stats->MTI_Radio_config.RF_channel;
 	IPC_msg.MTI_Update_Radio.Data_rate = stats->MTI_Radio_config.Data_rate;
 	IPC_msg.MTI_Update_Radio.Tele_dev_type = stats->MTI_Radio_config.Tele_dev_type;
+	IPC_msg.MTI_Update_Radio.new_config = new_config?1:0;
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
