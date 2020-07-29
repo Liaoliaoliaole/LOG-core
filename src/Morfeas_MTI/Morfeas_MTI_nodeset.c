@@ -136,7 +136,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 					if(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type>=Dev_type_min && IPC_msg_dec->MTI_Update_Radio.Tele_dev_type<=Dev_type_max)
 					{
 						sprintf(Node_ID_parent_str, "%s.Radio", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
-						Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Telemetries");
+						Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_Update_Radio.Tele_dev_type]);
 						switch(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type)
 						{
 							case Tele_TC16:
