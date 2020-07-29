@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	//Apps variables
 	int ret, tcp_port = MODBUS_TCP_DEFAULT_PORT, modbus_addr = default_slave_address;
 	char *path_to_logstat_dir;
-	unsigned char state = get_config;
+	unsigned char state = get_config, prev_RF_CH=0, prev_dev_type=0;
 	struct Morfeas_MTI_if_stats stats = {0};
 	//Variables for threads
 	pthread_t DBus_listener_Thread_id;
@@ -246,10 +246,14 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
-						IPC_Update_Radio_status(FIFO_fd, &stats);
+						if(prev_RF_CH^stats.MTI_Radio_config.RF_channel || prev_dev_type^stats.MTI_Radio_config.Tele_dev_type)
+						{							
+							IPC_Update_Radio_status(FIFO_fd, &stats);
+							prev_RF_CH = stats.MTI_Radio_config.RF_channel;
+							prev_dev_type = stats.MTI_Radio_config.Tele_dev_type;
+						}
 						if(stats.counter < 10)//approx every second
-						{
-							//Check transceiver state; if ON, next state is get_data, otherwise wait.
+						{	//Check transceiver state; if ON, next state is get_data, otherwise wait.
 							state = (stats.MTI_Radio_config.Tele_dev_type>=Dev_type_min&& 
 									 stats.MTI_Radio_config.Tele_dev_type<=Dev_type_max) ? get_data : wait;
 							stats.counter++;

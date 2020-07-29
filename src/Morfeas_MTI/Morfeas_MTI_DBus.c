@@ -121,7 +121,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 		exit(EXIT_FAILURE);
 	}
 	sprintf(dbus_server_name_if, "%s%s", IF_NAME_PROTO, stats->dev_name);
-	Logger("\t Interface:\"%s\"\n", dbus_server_name_if);
+	Logger("Interface:\"%s\"\n", dbus_server_name_if);
 
 	while(handler_run)
 	{
@@ -183,6 +183,9 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_lock(&MTI_access);
 										if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 										{
+											if(!stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button&& 
+											   !stats->MTI_Radio_config.sreg.for_rmsw_dev.sleep_button)
+											   DBus_reply_msg(conn, msg, "MTI_Global_SWs(): Global aren't enabled");
 											if(!(err = stats->error))
 											{
 												if(!(err = set_MTI_Global_switches(ctx,
