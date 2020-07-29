@@ -208,6 +208,7 @@ typedef struct MTI_Update_Health_msg_struct{
 typedef struct MTI_Update_Radio_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MTI_IPv4;
 	unsigned char RF_channel;
 	unsigned Data_rate:2;
 	unsigned Tele_dev_type:3;
