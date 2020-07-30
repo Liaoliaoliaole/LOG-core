@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 char *MTI_charger_state_str[]={"Discharging", "Full", "", "Charging"};
 char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
-char *MTI_Tele_dev_type_str[]={"Disabled", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4_W20", NULL};
+char *MTI_Tele_dev_type_str[]={"Disabled", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4", NULL};
 char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW", NULL};
 
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)

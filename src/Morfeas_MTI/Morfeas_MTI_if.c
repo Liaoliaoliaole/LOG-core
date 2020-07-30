@@ -391,6 +391,8 @@ void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, un
 	//Load Device name to IPC_message
 	memccpy(IPC_msg.MTI_Update_Radio.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
 	IPC_msg.MTI_Update_Radio.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load MTI's IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->MTI_IPv4_addr, &(IPC_msg.MTI_Update_Radio.MTI_IPv4));
 	//Load Health status data to IPC_msg
 	IPC_msg.MTI_Update_Radio.RF_channel = stats->MTI_Radio_config.RF_channel;
 	IPC_msg.MTI_Update_Radio.Data_rate = stats->MTI_Radio_config.Data_rate;

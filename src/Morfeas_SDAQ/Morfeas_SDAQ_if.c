@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
+#define Ready_to_reg_mask 0x85//Mask for SDAQ state: standby, no error and normal mode
+#define SDAQ_ERROR_mask (1<<3)//Mask for SDAQ Error bit check
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,10 +54,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_Logger.h"
 #include "../Morfeas_RPi_Hat/Morfeas_RPi_Hat.h"
 
+enum SDAQ_registeration_status{
+	Unregistered = 0,
+	Registered,
+	Pending_Calibration_data,
+	Ready
+};
+
 static volatile struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
 	unsigned led_existent :1;
-	unsigned port_meas_existen :1;
+	unsigned port_meas_exist :1;
 	unsigned Clean_flag :1;
 	unsigned bus_info :1;
 }flags = {.run=1,0};
@@ -242,7 +251,7 @@ int main(int argc, char *argv[])
 			//Read Port's CSA Configuration from EEPROM
 			if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
 			{
-				flags.port_meas_existen = 1;
+				flags.port_meas_exist = 1;
 				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month,
 															  port_meas_config.last_cal_date.day,
 															  port_meas_config.last_cal_date.year+12000);
@@ -296,8 +305,7 @@ int main(int argc, char *argv[])
 
 	//-----Actions on the bus-----//
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
-	//Stop any measuring activity on the bus
-	Stop(CAN_socket_num, Broadcast);
+	Stop(CAN_socket_num, Broadcast);//Stop any measuring activity on the bus
 	while(flags.run)//FSM of Morfeas_SDAQ_if
 	{
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
@@ -337,20 +345,24 @@ int main(int argc, char *argv[])
 				case Device_status:
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
-						if(!(status_dec->status&0x85))//Enter: if SDAQ of sdaq_id_dec->device_addr is: standby, no error and normal mode
+						if(!(status_dec->status & Ready_to_reg_mask))
 						{
-							if(!SDAQ_data->info_collection_status)//request QueryDeviceInfo on entries if no all SDAQ's info is filled
+							if(SDAQ_data->reg_status == Unregistered)
 							{
 								Logger("Register new SDAQ (%s) with S/N: %010u -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
 																									  status_dec->dev_sn,
 																									  SDAQ_data->SDAQ_address);
-								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
-								SDAQ_data->info_collection_status = 1;
-
+								SDAQ_data->reg_status = Registered;
 							}
-							else if(SDAQ_data->info_collection_status == 3 && !incomplete_SDAQs(&stats))
+							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Registered SDAQ reporting status but without info and calibration data
+								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+							else if(SDAQ_data->reg_status == Ready && !incomplete_SDAQs(&stats))//Registered SDAQ reporting status but without info and calibration data
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 						}
+						else if(status_dec->status & SDAQ_ERROR_mask)
+							Logger("SDAQ (%s) with S/N: %010u -> Address: %02hhu Report ERROR!!!\n", dev_type_str[status_dec->dev_type],
+																									 status_dec->dev_sn,
+																									 SDAQ_data->SDAQ_address);
 						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, stats.detected_SDAQs);
 					}
 					else
@@ -377,7 +389,7 @@ int main(int argc, char *argv[])
 			msg_cnt = 0;
 			flags.bus_info = 0;
 			//Get Electrics for BUS port
-			if(flags.port_meas_existen)
+			if(flags.port_meas_exist)
 			{
 				if(!get_port_meas(&port_meas, stats.port,I2C_BUS_NUM))
 				{
@@ -739,7 +751,7 @@ int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 	while(list_SDAQs)
 	{
 		node_data = list_SDAQs->data;
-		if(node_data->info_collection_status<3)
+		if(node_data->reg_status < Ready)
 			incomp_amount++;
 		list_SDAQs = list_SDAQs->next;
 	}
@@ -825,7 +837,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			sdaq_node = list_node->data;
 			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
 			time(&(sdaq_node->last_seen));
-			sdaq_node->info_collection_status = 2;
+			sdaq_node->reg_status = Pending_Calibration_data;
 			//(Release and ) Allocate memory for the Channels_current_meas
 			if(sdaq_node->SDAQ_Channels_curr_meas)
 				free(sdaq_node->SDAQ_Channels_curr_meas);
@@ -901,7 +913,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			//if this is the last calibration date message, mark entry as "info complete"
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)
 			{
-				sdaq_node->info_collection_status = 3;
+				sdaq_node->reg_status = Ready;
 				return EXIT_SUCCESS;
 			}
 		}

@@ -248,7 +248,7 @@ struct SDAQ_info_entry{
 	GSList *SDAQ_Channels_acc_meas;
 	struct Channel_curr_meas *SDAQ_Channels_curr_meas;
 	time_t last_seen;
-	unsigned info_collection_status : 2;//3 = All info collected, 2 = Only Dev_info collected, 1 = Dev_info requested, 0 = Nothing has been collected
+	unsigned reg_status:2;
 };
 // Data of a SDAQ_cal_dates node
 struct Channel_date_entry{
