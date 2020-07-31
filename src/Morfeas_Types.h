@@ -157,8 +157,8 @@ struct QUAD_data_struct{
 	unsigned char RX_Success_ratio;
 	unsigned Data_isValid:1;
 	struct Gen_config_struct gen_config[2];
+	int CNTs[2];
 	float CHs[2];
-	float CHs_cal[2];
 };
 
 union switch_status_dec{
@@ -206,6 +206,7 @@ struct Morfeas_MTI_if_stats{
 	int error;
 	struct MTI_status_struct MTI_status;
 	struct MTI_Radio_config_status_struct MTI_Radio_config;
+	float QUAD_Tele_inp_scalers[2];
 	union MTI_Telemetry_data{
 		struct TC4_data_struct as_TC4;
 		struct TC8_data_struct as_TC8;

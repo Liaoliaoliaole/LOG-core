@@ -62,7 +62,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 	char Node_ID_str[100], Node_ID_parent_str[60]; 
 	char *status_str = NULL, name_buff[20], anchor[50];
 	unsigned char i, lim = 0, status_value;
-	float meas;
+	float meas, ref;
+	int cnt;
 	//Msg type from MTI_handler
 	switch(type)
 	{
@@ -183,25 +184,20 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status Value", UA_TYPES_BYTE);
 								sprintf(Node_ID_str, "%s.%s.meas", anchor, name_buff);
 								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Value", UA_TYPES_FLOAT);
+								//Add telemetry's Channel specific variables (Non Linkable)
+								sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
 								switch(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type)
 								{
 									case Tele_TC8:
-										//Add temperature reference channel 
-										sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
-										sprintf(Node_ID_str, "%s.ref", Node_ID_parent_str);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Reference", UA_TYPES_FLOAT);
-										break;
 									case Tele_TC4:
 										//Add temperature reference channel 
-										sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
 										sprintf(Node_ID_str, "%s.ref", Node_ID_parent_str);
 										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Reference", UA_TYPES_FLOAT);
 										break;
 									case Tele_quad:
 										//Add Raw counter channel 
-										sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
 										sprintf(Node_ID_str, "%s.raw", Node_ID_parent_str);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Raw Counter", UA_TYPES_FLOAT);
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Raw Counter", UA_TYPES_INT32);
 										break;
 								}
 							}
@@ -238,8 +234,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 					sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_tele_data.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_tele_data.Tele_dev_type]);
 					for(i=1; i<=lim; i++)
 					{	//Get and decode Telemetry's data;
-						status_value = IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid ? Okay : Disconnected;
-						if(!status_value)
+						if(IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid)
 						{
 							switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
 							{
@@ -248,31 +243,39 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 									break;
 								case Tele_TC8:
 									meas = IPC_msg_dec->MTI_tele_data.data.as_TC8.CHs[i-1];
+									ref = IPC_msg_dec->MTI_tele_data.data.as_TC8.Refs[i-1];
 									break;
 								case Tele_TC4:
 									meas = IPC_msg_dec->MTI_tele_data.data.as_TC4.CHs[i-1];
+									ref = (i>=1&&i<=2)?IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[0]:
+													   IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[1];
 									break;
 								case Tele_quad:
-									meas = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CHs_cal[i-1]; 
+									meas = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CHs[i-1];
+									cnt = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CNTs[i-1];
 									break;
 							}
-							if(meas >= NO_SENSOR_VALUE)//Check for No sensor value
+							status_value = Okay;
+							status_str = "Okay";
+							if(IPC_msg_dec->MTI_tele_data.Tele_dev_type != Tele_quad)
 							{
-								status_str = "No Sensor";
-								status_value = Tele_channel_noSensor;
-								meas = NAN;
+								if(meas >= NO_SENSOR_VALUE)//Check for No sensor value
+								{
+									status_str = "No Sensor";
+									status_value = Tele_channel_noSensor;
+									meas = NAN;
+								}
+								else if(meas != meas)//Check for Telemetry Error (meas == NAN)
+								{
+									status_str = "Error";
+									status_value = Tele_channel_Error;
+								}
 							}
-							else if(meas != meas)//Check for Telemetry Error (meas == NAN)
-							{
-								status_str = "Error";
-								status_value = Tele_channel_Error;
-							}
-							else
-								status_str = "Okay";
 						}
 						else
 						{
 							meas = NAN;
+							status_value = Disconnected;
 							status_str = "Disconnected";
 						}
 						//Update telemetry's Channel specific variables (Linkable)
@@ -286,19 +289,13 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
 						{
 							case Tele_TC8:
-								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.ref", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC8.Refs[i-1]), UA_TYPES_FLOAT);
-								break;
 							case Tele_TC4:
 								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.ref", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
-								if(i>=1&&i<=2)
-									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[0]), UA_TYPES_FLOAT);
-								else
-									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[1]), UA_TYPES_FLOAT);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &ref, UA_TYPES_FLOAT);
 								break;
 							case Tele_quad:
 								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.raw", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_QUAD.CHs[i-1]), UA_TYPES_FLOAT); 
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32); 
 								break;
 						}
 					}

@@ -144,8 +144,10 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->Tele_data.as_QUAD.packet_index = cur_MTI_Tele_data.as_QUAD.index;
 				stats->Tele_data.as_QUAD.RX_status = cur_MTI_Tele_data.as_QUAD.rx_status;
 				stats->Tele_data.as_QUAD.RX_Success_ratio = cur_MTI_Tele_data.as_QUAD.success;
-				stats->Tele_data.as_QUAD.CHs[0] = *(cur_MTI_Tele_data.as_QUAD.Channel_1);
-				stats->Tele_data.as_QUAD.CHs[1] = *(cur_MTI_Tele_data.as_QUAD.Channel_2);
+				stats->Tele_data.as_QUAD.CNTs[0] = (int)*(cur_MTI_Tele_data.as_QUAD.Channel_1);
+				stats->Tele_data.as_QUAD.CNTs[1] = (int)*(cur_MTI_Tele_data.as_QUAD.Channel_2);
+				for(i=0; i<2; i++)
+					stats->Tele_data.as_QUAD.CHs[i] = stats->Tele_data.as_QUAD.CNTs[i] * stats->QUAD_Tele_inp_scalers[i];
 			}
 			else
 				stats->Tele_data.as_QUAD.Data_isValid = 0;

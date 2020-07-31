@@ -409,7 +409,9 @@ void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, un
 //Function that send Telemetry data(not RMSWs and MUXs) to Morfeas_opc_ua via IPC
 void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 {
-	if(stats->MTI_Radio_config.Tele_dev_type<Dev_type_min || stats->MTI_Radio_config.Tele_dev_type>Dev_type_max)
+	if(stats->MTI_Radio_config.Tele_dev_type<Dev_type_min||
+	   stats->MTI_Radio_config.Tele_dev_type>Dev_type_max||
+	   stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
 		return;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
@@ -441,17 +443,3 @@ void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
-/*
-typedef struct MTI_tele_data_msg_struct{
-	unsigned char IPC_msg_type;
-	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
-	unsigned int MTI_IPv4;
-	unsigned Tele_dev_type:3;
-	union MTI_Tele_data_union{
-		struct TC4_data_struct as_TC4;
-		struct TC8_data_struct as_TC8;
-		struct TC16_data_struct as_TC16;
-		struct QUAD_data_struct as_QUAD;
-	}data;
-}MTI_tele_data_msg;
-*/
