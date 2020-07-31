@@ -372,17 +372,17 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 						break;
 					case MDAQ:
 						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type,
-																   Node_data->identifier,
-																   Node_data->channel,
-																   Node_data->receiver_or_value,
-																   req_value);
+																		   Node_data->identifier,
+																		   Node_data->channel,
+																		   Node_data->receiver_or_value,
+																		   req_value);
 						break;
 					case IOBOX:
 						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type,
-																   Node_data->identifier,
-																   Node_data->receiver_or_value,
-																   Node_data->channel,
-																   req_value);
+																		  Node_data->identifier,
+																		  Node_data->receiver_or_value,
+																		  Node_data->channel,
+																		  req_value);
 						break;
 					default: return UA_STATUSCODE_GOOD;
 				}

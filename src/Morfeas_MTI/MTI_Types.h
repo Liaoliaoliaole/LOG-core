@@ -33,6 +33,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MTI_STATUS_OFFSET 2000 //float registers
 #define MTI_TELE_DATA_OFFSET 2050 //float registers
 
+//Defined value that temperature telemetry sent if input is open (aka No sensor)
+#define NO_SENSOR_VALUE 2000.0
+
 //--- Enumerators for MTI Telemetry types---//
 enum MTI_Telemetry_Dev_type_enum{
 	Tele_TC16 = 2,

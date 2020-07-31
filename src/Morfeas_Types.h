@@ -158,6 +158,7 @@ struct QUAD_data_struct{
 	unsigned Data_isValid:1;
 	struct Gen_config_struct gen_config[2];
 	float CHs[2];
+	float CHs_cal[2];
 };
 
 union switch_status_dec{
@@ -197,6 +198,7 @@ struct RM_devs_data_struct{
 	unsigned char amount_of_devices;
 	struct RMSW_MUX_Mini_data_struct det_devs_data[MAX_RMSW_DEVs];
 };
+
 //Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
@@ -210,7 +212,7 @@ struct Morfeas_MTI_if_stats{
 		struct TC16_data_struct as_TC16;
 		struct QUAD_data_struct as_QUAD;
 		struct RM_devs_data_struct as_RMSWs;
-	} Tele_data;
+	}Tele_data;
 	unsigned int counter;
 };
 

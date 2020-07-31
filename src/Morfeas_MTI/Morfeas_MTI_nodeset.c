@@ -23,6 +23,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
+enum MTI_Tele_status_enum{
+	Okay = 0,
+	Tele_channel_noSensor,
+	Tele_channel_Error,
+	Disconnected = 127,
+	OFF_line = -1
+};
+
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	int negative_one = -1;
@@ -52,7 +60,9 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 {
 	UA_NodeId NodeId;
 	char Node_ID_str[100], Node_ID_parent_str[60]; 
-	char name_buff[20], anchor[50];
+	char *status_str = NULL, name_buff[20], anchor[50];
+	unsigned char i, lim = 0, status_value;
+	float meas;
 	//Msg type from MTI_handler
 	switch(type)
 	{
@@ -141,88 +151,163 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						{
 							strcpy(Node_ID_parent_str, Node_ID_str);
 							//Add telemetry related variables
-							sprintf(Node_ID_str, "%s.Tele.index", Node_ID_parent_str);
-							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Packet Index", UA_TYPES_UINT32);
-							sprintf(Node_ID_str, "%s.Tele.RX_status", Node_ID_parent_str);
+							sprintf(Node_ID_str, "%s.index", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Packet Index", UA_TYPES_UINT16);
+							sprintf(Node_ID_str, "%s.RX_status", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "RX status", UA_TYPES_BYTE);
-							sprintf(Node_ID_str, "%s.Tele.success", Node_ID_parent_str);
+							sprintf(Node_ID_str, "%s.success", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "RX Success ratio(%)", UA_TYPES_BYTE);
-							sprintf(Node_ID_str, "%s.Tele.isValid", Node_ID_parent_str);
+							sprintf(Node_ID_str, "%s.isValid", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "isValid", UA_TYPES_BOOLEAN);
 							//Add telemetry specific variables
 							sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_Update_Radio.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_Update_Radio.Tele_dev_type]);
 							switch(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type)
 							{
-								case Tele_TC16: 
-									for(unsigned char i=1; i<=16; i++)
-									{
-										//Add telemetry's Channel node
-										sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
-										sprintf(name_buff, "CH%02u", i);
-										sprintf(Node_ID_str, "%s.%s", Node_ID_parent_str, name_buff);
-										Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
-										//Add telemetry's Channel specific variables (Linkable)
-										sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
-										sprintf(Node_ID_str, "%s.%s.status", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status", UA_TYPES_STRING);
-										sprintf(Node_ID_str, "%s.%s.status_byte", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status Value", UA_TYPES_BYTE);
-										sprintf(Node_ID_str, "%s.%s.meas", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Value", UA_TYPES_FLOAT);
-									}
-									break;
-								case Tele_TC8:
-									for(unsigned char i=1; i<=8; i++)
-									{
-										//Add telemetry's Channel node
-										sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
-										sprintf(name_buff, "CH%02u", i);
-										sprintf(Node_ID_str, "%s.%s", Node_ID_parent_str, name_buff);
-										Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
+								case Tele_TC16: lim = 16; break;
+								case Tele_TC8:  lim =  8; break;
+								case Tele_TC4:  lim =  4; break;
+								case Tele_quad: lim =  2; break;
+							}
+							for(i=1; i<=lim; i++)
+							{
+								//Add telemetry's Channel node
+								sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
+								sprintf(name_buff, "CH%02u", i);
+								sprintf(Node_ID_str, "%s.%s", Node_ID_parent_str, name_buff);
+								Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
+								//Add telemetry's Channel specific variables (Linkable)
+								sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
+								sprintf(Node_ID_str, "%s.%s.status", anchor, name_buff);
+								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status", UA_TYPES_STRING);
+								sprintf(Node_ID_str, "%s.%s.status_byte", anchor, name_buff);
+								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status Value", UA_TYPES_BYTE);
+								sprintf(Node_ID_str, "%s.%s.meas", anchor, name_buff);
+								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Value", UA_TYPES_FLOAT);
+								switch(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type)
+								{
+									case Tele_TC8:
 										//Add temperature reference channel 
 										sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
 										sprintf(Node_ID_str, "%s.ref", Node_ID_parent_str);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Reference", UA_TYPES_STRING);
-										//Add telemetry's Channel specific variables (Linkable)
-										sprintf(Node_ID_str, "%s.%s.status", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status", UA_TYPES_STRING);
-										sprintf(Node_ID_str, "%s.%s.status_byte", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status Value", UA_TYPES_BYTE);
-										sprintf(Node_ID_str, "%s.%s.meas", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Value", UA_TYPES_FLOAT);
-									}
-									break;
-								case Tele_TC4:
-									for(unsigned char i=1; i<=4; i++)
-									{
-										//Add telemetry's Channel node
-										sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
-										sprintf(name_buff, "CH%02u", i);
-										sprintf(Node_ID_str, "%s.%s", Node_ID_parent_str, name_buff);
-										Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Reference", UA_TYPES_FLOAT);
+										break;
+									case Tele_TC4:
 										//Add temperature reference channel 
 										sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
 										sprintf(Node_ID_str, "%s.ref", Node_ID_parent_str);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Reference", UA_TYPES_STRING);
-										//Add telemetry's Channel specific variables (Linkable)
-										sprintf(Node_ID_str, "%s.%s.status", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status", UA_TYPES_STRING);
-										sprintf(Node_ID_str, "%s.%s.status_byte", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status Value", UA_TYPES_BYTE);
-										sprintf(Node_ID_str, "%s.%s.meas", anchor, name_buff);
-										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Value", UA_TYPES_FLOAT);
-									}
-									break;
-								case Tele_quad:
-									break;
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Reference", UA_TYPES_FLOAT);
+										break;
+									case Tele_quad:
+										//Add Raw counter channel 
+										sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_report.Dev_or_Bus_name, name_buff);
+										sprintf(Node_ID_str, "%s.raw", Node_ID_parent_str);
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Raw Counter", UA_TYPES_FLOAT);
+										break;
+								}
 							}
 						}
 					}
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
-		case IPC_MTI_data:
+		case IPC_MTI_Tele_data:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
+				if(IPC_msg_dec->MTI_tele_data.Tele_dev_type>=Dev_type_min&& 
+				   IPC_msg_dec->MTI_tele_data.Tele_dev_type<=Dev_type_max&&
+				   IPC_msg_dec->MTI_tele_data.Tele_dev_type!= RM_SW_MUX)
+				{
+					sprintf(Node_ID_parent_str, "%s.Radio", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name);
+					//Update telemetry related variables. (All memory position at same order, TC4 used as reference
+					sprintf(Node_ID_str, "%s.Tele.index", Node_ID_parent_str);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC4.packet_index), UA_TYPES_UINT16);
+					sprintf(Node_ID_str, "%s.Tele.RX_status", Node_ID_parent_str);
+					status_value=IPC_msg_dec->MTI_tele_data.data.as_TC4.RX_status;
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
+					sprintf(Node_ID_str, "%s.Tele.success", Node_ID_parent_str);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC4.RX_Success_ratio), UA_TYPES_BYTE);
+					sprintf(Node_ID_str, "%s.Tele.isValid", Node_ID_parent_str);
+					status_value=IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid;
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
+					switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
+					{
+						case Tele_TC16: lim = 16; break;
+						case Tele_TC8:  lim =  8; break;
+						case Tele_TC4:  lim =  4; break;
+						case Tele_quad: lim =  2; break;
+					}
+					sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_tele_data.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_tele_data.Tele_dev_type]);
+					for(i=1; i<=lim; i++)
+					{	//Get and decode Telemetry's data;
+						status_value = IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid ? Okay : Disconnected;
+						if(!status_value)
+						{
+							switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
+							{
+								case Tele_TC16:
+									meas = IPC_msg_dec->MTI_tele_data.data.as_TC16.CHs[i-1];
+									break;
+								case Tele_TC8:
+									meas = IPC_msg_dec->MTI_tele_data.data.as_TC8.CHs[i-1];
+									break;
+								case Tele_TC4:
+									meas = IPC_msg_dec->MTI_tele_data.data.as_TC4.CHs[i-1];
+									break;
+								case Tele_quad:
+									meas = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CHs_cal[i-1]; 
+									break;
+							}
+							if(meas >= NO_SENSOR_VALUE)//Check for No sensor value
+							{
+								status_str = "No Sensor";
+								status_value = Tele_channel_noSensor;
+								meas = NAN;
+							}
+							else if(meas != meas)//Check for Telemetry Error (meas == NAN)
+							{
+								status_str = "Error";
+								status_value = Tele_channel_Error;
+							}
+							else
+								status_str = "Okay";
+						}
+						else
+						{
+							meas = NAN;
+							status_str = "Disconnected";
+						}
+						//Update telemetry's Channel specific variables (Linkable)
+						sprintf(Node_ID_str, "%s.CH%02u.meas", anchor, i);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+						sprintf(Node_ID_str, "%s.CH%02u.status", anchor, i);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
+						sprintf(Node_ID_str, "%s.CH%02u.status_byte", anchor, i);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
+						//Update telemetry's Channel specific variables (Non Linkable)
+						switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
+						{
+							case Tele_TC8:
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.ref", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC8.Refs[i-1]), UA_TYPES_FLOAT);
+								break;
+							case Tele_TC4:
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.ref", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
+								if(i>=1&&i<=2)
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[0]), UA_TYPES_FLOAT);
+								else
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[1]), UA_TYPES_FLOAT);
+								break;
+							case Tele_quad:
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.raw", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_tele_data.data.as_QUAD.CHs[i-1]), UA_TYPES_FLOAT); 
+								break;
+						}
+					}
+				}
+			pthread_mutex_unlock(&OPC_UA_NODESET_access);
+			break;
+		case IPC_MTI_RMSW_MUX_data:
+			pthread_mutex_lock(&OPC_UA_NODESET_access);
+			
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 	}

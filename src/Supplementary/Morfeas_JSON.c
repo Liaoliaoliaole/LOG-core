@@ -578,7 +578,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
 						for(i=0; i<4; i++)
 						{
-							if(stats->Tele_data.as_TC4.CHs[i]<2047.0)
+							if(stats->Tele_data.as_TC4.CHs[i]<NO_SENSOR_VALUE)
 								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC4.CHs[i]));
 							else
 								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
@@ -591,7 +591,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
 						for(i=0; i<8; i++)
 						{
-							if(stats->Tele_data.as_TC8.CHs[i]<2047.0)
+							if(stats->Tele_data.as_TC8.CHs[i]<NO_SENSOR_VALUE)
 								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC8.CHs[i]));
 							else
 								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
@@ -603,7 +603,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 						for(i=0; i<16; i++)
 						{
-							if(stats->Tele_data.as_TC16.CHs[i]<2047.0)
+							if(stats->Tele_data.as_TC16.CHs[i]<NO_SENSOR_VALUE)
 								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC16.CHs[i]));
 							else
 								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
@@ -677,7 +677,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							CHs = cJSON_CreateArray();
 							for(int j=0; j<4; j++)
 							{
-								if(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]<2047.0)
+								if(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]<NO_SENSOR_VALUE)
 									cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));
 								else
 									cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));

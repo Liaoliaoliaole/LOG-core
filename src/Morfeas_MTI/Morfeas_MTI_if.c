@@ -82,6 +82,8 @@ void IPC_reg_MTI_tree(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 void IPC_Update_Health_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 //Function that send Radio configuration to Morfeas_opc_ua via IPC
 void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, unsigned char new_config);
+//Function that send Telemetry data(not RMSWs and MUXs) to Morfeas_opc_ua via IPC
+void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
@@ -268,7 +270,9 @@ int main(int argc, char *argv[])
 				break;
 			case get_data:
 				pthread_mutex_lock(&MTI_access);
-					state = get_MTI_Tele_data(ctx, &stats) ? error : wait;
+					state = (ret = get_MTI_Tele_data(ctx, &stats)) ? error : wait;
+					if(!ret)
+						IPC_Telemetry_data(FIFO_fd, &stats);
 				pthread_mutex_unlock(&MTI_access);
 				break;
 			case get_status:
@@ -401,3 +405,53 @@ void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, un
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
+
+//Function that send Telemetry data(not RMSWs and MUXs) to Morfeas_opc_ua via IPC
+void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
+{
+	if(stats->MTI_Radio_config.Tele_dev_type<Dev_type_min || stats->MTI_Radio_config.Tele_dev_type>Dev_type_max)
+		return;
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	//--- Load necessary message data to IPC_message ---/
+	IPC_msg.MTI_tele_data.IPC_msg_type = IPC_MTI_Tele_data; //Message type
+	//Load Device name to IPC_message
+	memccpy(IPC_msg.MTI_tele_data.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_msg.MTI_tele_data.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load MTI's IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->MTI_IPv4_addr, &(IPC_msg.MTI_tele_data.MTI_IPv4));
+	//Load Telemetry device type
+	IPC_msg.MTI_tele_data.Tele_dev_type = stats->MTI_Radio_config.Tele_dev_type;
+	//Load Telemetry device data
+	switch(stats->MTI_Radio_config.Tele_dev_type)
+	{
+		case Tele_TC16:
+			memcpy(&(IPC_msg.MTI_tele_data.data), &(stats->Tele_data), sizeof(IPC_msg.MTI_tele_data.data.as_TC16));
+			break;
+		case Tele_TC8:
+			memcpy(&(IPC_msg.MTI_tele_data.data), &(stats->Tele_data), sizeof(IPC_msg.MTI_tele_data.data.as_TC8));
+			break;
+		case Tele_TC4:
+			memcpy(&(IPC_msg.MTI_tele_data.data), &(stats->Tele_data), sizeof(IPC_msg.MTI_tele_data.data.as_TC4));
+			break;
+		case Tele_quad:
+			memcpy(&(IPC_msg.MTI_tele_data.data), &(stats->Tele_data), sizeof(IPC_msg.MTI_tele_data.data.as_QUAD));
+			break;
+	}
+	//Send status report to Morfeas_opc_ua
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
+}
+/*
+typedef struct MTI_tele_data_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MTI_IPv4;
+	unsigned Tele_dev_type:3;
+	union MTI_Tele_data_union{
+		struct TC4_data_struct as_TC4;
+		struct TC8_data_struct as_TC8;
+		struct TC16_data_struct as_TC16;
+		struct QUAD_data_struct as_QUAD;
+	}data;
+}MTI_tele_data_msg;
+*/

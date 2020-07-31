@@ -42,7 +42,8 @@ enum Morfeas_IPC_msg_type{
 	IPC_MDAQ_channels_reg,
 	IPC_MDAQ_report,
 	//MTI_related IPC messages
-	IPC_MTI_data,
+	IPC_MTI_Tele_data,
+	IPC_MTI_RMSW_MUX_data,
 	IPC_MTI_tree_reg,
 	IPC_MTI_Update_Health,
 	IPC_MTI_Update_Radio,
@@ -58,7 +59,7 @@ enum Morfeas_IPC_msg_type{
 	Morfeas_IPC_MDAQ_MIN_type = IPC_MDAQ_data,
 	Morfeas_IPC_MDAQ_MAX_type = IPC_MDAQ_report,
 	//---MTI---//
-	Morfeas_IPC_MTI_MIN_type = IPC_MTI_data,
+	Morfeas_IPC_MTI_MIN_type = IPC_MTI_Tele_data,
 	Morfeas_IPC_MTI_MAX_type = IPC_MTI_report,
 	//MAX number of any type of IPC message
 	Morfeas_IPC_MAX_type = IPC_MTI_report
@@ -215,14 +216,18 @@ typedef struct MTI_Update_Radio_msg_struct{
 	unsigned new_config:1;
 }MTI_Update_Radio_msg;
 
-/*typedef struct MTI_data_msg_struct{
+typedef struct MTI_tele_data_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MTI_IPv4;
-	unsigned int meas_index;
-	float board_temp;
-	struct MTI_Channel meas[8];
-}MTI_data_msg;*/
+	unsigned Tele_dev_type:3;
+	union MTI_Tele_data_union{
+		struct TC4_data_struct as_TC4;
+		struct TC8_data_struct as_TC8;
+		struct TC16_data_struct as_TC16;
+		struct QUAD_data_struct as_QUAD;
+	}data;
+}MTI_tele_data_msg;
 #pragma pack(pop)//Disable packing
 
 //--IPC_MESSAGE--//
@@ -249,7 +254,7 @@ typedef union{
 	MTI_report_msg MTI_report;
 	MTI_Update_Health_msg MTI_Update_Health;
 	MTI_Update_Radio_msg MTI_Update_Radio;
-	//MTI_data_msg MTI_data;
+	MTI_tele_data_msg MTI_tele_data;
 }IPC_message;
 
 //Function that convert interface_type_string to interface_type_num
