@@ -40,7 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 enum MTI_Telemetry_Dev_type_enum{
 	Tele_TC16 = 2,
 	Tele_TC8,
-	RM_SW_MUX,
+	RMSW_MUX,
 	Tele_quad,
 	Tele_TC4,
 	//Limits

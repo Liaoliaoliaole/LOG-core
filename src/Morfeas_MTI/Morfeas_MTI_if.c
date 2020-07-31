@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
 	IPC_reg_MTI_tree(FIFO_fd, &stats);//Send MTI tree registration message to Morfeas_OPC_UA via IPC
 	stats.error = 0;//load no error on stats
 	MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-	
+
 	//Start D-Bus listener function in a thread
 	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);
 
@@ -248,16 +248,16 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
-						if(prev_RF_CH^stats.MTI_Radio_config.RF_channel|| 
+						if(prev_RF_CH^stats.MTI_Radio_config.RF_channel||
 						   prev_dev_type^stats.MTI_Radio_config.Tele_dev_type)
-						{							
+						{
 							IPC_Update_Radio_status(FIFO_fd, &stats, prev_dev_type^stats.MTI_Radio_config.Tele_dev_type?1:0);
 							prev_RF_CH = stats.MTI_Radio_config.RF_channel;
 							prev_dev_type = stats.MTI_Radio_config.Tele_dev_type;
 						}
 						if(stats.counter < 10)//approx every second
 						{	//Check transceiver state; if ON, next state is get_data, otherwise wait.
-							state = (stats.MTI_Radio_config.Tele_dev_type>=Dev_type_min&& 
+							state = (stats.MTI_Radio_config.Tele_dev_type>=Dev_type_min&&
 									 stats.MTI_Radio_config.Tele_dev_type<=Dev_type_max) ? get_data : wait;
 							stats.counter++;
 						}
@@ -411,7 +411,7 @@ void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 {
 	if(stats->MTI_Radio_config.Tele_dev_type<Dev_type_min||
 	   stats->MTI_Radio_config.Tele_dev_type>Dev_type_max||
-	   stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
+	   stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 		return;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};

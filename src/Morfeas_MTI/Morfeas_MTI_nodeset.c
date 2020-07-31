@@ -59,7 +59,7 @@ void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
-	char Node_ID_str[100], Node_ID_parent_str[60]; 
+	char Node_ID_str[100], Node_ID_parent_str[60];
 	char *status_str = NULL, name_buff[20], anchor[50];
 	unsigned char i, lim = 0, status_value;
 	float meas, ref;
@@ -147,8 +147,9 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 					if(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type>=Dev_type_min && IPC_msg_dec->MTI_Update_Radio.Tele_dev_type<=Dev_type_max)
 					{
 						sprintf(Node_ID_parent_str, "%s.Radio", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
-						Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_Update_Radio.Tele_dev_type]);
-						if(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type != RM_SW_MUX)
+						sprintf(name_buff, "Tele(%s)", MTI_Tele_dev_type_str[IPC_msg_dec->MTI_Update_Radio.Tele_dev_type]);
+						Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
+						if(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type != RMSW_MUX)
 						{
 							strcpy(Node_ID_parent_str, Node_ID_str);
 							//Add telemetry related variables
@@ -190,12 +191,12 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								{
 									case Tele_TC8:
 									case Tele_TC4:
-										//Add temperature reference channel 
+										//Add temperature reference channel
 										sprintf(Node_ID_str, "%s.ref", Node_ID_parent_str);
 										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Reference", UA_TYPES_FLOAT);
 										break;
 									case Tele_quad:
-										//Add Raw counter channel 
+										//Add Raw counter channel
 										sprintf(Node_ID_str, "%s.raw", Node_ID_parent_str);
 										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Raw Counter", UA_TYPES_INT32);
 										break;
@@ -208,9 +209,9 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			break;
 		case IPC_MTI_Tele_data:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				if(IPC_msg_dec->MTI_tele_data.Tele_dev_type>=Dev_type_min&& 
+				if(IPC_msg_dec->MTI_tele_data.Tele_dev_type>=Dev_type_min&&
 				   IPC_msg_dec->MTI_tele_data.Tele_dev_type<=Dev_type_max&&
-				   IPC_msg_dec->MTI_tele_data.Tele_dev_type!= RM_SW_MUX)
+				   IPC_msg_dec->MTI_tele_data.Tele_dev_type!= RMSW_MUX)
 				{
 					sprintf(Node_ID_parent_str, "%s.Radio", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name);
 					//Update telemetry related variables. (All memory position at same order, TC4 used as reference
@@ -295,7 +296,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								break;
 							case Tele_quad:
 								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.raw", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32); 
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32);
 								break;
 						}
 					}
@@ -304,7 +305,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			break;
 		case IPC_MTI_RMSW_MUX_data:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-			
+
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 	}

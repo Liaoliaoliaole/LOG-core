@@ -181,9 +181,9 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 										break;
 									}
 									pthread_mutex_lock(&MTI_access);
-										if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
+										if(stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 										{
-											if(!stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button&& 
+											if(!stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button&&
 											   !stats->MTI_Radio_config.sreg.for_rmsw_dev.sleep_button)
 											   DBus_reply_msg(conn, msg, "MTI_Global_SWs(): Global aren't enabled");
 											if(!(err = stats->error))
@@ -205,7 +205,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 										break;
 									}
 									pthread_mutex_lock(&MTI_access);
-										if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
+										if(stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 										{
 											if(stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button)
 												DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Global control is enabled");
@@ -373,7 +373,7 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 		;
 	if(*new_mode>Dev_type_max)//Check if new_mode is valid
 		return "new_MTI_config(): new_mode is Unknown";
-	if(*new_mode != RM_SW_MUX && *new_mode != Tele_quad)
+	if(*new_mode != RMSW_MUX && *new_mode != Tele_quad)
 	{
 		if(cJSON_HasObjectItem(JSON_args,"StV") && cJSON_HasObjectItem(JSON_args,"StF"))
 		{
@@ -394,7 +394,7 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 			sregs->for_temp_tele.StF = 0;
 		}
 	}
-	else if(*new_mode == RM_SW_MUX)
+	else if(*new_mode == RMSW_MUX)
 	{
 		if(cJSON_HasObjectItem(JSON_args,"G_SW") && cJSON_HasObjectItem(JSON_args,"G_SL"))
 		{
@@ -452,8 +452,8 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 		return "new_PWM_config(): PWM_gens_config wrong size Array";
 	for(int i=0; (JSON_element = cJSON_GetArrayItem(JSON_Array, i)) && i<2; i++)
 	{
-		if(!cJSON_HasObjectItem(JSON_element,"max") || 
-		   !cJSON_HasObjectItem(JSON_element,"min")|| 
+		if(!cJSON_HasObjectItem(JSON_element,"max") ||
+		   !cJSON_HasObjectItem(JSON_element,"min")||
 		   !cJSON_HasObjectItem(JSON_element,"saturation"))
 			return "new_PWM_config(): Missing Arguments";
 		if(cJSON_GetObjectItem(JSON_element,"max")->type != cJSON_Number)

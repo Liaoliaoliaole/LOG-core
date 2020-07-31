@@ -84,7 +84,7 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				for(int i=0; i<sizeof(stats->MTI_Radio_config.sreg.as_array);i++)
 					stats->MTI_Radio_config.sreg.as_array[i]=0;
 			break;
-		case RM_SW_MUX:
+		case RMSW_MUX:
 			stats->MTI_Radio_config.sreg.as_array[0] = cur_RX_config.Specific_reg[0];
 			stats->MTI_Radio_config.sreg.as_array[1] = cur_RX_config.Specific_reg[21];
 			break;
@@ -165,7 +165,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.as_byte = Pulse_gen_conf.CHs[i].cnt_mode;
 			}
 			break;
-		case RM_SW_MUX:
+		case RMSW_MUX:
 			//Zero the amount of detected devices
 			stats->Tele_data.as_RMSWs.amount_of_devices = 0;
 			//Loop that Getting The Remote controlling devices data, and store them to the cur_MTI_Tele_data struct.
@@ -247,7 +247,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 				amount = 6;//Including configuration for MTI's validation mechanism
 			}
 			break;
-		case RM_SW_MUX:
+		case RMSW_MUX:
 			new_Radio_config.RF_channel = 0;//Remote controlling device always listening at channel 0 (2400MHz)
 			new_Radio_config.Specific_reg[0] = new_sregs->as_array[0];//Device Specific Register 0, Global switches configuration
 			amount = 6;//Including Global control register

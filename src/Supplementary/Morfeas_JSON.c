@@ -515,7 +515,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	FILE * pFile;
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash;
-	
+
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
 	//Correct logstat_path_and_name
@@ -524,7 +524,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
 	char *JSON_str = NULL;
-	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *PWM_config = NULL, 
+	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *PWM_config = NULL,
 	      *MTI_global_state = NULL, *Tele_data = NULL, *CHs = NULL, *REFs = NULL, *RMSW_t = NULL;
 
 	//Convert IPv4 to MTI's Identifier
@@ -558,7 +558,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 		if(stats->MTI_Radio_config.Tele_dev_type>1)//transceiver enabled
 		{
 			//Add device specific values on JSON root
-			if(stats->MTI_Radio_config.Tele_dev_type != RM_SW_MUX)
+			if(stats->MTI_Radio_config.Tele_dev_type != RMSW_MUX)
 			{
 				//Add RX status data for all the Telemetries (exception to Remote switches). Format and position same for all, TC4 used as reference
 				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateObject());
@@ -618,7 +618,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							cJSON_AddNumberToObject(CHs, "PWM_min", stats->Tele_data.as_QUAD.gen_config[i].min);
 							cJSON_AddItemToObject(CHs, "Saturation_mode", cJSON_CreateBool(stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.saturation));
 							cJSON_AddItemToObject(CHs, "Fixed_freq", cJSON_CreateBool(stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.fixed_freq));
-							cJSON_AddItemToArray(PWM_config, CHs);							
+							cJSON_AddItemToArray(PWM_config, CHs);
 						}
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 						for(i=0; i<2; i++)
@@ -626,7 +626,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						break;
 				}
 			}
-			else if(stats->MTI_Radio_config.Tele_dev_type == RM_SW_MUX)
+			else if(stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 			{
 				//Add MTI_global_state to MTI_status
 				cJSON_AddItemToObject(MTI_status, "MTI_Global_state", MTI_global_state = cJSON_CreateObject());
@@ -661,9 +661,9 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							//Add measurements
 							CHs = cJSON_CreateArray();
 							for(int j=0; j<4; j++)
-								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));												
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));
 							cJSON_AddItemToObject(RMSW_t, "CHs_meas", CHs);
-							//Add control status 
+							//Add control status
 							REFs = cJSON_CreateObject();
 							cJSON_AddNumberToObject(REFs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
 							cJSON_AddNumberToObject(REFs, "TX_Rate", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.rmsw_dec.Rep_rate?2:20);
@@ -683,7 +683,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 									cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
 							}
 							cJSON_AddItemToObject(RMSW_t, "CHs_meas", CHs);
-							//Add control status 
+							//Add control status
 							REFs = cJSON_CreateObject();
 							cJSON_AddNumberToObject(REFs, "Control_byte", stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.as_byte);
 							switch(stats->Tele_data.as_RMSWs.det_devs_data[i].switch_status.mini_dec.Rep_rate)
@@ -699,7 +699,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 					}
 					cJSON_AddItemToArray(Tele_data, RMSW_t);
 				}
-				
+
 			}
 		}
 	}
