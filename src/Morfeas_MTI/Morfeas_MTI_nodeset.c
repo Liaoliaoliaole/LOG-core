@@ -224,9 +224,13 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						{	//Add RMSW/MUX related Global switches nodes
 							sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
 							sprintf(Node_ID_str, "%s.G_SW", Node_ID_parent_str);
-							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global ON/OFF", UA_TYPES_BOOLEAN);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global ON/OFF Control", UA_TYPES_BOOLEAN);
 							sprintf(Node_ID_str, "%s.G_SL", Node_ID_parent_str);
-							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global Sleep", UA_TYPES_BOOLEAN);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global Sleep Control", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.G_P_state", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global ON/OFF state", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.G_S_state", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global Sleep state", UA_TYPES_BOOLEAN);
 						}
 					}
 				}
@@ -244,11 +248,17 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						break;
 					case RMSW_MUX:
 						sprintf(Node_ID_str, "%s.Radio.Tele.G_SW", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
-						i=IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SW;
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &i, UA_TYPES_BOOLEAN);
+						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SW;
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
 						sprintf(Node_ID_str, "%s.Radio.Tele.G_SL", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
-						i=IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SL;
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &i, UA_TYPES_BOOLEAN);
+						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SL;
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
+						sprintf(Node_ID_str, "%s.Radio.Tele.G_P_state", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_P_state;
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
+						sprintf(Node_ID_str, "%s.Radio.Tele.G_S_state", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_S_state;
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
 						break;
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
