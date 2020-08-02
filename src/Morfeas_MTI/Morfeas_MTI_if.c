@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
 	int ret, tcp_port = MODBUS_TCP_DEFAULT_PORT, modbus_addr = default_slave_address;
 	char *path_to_logstat_dir;
 	unsigned char state = get_config, prev_RF_CH=-1, prev_dev_type=-1;
+	unsigned short prev_sRegs=-1;
 	struct Morfeas_MTI_if_stats stats = {0};
 	//Variables for threads
 	pthread_t DBus_listener_Thread_id;
@@ -249,11 +250,13 @@ int main(int argc, char *argv[])
 					if(!get_MTI_Radio_config(ctx, &stats))
 					{
 						if(prev_RF_CH^stats.MTI_Radio_config.RF_channel||
-						   prev_dev_type^stats.MTI_Radio_config.Tele_dev_type)
+						   prev_dev_type^stats.MTI_Radio_config.Tele_dev_type||
+						   prev_sRegs^stats.MTI_Radio_config.sRegs.as_short)
 						{
 							IPC_Update_Radio_status(FIFO_fd, &stats, prev_dev_type^stats.MTI_Radio_config.Tele_dev_type?1:0);
 							prev_RF_CH = stats.MTI_Radio_config.RF_channel;
 							prev_dev_type = stats.MTI_Radio_config.Tele_dev_type;
+							prev_sRegs = stats.MTI_Radio_config.sRegs.as_short;
 						}
 						if(stats.counter < 10)//approx every second
 						{	//Check transceiver state; if ON, next state is get_data, otherwise wait.
@@ -401,7 +404,8 @@ void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, un
 	IPC_msg.MTI_Update_Radio.RF_channel = stats->MTI_Radio_config.RF_channel;
 	IPC_msg.MTI_Update_Radio.Data_rate = stats->MTI_Radio_config.Data_rate;
 	IPC_msg.MTI_Update_Radio.Tele_dev_type = stats->MTI_Radio_config.Tele_dev_type;
-	IPC_msg.MTI_Update_Radio.new_config = new_config?1:0;
+	memcpy(&(IPC_msg.MTI_Update_Radio.sRegs), &(stats->MTI_Radio_config.sRegs), sizeof(IPC_msg.MTI_Update_Radio.sRegs));
+	IPC_msg.MTI_Update_Radio.isNew_config = new_config?1:0;
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }

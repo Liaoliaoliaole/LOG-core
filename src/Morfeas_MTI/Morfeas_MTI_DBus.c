@@ -60,7 +60,7 @@ int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str);
 int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *reply_str);
 
 	//--- Local Functions ---//
-char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH, unsigned char *new_mode, union MTI_specific_regs *sregs);
+char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH, unsigned char *new_mode, union MTI_specific_regs *snew_sRegs);
 char * ctrl_tele_SWs_argValidator(cJSON *JSON_args, unsigned char *mem_pos, unsigned char *tele_type, unsigned char *sw_name);
 char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[]);
 
@@ -183,8 +183,8 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_lock(&MTI_access);
 										if(stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 										{
-											if(!stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button&&
-											   !stats->MTI_Radio_config.sreg.for_rmsw_dev.sleep_button)
+											if(!stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_SW&&
+											   !stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_SL)
 											   DBus_reply_msg(conn, msg, "MTI_Global_SWs(): Global aren't enabled");
 											if(!(err = stats->error))
 											{
@@ -207,7 +207,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_lock(&MTI_access);
 										if(stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 										{
-											if(stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button)
+											if(stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_SW)
 												DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Global control is enabled");
 											else
 											{
@@ -353,11 +353,11 @@ unsigned char get_rmswORmux_sw_name(unsigned char tele_type, char *buf)
 	return -1;
 }
 
-char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,unsigned char *new_mode, union MTI_specific_regs *sregs)
+char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,unsigned char *new_mode, union MTI_specific_regs *new_sRegs)
 {
 	char *buf;
 
-	if(!JSON_args||!new_RF_CH||!new_mode||!sregs)
+	if(!JSON_args||!new_RF_CH||!new_mode||!new_sRegs)
 		return "NULL at Argument(s)";
 
 	//Validate data in argument
@@ -385,22 +385,22 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 				return "new_MTI_config(): StF is NAN";
 			if(cJSON_GetObjectItem(JSON_args,"StF")->valueint > 0xff)
 				return "new_MTI_config(): StF is invalid (>0xff)";
-			sregs->for_temp_tele.StV = cJSON_GetObjectItem(JSON_args,"StV")->valueint;
-			sregs->for_temp_tele.StF = cJSON_GetObjectItem(JSON_args,"StF")->valueint;
+			new_sRegs->for_temp_tele.StV = cJSON_GetObjectItem(JSON_args,"StV")->valueint;
+			new_sRegs->for_temp_tele.StF = cJSON_GetObjectItem(JSON_args,"StF")->valueint;
 		}
 		else
 		{
-			sregs->for_temp_tele.StV = 0;
-			sregs->for_temp_tele.StF = 0;
+			new_sRegs->for_temp_tele.StV = 0;
+			new_sRegs->for_temp_tele.StF = 0;
 		}
 	}
 	else if(*new_mode == RMSW_MUX)
 	{
 		if(cJSON_HasObjectItem(JSON_args,"G_SW") && cJSON_HasObjectItem(JSON_args,"G_SL"))
 		{
-			sregs->for_rmsw_dev.reserver = 0;//reset reserved bits
-			sregs->for_rmsw_dev.manual_button = cJSON_GetObjectItem(JSON_args,"G_SW")->valueint?1:0;
-			sregs->for_rmsw_dev.sleep_button = cJSON_GetObjectItem(JSON_args,"G_SL")->valueint?1:0;
+			new_sRegs->for_rmsw_dev.reserver = 0;//reset reserved bits
+			new_sRegs->for_rmsw_dev.G_SW = cJSON_GetObjectItem(JSON_args,"G_SW")->valueint?1:0;
+			new_sRegs->for_rmsw_dev.G_SL = cJSON_GetObjectItem(JSON_args,"G_SL")->valueint?1:0;
 		}
 		else
 			return "new_MTI_config(): Missing Arguments";

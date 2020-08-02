@@ -77,16 +77,16 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 		case Tele_TC4:
 			if(cur_RX_config.Specific_reg[0]==49)//Check if Message validation is enable. From MTI's Documentation.
 			{
-				stats->MTI_Radio_config.sreg.for_temp_tele.StV = cur_RX_config.Specific_reg[1];
-				stats->MTI_Radio_config.sreg.for_temp_tele.StF = cur_RX_config.Specific_reg[2];
+				stats->MTI_Radio_config.sRegs.for_temp_tele.StV = cur_RX_config.Specific_reg[1];
+				stats->MTI_Radio_config.sRegs.for_temp_tele.StF = cur_RX_config.Specific_reg[2];
 			}
 			else
-				for(int i=0; i<sizeof(stats->MTI_Radio_config.sreg.as_array);i++)
-					stats->MTI_Radio_config.sreg.as_array[i]=0;
+				for(int i=0; i<sizeof(stats->MTI_Radio_config.sRegs.as_array);i++)
+					stats->MTI_Radio_config.sRegs.as_array[i]=0;
 			break;
 		case RMSW_MUX:
-			stats->MTI_Radio_config.sreg.as_array[0] = cur_RX_config.Specific_reg[0];
-			stats->MTI_Radio_config.sreg.as_array[1] = cur_RX_config.Specific_reg[21];
+			stats->MTI_Radio_config.sRegs.as_array[0] = cur_RX_config.Specific_reg[0];
+			stats->MTI_Radio_config.sRegs.as_array[1] = cur_RX_config.Specific_reg[21];
 			break;
 	}
 	return EXIT_SUCCESS;

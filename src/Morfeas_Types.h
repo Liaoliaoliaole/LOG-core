@@ -101,19 +101,20 @@ union MTI_specific_regs{
 		unsigned char StF;//samples to reset valid flag
 	}for_temp_tele;
 	struct dec_for_controlling_devices{
-		unsigned manual_button:1;
-		unsigned sleep_button:1;
+		unsigned G_SW:1;
+		unsigned G_SL:1;
 		unsigned reserver:6;
-		unsigned global_switch:1;
-		unsigned global_speed:1;//global switch for RMSWs report speed
+		unsigned G_P_state:1;
+		unsigned G_S_state:1;
 	}for_rmsw_dev;
-	unsigned char as_array[4];
+	unsigned char as_array[2];
+	unsigned short as_short;
 };
 struct MTI_Radio_config_status_struct{
 	unsigned RF_channel:7;
 	unsigned Data_rate:2;
 	unsigned Tele_dev_type:3;
-	union MTI_specific_regs sreg;
+	union MTI_specific_regs sRegs;
 };
 //Structs for MTI related telemetry device
 struct TC4_data_struct{

@@ -568,8 +568,8 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 				cJSON_AddItemToObject(Tele_data, "IsValid", cJSON_CreateBool(stats->Tele_data.as_TC4.Data_isValid));
 				if(stats->MTI_Radio_config.Tele_dev_type != Tele_quad)
 				{
-					cJSON_AddNumberToObject(Tele_data, "Samples_toValid", stats->MTI_Radio_config.sreg.for_temp_tele.StV);
-					cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", stats->MTI_Radio_config.sreg.for_temp_tele.StF);
+					cJSON_AddNumberToObject(Tele_data, "Samples_toValid", stats->MTI_Radio_config.sRegs.for_temp_tele.StV);
+					cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", stats->MTI_Radio_config.sRegs.for_temp_tele.StF);
 				}
 				switch(stats->MTI_Radio_config.Tele_dev_type)
 				{
@@ -630,10 +630,10 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 			{
 				//Add MTI_global_state to MTI_status
 				cJSON_AddItemToObject(MTI_status, "MTI_Global_state", MTI_global_state = cJSON_CreateObject());
-				cJSON_AddItemToObject(MTI_global_state, "Manual_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.manual_button));
-				cJSON_AddItemToObject(MTI_global_state, "Sleep_button_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.sleep_button));
-				cJSON_AddItemToObject(MTI_global_state, "Global_switch_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_switch));
-				cJSON_AddItemToObject(MTI_global_state, "Global_speed_cnt", cJSON_CreateBool(stats->MTI_Radio_config.sreg.for_rmsw_dev.global_speed));
+				cJSON_AddItemToObject(MTI_global_state, "Global_ON_OFF", cJSON_CreateBool(stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_SW));
+				cJSON_AddItemToObject(MTI_global_state, "Global_Sleep", cJSON_CreateBool(stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_SL));
+				cJSON_AddItemToObject(MTI_global_state, "Global_Power_state", cJSON_CreateBool(stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_P_state));
+				cJSON_AddItemToObject(MTI_global_state, "Global_Sleep_state", cJSON_CreateBool(stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_S_state));
 				//Add remote switch data to JSON
 				cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateArray());
 				for(i=0; i<stats->Tele_data.as_RMSWs.amount_of_devices; i++)

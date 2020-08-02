@@ -203,7 +203,7 @@ typedef struct MTI_Update_Health_msg_struct{
 	float cpu_temp;
 	float batt_capacity;
 	float batt_voltage;
-	unsigned char batt_state; 
+	unsigned char batt_state;
 }MTI_Update_Health_msg;
 
 typedef struct MTI_Update_Radio_msg_struct{
@@ -213,7 +213,8 @@ typedef struct MTI_Update_Radio_msg_struct{
 	unsigned char RF_channel;
 	unsigned Data_rate:2;
 	unsigned Tele_dev_type:3;
-	unsigned new_config:1;
+	union MTI_specific_regs sRegs;
+	unsigned isNew_config:1;
 }MTI_Update_Radio_msg;
 
 typedef struct MTI_tele_data_msg_struct{

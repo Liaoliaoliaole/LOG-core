@@ -34,6 +34,9 @@ enum MTI_Tele_status_enum{
 //Local function that adding the new_MTI_config method to the Morfeas OPC_UA nodeset
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 
+//The DBus method caller function
+int Morfeas_MTI_DBus_method_call();
+
 
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
@@ -142,8 +145,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), MTI_Data_rate_str[IPC_msg_dec->MTI_Update_Radio.Data_rate], UA_TYPES_STRING);
 				sprintf(Node_ID_str, "%s.Radio.Tele_dev_type", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), MTI_Tele_dev_type_str[IPC_msg_dec->MTI_Update_Radio.Tele_dev_type], UA_TYPES_STRING);
-				//Check call with new configuration
-				if(IPC_msg_dec->MTI_Update_Radio.new_config)
+				//Check if call is with a new configuration
+				if(IPC_msg_dec->MTI_Update_Radio.isNew_config)
 				{
 					sprintf(Node_ID_str, "%s.Radio.Tele", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 					if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
@@ -167,7 +170,14 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							sprintf(Node_ID_str, "%s.success", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "RX Success ratio(%)", UA_TYPES_BYTE);
 							sprintf(Node_ID_str, "%s.isValid", Node_ID_parent_str);
-							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "isValid", UA_TYPES_BOOLEAN);
+							if(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type != Tele_quad)
+							{
+								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "isValid", UA_TYPES_BOOLEAN);
+								sprintf(Node_ID_str, "%s.StV", Node_ID_parent_str);
+								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Samples to Validate", UA_TYPES_BYTE);
+								sprintf(Node_ID_str, "%s.StF", Node_ID_parent_str);
+								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Samples to Fail", UA_TYPES_BYTE);
+							}
 							//Add telemetry specific variables
 							sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_Update_Radio.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_Update_Radio.Tele_dev_type]);
 							switch(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type)
@@ -210,7 +220,36 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								}
 							}
 						}
+						else
+						{	//Add RMSW/MUX related Global switches nodes
+							sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
+							sprintf(Node_ID_str, "%s.G_SW", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global ON/OFF", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.G_SL", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global Sleep", UA_TYPES_BOOLEAN);
+						}
 					}
+				}
+				//Update values from MTI's Special registers
+				switch(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type)
+				{
+					case Tele_TC4:
+					case Tele_TC8:
+					case Tele_TC16:
+					case Tele_quad:
+						sprintf(Node_ID_str, "%s.Radio.Tele.StV", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_Update_Radio.sRegs.for_temp_tele.StV), UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.Radio.Tele.StF", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_Update_Radio.sRegs.for_temp_tele.StF), UA_TYPES_BYTE);
+						break;
+					case RMSW_MUX:
+						sprintf(Node_ID_str, "%s.Radio.Tele.G_SW", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						i=IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SW;
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &i, UA_TYPES_BOOLEAN);
+						sprintf(Node_ID_str, "%s.Radio.Tele.G_SL", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						i=IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SL;
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &i, UA_TYPES_BOOLEAN);
+						break;
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
@@ -318,8 +357,6 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 	}
 }
 
-int Morfeas_MTI_DBus_method_call();
-
 UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
                          const UA_NodeId *sessionId, void *sessionHandle,
                          const UA_NodeId *methodId, void *methodContext,
@@ -338,8 +375,8 @@ void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *No
 {
 	const char *inp_descriptions[] = {"Range:(0..126)",
 									  "Accepted values:{TC16,TC8,TC4,2CH_QUAD,RMSW/MUX}",
-									  "Successful receptions to set valid flag(Range:1..254, 0=Unchange, -1=Disable)",
-									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchange, -1=Disable)",
+									  "Successful receptions to set valid flag(Range:1..254, 0=Unchange, 255=Disable)",
+									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchange, 255=Disable)",
 									  "Global ON/OFF mode(Used with mode RMSW/MUX)",
 									  "Global Sleep mode(Used with mode RMSW/MUX)"};
 	const char *inp_names[] = {"new_RF_CH","new_Radio_mode","StV","StF","G_SW","G_SL",NULL};
