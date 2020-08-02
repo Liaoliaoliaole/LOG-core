@@ -65,7 +65,7 @@ void IOBOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
-	char IOBOX_IPv4_addr_str[20], Node_name[30], status_byte = 0;
+	char IOBOX_IPv4_addr_str[20], Node_name[30], status_byte = Okay;
 	char Node_ID_str[60], Node_ID_child_str[80], Node_ID_child_child_str[100], val_Node_ID_str[160];
 	float nan = NAN; unsigned char negative_one = -1;
 	//Msg type from IOBOX_handler
@@ -194,7 +194,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 							{
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str),
 																   &nan, UA_TYPES_FLOAT);
-								status_byte = 1; //1 = No sensor
+								status_byte = Tele_channel_noSensor;
 								sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "No sensor", UA_TYPES_STRING);
 							}
@@ -211,7 +211,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
 							sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "Disconnected", UA_TYPES_STRING);
-							status_byte = 127; //127 = No Telemetry connected
+							status_byte = Disconnected;
 						}
 						sprintf(val_Node_ID_str, "%s.status_byte", Node_ID_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &status_byte, UA_TYPES_BYTE);

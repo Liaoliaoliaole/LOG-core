@@ -23,14 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
-enum MTI_Tele_status_enum{
-	Okay = 0,
-	Tele_channel_noSensor,
-	Tele_channel_Error,
-	Disconnected = 127,
-	OFF_line = -1
-};
-
 //Local function that adding the new_MTI_config method to the Morfeas OPC_UA nodeset
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 
