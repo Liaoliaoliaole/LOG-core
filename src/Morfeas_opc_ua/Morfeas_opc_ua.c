@@ -670,14 +670,13 @@ void Morfeas_opc_ua_add_variable_node_with_callback_onRead(UA_Server *server_ptr
 	vAttr.dataType = UA_TYPES[_UA_Type].typeId;
 	UA_DataSource DataSource = {0};
 	DataSource.read = call_func;
-	UA_Server_addDataSourceVariableNode(
-							  server_ptr,
-							  UA_NODEID_STRING(1, Node_id),
-							  UA_NODEID_STRING(1, Parent_id),
-							  UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-							  UA_QUALIFIEDNAME(1, Node_id),
-							  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-							  vAttr, DataSource, NULL, NULL);
+	UA_Server_addDataSourceVariableNode(server_ptr,
+									    UA_NODEID_STRING(1, Node_id),
+									    UA_NODEID_STRING(1, Parent_id),
+									    UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+									    UA_QUALIFIEDNAME(1, Node_id),
+									    UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+									    vAttr, DataSource, NULL, NULL);
 }
 
 inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, const void *value, int _UA_Type)

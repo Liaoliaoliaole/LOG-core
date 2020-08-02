@@ -41,6 +41,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_opc_ua_config.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/MTI_func.o \
+					  $(WORK_dir)/Morfeas_DBus_method_caller.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
 					  $(WORK_dir)/Morfeas_MDAQ_nodeset.o \
@@ -120,6 +121,9 @@ $(WORK_dir)/Morfeas_opc_ua_config.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_opc_ua_co
 #Dependencies of the Morfeas_opc_ua
 $(WORK_dir)/Morfeas_opc_ua.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_opc_ua.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_DBus_method_caller.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_DBus_method_caller.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Dependencies of the Morfeas_daemon
 $(WORK_dir)/Morfeas_daemon.o: $(SRC_dir)/Morfeas_daemon.c

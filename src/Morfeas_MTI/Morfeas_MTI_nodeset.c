@@ -31,6 +31,10 @@ enum MTI_Tele_status_enum{
 	OFF_line = -1
 };
 
+//Local function that adding the new_MTI_config method to the Morfeas OPC_UA nodeset
+void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
+
+
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	int negative_one = -1;
@@ -111,6 +115,9 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 				Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Data Rate", UA_TYPES_STRING);
 				sprintf(Node_ID_str, "%s.Tele_dev_type", Node_ID_parent_str);
 				Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Tele Dev Type", UA_TYPES_STRING);
+				//Add new_MTI_config method
+				sprintf(Node_ID_str, "%s.new_MTI_config()", Node_ID_parent_str);
+				Morfeas_add_new_MTI_config(server, Node_ID_parent_str, Node_ID_str);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 		case IPC_MTI_Update_Health:
@@ -309,4 +316,65 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 	}
+}
+
+int Morfeas_MTI_DBus_method_call();
+
+UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
+                         const UA_NodeId *sessionId, void *sessionHandle,
+                         const UA_NodeId *methodId, void *methodContext,
+                         const UA_NodeId *objectId, void *objectContext,
+                         size_t inputSize, const UA_Variant *input,
+                         size_t outputSize, UA_Variant *output)
+{
+
+    UA_String tmp = UA_STRING_ALLOC("new_MTI_config() was called");
+    UA_Variant_setScalarCopy(output, &tmp, &UA_TYPES[UA_TYPES_STRING]);
+    UA_String_clear(&tmp);
+    return UA_STATUSCODE_GOOD;
+}
+
+void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id)
+{
+	const char *inp_descriptions[] = {"Range:(0..126)",
+									  "Accepted values:{TC16,TC8,TC4,2CH_QUAD,RMSW/MUX}",
+									  "Successful receptions to set valid flag(Range:1..254, 0=Unchange, -1=Disable)",
+									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchange, -1=Disable)",
+									  "Global ON/OFF mode(Used with mode RMSW/MUX)",
+									  "Global Sleep mode(Used with mode RMSW/MUX)"};
+	const char *inp_names[] = {"new_RF_CH","new_Radio_mode","StV","StF","G_SW","G_SL",NULL};
+	const unsigned int inp_value_type[] = {UA_TYPES_BYTE, UA_TYPES_STRING, UA_TYPES_BYTE, UA_TYPES_BYTE, UA_TYPES_BOOLEAN,UA_TYPES_BOOLEAN};
+
+	//Configure inputArguments
+    UA_Argument inputArguments[6];
+	for(int i=0; i<sizeof(inputArguments)/sizeof(*inputArguments); i++)
+	{
+		UA_Argument_init(&inputArguments[i]);
+		inputArguments[i].description = UA_LOCALIZEDTEXT("en-US", (char *)inp_descriptions[i]);
+		inputArguments[i].name = UA_STRING((char *)inp_names[i]);
+		inputArguments[i].dataType = UA_TYPES[inp_value_type[i]].typeId;
+		inputArguments[i].valueRank = UA_VALUERANK_SCALAR;
+	}
+	//Configure outputArgument
+	UA_Argument outputArgument;
+	UA_Argument_init(&outputArgument);
+	outputArgument.description = UA_LOCALIZEDTEXT("en-US", "Return of the method call");
+	outputArgument.name = UA_STRING("Return");
+	outputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+	outputArgument.valueRank = UA_VALUERANK_SCALAR;
+
+	UA_MethodAttributes Method_Attr = UA_MethodAttributes_default;
+	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method new_MTI_config");
+	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","new_MTI_config()");
+	Method_Attr.executable = true;
+	Method_Attr.userExecutable = true;
+	UA_Server_addMethodNode(server_ptr,
+							UA_NODEID_STRING(1, Node_id),
+							UA_NODEID_STRING(1, Parent_id),
+							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+							UA_QUALIFIEDNAME(1, Node_id),
+							Method_Attr, &Morfeas_new_MTI_config_method_callback,
+							sizeof(inputArguments)/sizeof(*inputArguments), inputArguments,
+							1, &outputArgument,
+							NULL, NULL);
 }
