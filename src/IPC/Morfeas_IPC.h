@@ -194,6 +194,7 @@ typedef struct MTI_report_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MTI_IPv4;
+	unsigned Tele_dev_type:3;
 	int status;
 }MTI_report_msg;
 

@@ -184,11 +184,10 @@ int main(int argc, char *argv[])
 		if (rc <= 0)
 		{
 			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
-			//Attempt to reconnection
-			while(modbus_connect(ctx) && handler_run)
+			stats.error = errno;//load errno to stats
+			IOBOX_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
+			while(modbus_connect(ctx) && handler_run)//Attempt to reconnection
 			{
-				stats.error = errno;//load errno to stats
-				IOBOX_status_to_IPC(FIFO_fd, &stats); //send status report to Morfeas_opc_ua via IPC
 				logstat_IOBOX(path_to_logstat_dir, &stats);//report error on logstat
 				sleep(1);
 			}

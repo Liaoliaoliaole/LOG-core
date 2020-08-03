@@ -347,6 +347,8 @@ void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 	IPC_msg.MTI_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	//Load MTI IPv4 by converting from string to unsigned integer
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &(IPC_msg.MTI_report.MTI_IPv4));
+	//Load current Radio Telemetry type
+	IPC_msg.MTI_report.Tele_dev_type = stats->MTI_Radio_config.Tele_dev_type;
 	//Load error code to report IPC_msg
 	IPC_msg.MTI_report.status = stats->error;
 	//Send status report
