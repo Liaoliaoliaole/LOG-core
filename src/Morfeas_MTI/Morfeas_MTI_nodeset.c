@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <arpa/inet.h>
 
 #include <modbus.h>
+#include <cjson/cJSON.h>
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
@@ -27,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 
 //The DBus method caller function
-int Morfeas_MTI_DBus_method_call();
+int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
 
 
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
@@ -366,19 +367,46 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
                          size_t inputSize, const UA_Variant *input,
                          size_t outputSize, UA_Variant *output)
 {
+	char contents[200], dev_name[Dev_or_Bus_name_str_size];
+    int ret = UA_STATUSCODE_GOOD, i=0;
+	cJSON *root = NULL;
+	UA_String reply;
 
-    UA_String tmp = UA_STRING_ALLOC("new_MTI_config() was called");
-    UA_Variant_setScalarCopy(output, &tmp, &UA_TYPES[UA_TYPES_STRING]);
-    UA_String_clear(&tmp);
-    return UA_STATUSCODE_GOOD;
+	//Get Dev_name
+	while(methodId->identifier.string.data[i]!='.')
+	{
+		dev_name[i]=methodId->identifier.string.data[i];
+		i++;
+	}
+	dev_name[i]='\0';
+	//Construct JSON object (used as contents)
+	root = cJSON_CreateObject();
+	cJSON_AddNumberToObject(root, "new_RF_CH", 16);
+	cJSON_AddItemToObject(root, "new_mode", cJSON_CreateString("TC8"));
+	cJSON_AddNumberToObject(root, "StV", 50);
+	cJSON_AddNumberToObject(root, "StF", 30);
+	cJSON_AddItemToObject(root, "G_SW", cJSON_CreateBool(0));
+	cJSON_AddItemToObject(root, "G_SL", cJSON_CreateBool(0));
+	//Stringify the root JSON object
+	cJSON_PrintPreallocated(root, contents, sizeof(contents), 0);
+	cJSON_Delete(root);
+
+	if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))//Check for failure
+	{
+		reply = UA_STRING_ALLOC("Error!!!");
+		ret = UA_STATUSCODE_BADSYNTAXERROR;
+	}
+	UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+    UA_String_clear(&reply);
+    return ret;
 }
 
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id)
 {
 	const char *inp_descriptions[] = {"Range:(0..126)",
 									  "Accepted values:{TC16,TC8,TC4,2CH_QUAD,RMSW/MUX}",
-									  "Successful receptions to set valid flag(Range:1..254, 0=Unchange, 255=Disable)",
-									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchange, 255=Disable)",
+									  "Successful receptions to set valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
+									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
 									  "Global ON/OFF mode(Used with mode RMSW/MUX)",
 									  "Global Sleep mode(Used with mode RMSW/MUX)"};
 	const char *inp_names[] = {"new_RF_CH","new_Radio_mode","StV","StF","G_SW","G_SL",NULL};

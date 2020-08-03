@@ -28,107 +28,67 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
 //The DBus method caller function
-int Morfeas_MTI_DBus_method_call();
-void query(char* param)
+int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply)
 {
-   DBusMessage* msg;
-   DBusMessageIter args;
-   DBusConnection* conn;
-   DBusError err;
-   DBusPendingCall* pending;
-   int ret;
-   bool stat;
-   dbus_uint32_t level;
-
-   printf("Calling remote method with %s\n", param);
-
-   // initialiset the errors
-   dbus_error_init(&err);
-
-   // connect to the system bus and check for errors
-   conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-   if (dbus_error_is_set(&err)) {
-      fprintf(stderr, "Connection Error (%s)\n", err.message);
-      dbus_error_free(&err);
-   }
-   if (NULL == conn) {
-      exit(1);
-   }
-
-   // request our name on the bus
-   ret = dbus_bus_request_name(conn, "test.method.caller", DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
-   if (dbus_error_is_set(&err)) {
-      fprintf(stderr, "Name Error (%s)\n", err.message);
-      dbus_error_free(&err);
-   }
-   if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
-      exit(1);
-   }
-
-   // create a new method call and check for errors
-   msg = dbus_message_new_method_call("test.method.server", // target for the method call
-                                      "/test/method/Object", // object to call on
-                                      "test.method.Type", // interface to call on
-                                      "Method"); // method name
-   if (NULL == msg) {
-      fprintf(stderr, "Message Null\n");
-      exit(1);
-   }
-
-   // append arguments
-   dbus_message_iter_init_append(msg, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &param)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-
-   // send message and get a handle for a reply
-   if (!dbus_connection_send_with_reply (conn, msg, &pending, -1)) { // -1 is default timeout
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   if (NULL == pending) {
-      fprintf(stderr, "Pending Call Null\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   printf("Request Sent\n");
-
-   // free message
-   dbus_message_unref(msg);
-
-   // block until we recieve a reply
-   dbus_pending_call_block(pending);
-
-   // get the reply message
-   msg = dbus_pending_call_steal_reply(pending);
-   if (NULL == msg) {
-      fprintf(stderr, "Reply Null\n");
-      exit(1);
-   }
-   // free the pending message handle
-   dbus_pending_call_unref(pending);
-
-   // read the parameters
-   if (!dbus_message_iter_init(msg, &args))
-      fprintf(stderr, "Message has no arguments!\n");
-   else if (DBUS_TYPE_BOOLEAN != dbus_message_iter_get_arg_type(&args))
-      fprintf(stderr, "Argument is not boolean!\n");
-   else
-      dbus_message_iter_get_basic(&args, &stat);
-
-   if (!dbus_message_iter_next(&args))
-      fprintf(stderr, "Message has too few arguments!\n");
-   else if (DBUS_TYPE_UINT32 != dbus_message_iter_get_arg_type(&args))
-      fprintf(stderr, "Argument is not int!\n");
-   else
-      dbus_message_iter_get_basic(&args, &level);
-
-   printf("Got Reply: %d, %d\n", stat, level);
-
-   // free reply and close connection
-   dbus_message_unref(msg);
-   dbus_connection_close(conn);
+	char target[100], interface[100], *reply_str=NULL;
+	DBusMessage *msg;
+	DBusMessageIter args;
+	DBusConnection *conn;
+	DBusError err;
+	DBusPendingCall *pending;
+	
+	// Initialize the errors
+	dbus_error_init(&err);
+	// Connect to the system bus and check for errors
+	conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+	if (dbus_error_is_set(&err))
+	{
+		UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, err.message);
+		dbus_error_free(&err);
+	}
+	if (!conn)
+	  return EXIT_FAILURE;
+	//Prepare target and interface strings
+	sprintf(target, "org.freedesktop.Morfeas.%s.%s", handler_type, dev_name);
+	sprintf(interface, "Morfeas.%s.%s", handler_type, dev_name);
+	//Create a new method call and check for errors
+	if (!(msg = dbus_message_new_method_call(target, "/", interface, method)))
+	  return EXIT_FAILURE;
+	
+	dbus_message_iter_init_append(msg, &args);
+	//Append arguments
+	if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &contents))
+	{
+	  fprintf(stderr, "Memory Error!!!!\n");
+	  exit(EXIT_FAILURE);
+	}
+	//Send message and get a handle for a reply
+	if (!dbus_connection_send_with_reply(conn, msg, &pending, 1000))
+	{
+	  fprintf(stderr, "Out Of Memory!\n");
+	  exit(EXIT_FAILURE);
+	}
+	if (!pending)
+	  return EXIT_FAILURE;
+	dbus_connection_flush(conn);
+	//Free message
+	dbus_message_unref(msg);
+	//Block until we recieve a reply
+	dbus_pending_call_block(pending);
+	//get the reply message
+	if(!(msg = dbus_pending_call_steal_reply(pending)))
+		return EXIT_FAILURE;
+	//Free the pending message handle
+	dbus_pending_call_unref(pending);
+	//Read the parameters
+	if(!dbus_message_iter_init(msg, &args))
+	  return EXIT_FAILURE;
+	if(DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&args))
+	  return EXIT_FAILURE;
+	dbus_message_iter_get_basic(&args, &reply_str);
+	*reply = UA_STRING_ALLOC(reply_str);
+	//Free error, reply and close connection
+	dbus_error_free(&err);
+	dbus_message_unref(msg);
+	return EXIT_SUCCESS;
 }
-

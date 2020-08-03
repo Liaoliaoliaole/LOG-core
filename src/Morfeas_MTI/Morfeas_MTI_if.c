@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	char *path_to_logstat_dir;
 	unsigned char state = get_config, prev_RF_CH=-1, prev_dev_type=-1;
 	unsigned short prev_sRegs=-1;
-	struct Morfeas_MTI_if_stats stats = {0};
+	struct Morfeas_MTI_if_stats stats = {.QUAD_Tele_inp_scalers[0]=1.0,.QUAD_Tele_inp_scalers[1]=1.0};
 	//Variables for threads
 	pthread_t DBus_listener_Thread_id;
 	struct MTI_DBus_thread_arguments_passer passer = {&ctx, &stats};
