@@ -202,9 +202,9 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							sprintf(Node_ID_str, "%s.success", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "RX Success ratio(%)", UA_TYPES_BYTE);
 							sprintf(Node_ID_str, "%s.isValid", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "isValid", UA_TYPES_BOOLEAN);
 							if(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type != Tele_quad)
 							{
-								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "isValid", UA_TYPES_BOOLEAN);
 								sprintf(Node_ID_str, "%s.StV", Node_ID_parent_str);
 								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Samples to Validate", UA_TYPES_BYTE);
 								sprintf(Node_ID_str, "%s.StF", Node_ID_parent_str);
@@ -272,7 +272,6 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 					case Tele_TC4:
 					case Tele_TC8:
 					case Tele_TC16:
-					case Tele_quad:
 						sprintf(Node_ID_str, "%s.Radio.Tele.StV", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_Update_Radio.sRegs.for_temp_tele.StV), UA_TYPES_BYTE);
 						sprintf(Node_ID_str, "%s.Radio.Tele.StF", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
@@ -323,27 +322,27 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 					sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_tele_data.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_tele_data.Tele_dev_type]);
 					for(i=1; i<=lim; i++)
 					{	//Get and decode Telemetry's data;
+						switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
+						{
+							case Tele_TC16:
+								meas = IPC_msg_dec->MTI_tele_data.data.as_TC16.CHs[i-1];
+								break;
+							case Tele_TC8:
+								meas = IPC_msg_dec->MTI_tele_data.data.as_TC8.CHs[i-1];
+								ref = IPC_msg_dec->MTI_tele_data.data.as_TC8.Refs[i-1];
+								break;
+							case Tele_TC4:
+								meas = IPC_msg_dec->MTI_tele_data.data.as_TC4.CHs[i-1];
+								ref = (i>=1&&i<=2)?IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[0]:
+												   IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[1];
+								break;
+							case Tele_quad:
+								meas = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CHs[i-1];
+								cnt = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CNTs[i-1];
+								break;
+						}
 						if(IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid)
 						{
-							switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
-							{
-								case Tele_TC16:
-									meas = IPC_msg_dec->MTI_tele_data.data.as_TC16.CHs[i-1];
-									break;
-								case Tele_TC8:
-									meas = IPC_msg_dec->MTI_tele_data.data.as_TC8.CHs[i-1];
-									ref = IPC_msg_dec->MTI_tele_data.data.as_TC8.Refs[i-1];
-									break;
-								case Tele_TC4:
-									meas = IPC_msg_dec->MTI_tele_data.data.as_TC4.CHs[i-1];
-									ref = (i>=1&&i<=2)?IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[0]:
-													   IPC_msg_dec->MTI_tele_data.data.as_TC4.Refs[1];
-									break;
-								case Tele_quad:
-									meas = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CHs[i-1];
-									cnt = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CNTs[i-1];
-									break;
-							}
 							status_value = Okay;
 							status_str = "Okay";
 							if(IPC_msg_dec->MTI_tele_data.Tele_dev_type != Tele_quad)
@@ -406,26 +405,56 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
                          size_t inputSize, const UA_Variant *input,
                          size_t outputSize, UA_Variant *output)
 {
-	char contents[200], dev_name[Dev_or_Bus_name_str_size];
+	char contents[200], dev_name[Dev_or_Bus_name_str_size], new_mode_str[10] = {0};
     int ret = UA_STATUSCODE_GOOD, i=0;
+	unsigned char new_mode_val=0,
+				  *new_RF_CH = (unsigned char*)(input[0].data),
+				  *StV = (unsigned char*)(input[2].data),
+				  *StF = (unsigned char*)(input[3].data);
+	bool *G_SW = (bool *)(input[4].data),
+		 *G_SL = (bool *)(input[5].data);
 	cJSON *root = NULL;
-	UA_String reply;
-
+	UA_String reply, *new_mode_UA_str = (UA_String *)(input[1].data);
+	//Sanitize new_mode_UA_str
+	if(!new_mode_UA_str->length || new_mode_UA_str->length >= sizeof(new_mode_str))
+		return UA_STATUSCODE_BADSYNTAXERROR;
+	//Convert new_mode_UA_str to new_mode_str
+	while(i < new_mode_UA_str->length)
+	{
+		new_mode_str[i] = new_mode_UA_str->data[i];
+		i++;
+	}
+	new_mode_str[i]='\0';
+	//Check validity of new_mode_str  
+	while(MTI_Tele_dev_type_str[new_mode_val] && strcmp(new_mode_str,MTI_Tele_dev_type_str[new_mode_val]))
+		new_mode_val++;
+	if(new_mode_val > Dev_type_max)
+		return UA_STATUSCODE_BADSYNTAXERROR;
 	//Get Dev_name
+	i=0;
 	while(methodId->identifier.string.data[i]!='.')
 	{
 		dev_name[i]=methodId->identifier.string.data[i];
 		i++;
 	}
 	dev_name[i]='\0';
-	//Construct JSON object (used as contents)
+	//Construct contents for DBus method call (as JSON object)
 	root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, "new_RF_CH", 16);
-	cJSON_AddItemToObject(root, "new_mode", cJSON_CreateString("TC8"));
-	cJSON_AddNumberToObject(root, "StV", 50);
-	cJSON_AddNumberToObject(root, "StF", 30);
-	cJSON_AddItemToObject(root, "G_SW", cJSON_CreateBool(0));
-	cJSON_AddItemToObject(root, "G_SL", cJSON_CreateBool(0));
+	cJSON_AddNumberToObject(root, "new_RF_CH", *new_RF_CH);
+	cJSON_AddItemToObject(root, "new_mode", cJSON_CreateString(new_mode_str));
+	switch(new_mode_val)
+	{
+		case Tele_TC4:
+		case Tele_TC8:
+		case Tele_TC16:
+			cJSON_AddNumberToObject(root, "StV", *StV);
+			cJSON_AddNumberToObject(root, "StF", *StF);
+			break;
+		case RMSW_MUX:
+			cJSON_AddItemToObject(root, "G_SW", cJSON_CreateBool(*G_SW));
+			cJSON_AddItemToObject(root, "G_SL", cJSON_CreateBool(*G_SL));
+			break;
+	}
 	//Stringify the root JSON object
 	cJSON_PrintPreallocated(root, contents, sizeof(contents), 0);
 	cJSON_Delete(root);
@@ -443,7 +472,7 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id)
 {
 	const char *inp_descriptions[] = {"Range:(0..126)",
-									  "Accepted values:{TC16,TC8,TC4,2CH_QUAD,RMSW/MUX}",
+									  "Accepted values:{Disabled,TC16,TC8,TC4,2CH_QUAD,RMSW/MUX}",
 									  "Successful receptions to set valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
 									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
 									  "Global ON/OFF mode(Used with mode RMSW/MUX)",

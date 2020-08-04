@@ -132,25 +132,20 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			break;
 		case Tele_quad:
 			//Get Quadrature telemetry data
-			if(modbus_read_input_registers(ctx, MTI_TELE_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
+			if(modbus_read_input_registers(ctx, MTI_2CH_QUAD_DATA_OFFSET, sizeof(cur_MTI_Tele_data.as_QUAD)/sizeof(short), (unsigned short*)&cur_MTI_Tele_data)<=0)
 			{
 				stats->error = errno;
 				return EXIT_FAILURE;
 			}
 			//Convert data and load them to stats
-			if((int)cur_MTI_Tele_data.as_QUAD.index ^ stats->Tele_data.as_QUAD.packet_index)
-			{
-				stats->Tele_data.as_QUAD.Data_isValid = 1;
-				stats->Tele_data.as_QUAD.packet_index = cur_MTI_Tele_data.as_QUAD.index;
-				stats->Tele_data.as_QUAD.RX_status = cur_MTI_Tele_data.as_QUAD.rx_status;
-				stats->Tele_data.as_QUAD.RX_Success_ratio = cur_MTI_Tele_data.as_QUAD.success;
-				stats->Tele_data.as_QUAD.CNTs[0] = (int)*(cur_MTI_Tele_data.as_QUAD.Channel_1);
-				stats->Tele_data.as_QUAD.CNTs[1] = (int)*(cur_MTI_Tele_data.as_QUAD.Channel_2);
-				for(i=0; i<2; i++)
-					stats->Tele_data.as_QUAD.CHs[i] = stats->Tele_data.as_QUAD.CNTs[i] * stats->QUAD_Tele_inp_scalers[i];
-			}
-			else
-				stats->Tele_data.as_QUAD.Data_isValid = 0;
+			stats->Tele_data.as_QUAD.Data_isValid = cur_MTI_Tele_data.as_QUAD.index ^ stats->Tele_data.as_QUAD.packet_index ? 1:0;
+			stats->Tele_data.as_QUAD.packet_index = cur_MTI_Tele_data.as_QUAD.index;
+			stats->Tele_data.as_QUAD.RX_status = stats->Tele_data.as_QUAD.Data_isValid ? cur_MTI_Tele_data.as_QUAD.rx_status:0;
+			stats->Tele_data.as_QUAD.RX_Success_ratio = stats->Tele_data.as_QUAD.Data_isValid ? cur_MTI_Tele_data.as_QUAD.success:0;
+			stats->Tele_data.as_QUAD.CNTs[0] = *cur_MTI_Tele_data.as_QUAD.Channel_1;
+			stats->Tele_data.as_QUAD.CNTs[1] = *cur_MTI_Tele_data.as_QUAD.Channel_2;
+			for(i=0; i<2; i++)
+				stats->Tele_data.as_QUAD.CHs[i] = stats->Tele_data.as_QUAD.CNTs[i] * stats->QUAD_Tele_inp_scalers[i];
 			//Get Pulse Generators Configuration
 			if(modbus_read_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(Pulse_gen_conf)/sizeof(short), (unsigned short*)&Pulse_gen_conf)<=0)
 			{

@@ -27,11 +27,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define GLOBAL_SW_REG 24
 #define MTI_RMSWs_SWITCH_OFFSET 28
 #define MTI_CONFIG_OFFSET 0
+#define MTI_PULSE_GEN_OFFSET 1050 //int registers
 //Read registers region
 #define MTI_RMSWs_DATA_OFFSET 25 //short registers
-#define MTI_PULSE_GEN_OFFSET 1050 //int registers
 #define MTI_STATUS_OFFSET 2000 //float registers
 #define MTI_TELE_DATA_OFFSET 2050 //float registers
+#define MTI_2CH_QUAD_DATA_OFFSET 1050 //int registers
 
 //Defined value that temperature telemetry sent if input is open (aka No sensor)
 #define NO_SENSOR_VALUE 2000.0
@@ -101,14 +102,14 @@ struct MTI_4_temp_tele{
 	float channels[6];
 };
 struct MTI_quad_tele{
-	float index;
-	float rx_status;
-	float success;
-	float samplerate;
-	float drift_index;
-	float reserved[5];
-	float Channel_1[5];
-	float Channel_2[5];
+	unsigned int index;
+	unsigned int rx_status;
+	unsigned int success;
+	unsigned int samplerate;
+	unsigned int drift_index;
+	unsigned int reserved[5];
+	int Channel_1[5];
+	int Channel_2[5];
 };
 struct MTI_mux_rmsw_tele{
 	unsigned short dev_type;

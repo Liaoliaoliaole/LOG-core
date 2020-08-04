@@ -84,6 +84,8 @@ void IPC_Update_Health_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, unsigned char new_config);
 //Function that send Telemetry data(not RMSWs and MUXs) to Morfeas_opc_ua via IPC
 void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
+//Function that send data from RMSWs and MUXs to Morfeas_opc_ua via IPC
+void IPC_RMSW_MUX_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
@@ -275,7 +277,19 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					state = (ret = get_MTI_Tele_data(ctx, &stats)) ? error : wait;
 					if(!ret)
-						IPC_Telemetry_data(FIFO_fd, &stats);
+					{
+						switch(stats.MTI_Radio_config.Tele_dev_type)
+						{
+							case Tele_TC16:
+							case Tele_TC8:
+							case Tele_TC4:
+							case Tele_quad:	
+								IPC_Telemetry_data(FIFO_fd, &stats);
+							case RMSW_MUX:
+								IPC_RMSW_MUX_data(FIFO_fd, &stats);
+								break;
+						}
+					}
 				pthread_mutex_unlock(&MTI_access);
 				break;
 			case get_status:
@@ -446,6 +460,22 @@ void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 			memcpy(&(IPC_msg.MTI_tele_data.data), &(stats->Tele_data), sizeof(IPC_msg.MTI_tele_data.data.as_QUAD));
 			break;
 	}
+	//Send status report to Morfeas_opc_ua
+	IPC_msg_TX(FIFO_fd, &IPC_msg);
+}
+
+//Function that send data from RMSWs and MUXs to Morfeas_opc_ua via IPC
+void IPC_RMSW_MUX_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
+{
+	if(stats->MTI_Radio_config.Tele_dev_type<Dev_type_min||
+	   stats->MTI_Radio_config.Tele_dev_type>Dev_type_max||
+	   stats->MTI_Radio_config.Tele_dev_type != RMSW_MUX)
+		return;
+	//Variables for IPC
+	IPC_message IPC_msg = {0};
+	//--- Load necessary message data to IPC_message ---/
+	IPC_msg.MTI_tele_data.IPC_msg_type = IPC_MTI_RMSW_MUX_data; //Message type
+	
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }
