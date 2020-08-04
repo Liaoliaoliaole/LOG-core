@@ -203,8 +203,15 @@ struct RMSW_MUX_Mini_data_struct{
 	float input_voltage;
 	float meas_data[4];
 };
-struct RM_devs_data_struct{
+struct RMSW_MUX_Devs_data_struct{
 	unsigned char amount_of_devices;
+	unsigned char amount_to_be_remove;
+	unsigned char IDs_to_be_removed[MAX_RMSW_DEVs];
+	unsigned char amount_to_be_add;
+	struct {
+		unsigned char RMSW_Dev_type;
+		unsigned char Dev_id;
+	}dev_to_be_add[MAX_RMSW_DEVs];
 	struct RMSW_MUX_Mini_data_struct det_devs_data[MAX_RMSW_DEVs];
 };
 
@@ -221,7 +228,7 @@ struct Morfeas_MTI_if_stats{
 		struct TC8_data_struct as_TC8;
 		struct TC16_data_struct as_TC16;
 		struct QUAD_data_struct as_QUAD;
-		struct RM_devs_data_struct as_RMSWs;
+		struct RMSW_MUX_Devs_data_struct as_RMSWs;
 	}Tele_data;
 	unsigned int counter;
 };

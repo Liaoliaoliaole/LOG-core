@@ -230,6 +230,13 @@ typedef struct MTI_tele_data_msg_struct{
 		struct QUAD_data_struct as_QUAD;
 	}data;
 }MTI_tele_data_msg;
+
+typedef struct MTI_RMSW_MUX_data_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned int MTI_IPv4;
+	struct RMSW_MUX_Devs_data_struct Devs_data;
+}MTI_RMSW_MUX_data_msg;
 #pragma pack(pop)//Disable packing
 
 //--IPC_MESSAGE--//
@@ -257,6 +264,7 @@ typedef union{
 	MTI_Update_Health_msg MTI_Update_Health;
 	MTI_Update_Radio_msg MTI_Update_Radio;
 	MTI_tele_data_msg MTI_tele_data;
+	MTI_RMSW_MUX_data_msg MTI_RMSW_MUX_data;
 }IPC_message;
 
 //Function that convert interface_type_string to interface_type_num

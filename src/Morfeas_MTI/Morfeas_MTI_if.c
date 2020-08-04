@@ -306,7 +306,10 @@ int main(int argc, char *argv[])
 				pthread_mutex_unlock(&MTI_access);
 				break;
 			case wait:
-				usleep(100000);
+				if(stats.MTI_Radio_config.Tele_dev_type == RMSW_MUX)	
+					usleep(200000);
+				else
+					usleep(100000);
 				state = get_config;
 				break;
 		}
