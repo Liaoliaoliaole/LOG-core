@@ -94,7 +94,7 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
-	int remain_words, i, pos;
+	int remain_words, i, j, pos;
 	struct MTI_PWM_config_struct Pulse_gen_conf;
 	union MTI_Tele_data_union{
 		struct MTI_16_temp_tele as_TC16;
@@ -161,8 +161,6 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			}
 			break;
 		case RMSW_MUX:
-			//Zero the amount of detected devices
-			stats->Tele_data.as_RMSWs.amount_of_devices = 0;
 			//Loop that Getting The Remote controlling devices data, and store them to the cur_MTI_Tele_data struct.
 			for(i=0, remain_words = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); remain_words>0; remain_words -= MTI_MODBUS_MAX_READ_REGISTERS, i++)
 			{
@@ -174,7 +172,22 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 					return EXIT_FAILURE;
 				}
 			}
+			stats->Tele_data.as_RMSWs.amount_to_be_remove = 0;
+			//Loop that detecting removed devices
+			if(stats->Tele_data.as_RMSWs.amount_of_devices && stats->Tele_data.as_RMSWs.amount_of_devices <= MAX_RMSW_DEVs)
+			{
+				for(i=0; i<stats->Tele_data.as_RMSWs.amount_of_devices; i++)
+				{
+					for(j=0; j<MAX_RMSW_DEVs && stats->Tele_data.as_RMSWs.det_devs_data[i].dev_id != cur_MTI_Tele_data.as_MUXs_RMSWs[j].dev_id; j++);
+					if(j==MAX_RMSW_DEVs)
+					{
+						stats->Tele_data.as_RMSWs.IDs_to_be_removed[stats->Tele_data.as_RMSWs.amount_to_be_remove] = stats->Tele_data.as_RMSWs.det_devs_data[i].dev_id;
+						stats->Tele_data.as_RMSWs.amount_to_be_remove++;
+					}
+				}
+			}
 			//Loop that find the detected devices and load them to the stats.
+			stats->Tele_data.as_RMSWs.amount_of_devices = 0;
 			for(i=0, pos=0; i<MAX_RMSW_DEVs; i++)
 			{
 				if(cur_MTI_Tele_data.as_MUXs_RMSWs[i].dev_type)
@@ -201,9 +214,6 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 							for(int j=0;j<4; j++)
 								stats->Tele_data.as_RMSWs.det_devs_data[pos].meas_data[j] = ((short)cur_MTI_Tele_data.as_MUXs_RMSWs[i].meas_data[j])/16.0;
 							break;
-						default:
-							for(int j=0; j<4;j++)
-								stats->Tele_data.as_RMSWs.det_devs_data[pos].meas_data[j] = NAN;
 					}
 					pos++;
 				}

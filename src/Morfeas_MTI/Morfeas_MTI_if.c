@@ -283,8 +283,9 @@ int main(int argc, char *argv[])
 							case Tele_TC16:
 							case Tele_TC8:
 							case Tele_TC4:
-							case Tele_quad:	
+							case Tele_quad:
 								IPC_Telemetry_data(FIFO_fd, &stats);
+								break;
 							case RMSW_MUX:
 								IPC_RMSW_MUX_data(FIFO_fd, &stats);
 								break;
@@ -306,7 +307,7 @@ int main(int argc, char *argv[])
 				pthread_mutex_unlock(&MTI_access);
 				break;
 			case wait:
-				if(stats.MTI_Radio_config.Tele_dev_type == RMSW_MUX)	
+				if(stats.MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 					usleep(200000);
 				else
 					usleep(100000);
@@ -358,7 +359,8 @@ void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	//scale measurements and send them to Morfeas_opc_ua via IPC
+
+		//--- Load data to IPC_message ---//
 	IPC_msg.MTI_report.IPC_msg_type = IPC_MTI_report;
 	memccpy(IPC_msg.MTI_report.Dev_or_Bus_name, stats->dev_name,'\0',Dev_or_Bus_name_str_size);
 	IPC_msg.MTI_report.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
@@ -377,7 +379,8 @@ void IPC_reg_MTI_tree(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	//--- Load necessary message data to IPC_message ---/
+
+		//--- Load data to IPC_message ---//
 	IPC_msg.MTI_tree_reg.IPC_msg_type = IPC_MTI_tree_reg; //Message type
 	//Load Device name to IPC_message
 	memccpy(IPC_msg.MTI_tree_reg.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
@@ -393,7 +396,8 @@ void IPC_Update_Health_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	//--- Load necessary message data to IPC_message ---/
+
+		//--- Load data to IPC_message ---//
 	IPC_msg.MTI_Update_Health.IPC_msg_type = IPC_MTI_Update_Health; //Message type
 	//Load Device name to IPC_message
 	memccpy(IPC_msg.MTI_Update_Health.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
@@ -412,7 +416,8 @@ void IPC_Update_Radio_status(int FIFO_fd, struct Morfeas_MTI_if_stats *stats, un
 {
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	//--- Load necessary message data to IPC_message ---/
+
+		//--- Load data to IPC_message ---//
 	IPC_msg.MTI_Update_Radio.IPC_msg_type = IPC_MTI_Update_Radio; //Message type
 	//Load Device name to IPC_message
 	memccpy(IPC_msg.MTI_Update_Radio.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
@@ -438,7 +443,8 @@ void IPC_Telemetry_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 		return;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	//--- Load necessary message data to IPC_message ---/
+
+		//--- Load data to IPC_message ---//
 	IPC_msg.MTI_tele_data.IPC_msg_type = IPC_MTI_Tele_data; //Message type
 	//Load Device name to IPC_message
 	memccpy(IPC_msg.MTI_tele_data.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
@@ -476,9 +482,19 @@ void IPC_RMSW_MUX_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 		return;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
-	//--- Load necessary message data to IPC_message ---/
-	IPC_msg.MTI_tele_data.IPC_msg_type = IPC_MTI_RMSW_MUX_data; //Message type
-	
+
+		//--- Load data to IPC_message ---//
+	IPC_msg.MTI_RMSW_MUX_data.IPC_msg_type = IPC_MTI_RMSW_MUX_data; //Message type
+	//Load Device name to IPC_message
+	memccpy(IPC_msg.MTI_RMSW_MUX_data.Dev_or_Bus_name, stats->dev_name, '\0', Dev_or_Bus_name_str_size);
+	IPC_msg.MTI_RMSW_MUX_data.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	//Load MTI's IPv4 by converting from string to unsigned integer
+	inet_pton(AF_INET, stats->MTI_IPv4_addr, &(IPC_msg.MTI_RMSW_MUX_data.MTI_IPv4));
+	//Load RMSW/MUX data to IPC_msg
+	IPC_msg.MTI_RMSW_MUX_data.Devs_data.amount_of_devices = stats->Tele_data.as_RMSWs.amount_of_devices;
+	IPC_msg.MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove = stats->Tele_data.as_RMSWs.amount_to_be_remove;
+	memcpy(IPC_msg.MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed, stats->Tele_data.as_RMSWs.IDs_to_be_removed, stats->Tele_data.as_RMSWs.amount_to_be_remove);
+	memcpy(IPC_msg.MTI_RMSW_MUX_data.Devs_data.det_devs_data, stats->Tele_data.as_RMSWs.det_devs_data, stats->Tele_data.as_RMSWs.amount_of_devices * sizeof(struct RMSW_MUX_Mini_data_struct));
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }

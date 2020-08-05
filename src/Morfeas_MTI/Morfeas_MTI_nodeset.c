@@ -61,7 +61,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 	UA_NodeId NodeId;
 	char Node_ID_str[100], Node_ID_parent_str[60];
 	char *status_str = NULL, name_buff[20], anchor[50];
-	unsigned char i, lim = 0, status_value;
+	unsigned char i, j, lim = 0, status_value;
 	float meas, ref;
 	int cnt;
 	//Msg type from MTI_handler
@@ -253,8 +253,13 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							}
 						}
 						else
-						{	//Add RMSW/MUX related Global switches nodes
+						{
+							//Add Global object node
 							sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
+							sprintf(Node_ID_str, "%s.Global", Node_ID_parent_str);
+							Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Global Controls");
+							//Add RMSW/MUX related Global switches variables nodes
+							sprintf(Node_ID_parent_str, "%s.Radio.Tele.Global", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
 							sprintf(Node_ID_str, "%s.G_SW", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global ON/OFF Control", UA_TYPES_BOOLEAN);
 							sprintf(Node_ID_str, "%s.G_SL", Node_ID_parent_str);
@@ -278,16 +283,16 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_Update_Radio.sRegs.for_temp_tele.StF), UA_TYPES_BYTE);
 						break;
 					case RMSW_MUX:
-						sprintf(Node_ID_str, "%s.Radio.Tele.G_SW", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						sprintf(Node_ID_str, "%s.Radio.Tele.Global.G_SW", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SW;
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
-						sprintf(Node_ID_str, "%s.Radio.Tele.G_SL", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						sprintf(Node_ID_str, "%s.Radio.Tele.Global.G_SL", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_SL;
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
-						sprintf(Node_ID_str, "%s.Radio.Tele.G_P_state", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						sprintf(Node_ID_str, "%s.Radio.Tele.Global.G_P_state", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_P_state;
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
-						sprintf(Node_ID_str, "%s.Radio.Tele.G_S_state", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
+						sprintf(Node_ID_str, "%s.Radio.Tele.Global.G_S_state", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 						status_value = IPC_msg_dec->MTI_Update_Radio.sRegs.for_rmsw_dev.G_S_state;
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
 						break;
@@ -392,7 +397,203 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			break;
 		case IPC_MTI_RMSW_MUX_data:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-
+				if(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove)//Check if RMSW/MUX nodes is need to be remove
+				{
+					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "amount_to_be_remove = %d", IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove);
+					for(i=0; i<IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove; i++)
+					{
+						sprintf(Node_ID_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed[i]);
+						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+						{
+							UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "RMSW_dev with ID:%d removed!!!", IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed[i]);
+							UA_Server_deleteNode(server, NodeId, 1);
+							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+						}
+					}
+				}
+				//Add and update data of RMSW/MUX devices
+				for(i=0; i<IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_of_devices; i++)
+				{
+					sprintf(Node_ID_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+					if(UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))//Check if device is in Nodestore, if not register it
+					{
+						//Add current RMSW/MUX Device object node
+						sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name);
+						sprintf(name_buff, "%s(ID:%u)", MTI_RM_dev_type_str[IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type],
+													 IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+						Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
+						strcpy(Node_ID_parent_str, Node_ID_str);
+						//Add current RMSW/MUX related variables nodes and load static values
+						sprintf(Node_ID_str, "%s.mem_offset", Node_ID_parent_str);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Memory Offset", UA_TYPES_BYTE);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].pos_offset), UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.type", Node_ID_parent_str);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Type", UA_TYPES_STRING);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), MTI_RM_dev_type_str[IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type], UA_TYPES_STRING);
+						sprintf(Node_ID_str, "%s.id", Node_ID_parent_str);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "ID", UA_TYPES_BYTE);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id), UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.last_msg", Node_ID_parent_str);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Last RX(sec)", UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.dev_temp", Node_ID_parent_str);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Device temp(°C)", UA_TYPES_FLOAT);
+						sprintf(Node_ID_str, "%s.sup_volt", Node_ID_parent_str);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Supply Voltage(V)", UA_TYPES_FLOAT);
+						//Add objects and variables nodes for Controls and Measurement
+						if(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type == Mini_RMSW)
+						{
+							sprintf(Node_ID_str, "%s.meas", Node_ID_parent_str);
+							Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Measurements");
+						}
+						sprintf(Node_ID_str, "%s.Controls", Node_ID_parent_str);
+						Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Controls");
+						strcpy(Node_ID_parent_str, Node_ID_str);
+						if(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type != MUX)
+						{
+							sprintf(Node_ID_str, "%s.Main_SW", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Main Switch", UA_TYPES_BOOLEAN);
+						}
+						sprintf(Node_ID_str, "%s.TX_rate", Node_ID_parent_str);
+						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "TX Rate(sec)", UA_TYPES_FLOAT);
+						switch(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type)
+						{
+							case Mini_RMSW:
+								sprintf(anchor, "MTI.%u.%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+								//Add Mini_RMSW Channels related nodes (Linkable)
+								for(j=1; j<=4; j++)
+								{
+									sprintf(Node_ID_parent_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+									sprintf(Node_ID_str, "%s.Radio.Tele.%u.CH%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name,
+																				  IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id,
+																				  j);
+									sprintf(name_buff, "CH%u", j);
+									Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
+									strcpy(Node_ID_parent_str, Node_ID_str);
+									sprintf(Node_ID_str, "%s.%s.status", anchor, name_buff);
+									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status", UA_TYPES_STRING);
+									sprintf(Node_ID_str, "%s.%s.status_byte", anchor, name_buff);
+									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status Value", UA_TYPES_BYTE);
+									sprintf(Node_ID_str, "%s.%s.meas", anchor, name_buff);
+									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Value", UA_TYPES_FLOAT);
+								}
+								break;
+							case RMSW_2CH:
+								for(j=1; j<=2; j++)
+								{
+									sprintf(Node_ID_str, "%s.CH%u_state", Node_ID_parent_str, j);
+									sprintf(name_buff, "CH%u state", j);
+									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, name_buff, UA_TYPES_BOOLEAN);
+								}
+								//Add RMSW_2CH Channels related nodes
+								for(j=1; j<=2; j++)
+								{
+									sprintf(Node_ID_parent_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+									sprintf(Node_ID_str, "%s.Radio.Tele.%u.CH%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name,
+																				  IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id,
+																				  j);
+									sprintf(name_buff, "CH%u", j);
+									Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
+									strcpy(Node_ID_parent_str, Node_ID_str);
+									sprintf(Node_ID_str, "%s.voltage", Node_ID_parent_str);
+									sprintf(name_buff, "CH%u Voltage(V)", j);
+									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, name_buff, UA_TYPES_FLOAT);
+									sprintf(Node_ID_str, "%s.amperage", Node_ID_parent_str);
+									sprintf(name_buff, "CH%u Amperage(A)", j);
+									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, name_buff, UA_TYPES_FLOAT);
+								}
+								break;
+							case MUX:
+								for(j=1; j<=4; j++)
+								{
+									sprintf(Node_ID_str, "%s.CH%u", Node_ID_parent_str, j);
+									sprintf(name_buff, "CH%u", j);
+									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, name_buff, UA_TYPES_BOOLEAN);
+								}
+								break;
+						}
+					}
+					else
+						UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+					sprintf(Node_ID_parent_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+					//Update current RMSW/MUX Device values
+					sprintf(Node_ID_str, "%s.last_msg", Node_ID_parent_str);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].time_from_last_mesg), UA_TYPES_BYTE);
+					sprintf(Node_ID_str, "%s.dev_temp", Node_ID_parent_str);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_temp), UA_TYPES_FLOAT);
+					sprintf(Node_ID_str, "%s.sup_volt", Node_ID_parent_str);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].input_voltage), UA_TYPES_FLOAT);
+					//Update variables nodes for controls and meas
+					switch(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type)
+					{
+						case Mini_RMSW:
+							sprintf(Node_ID_str, "%s.Controls.Main_SW", Node_ID_parent_str);
+							status_value = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].switch_status.mini_dec.Main;
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.Controls.TX_rate", Node_ID_parent_str);
+							switch(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].switch_status.mini_dec.Rep_rate)
+							{
+								case 0: meas = 20; break;
+								case 2: meas = 2; break;
+								case 3:
+								case 1: meas = .2; break;
+							}
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+							sprintf(anchor, "MTI.%u.%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+							for(j=1; j<=4; j++)
+							{
+								meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j-1];
+								meas = meas<NO_SENSOR_VALUE ? meas:NAN;
+								status_value = meas!=meas ? Tele_channel_noSensor:Okay;
+								status_str = status_value ? "No Sensor":"Okay";
+								sprintf(Node_ID_str, "%s.CH%u.meas", anchor, j);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+								sprintf(Node_ID_str, "%s.CH%u.status", anchor, j);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
+								sprintf(Node_ID_str, "%s.CH%u.status_byte", anchor, j);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
+							}
+							break;
+						case RMSW_2CH:
+							sprintf(Node_ID_str, "%s.Controls.TX_rate", Node_ID_parent_str);
+							switch(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].switch_status.rmsw_dec.Rep_rate)
+							{
+								case 0: meas = 20; break;
+								case 1: meas = 2; break;
+							}
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+							sprintf(Node_ID_str, "%s.Controls.Main_SW", Node_ID_parent_str);
+							status_value = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].switch_status.as_byte & 1;
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
+							for(j=1; j<=2; j++)
+							{
+								sprintf(Node_ID_str, "%s.Controls.CH%u_state", Node_ID_parent_str, j);
+								status_value = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].switch_status.as_byte & (1<<j);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
+								sprintf(Node_ID_str, "%s.CH%u.voltage", Node_ID_parent_str, j);
+								meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j==1?0:2];
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+								sprintf(Node_ID_str, "%s.CH%u.amperage", Node_ID_parent_str, j);
+								meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j==1?1:3];
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+							}
+							break;
+						case MUX:
+							sprintf(Node_ID_str, "%s.Controls.TX_rate", Node_ID_parent_str);
+							switch(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].switch_status.mux_dec.Rep_rate)
+							{
+								case 0: meas = 20; break;
+								case 1: meas = 2; break;
+							}
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+							for(j=1; j<=4; j++)
+							{
+								sprintf(Node_ID_str, "%s.Controls.CH%u_state", Node_ID_parent_str, j);
+								status_value = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].switch_status.as_byte & (1<<(j-1));
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
+							}
+							break;
+					}
+				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 	}
@@ -408,11 +609,11 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	char contents[200], dev_name[Dev_or_Bus_name_str_size], new_mode_str[10] = {0};
     int ret = UA_STATUSCODE_GOOD, i=0;
 	unsigned char new_mode_val=0,
-				  *new_RF_CH = (unsigned char*)(input[0].data),
-				  *StV = (unsigned char*)(input[2].data),
-				  *StF = (unsigned char*)(input[3].data);
-	bool *G_SW = (bool *)(input[4].data),
-		 *G_SL = (bool *)(input[5].data);
+				  new_RF_CH = input[0].data ? *(unsigned char*)(input[0].data):0,
+				  StV = input[2].data ? *(unsigned char*)(input[2].data):0,
+				  StF = input[3].data ? *(unsigned char*)(input[3].data):0;
+	bool G_SW = input[4].data ? *(bool *)(input[4].data):0,
+		 G_SL = input[5].data ? *(bool *)(input[5].data):0;
 	cJSON *root = NULL;
 	UA_String reply, *new_mode_UA_str = (UA_String *)(input[1].data);
 	//Sanitize new_mode_UA_str
@@ -425,7 +626,7 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 		i++;
 	}
 	new_mode_str[i]='\0';
-	//Check validity of new_mode_str  
+	//Check validity of new_mode_str
 	while(MTI_Tele_dev_type_str[new_mode_val] && strcmp(new_mode_str,MTI_Tele_dev_type_str[new_mode_val]))
 		new_mode_val++;
 	if(new_mode_val > Dev_type_max)
@@ -440,19 +641,19 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	dev_name[i]='\0';
 	//Construct contents for DBus method call (as JSON object)
 	root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, "new_RF_CH", *new_RF_CH);
+	cJSON_AddNumberToObject(root, "new_RF_CH", new_RF_CH);
 	cJSON_AddItemToObject(root, "new_mode", cJSON_CreateString(new_mode_str));
 	switch(new_mode_val)
 	{
 		case Tele_TC4:
 		case Tele_TC8:
 		case Tele_TC16:
-			cJSON_AddNumberToObject(root, "StV", *StV);
-			cJSON_AddNumberToObject(root, "StF", *StF);
+			cJSON_AddNumberToObject(root, "StV", StV);
+			cJSON_AddNumberToObject(root, "StF", StF);
 			break;
 		case RMSW_MUX:
-			cJSON_AddItemToObject(root, "G_SW", cJSON_CreateBool(*G_SW));
-			cJSON_AddItemToObject(root, "G_SL", cJSON_CreateBool(*G_SL));
+			cJSON_AddItemToObject(root, "G_SW", cJSON_CreateBool(G_SW));
+			cJSON_AddItemToObject(root, "G_SL", cJSON_CreateBool(G_SL));
 			break;
 	}
 	//Stringify the root JSON object

@@ -207,11 +207,6 @@ struct RMSW_MUX_Devs_data_struct{
 	unsigned char amount_of_devices;
 	unsigned char amount_to_be_remove;
 	unsigned char IDs_to_be_removed[MAX_RMSW_DEVs];
-	unsigned char amount_to_be_add;
-	struct {
-		unsigned char RMSW_Dev_type;
-		unsigned char Dev_id;
-	}dev_to_be_add[MAX_RMSW_DEVs];
 	struct RMSW_MUX_Mini_data_struct det_devs_data[MAX_RMSW_DEVs];
 };
 
