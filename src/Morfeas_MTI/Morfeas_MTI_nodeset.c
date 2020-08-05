@@ -399,13 +399,11 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				if(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove)//Check if RMSW/MUX nodes is need to be remove
 				{
-					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "amount_to_be_remove = %d", IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove);
 					for(i=0; i<IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove; i++)
 					{
 						sprintf(Node_ID_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed[i]);
 						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 						{
-							UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "RMSW_dev with ID:%d removed!!!", IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed[i]);
 							UA_Server_deleteNode(server, NodeId, 1);
 							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 						}
