@@ -195,7 +195,7 @@ typedef struct MTI_report_msg_struct{
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int MTI_IPv4;
 	unsigned Tele_dev_type:3;
-	unsigned char amount_of_tele;
+	unsigned char amount_of_Linkable_tele;
 	unsigned char IDs_of_MiniRMSWs[MAX_RMSW_DEVs];
 	int status;
 }MTI_report_msg;

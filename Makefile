@@ -202,13 +202,15 @@ install:
 	@echo  "# systemctl enable Morfeas_system.service"
 
 uninstall:
-	@echo  "Stop Morfeas_system service"
-	systemctl stop Morfeas_system.service
-	@echo  "Remove related binaries and Systemd unit files"
-	rm /usr/local/bin/Morfeas_*
-	rm -r /etc/systemd/system/Morfeas_system*
-	@echo  "\nRemove D-Bus configuration"
-	rm /etc/dbus-1/system.d/Morfeas_system.conf
+	@echo  "Stop Morfeas_system service..."
+	@systemctl stop Morfeas_system.service
+	@echo  "Remove related binaries and Systemd unit files..."
+	@rm /usr/local/bin/Morfeas_*
+	@rm -r /etc/systemd/system/Morfeas_system*
+	@echo  "\nRemove D-Bus configuration..."
+	@rm /etc/dbus-1/system.d/Morfeas_system.conf
+	@echo  "\nRemove LogBooks..."
+	@rm -r /var/tmp/Morfeas_*
 
 .PHONY: all clean delete-tree
 

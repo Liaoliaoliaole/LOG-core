@@ -14,7 +14,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.7" /*Release Version of Morfeas_MTI_if*/
+#define Configs_dir "/var/tmp/Morfeas_MTI_Configurations/"
+#define VERSION "0.9" /*Release Version of Morfeas_MTI_if*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,6 +60,8 @@ static void stopHandler(int signum)
 {
 	if(signum == SIGPIPE)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
+	else if(!handler_run && signum == SIGINT)
+		raise(SIGABRT);
 	handler_run = 0;
 }
 
@@ -97,6 +100,8 @@ int main(int argc, char *argv[])
 	unsigned char state = get_config, prev_RF_CH=-1, prev_dev_type=-1;
 	unsigned short prev_sRegs=-1;
 	struct Morfeas_MTI_if_stats stats = {.QUAD_Tele_inp_scalers[0]=1.0,.QUAD_Tele_inp_scalers[1]=1.0};
+	//Directory pointer variables
+	DIR *dir;
 	//Variables for threads
 	pthread_t DBus_listener_Thread_id;
 	struct MTI_DBus_thread_arguments_passer passer = {&ctx, &stats};
@@ -173,6 +178,21 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s with Dev_name:%s Already Running!!!\n", argv[0], stats.dev_name);
 		exit(EXIT_SUCCESS);
 	}
+
+	//Check the existence of the Morfeas_MTI_configs directory
+	dir = opendir(Configs_dir);
+	if (dir)
+		closedir(dir);
+	else
+	{
+		Logger("Making MTI_Configurations_dir \n");
+		if(mkdir(Configs_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))
+		{
+			perror("Error at MTI_Configurations_dir creation!!!");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	//Install stopHandler as the signal handler for SIGINT, SIGTERM and SIGPIPE signals.
 	signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
@@ -186,10 +206,10 @@ int main(int argc, char *argv[])
 
 	//---- Make of FIFO file ----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-	//Open FIFO for Write
-	FIFO_fd = open(Data_FIFO, O_WRONLY);
 	//Register handler to Morfeas_OPC-UA Server
 	Logger("Morfeas_MTI_if(%s) Send Registration message to OPC-UA via IPC....\n",stats.dev_name);
+	//Open FIFO for Write
+	FIFO_fd = open(Data_FIFO, O_WRONLY);
 	IPC_Handler_reg_op(FIFO_fd, MTI, stats.dev_name, 0);
 	Logger("Morfeas_MTI_if(%s) Registered on OPC-UA\n",stats.dev_name);
 
@@ -379,13 +399,13 @@ void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 		{
 			if(stats->Tele_data.as_RMSWs.det_devs_data[i].dev_type == Mini_RMSW)
 			{
-				IPC_msg.MTI_report.IDs_of_MiniRMSWs[IPC_msg.MTI_report.amount_of_tele] = stats->Tele_data.as_RMSWs.det_devs_data[i].dev_id;
-				IPC_msg.MTI_report.amount_of_tele++;
+				IPC_msg.MTI_report.IDs_of_MiniRMSWs[IPC_msg.MTI_report.amount_of_Linkable_tele] = stats->Tele_data.as_RMSWs.det_devs_data[i].dev_id;
+				IPC_msg.MTI_report.amount_of_Linkable_tele++;
 			}
 		}
 	}
 	else
-		IPC_msg.MTI_report.amount_of_tele = 1;
+		IPC_msg.MTI_report.amount_of_Linkable_tele = 1;
 	//Load error code to report IPC_msg
 	IPC_msg.MTI_report.status = stats->error;
 	//Send status report

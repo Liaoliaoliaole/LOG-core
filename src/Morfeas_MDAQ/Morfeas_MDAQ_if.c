@@ -48,8 +48,11 @@ static void stopHandler(int signum)
 {
 	if(signum == SIGPIPE)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
+	else if(!handler_run && signum == SIGINT)
+		raise(SIGABRT);
 	handler_run = 0;
 }
+
 //--- Local functions ---//
 // MDAQ_status_to_IPC function. Send Status of MDAQ to Morfeas_opc_ua via IPC
 void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);

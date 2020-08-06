@@ -8,3 +8,4 @@
 	path = src/open62541
 	url = https://github.com/open62541/open62541.git
 	ignore = dirty
+

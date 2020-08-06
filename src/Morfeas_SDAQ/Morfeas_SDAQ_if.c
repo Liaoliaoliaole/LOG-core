@@ -440,8 +440,9 @@ inline void quit_signal_handler(int signum)
 {
 	if(signum == SIGPIPE)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
+	else if(!flags.run && signum == SIGINT)
+		raise(SIGABRT);
 	flags.run = 0;
-	return;
 }
 
 inline void CAN_if_timer_handler (int signum)

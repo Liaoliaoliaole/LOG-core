@@ -48,6 +48,8 @@ static void stopHandler(int signum)
 {
 	if(signum == SIGPIPE)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
+	else if(!handler_run && signum == SIGINT)
+		raise(SIGABRT);
 	handler_run = 0;
 }
 //--- Local Functions ---//

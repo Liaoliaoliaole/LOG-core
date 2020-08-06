@@ -93,7 +93,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								case Tele_quad: lim =  2; break;
 								case RMSW_MUX:  lim =  4; break;
 							}
-							for(j=0; j<IPC_msg_dec->MTI_report.amount_of_tele; j++)
+							for(j=0; j<IPC_msg_dec->MTI_report.amount_of_Linkable_tele; j++)
 							{
 								if(IPC_msg_dec->MTI_report.Tele_dev_type != RMSW_MUX)
 									sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_report.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_report.Tele_dev_type]);
