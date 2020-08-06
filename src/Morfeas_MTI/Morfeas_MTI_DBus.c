@@ -80,7 +80,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	DBusMessageIter call_args;
 	//Local variables and structures
 	char *err_str;
-	unsigned char new_RF_CH, new_mode, mem_pos, tele_type, sw_name;
+	unsigned char new_RF_CH, new_mode, mem_pos, RMSW_tele_type, sw_name;
 	union MTI_specific_regs sregs;
 	struct Gen_config_struct PWM_gens_config[2];
 
@@ -199,7 +199,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_unlock(&MTI_access);
 									break;
 								case ctrl_tele_SWs:
-									if((err_str = ctrl_tele_SWs_argValidator(JSON_args, &mem_pos, &tele_type, &sw_name)))
+									if((err_str = ctrl_tele_SWs_argValidator(JSON_args, &mem_pos, &RMSW_tele_type, &sw_name)))
 									{
 										DBus_reply_msg(conn, msg, err_str);
 										break;
@@ -207,7 +207,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_lock(&MTI_access);
 										if(stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX)
 										{
-											if(stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_SW)
+											if(stats->MTI_Radio_config.sRegs.for_rmsw_dev.G_SW && RMSW_tele_type != MUX)
 												DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Global control is enabled");
 											else
 											{
@@ -215,7 +215,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 												{
 													if(!(err = ctrl_tele_switch(ctx,
 																				mem_pos,
-																				tele_type,
+																				RMSW_tele_type,
 																				sw_name,
 																				cJSON_GetObjectItem(JSON_args,"new_state")->valueint?1:0)))
 														DBus_reply_msg(conn, msg, "ctrl_tele_SWs(): Success");

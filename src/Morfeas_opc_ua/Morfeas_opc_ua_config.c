@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <open62541/server_config_default.h>
 
 static const size_t usernamePasswordsSize = 1;
-static UA_UsernamePasswordLogin usernamePasswords[] = {{UA_STRING_STATIC("Morfeas"), UA_STRING_STATIC("Morfeas_password")}};
+static UA_UsernamePasswordLogin usernamePasswords[] = {{UA_STRING_STATIC("Morfeas"), UA_STRING_STATIC("Morfeas_pass")}};
 
 UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version)
 {

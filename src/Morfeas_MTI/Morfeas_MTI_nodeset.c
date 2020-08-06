@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Local function that adding the new_MTI_config method to the Morfeas OPC_UA nodeset
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
+void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 
 //The DBus method caller function
 int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
@@ -61,7 +62,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 	UA_NodeId NodeId;
 	char Node_ID_str[100], Node_ID_parent_str[60];
 	char *status_str = NULL, name_buff[20], anchor[50];
-	unsigned char i, j, lim = 0, status_value;
+	unsigned char i, j = 1, lim = 0, status_value;
 	float meas, ref;
 	int cnt;
 	//Msg type from MTI_handler
@@ -84,35 +85,41 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							cnt = 0;
 							status_value = OFF_line;
 							status_str = "OFF-line";
-							//Update values from MTI's Special registers
 							switch(IPC_msg_dec->MTI_report.Tele_dev_type)
 							{
 								case Tele_TC16: lim = 16; break;
 								case Tele_TC8:  lim =  8; break;
 								case Tele_TC4:  lim =  4; break;
 								case Tele_quad: lim =  2; break;
+								case RMSW_MUX:  lim =  4; break;
 							}
-							sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_report.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_report.Tele_dev_type]);
-							for(i=1; i<=lim; i++)
+							for(j=0; j<IPC_msg_dec->MTI_report.amount_of_tele; j++)
 							{
-								//Update telemetry's Channel specific variables (Linkable)
-								sprintf(Node_ID_str, "%s.CH%02u.meas", anchor, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
-								sprintf(Node_ID_str, "%s.CH%02u.status", anchor, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
-								sprintf(Node_ID_str, "%s.CH%02u.status_byte", anchor, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
-								switch(IPC_msg_dec->MTI_report.Tele_dev_type)
+								if(IPC_msg_dec->MTI_report.Tele_dev_type != RMSW_MUX)
+									sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_report.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_report.Tele_dev_type]);
+								else
+									sprintf(anchor, "MTI.%u.%u", IPC_msg_dec->MTI_report.MTI_IPv4, IPC_msg_dec->MTI_report.IDs_of_MiniRMSWs[j]);
+								for(i=1; i<=lim; i++)
 								{
-									case Tele_TC8:
-									case Tele_TC4:
-										sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.ref", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
-										Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &ref, UA_TYPES_FLOAT);
-										break;
-									case Tele_quad:
-										sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.raw", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
-										Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32);
-										break;
+									//Update telemetry's Channel specific variables (Linkable)
+									sprintf(Node_ID_str, "%s.CH%u.meas", anchor, i);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+									sprintf(Node_ID_str, "%s.CH%u.status", anchor, i);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
+									sprintf(Node_ID_str, "%s.CH%u.status_byte", anchor, i);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
+									switch(IPC_msg_dec->MTI_report.Tele_dev_type)
+									{
+										case Tele_TC8:
+										case Tele_TC4:
+											sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.ref", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
+											Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &ref, UA_TYPES_FLOAT);
+											break;
+										case Tele_quad:
+											sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.raw", IPC_msg_dec->MTI_report.Dev_or_Bus_name, i);
+											Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32);
+											break;
+									}
 								}
 							}
 						}
@@ -224,18 +231,18 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								//Add telemetry's Channel node
 								sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
 								sprintf(name_buff, "CH%02u", i);
-								sprintf(Node_ID_str, "%s.%s", Node_ID_parent_str, name_buff);
+								sprintf(Node_ID_str, "%s.CH%u", Node_ID_parent_str, i);
 								Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
 								//Add telemetry's Channel specific variables (Linkable)
-								sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, name_buff);
-								sprintf(Node_ID_str, "%s.%s.status", anchor, name_buff);
+								sprintf(Node_ID_parent_str, "%s.Radio.Tele.CH%u", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
+								sprintf(Node_ID_str, "%s.CH%u.status", anchor, i);
 								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status", UA_TYPES_STRING);
-								sprintf(Node_ID_str, "%s.%s.status_byte", anchor, name_buff);
+								sprintf(Node_ID_str, "%s.CH%u.status_byte", anchor, i);
 								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Status Value", UA_TYPES_BYTE);
-								sprintf(Node_ID_str, "%s.%s.meas", anchor, name_buff);
+								sprintf(Node_ID_str, "%s.CH%u.meas", anchor, i);
 								Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Value", UA_TYPES_FLOAT);
 								//Add telemetry's Channel specific variables (Non Linkable)
-								sprintf(Node_ID_parent_str, "%s.Radio.Tele.%s", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, name_buff);
+								sprintf(Node_ID_parent_str, "%s.Radio.Tele.CH%u", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
 								switch(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type)
 								{
 									case Tele_TC8:
@@ -268,6 +275,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global ON/OFF state", UA_TYPES_BOOLEAN);
 							sprintf(Node_ID_str, "%s.G_S_state", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Global Sleep state", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.MTI_Global_SWs()", Node_ID_parent_str);
+							Morfeas_add_MTI_Global_SWs(server, Node_ID_parent_str, Node_ID_str);
 						}
 					}
 				}
@@ -363,6 +372,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								{
 									status_str = "Error";
 									status_value = Tele_channel_Error;
+									ref = NAN;
 								}
 							}
 						}
@@ -372,22 +382,22 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							status_str = "Disconnected";
 						}
 						//Update telemetry's Channel specific variables (Linkable)
-						sprintf(Node_ID_str, "%s.CH%02u.meas", anchor, i);
+						sprintf(Node_ID_str, "%s.CH%u.meas", anchor, i);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
-						sprintf(Node_ID_str, "%s.CH%02u.status", anchor, i);
+						sprintf(Node_ID_str, "%s.CH%u.status", anchor, i);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
-						sprintf(Node_ID_str, "%s.CH%02u.status_byte", anchor, i);
+						sprintf(Node_ID_str, "%s.CH%u.status_byte", anchor, i);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
 						//Update telemetry's Channel specific variables (Non Linkable)
 						switch(IPC_msg_dec->MTI_tele_data.Tele_dev_type)
 						{
 							case Tele_TC8:
 							case Tele_TC4:
-								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.ref", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.ref", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &ref, UA_TYPES_FLOAT);
 								break;
 							case Tele_quad:
-								sprintf(Node_ID_str, "%s.Radio.Tele.CH%02u.raw", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.raw", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32);
 								break;
 						}
@@ -478,8 +488,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							case RMSW_2CH:
 								for(j=1; j<=2; j++)
 								{
-									sprintf(Node_ID_str, "%s.CH%u_state", Node_ID_parent_str, j);
-									sprintf(name_buff, "CH%u state", j);
+									sprintf(name_buff, "CH%u_state", j);
+									sprintf(Node_ID_str, "%s.%s", Node_ID_parent_str, name_buff);
 									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, name_buff, UA_TYPES_BOOLEAN);
 								}
 								//Add RMSW_2CH Channels related nodes
@@ -503,8 +513,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							case MUX:
 								for(j=1; j<=4; j++)
 								{
-									sprintf(Node_ID_str, "%s.CH%u", Node_ID_parent_str, j);
-									sprintf(name_buff, "CH%u", j);
+									sprintf(name_buff, "CH%u_state", j);
+									sprintf(Node_ID_str, "%s.%s", Node_ID_parent_str, name_buff);
 									Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, name_buff, UA_TYPES_BOOLEAN);
 								}
 								break;
@@ -615,7 +625,9 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	cJSON *root = NULL;
 	UA_String reply, *new_mode_UA_str = (UA_String *)(input[1].data);
 	//Sanitize new_mode_UA_str
-	if(!new_mode_UA_str->length || new_mode_UA_str->length >= sizeof(new_mode_str))
+	if(!new_mode_UA_str)
+		return UA_STATUSCODE_BADSYNTAXERROR;
+	if(new_mode_UA_str->length >= sizeof(new_mode_str) || !new_mode_UA_str->length)
 		return UA_STATUSCODE_BADSYNTAXERROR;
 	//Convert new_mode_UA_str to new_mode_str
 	while(i < new_mode_UA_str->length)
@@ -655,16 +667,19 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 			break;
 	}
 	//Stringify the root JSON object
-	cJSON_PrintPreallocated(root, contents, sizeof(contents), 0);
+	if(!cJSON_PrintPreallocated(root, contents, sizeof(contents), 0))
+		ret = UA_STATUSCODE_BADOUTOFMEMORY;
 	cJSON_Delete(root);
-
-	if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))//Check for failure
+	if(!ret)
 	{
-		reply = UA_STRING_ALLOC("Error!!!");
-		ret = UA_STATUSCODE_BADSYNTAXERROR;
+		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))//Check for failure
+		{
+			reply = UA_STRING_ALLOC("Internal Error!!!");
+			ret = UA_STATUSCODE_BADSYNTAXERROR;
+		}
+		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+		UA_String_clear(&reply);
 	}
-	UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
-    UA_String_clear(&reply);
     return ret;
 }
 
@@ -708,6 +723,94 @@ void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *No
 							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 							UA_QUALIFIEDNAME(1, Node_id),
 							Method_Attr, &Morfeas_new_MTI_config_method_callback,
+							sizeof(inputArguments)/sizeof(*inputArguments), inputArguments,
+							1, &outputArgument,
+							NULL, NULL);
+}
+
+UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
+                         const UA_NodeId *sessionId, void *sessionHandle,
+                         const UA_NodeId *methodId, void *methodContext,
+                         const UA_NodeId *objectId, void *objectContext,
+                         size_t inputSize, const UA_Variant *input,
+                         size_t outputSize, UA_Variant *output)
+{
+	char contents[50], dev_name[Dev_or_Bus_name_str_size];
+    int ret = UA_STATUSCODE_GOOD, i=0;
+	bool G_P_state = input[0].data ? *(bool *)(input[0].data):0,
+		 G_S_state = input[1].data ? *(bool *)(input[1].data):0;
+	cJSON *root = NULL;
+	UA_String reply;
+
+	//Sanitize input
+	if(!input[0].data)
+		return UA_STATUSCODE_BADSYNTAXERROR;
+	//Get Dev_name
+	i=0;
+	while(methodId->identifier.string.data[i]!='.')
+	{
+		dev_name[i]=methodId->identifier.string.data[i];
+		i++;
+	}
+	dev_name[i]='\0';
+	//Construct contents for DBus method call (as JSON object)
+	root = cJSON_CreateObject();
+	cJSON_AddItemToObject(root, "G_P_state", cJSON_CreateBool(G_P_state));
+	cJSON_AddItemToObject(root, "G_S_state", cJSON_CreateBool(G_S_state));
+	//Stringify the root JSON object
+	if(!cJSON_PrintPreallocated(root, contents, sizeof(contents), 0))
+		ret = UA_STATUSCODE_BADOUTOFMEMORY;
+	cJSON_Delete(root);
+	if(!ret)
+	{
+		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "MTI_Global_SWs", contents, &reply))//Check for failure
+		{
+			reply = UA_STRING_ALLOC("Internal Error!!!");
+			ret = UA_STATUSCODE_BADSYNTAXERROR;
+		}
+		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+		UA_String_clear(&reply);
+	}
+    return ret;
+}
+
+void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id)
+{
+	const char *inp_descriptions[] = {"Global ON/OFF",
+									  "Global Sleep",
+									  NULL};
+	const char *inp_names[] = {"G_P_state","G_S_state",NULL};
+	const unsigned int inp_value_type[] = {UA_TYPES_BOOLEAN, UA_TYPES_BOOLEAN};
+
+	//Configure inputArguments
+    UA_Argument inputArguments[2];
+	for(int i=0; i<sizeof(inputArguments)/sizeof(*inputArguments); i++)
+	{
+		UA_Argument_init(&inputArguments[i]);
+		inputArguments[i].description = UA_LOCALIZEDTEXT("en-US", (char *)inp_descriptions[i]);
+		inputArguments[i].name = UA_STRING((char *)inp_names[i]);
+		inputArguments[i].dataType = UA_TYPES[inp_value_type[i]].typeId;
+		inputArguments[i].valueRank = UA_VALUERANK_SCALAR_OR_ONE_DIMENSION;
+	}
+	//Configure outputArgument
+	UA_Argument outputArgument;
+	UA_Argument_init(&outputArgument);
+	outputArgument.description = UA_LOCALIZEDTEXT("en-US", "Return of the method call");
+	outputArgument.name = UA_STRING("Return");
+	outputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+	outputArgument.valueRank = UA_VALUERANK_SCALAR;
+
+	UA_MethodAttributes Method_Attr = UA_MethodAttributes_default;
+	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method MTI_Global_SWs");
+	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","MTI_Global_SWs()");
+	Method_Attr.executable = true;
+	Method_Attr.userExecutable = true;
+	UA_Server_addMethodNode(server_ptr,
+							UA_NODEID_STRING(1, Node_id),
+							UA_NODEID_STRING(1, Parent_id),
+							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+							UA_QUALIFIEDNAME(1, Node_id),
+							Method_Attr, &Morfeas_MTI_Global_SWs_method_callback,
 							sizeof(inputArguments)/sizeof(*inputArguments), inputArguments,
 							1, &outputArgument,
 							NULL, NULL);

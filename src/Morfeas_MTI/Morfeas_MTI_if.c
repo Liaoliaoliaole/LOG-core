@@ -124,14 +124,14 @@ int main(int argc, char *argv[])
 			case 'p':
 				if(!(tcp_port = atoi(optarg)))
 				{
-					fprintf(stderr, "argument of -p option is invalid!!!!\n");
+					fprintf(stderr, "-p argument is invalid!!!!\n");
 					exit(1);
 				}
 				break;
 			case 'a':
 				if(!(modbus_addr = atoi(optarg)))
 				{
-					fprintf(stderr, "argument of -a option is invalid!!!!\n");
+					fprintf(stderr, "-a argument is invalid!!!!\n");
 					exit(1);
 				}
 				break;
@@ -228,21 +228,24 @@ int main(int argc, char *argv[])
 		switch(state)
 		{
 			case error:
-				Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
+				pthread_mutex_lock(&MTI_access);
+					Logger("MODBus Error(%d): %s\n",errno, modbus_strerror((stats.error = errno)));
+					MTI_status_to_IPC(FIFO_fd, &stats);//Send Error status report to Morfeas_opc_ua via IPC
+				pthread_mutex_unlock(&MTI_access);
 				do{
 					pthread_mutex_lock(&MTI_access);
-						ret = modbus_connect(ctx);//Attempt to reconnect and sleep on failure
-						stats.error = ret?errno:OK_status;//Load errno to stats
-						MTI_status_to_IPC(FIFO_fd, &stats);//Send status report to Morfeas_opc_ua via IPC
+						ret = modbus_connect(ctx);//Attempt to reconnect
+						stats.error = ret?errno:OK_status;//Load errno to stats at error or OK_status at success
 						logstat_MTI(path_to_logstat_dir, &stats);//report error on logstat
 					pthread_mutex_unlock(&MTI_access);
-					if(ret)
+					if(ret)//Sleep 1sec at failure
 						sleep(1);
 				}while(ret && handler_run);
-				if(!handler_run)
+				if(!handler_run)//Check if exit by handler stop request
 					break;
 				Logger("Recover from last Error\n");
 				pthread_mutex_lock(&MTI_access);
+					MTI_status_to_IPC(FIFO_fd, &stats);//Send Okay status report to Morfeas_opc_ua via IPC
 					stats.counter = 0;//Reset sample counter
 				pthread_mutex_unlock(&MTI_access);
 				state = get_config;
@@ -357,6 +360,7 @@ void print_usage(char *prog_name)
 // MTI_status function. Send Status of MTI to Morfeas_opc_ua via IPC
 void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 {
+	unsigned char i;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 
@@ -368,6 +372,20 @@ void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &(IPC_msg.MTI_report.MTI_IPv4));
 	//Load current Radio Telemetry type
 	IPC_msg.MTI_report.Tele_dev_type = stats->MTI_Radio_config.Tele_dev_type;
+	//Load MiniRMSW amount and them IDs to IPC_msg, if MTI's radio configured for RMSW/MUX. Otherwise amount is 1
+	if(stats->MTI_Radio_config.Tele_dev_type == RMSW_MUX && stats->Tele_data.as_RMSWs.amount_of_devices)
+	{
+		for(i=0; i<stats->Tele_data.as_RMSWs.amount_of_devices; i++)
+		{
+			if(stats->Tele_data.as_RMSWs.det_devs_data[i].dev_type == Mini_RMSW)
+			{
+				IPC_msg.MTI_report.IDs_of_MiniRMSWs[IPC_msg.MTI_report.amount_of_tele] = stats->Tele_data.as_RMSWs.det_devs_data[i].dev_id;
+				IPC_msg.MTI_report.amount_of_tele++;
+			}
+		}
+	}
+	else
+		IPC_msg.MTI_report.amount_of_tele = 1;
 	//Load error code to report IPC_msg
 	IPC_msg.MTI_report.status = stats->error;
 	//Send status report
