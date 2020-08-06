@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 
-//The DBus method caller function
+//The DBus method caller function. Return 0 if not internal error.
 int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
 
 
@@ -776,8 +776,8 @@ UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
 
 void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id)
 {
-	const char *inp_descriptions[] = {"Global ON/OFF",
-									  "Global Sleep",
+	const char *inp_descriptions[] = {"Global ON/OFF state control",
+									  "Global Sleep state control (only for MiniRMSWs)",
 									  NULL};
 	const char *inp_names[] = {"G_P_state","G_S_state",NULL};
 	const unsigned int inp_value_type[] = {UA_TYPES_BOOLEAN, UA_TYPES_BOOLEAN};
