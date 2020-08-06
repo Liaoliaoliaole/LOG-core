@@ -50,7 +50,6 @@ For compilation of this project the following dependencies required.
 * [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
 * [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data.
 * [libxml2](http://xmlsoft.org/) - Library for parsing XML documents.
-* [libcjson](https://github.com/DaveGamble/cJSON) - Ultralightweight JSON parser in ANSI C
 * [libusb](https://libusb.info/) - A ANSI C library that provides generic access to USB devices.
 * [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 * [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace
@@ -75,7 +74,15 @@ $ # Get Source of the submodules
 $ git submodule update --init --recursive --remote --merge
 ```
 ### Compilation and installation of the submodules
-
+#### cJSON
+```
+$ cd src/cJSON
+$ mkdir build && cd build
+$ cmake -D BUILD_SHARED_LIBS=ON ..
+$ make -j$(nproc)
+$ sudo make install
+$ sudo ldconfig
+```
 #### open62541
 ```
 $ cd src/open62541
