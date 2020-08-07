@@ -86,7 +86,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	char *err_str;
 	unsigned char new_RF_CH, new_mode, mem_pos, RMSW_tele_type, sw_name;
 	union MTI_specific_regs sregs;
-	struct Gen_config_struct PWM_gens_config[2];
+	struct Gen_config_struct PWM_gens_config[Amount_OF_GENS];
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -254,7 +254,12 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 											if(!(err = stats->error))
 											{
 												if(!(err = set_MTI_PWM_gens(ctx, PWM_gens_config)))
+												{
 													DBus_reply_msg(conn, msg, "new_PWM_config() Success");
+													memcpy(stats->user_config.gen_config, PWM_gens_config, sizeof(PWM_gens_config));
+													if(user_config(stats, "w"))
+														Logger("Storing of user_config failed!!!\n");
+												}
 											}
 										}
 										else

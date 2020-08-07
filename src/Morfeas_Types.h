@@ -107,14 +107,14 @@ union MTI_specific_regs{
 	struct dec_for_temperature_telemetries{
 		unsigned char StV;//Sample to set valid flag
 		unsigned char StF;//samples to reset valid flag
-	}for_temp_tele;
+	}__attribute__((packed, aligned(1))) for_temp_tele;
 	struct dec_for_controlling_devices{
 		unsigned G_SW:1;
 		unsigned G_SL:1;
 		unsigned reserver:6;
 		unsigned G_P_state:1;
 		unsigned G_S_state:1;
-	}for_rmsw_dev;
+	}__attribute__((packed, aligned(1))) for_rmsw_dev;
 	unsigned char as_array[2];
 	unsigned short as_short;
 };
@@ -165,7 +165,7 @@ struct QUAD_data_struct{
 	unsigned RX_status:2;
 	unsigned char RX_Success_ratio;
 	unsigned Data_isValid:1;
-	struct Gen_config_struct gen_config[2];
+	struct Gen_config_struct gen_config[Amount_OF_GENS];
 	int CNTs[2];
 	float CHs[2];
 };
@@ -210,12 +210,12 @@ struct RMSW_MUX_Devs_data_struct{
 	struct RMSW_MUX_Mini_data_struct det_devs_data[MAX_RMSW_DEVs];
 };
 
-typedef struct MTI_stored_config{
+typedef struct MTI_stored_config_struct{
 	unsigned char RF_channel;
 	unsigned char Tele_dev_type;
 	union MTI_specific_regs sRegs;
-	struct Gen_config_struct gen_config[2];
-	float QUAD_Tele_cnt_scalers[2];
+	struct Gen_config_struct gen_config[Amount_OF_GENS];
+	float QUAD_Tele_cnt_scalers[Amount_OF_GENS];
 }__attribute__((packed, aligned(1))) MTI_stored_config;
 
 //Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if

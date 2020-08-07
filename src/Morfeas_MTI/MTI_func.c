@@ -354,10 +354,16 @@ int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
 
 int MTI_set_user_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 {
+	union MTI_specific_regs sRegs={.as_short = stats->user_config.sRegs.as_short};
 	int ret=set_MTI_Radio_config(ctx, stats->user_config.RF_channel,
 									  stats->user_config.Tele_dev_type,
-									  &(stats->user_config.sRegs));
-	if(!ret && stats->user_config.Tele_dev_type == Tele_quad)
-		ret=set_MTI_PWM_gens(ctx, stats->user_config.gen_config);
+									  &sRegs);
+	if(!ret)
+	{
+		if(stats->user_config.Tele_dev_type == Tele_quad)
+			ret=set_MTI_PWM_gens(ctx, stats->user_config.gen_config);
+		else if(stats->user_config.Tele_dev_type == RMSW_MUX)
+			stats->Tele_data.as_RMSWs.amount_of_devices=0;
+	}
 	return ret;
 }

@@ -37,6 +37,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Defined value that temperature telemetry sent if input is open (aka No sensor)
 #define NO_SENSOR_VALUE 2000.0
 
+//Define amount of Pulse Generators
+#define Amount_OF_GENS 2
+
 //--- Enumerators for MTI Telemetry types---//
 enum MTI_Telemetry_Dev_type_enum{
 	Tele_TC16 = 2,
