@@ -156,10 +156,10 @@ struct Gen_config_struct{
 			unsigned saturation:1;
 			unsigned reserved:6;
 			unsigned fixed_freq:1;
-		}dec;
+		}__attribute__((packed, aligned(1))) dec;
 		unsigned char as_byte;
 	}pwm_mode;
-};
+}__attribute__((packed, aligned(1)));
 struct QUAD_data_struct{
 	unsigned short packet_index;
 	unsigned RX_status:2;
@@ -210,14 +210,22 @@ struct RMSW_MUX_Devs_data_struct{
 	struct RMSW_MUX_Mini_data_struct det_devs_data[MAX_RMSW_DEVs];
 };
 
+typedef struct MTI_stored_config{
+	unsigned char RF_channel;
+	unsigned char Tele_dev_type;
+	union MTI_specific_regs sRegs;
+	struct Gen_config_struct gen_config[2];
+	float QUAD_Tele_cnt_scalers[2];
+}__attribute__((packed, aligned(1))) MTI_stored_config;
+
 //Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
 struct Morfeas_MTI_if_stats{
 	char *MTI_IPv4_addr;
 	char *dev_name;
 	int error;
+	MTI_stored_config user_config;
 	struct MTI_status_struct MTI_status;
 	struct MTI_Radio_config_status_struct MTI_Radio_config;
-	float QUAD_Tele_inp_scalers[2];
 	union MTI_Telemetry_data{
 		struct TC4_data_struct as_TC4;
 		struct TC8_data_struct as_TC8;

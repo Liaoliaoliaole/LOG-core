@@ -84,7 +84,7 @@ void print_usage(char *prog_name);//print the usage manual
 //Function for Status LEDs
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 //Logbook read and write from file;
-int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append);
+int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode);
 //Function to clean-up list_SDAQs from non active SDAQ, also send IPC msg to opc_ua for each dead SDAQ
 int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function that found and return the status of a node from the list_SDAQ with SDAQ_address == address. Used in FSM
@@ -641,7 +641,7 @@ gint SDAQ_info_entry_cmp (gconstpointer a, gconstpointer b)
 }
 
 //Logbook read and write from file;
-int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append)
+int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 {
 	FILE *fp;
 	GSList *LogBook_node = stats->LogBook;
@@ -650,14 +650,14 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 	size_t read_bytes;
 	unsigned char checksum;
 
-	if(!strcmp(read_write_or_append, "r"))
+	if(!strcmp(mode, "r"))
 	{
 		if(stats->LogBook)
 		{
 			g_slist_free_full(stats->LogBook, free_LogBook_entry);
 			stats->LogBook = NULL;
 		}
-		fp=fopen(stats->LogBook_file_path,read_write_or_append);
+		fp=fopen(stats->LogBook_file_path,mode);
 		if(fp)
 		{
 			do{
@@ -690,11 +690,11 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 		else
 			return EXIT_FAILURE;
 	}
-	else if(!strcmp(read_write_or_append, "w"))
+	else if(!strcmp(mode, "w"))
 	{
 		if(LogBook_node)//check if list LogBook have elements
 		{
-			fp=fopen(stats->LogBook_file_path,read_write_or_append);
+			fp=fopen(stats->LogBook_file_path,mode);
 			if(fp)
 			{
 				//Store all the nodes of list LogBook in file
@@ -718,13 +718,13 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 			}
 		}
 	}
-	else if(!strcmp(read_write_or_append, "a"))
+	else if(!strcmp(mode, "a"))
 	{
 		if(stats->list_SDAQs)//check if list_SDAQs have elements
 		{
 			while(LogBook_node->next)//find last node
 				LogBook_node = LogBook_node->next;//next node
-			fp=fopen(stats->LogBook_file_path,read_write_or_append);
+			fp=fopen(stats->LogBook_file_path,mode);
 			if(fp)
 			{
 				node_data = LogBook_node->data;
@@ -741,7 +741,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, char *read_write_or_append
 			}
 		}
 	}
-	return 0;
+	return EXIT_SUCCESS;
 }
 //Function that find and return the amount of incomplete (incomplete info and/or dates) nodes.
 int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats)

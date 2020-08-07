@@ -145,7 +145,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			stats->Tele_data.as_QUAD.CNTs[0] = *cur_MTI_Tele_data.as_QUAD.Channel_1;
 			stats->Tele_data.as_QUAD.CNTs[1] = *cur_MTI_Tele_data.as_QUAD.Channel_2;
 			for(i=0; i<2; i++)
-				stats->Tele_data.as_QUAD.CHs[i] = stats->Tele_data.as_QUAD.CNTs[i] * stats->QUAD_Tele_inp_scalers[i];
+				stats->Tele_data.as_QUAD.CHs[i] = stats->Tele_data.as_QUAD.CNTs[i] * stats->user_config.QUAD_Tele_cnt_scalers[i];
 			//Get Pulse Generators Configuration
 			if(modbus_read_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(Pulse_gen_conf)/sizeof(short), (unsigned short*)&Pulse_gen_conf)<=0)
 			{
@@ -350,4 +350,14 @@ int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
 	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
 		return errno;
 	return EXIT_SUCCESS;
+}
+
+int MTI_set_user_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
+{
+	int ret=set_MTI_Radio_config(ctx, stats->user_config.RF_channel,
+									  stats->user_config.Tele_dev_type,
+									  &(stats->user_config.sRegs));
+	if(!ret && stats->user_config.Tele_dev_type == Tele_quad)
+		ret=set_MTI_PWM_gens(ctx, stats->user_config.gen_config);
+	return ret;
 }

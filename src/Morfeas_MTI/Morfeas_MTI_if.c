@@ -65,6 +65,10 @@ static void stopHandler(int signum)
 	handler_run = 0;
 }
 
+	//--- File related functions ---//
+//Function that get or store the users_config to file. Return 0 on success.
+int user_config(struct Morfeas_MTI_if_stats *stats, const char *mode);
+
 	//--- MTI's Read Functions ---//
 //MTI function that request the MTI's status and load them to stats. Return 0 on success.
 int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
@@ -72,6 +76,10 @@ int get_MTI_status(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 //MTI function that request from MTI the telemetry data and load them to stats. Return 0 in success.
 int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
+
+	//--- MTI's User config function ---//
+//Function that write user_config to MTI. Return 0 on success.
+int MTI_set_user_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats);
 
 //--- D-Bus Listener function ---//
 void * MTI_DBus_listener(void *varg_pt);//Thread function.
@@ -99,7 +107,7 @@ int main(int argc, char *argv[])
 	char *path_to_logstat_dir;
 	unsigned char state = get_config, prev_RF_CH=-1, prev_dev_type=-1;
 	unsigned short prev_sRegs=-1;
-	struct Morfeas_MTI_if_stats stats = {.QUAD_Tele_inp_scalers[0]=1.0,.QUAD_Tele_inp_scalers[1]=1.0};
+	struct Morfeas_MTI_if_stats stats = {0};
 	//Directory pointer variables
 	DIR *dir;
 	//Variables for threads
@@ -240,6 +248,18 @@ int main(int argc, char *argv[])
 	stats.error = 0;//load no error on stats
 	MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 
+	//Get old user_config form config_file
+	if(!user_config(&stats, "r"))
+	{
+		if(MTI_set_user_config(ctx, &stats))
+			state = error;
+	}
+	else
+	{
+		for(int i=0; i<sizeof(stats.user_config.QUAD_Tele_cnt_scalers)/sizeof(*(stats.user_config.QUAD_Tele_cnt_scalers)); i++)
+			stats.user_config.QUAD_Tele_cnt_scalers[i]=1.0;
+	}
+
 	//Start D-Bus listener function in a thread
 	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);
 
@@ -375,6 +395,52 @@ void print_usage(char *prog_name)
 	};
 	printf("%s\nUsage: %s IPv4 Dev_name [/path/to/logstat/directory] [Options]\n\n%s",preamp, prog_name, manual);
 	return;
+}
+
+int user_config(struct Morfeas_MTI_if_stats *stats, const char *mode)
+{
+	char config_file_path[60];
+	FILE *fp;
+	struct{
+		MTI_stored_config user_config;
+		unsigned char checksum;
+	}file_config;
+
+	if(strcmp(mode, "r") && strcmp(mode, "w"))
+		return EXIT_FAILURE;
+	sprintf(config_file_path, "%sMorfeas_MTI_%s", Configs_dir, stats->dev_name);
+	if(!strcmp(mode, "r"))
+	{
+		fp=fopen(config_file_path, mode);
+		if(fp)
+		{
+			fread(&file_config, 1, sizeof(file_config), fp);
+			fclose(fp);
+			if(!file_config.checksum ^ Checksum(&(file_config.user_config), sizeof(MTI_stored_config)))
+				memcpy(&(stats->user_config), &(file_config.user_config), sizeof(MTI_stored_config));
+			else
+			{
+				Logger("MTI configuration file Checksum Error!!!\n");
+				return EXIT_FAILURE;
+			}
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	else if(!strcmp(mode, "w"))
+	{
+		memcpy(&(file_config.user_config), &(stats->user_config), sizeof(MTI_stored_config));
+		file_config.checksum = Checksum(&(file_config.user_config), sizeof(MTI_stored_config));
+		fp=fopen(config_file_path, mode);
+		if(fp)
+		{
+			fwrite(&file_config, 1, sizeof(file_config), fp);
+			fclose(fp);
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
 }
 
 // MTI_status function. Send Status of MTI to Morfeas_opc_ua via IPC

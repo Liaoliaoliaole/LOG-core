@@ -44,6 +44,10 @@ static const char *const Method[] = {"new_MTI_config", "MTI_Global_SWs", "new_PW
 enum Method_enum{new_MTI_config, MTI_Global_SWs, new_PWM_config, ctrl_tele_SWs, echo};
 static DBusError dbus_error;
 
+	//--- File related functions ---//
+//Function that get or store the users_config to file. Return 0 on success.
+int user_config(struct Morfeas_MTI_if_stats *stats, const char *mode);
+
 	//--- MTI's Write Functions ---//
 //MTI function that sending a new Radio configuration. Return 0 on success, errno otherwise.
 int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char new_mode, union MTI_specific_regs *new_sregs);
@@ -170,7 +174,14 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 																			new_RF_CH,
 																			new_mode,
 																			&sregs)))
+											{
 												DBus_reply_msg(conn, msg, "new_MTI_config(): Success");
+												stats->user_config.RF_channel = new_RF_CH;
+												stats->user_config.Tele_dev_type = new_mode;
+												memcpy(&(stats->user_config.sRegs), &sregs, sizeof(sregs));
+												if(user_config(stats, "w"))
+													Logger("Storing of user_config failed!!!\n");
+											}
 										}
 									pthread_mutex_unlock(&MTI_access);
 									break;
