@@ -416,7 +416,7 @@ int user_config(struct Morfeas_MTI_if_stats *stats, const char *mode)
 		{
 			fread(&file_config, 1, sizeof(file_config), fp);
 			fclose(fp);
-			if(!file_config.checksum ^ Checksum(&(file_config.user_config), sizeof(MTI_stored_config)))
+			if(!(file_config.checksum ^ Checksum(&(file_config.user_config), sizeof(MTI_stored_config))))
 				memcpy(&(stats->user_config), &(file_config.user_config), sizeof(MTI_stored_config));
 			else
 			{

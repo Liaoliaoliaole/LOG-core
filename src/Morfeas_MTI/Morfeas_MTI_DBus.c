@@ -66,7 +66,7 @@ int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *repl
 	//--- Local Functions ---//
 char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH, unsigned char *new_mode, union MTI_specific_regs *snew_sRegs);
 char * ctrl_tele_SWs_argValidator(cJSON *JSON_args, unsigned char *mem_pos, unsigned char *tele_type, unsigned char *sw_name);
-char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[]);
+char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[], float cnt_scalers[]);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
@@ -87,6 +87,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	unsigned char new_RF_CH, new_mode, mem_pos, RMSW_tele_type, sw_name;
 	union MTI_specific_regs sregs;
 	struct Gen_config_struct PWM_gens_config[Amount_OF_GENS];
+	float cnt_scalers[Amount_OF_GENS];
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
@@ -243,7 +244,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_unlock(&MTI_access);
 									break;
 								case new_PWM_config:
-									if((err_str = new_PWM_config_argValidator(JSON_args, PWM_gens_config)))
+									if((err_str = new_PWM_config_argValidator(JSON_args, PWM_gens_config, cnt_scalers)))
 									{
 										DBus_reply_msg(conn, msg, err_str);
 										break;
@@ -257,6 +258,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 												{
 													DBus_reply_msg(conn, msg, "new_PWM_config() Success");
 													memcpy(stats->user_config.gen_config, PWM_gens_config, sizeof(PWM_gens_config));
+													memcpy(stats->user_config.QUAD_Tele_cnt_scalers, cnt_scalers, sizeof(cnt_scalers));
 													if(user_config(stats, "w"))
 														Logger("Storing of user_config failed!!!\n");
 												}
@@ -451,10 +453,10 @@ char * ctrl_tele_SWs_argValidator(cJSON *JSON_args, unsigned char *mem_pos, unsi
 	return NULL;
 }
 
-char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[])
+char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[], float cnt_scalers[])
 {
 	static char ret_str[100];
-	cJSON *JSON_element, *JSON_Array;
+	cJSON *JSON_Array_element, *JSON_Array;
 
 	if(!JSON_args||!PWM_gens_config)
 		return "NULL at Argument(s)";
@@ -463,32 +465,39 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 	if(cJSON_GetObjectItem(JSON_args,"PWM_gens_config")->type != cJSON_Array)
 		return "new_PWM_config(): PWM_gens_config isn't Array";
 	JSON_Array = cJSON_GetObjectItem(JSON_args,"PWM_gens_config");
-	if(cJSON_GetArraySize(JSON_Array)!=2)
+	if(cJSON_GetArraySize(JSON_Array)!=Amount_OF_GENS)
 		return "new_PWM_config(): PWM_gens_config wrong size Array";
-	for(int i=0; (JSON_element = cJSON_GetArrayItem(JSON_Array, i)) && i<2; i++)
+	for(int i=0; (JSON_Array_element = cJSON_GetArrayItem(JSON_Array, i)) && i<Amount_OF_GENS; i++)
 	{
-		if(!cJSON_HasObjectItem(JSON_element,"max") ||
-		   !cJSON_HasObjectItem(JSON_element,"min")||
-		   !cJSON_HasObjectItem(JSON_element,"saturation"))
+		if(!cJSON_HasObjectItem(JSON_Array_element,"scaler")||
+		   !cJSON_HasObjectItem(JSON_Array_element,"max")||
+		   !cJSON_HasObjectItem(JSON_Array_element,"min")||
+		   !cJSON_HasObjectItem(JSON_Array_element,"saturation"))
 			return "new_PWM_config(): Missing Arguments";
-		if(cJSON_GetObjectItem(JSON_element,"max")->type != cJSON_Number)
+		if(cJSON_GetObjectItem(JSON_Array_element,"scaler")->type != cJSON_Number)
+		{
+			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].scaler is NAN", i);
+			return ret_str;
+		}
+		if(cJSON_GetObjectItem(JSON_Array_element,"max")->type != cJSON_Number)
 		{
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].max is NAN", i);
 			return ret_str;
 		}
-		if(cJSON_GetObjectItem(JSON_element,"min")->type != cJSON_Number)
+		if(cJSON_GetObjectItem(JSON_Array_element,"min")->type != cJSON_Number)
 		{
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].min is NAN", i);
 			return ret_str;
 		}
-		PWM_gens_config[i].max = cJSON_GetObjectItem(JSON_element,"max")->valueint;
-		PWM_gens_config[i].min = cJSON_GetObjectItem(JSON_element,"min")->valueint;
+		cnt_scalers[i]= cJSON_GetObjectItem(JSON_Array_element,"scaler")->valuedouble;
+		PWM_gens_config[i].max = cJSON_GetObjectItem(JSON_Array_element,"max")->valueint;
+		PWM_gens_config[i].min = cJSON_GetObjectItem(JSON_Array_element,"min")->valueint;
 		if(PWM_gens_config[i].max<=PWM_gens_config[i].min)
 		{
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].max <= PWM_gens_config[%u].min", i, i);
 			return ret_str;
 		}
-		PWM_gens_config[i].pwm_mode.dec.saturation = cJSON_GetObjectItem(JSON_element,"saturation")->valueint?1:0;
+		PWM_gens_config[i].pwm_mode.dec.saturation = cJSON_GetObjectItem(JSON_Array_element,"saturation")->valueint?1:0;
 	}
 	return NULL;
 }

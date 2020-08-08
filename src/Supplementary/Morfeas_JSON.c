@@ -611,7 +611,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						break;
 					case Tele_quad:
 						cJSON_AddItemToObject(MTI_status, "PWMs_config", PWM_config = cJSON_CreateArray());
-						for(i=0; i<2; i++)
+						for(i=0; i<Amount_OF_GENS; i++)
 						{
 							CHs = cJSON_CreateObject();
 							cJSON_AddNumberToObject(CHs, "PWM_max", stats->Tele_data.as_QUAD.gen_config[i].max);
@@ -621,8 +621,11 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							cJSON_AddItemToArray(PWM_config, CHs);
 						}
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
-						for(i=0; i<2; i++)
+						for(i=0; i<Amount_OF_GENS; i++)
 							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_QUAD.CHs[i]));
+						cJSON_AddItemToObject(Tele_data, "CNTs", REFs = cJSON_CreateArray());
+						for(i=0; i<Amount_OF_GENS; i++)
+							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_QUAD.CNTs[i]));
 						break;
 				}
 			}
