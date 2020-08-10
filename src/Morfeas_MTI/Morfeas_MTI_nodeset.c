@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Local function that adding the new_MTI_config method to the Morfeas OPC_UA nodeset
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id);
+void Morfeas_add_new_Gen_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 
 //The DBus method caller function. Return 0 if not internal error.
 int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
@@ -255,6 +256,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 										//Add Raw counter channel
 										sprintf(Node_ID_str, "%s.raw", Node_ID_parent_str);
 										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Raw Counter", UA_TYPES_INT32);
+										sprintf(Node_ID_str, "%s.new_Gen_config", Node_ID_parent_str);
+										Morfeas_add_new_Gen_config(server, Node_ID_parent_str, Node_ID_str);
 										break;
 								}
 							}
@@ -623,7 +626,7 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	bool G_SW = input[4].data ? *(bool *)(input[4].data):0,
 		 G_SL = input[5].data ? *(bool *)(input[5].data):0;
 	cJSON *root = NULL;
-	UA_String reply, *new_mode_UA_str = (UA_String *)(input[1].data);
+	UA_String reply={0}, *new_mode_UA_str = (UA_String *)(input[1].data);
 	//Sanitize new_mode_UA_str
 	if(!new_mode_UA_str)
 		return UA_STATUSCODE_BADSYNTAXERROR;
@@ -674,8 +677,8 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	{
 		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))//Check for failure
 		{
-			reply = UA_STRING_ALLOC("Internal Error!!!");
-			ret = UA_STATUSCODE_BADSYNTAXERROR;
+			reply = UA_STRING_ALLOC("Fatal Error!!!");
+			ret = UA_STATUSCODE_BADINTERNALERROR;
 		}
 		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
 		UA_String_clear(&reply);
@@ -740,7 +743,7 @@ UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
 	bool G_P_state = input[0].data ? *(bool *)(input[0].data):0,
 		 G_S_state = input[1].data ? *(bool *)(input[1].data):0;
 	cJSON *root = NULL;
-	UA_String reply;
+	UA_String reply={0};
 
 	//Sanitize input
 	if(!input[0].data)
@@ -765,8 +768,8 @@ UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
 	{
 		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "MTI_Global_SWs", contents, &reply))//Check for failure
 		{
-			reply = UA_STRING_ALLOC("Internal Error!!!");
-			ret = UA_STATUSCODE_BADSYNTAXERROR;
+			reply = UA_STRING_ALLOC("Fatal Error!!!");
+			ret = UA_STATUSCODE_BADINTERNALERROR;
 		}
 		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
 		UA_String_clear(&reply);
@@ -811,6 +814,110 @@ void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *No
 							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 							UA_QUALIFIEDNAME(1, Node_id),
 							Method_Attr, &Morfeas_MTI_Global_SWs_method_callback,
+							sizeof(inputArguments)/sizeof(*inputArguments), inputArguments,
+							1, &outputArgument,
+							NULL, NULL);
+}
+
+UA_StatusCode Morfeas_new_Gen_config_method_callback(UA_Server *server,
+                         const UA_NodeId *sessionId, void *sessionHandle,
+                         const UA_NodeId *methodId, void *methodContext,
+                         const UA_NodeId *objectId, void *objectContext,
+                         size_t inputSize, const UA_Variant *input,
+                         size_t outputSize, UA_Variant *output)
+{
+	char contents[100], dev_name[Dev_or_Bus_name_str_size];
+    int ret = UA_STATUSCODE_GOOD, i=0;
+	unsigned char CH_num;
+	float gain, min, max;
+	bool saturate;
+	cJSON *root = NULL, *array = NULL, *PWM_gens_config_item = NULL;
+	UA_String reply={0};
+
+	//Sanitize input
+	if(!input[0].data || !input[1].data || !input[2].data)
+		return UA_STATUSCODE_BADSYNTAXERROR;
+	gain = *(float *)(input[0].data);
+	min  = *(float *)(input[1].data);
+	max  = *(float *)(input[2].data);
+	saturate = input[3].data ? *(bool *)(input[3].data):0,
+	//Get Dev_name
+	i=0;
+	while(methodId->identifier.string.data[i]!='.')
+	{
+		dev_name[i]=methodId->identifier.string.data[i];
+		i++;
+	}
+	dev_name[i]='\0';
+	//Get Channel Number
+	sscanf(strstr((char *)methodId->identifier.string.data, "CH"), "CH%hhu.", &CH_num);
+	//Construct contents for DBus method call (as JSON object)
+	root = cJSON_CreateObject();
+	cJSON_AddItemToObject(root, "PWM_gens_config", array = cJSON_CreateArray());
+	cJSON_AddItemToArray(array, cJSON_CreateNull());//Array element for CH1
+	cJSON_AddItemToArray(array, cJSON_CreateNull());//Array element for CH2
+	PWM_gens_config_item = cJSON_CreateObject();
+	cJSON_AddNumberToObject(PWM_gens_config_item, "scaler", gain);
+	cJSON_AddNumberToObject(PWM_gens_config_item, "min", min);
+	cJSON_AddNumberToObject(PWM_gens_config_item, "max", max);
+	cJSON_AddItemToObject(PWM_gens_config_item, "saturation", cJSON_CreateBool(saturate));
+	cJSON_ReplaceItemInArray(array, CH_num-1, PWM_gens_config_item);//Load data to specific element according to the channel number
+	//Stringify the root JSON object
+	if(!cJSON_PrintPreallocated(root, contents, sizeof(contents), 0))
+		ret = UA_STATUSCODE_BADOUTOFMEMORY;
+	cJSON_Delete(root);
+	if(!ret)
+	{
+		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_PWM_config", contents, &reply))//Check for failure
+		{
+			reply = UA_STRING_ALLOC("Fatal Error!!!");
+			ret = UA_STATUSCODE_BADINTERNALERROR;
+		}
+		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+		UA_String_clear(&reply);
+	}
+    return ret;
+}
+
+void Morfeas_add_new_Gen_config(UA_Server *server_ptr, char *Parent_id, char *Node_id)
+{
+	const char *inp_descriptions[] = {"CNT -> CH (Scaler)",
+									  "Scaled CH's Value for 0% modulation index",
+									  "Scaled CH's Value for 100% modulation index",
+									  "Saturate at limits",
+									  NULL};
+	const char *inp_names[] = {"Scaler","Gen_MIN","Gen_MAX","Limits",NULL};
+	const unsigned int inp_value_type[] = {UA_TYPES_FLOAT, UA_TYPES_FLOAT, UA_TYPES_FLOAT, UA_TYPES_BOOLEAN};
+
+	//Configure inputArguments
+    UA_Argument inputArguments[4];
+	for(int i=0; i<sizeof(inputArguments)/sizeof(*inputArguments); i++)
+	{
+		UA_Argument_init(&inputArguments[i]);
+		inputArguments[i].description = UA_LOCALIZEDTEXT("en-US", (char *)inp_descriptions[i]);
+		inputArguments[i].name = UA_STRING((char *)inp_names[i]);
+		inputArguments[i].dataType = UA_TYPES[inp_value_type[i]].typeId;
+		inputArguments[i].valueRank = UA_VALUERANK_SCALAR_OR_ONE_DIMENSION;
+	}
+	//Configure outputArgument
+	UA_Argument outputArgument;
+	UA_Argument_init(&outputArgument);
+	outputArgument.description = UA_LOCALIZEDTEXT("en-US", "Return of the method call");
+	outputArgument.name = UA_STRING("Return");
+	outputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+	outputArgument.valueRank = UA_VALUERANK_SCALAR;
+
+	UA_MethodAttributes Method_Attr = UA_MethodAttributes_default;
+	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method new_Gen_config");
+	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","new_Gen_config()");
+	Method_Attr.executable = true;
+	Method_Attr.userExecutable = true;
+	UA_Server_addMethodNode(server_ptr,
+							UA_NODEID_STRING(1, Node_id),
+							UA_NODEID_STRING(1, Parent_id),
+							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+							UA_QUALIFIEDNAME(1, Node_id),
+							Method_Attr, &Morfeas_new_Gen_config_method_callback,
 							sizeof(inputArguments)/sizeof(*inputArguments), inputArguments,
 							1, &outputArgument,
 							NULL, NULL);

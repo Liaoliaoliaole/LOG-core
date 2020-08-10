@@ -27,9 +27,12 @@ int check_already_run(const char *prog_name)
 	FILE *out = popen(cmd, "r");
 	fgets(out_str, sizeof(out_str), out);
 	pclose(out);
-	tok = strtok(out_str, " ");
-	while((tok = strtok(NULL, " ")))
-		i++;
+	if(i==1)
+	{
+		tok = strtok(out_str, " ");
+		while((tok = strtok(NULL, " ")))
+			i++;
+	}
 	return i>1? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

@@ -36,7 +36,7 @@ int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name,
 	DBusConnection *conn;
 	DBusError err;
 	DBusPendingCall *pending;
-	
+
 	// Initialize the errors
 	dbus_error_init(&err);
 	// Connect to the system bus and check for errors
@@ -54,7 +54,7 @@ int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name,
 	//Create a new method call and check for errors
 	if (!(msg = dbus_message_new_method_call(target, "/", interface, method)))
 	  return EXIT_FAILURE;
-	
+
 	dbus_message_iter_init_append(msg, &args);
 	//Append arguments
 	if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &contents))
