@@ -90,10 +90,10 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
-	
+
 	//Load local PWM_gen_config and cnt_scalers from user_config
 	memcpy(local_PWM_gens_config, stats->user_config.gen_config, sizeof(local_PWM_gens_config));
-	
+
 	dbus_error_init (&dbus_error);
 	Logger("Thread for D-Bus listener Started\n");
 	//Connects to a bus daemon and registers with it.
@@ -185,7 +185,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 												stats->user_config.RF_channel = new_RF_CH;
 												stats->user_config.Tele_dev_type = new_mode;
 												memcpy(&(stats->user_config.sRegs), &local_sregs, sizeof(local_sregs));
-												
+
 												if(user_config(stats, "w"))
 													Logger("Storing of user_config failed!!!\n");
 											}
@@ -477,9 +477,6 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 		return "new_PWM_config(): PWM_gens_config wrong size Array";
 	for(i=0, j=0; i<Amount_OF_GENS; i++)
 	{
-		PWM_gens_config[i].pwm_mode.dec.reserved = 0;//Set unused bits to zero
-		PWM_gens_config[i].pwm_mode.dec.fixed_freq = 1;//Always set gen at fixed out frequency
-		PWM_gens_config[i].pwm_mode.dec.mid_val_use = 1;//Always set mid_val_use
 		JSON_Array_element = cJSON_GetArrayItem(JSON_Array, i);
 		if(cJSON_IsNull(JSON_Array_element))
 			continue;

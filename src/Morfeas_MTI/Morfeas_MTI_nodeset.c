@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_new_Gen_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
+void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id, unsigned char dev_type);
 
 //The DBus method caller function. Return 0 if not internal error.
 int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
@@ -278,6 +279,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						{
 							//Add Global object node
 							sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
+							sprintf(Node_ID_str, "%s.amount", Node_ID_parent_str);
+							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Amount of Devices", UA_TYPES_BYTE);
 							sprintf(Node_ID_str, "%s.Global", Node_ID_parent_str);
 							Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Global Controls");
 							//Add RMSW/MUX related Global switches variables nodes
@@ -414,7 +417,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							case Tele_quad:
 								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.raw", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32);
-								//Update Channel's Pulse Gen Status 
+								//Update Channel's Pulse Gen Status
 								sprintf(Node_ID_parent_str, "%s.Radio.Tele.CH%u.pwm_gen", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
 								sprintf(Node_ID_str, "%s.scaler", Node_ID_parent_str);
 								ref = IPC_msg_dec->MTI_tele_data.data.as_QUAD.gen_config[i-1].scaler;
@@ -449,6 +452,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 					}
 				}
 				//Add and update data of RMSW/MUX devices
+				sprintf(Node_ID_str, "%s.Radio.Tele.amount", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name);
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_of_devices), UA_TYPES_BYTE);
 				for(i=0; i<IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_of_devices; i++)
 				{
 					sprintf(Node_ID_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
@@ -490,6 +495,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							sprintf(Node_ID_str, "%s.Main_SW", Node_ID_parent_str);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Main Switch", UA_TYPES_BOOLEAN);
 						}
+						sprintf(Node_ID_str, "%s.ctrl_tele_SWs()", Node_ID_parent_str);
+						Morfeas_add_ctrl_tele_SWs(server, Node_ID_parent_str, Node_ID_str, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type);
 						sprintf(Node_ID_str, "%s.TX_rate", Node_ID_parent_str);
 						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "TX Rate(sec)", UA_TYPES_FLOAT);
 						switch(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type)
@@ -701,13 +708,13 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	cJSON_Delete(root);
 	if(!ret)
 	{
-		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))//Check for failure
+		if(!Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))
 		{
-			reply = UA_STRING_ALLOC("Fatal Error!!!");
-			ret = UA_STATUSCODE_BADINTERNALERROR;
+			UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+			UA_String_clear(&reply);
 		}
-		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
-		UA_String_clear(&reply);
+		else
+			ret = UA_STATUSCODE_BADINTERNALERROR;
 	}
     return ret;
 }
@@ -792,13 +799,13 @@ UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
 	cJSON_Delete(root);
 	if(!ret)
 	{
-		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "MTI_Global_SWs", contents, &reply))//Check for failure
+		if(!Morfeas_MTI_DBus_method_call("MTI", dev_name, "MTI_Global_SWs", contents, &reply))
 		{
-			reply = UA_STRING_ALLOC("Fatal Error!!!");
-			ret = UA_STATUSCODE_BADINTERNALERROR;
+			UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+			UA_String_clear(&reply);
 		}
-		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
-		UA_String_clear(&reply);
+		else
+			ret = UA_STATUSCODE_BADINTERNALERROR;
 	}
     return ret;
 }
@@ -894,13 +901,13 @@ UA_StatusCode Morfeas_new_Gen_config_method_callback(UA_Server *server,
 	cJSON_Delete(root);
 	if(!ret)
 	{
-		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_PWM_config", contents, &reply))//Check for failure
+		if(!Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_PWM_config", contents, &reply))
 		{
-			reply = UA_STRING_ALLOC("Fatal Error!!!");
-			ret = UA_STATUSCODE_BADINTERNALERROR;
+			UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+			UA_String_clear(&reply);
 		}
-		UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
-		UA_String_clear(&reply);
+		else
+			ret = UA_STATUSCODE_BADINTERNALERROR;
 	}
     return ret;
 }
@@ -945,6 +952,78 @@ void Morfeas_add_new_Gen_config(UA_Server *server_ptr, char *Parent_id, char *No
 							UA_QUALIFIEDNAME(1, Node_id),
 							Method_Attr, &Morfeas_new_Gen_config_method_callback,
 							sizeof(inputArguments)/sizeof(*inputArguments), inputArguments,
+							1, &outputArgument,
+							NULL, NULL);
+}
+
+UA_StatusCode Morfeas_ctrl_tele_SWs_method_callback(UA_Server *server,
+                         const UA_NodeId *sessionId, void *sessionHandle,
+                         const UA_NodeId *methodId, void *methodContext,
+                         const UA_NodeId *objectId, void *objectContext,
+                         size_t inputSize, const UA_Variant *input,
+                         size_t outputSize, UA_Variant *output)
+{
+	return UA_STATUSCODE_GOOD;
+}
+
+void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id, unsigned char dev_type)
+{
+	const char *inp_descriptions_rmsw[] = {"Main Switch", "CH1 Switch", "CH2 Switch", NULL};
+	const char *inp_names_rmsw[] = {"Main","CH1","CH2",NULL};
+	const char *inp_descriptions_mux[] = {"CH1 Selector", "CH2 Selector", "CH3 Selector", "CH4 Selector", NULL};
+	const char *inp_names_mux[] = {"CH1","CH2","CH3","CH4",NULL};
+	size_t inputArgumentsAmount;
+	char **inp_descriptions, **inp_names;
+	UA_Argument inputArguments[4];
+	
+	//Configure inputArguments
+	switch(dev_type)
+	{
+		case Mini_RMSW:
+			inputArgumentsAmount = 1;
+			inp_descriptions = (char **)inp_descriptions_rmsw;
+			inp_names = (char **)inp_names_rmsw;
+			break;
+		case RMSW_2CH:
+			inputArgumentsAmount = 3;
+			inp_descriptions = (char **)inp_descriptions_rmsw;
+			inp_names = (char **)inp_names_rmsw;
+			break;
+		case MUX:
+			inputArgumentsAmount = 4;
+			inp_descriptions = (char **)inp_descriptions_mux;
+			inp_names = (char **)inp_names_mux;
+			break;
+		default : return;
+	}
+	for(int i=0; i<inputArgumentsAmount; i++)
+	{
+		UA_Argument_init(&inputArguments[i]);
+		inputArguments[i].description = UA_LOCALIZEDTEXT("en-US", inp_descriptions[i]);
+		inputArguments[i].name = UA_STRING(inp_names[i]);
+		inputArguments[i].dataType = UA_TYPES[UA_TYPES_BOOLEAN].typeId;
+		inputArguments[i].valueRank = UA_VALUERANK_SCALAR_OR_ONE_DIMENSION;
+	}
+	//Configure outputArgument
+	UA_Argument outputArgument;
+	UA_Argument_init(&outputArgument);
+	outputArgument.description = UA_LOCALIZEDTEXT("en-US", "Return of the method call");
+	outputArgument.name = UA_STRING("Return");
+	outputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+	outputArgument.valueRank = UA_VALUERANK_SCALAR;
+
+	UA_MethodAttributes Method_Attr = UA_MethodAttributes_default;
+	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method ctrl_tele_SWs");
+	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","ctrl_tele_SWs()");
+	Method_Attr.executable = true;
+	Method_Attr.userExecutable = true;
+	UA_Server_addMethodNode(server_ptr,
+							UA_NODEID_STRING(1, Node_id),
+							UA_NODEID_STRING(1, Parent_id),
+							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+							UA_QUALIFIEDNAME(1, Node_id),
+							Method_Attr, &Morfeas_ctrl_tele_SWs_method_callback,
+							inputArgumentsAmount, inputArguments,
 							1, &outputArgument,
 							NULL, NULL);
 }
