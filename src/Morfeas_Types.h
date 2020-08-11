@@ -22,6 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Defs for IOBOX_handler
 #define IOBOX_start_reg 0
 #define IOBOX_imp_reg 125
+#define IOBOX_Amount_of_RXs 4
+#define IOBOX_Amount_of_channels 16
+#define IOBOX_RXs_mem_offset 25
+#define IOBOX_Index_reg_pos 20
+#define IOBOX_Status_reg_pos 21
+#define IOBOX_Success_reg_pos 22
 
 //Defs for MDAQ_handler
 #define MDAQ_start_reg 100
@@ -55,11 +61,11 @@ extern char *MTI_Tele_dev_type_str[];
 extern char *MTI_RM_dev_type_str[];
 
 /*Structs for IOBOX_handler*/
-struct Power_Supply{
+struct IOBOX_Power_Supply{
 	float Vout,Iout;
 };
-struct RXs{
-	float CH_value[16];
+struct IOBOX_RXs{
+	float CH_value[IOBOX_Amount_of_channels];
 	unsigned short index;
 	unsigned char status;
 	unsigned char success;
@@ -69,8 +75,8 @@ struct Morfeas_IOBOX_if_stats{
 	char *dev_name;
 	int error;
 	float Supply_Vin;
-	struct Power_Supply Supply_meas[4];
-	struct RXs RX[4];
+	struct IOBOX_Power_Supply Supply_meas[IOBOX_Amount_of_RXs];
+	struct IOBOX_RXs RX[IOBOX_Amount_of_RXs];
 	unsigned int counter;
 };
 

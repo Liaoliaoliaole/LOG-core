@@ -62,8 +62,9 @@ int main(int argc, char *argv[])
 {
 	//MODBus related variables
 	modbus_t *ctx;
-	int rc, offset;
+	int rc, RX_mem;
 	//Apps variables
+	unsigned short old_indexes[IOBOX_Amount_of_RXs] = {0};
 	char *path_to_logstat_dir;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
@@ -212,45 +213,52 @@ int main(int argc, char *argv[])
 				j++;
 			}
 			//Load Data for RXs
-			offset = 25;
-			for(int i=0; i<4; i++)
+			RX_mem = IOBOX_RXs_mem_offset;
+			for(int i=0; i<IOBOX_Amount_of_RXs; i++)
 			{
-				for(int j=0; j<16; j++)
-					IPC_msg.IOBOX_data.RX[i].CH_value[j] = ((short)IOBOX_regs[j+offset])/16.0;//Recast the value to signed
-				IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[20+offset];
-				IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[21+offset];
-				IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[22+offset];
-				offset += 25;
+				if(old_indexes[i]^IOBOX_regs[IOBOX_Status_reg_pos+RX_mem])//Check if message in valid
+				{
+					for(int j=0; j<IOBOX_Amount_of_channels; j++)
+						IPC_msg.IOBOX_data.RX[i].CH_value[j] = ((short)IOBOX_regs[j+RX_mem])/16.0;//Recast the value to signed
+					IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
+					IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[IOBOX_Status_reg_pos+RX_mem];
+					IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[IOBOX_Success_reg_pos+RX_mem];
+				}
+				else
+				{
+					IPC_msg.IOBOX_data.RX[i].status = 0;
+					IPC_msg.IOBOX_data.RX[i].success = 0;
+				}
+				old_indexes[i] = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
+				RX_mem += IOBOX_RXs_mem_offset;
 			}
 			//Send measurements
 			IPC_msg_TX(FIFO_fd, &IPC_msg);
 
-			if(stats.counter >= 10)
+				//--- Accumulate values for averaging ---//
+			//Load Wireless Inductive Power Supply data to stats
+			stats.Supply_Vin += IPC_msg.IOBOX_data.Supply_Vin;
+			for(int i=0; i<4; i++)
+			{
+				stats.Supply_meas[i].Vout += IPC_msg.IOBOX_data.Supply_meas[i].Vout;
+				stats.Supply_meas[i].Iout += IPC_msg.IOBOX_data.Supply_meas[i].Iout;
+			}
+			//Load RXs Data to stats
+			RX_mem = IOBOX_RXs_mem_offset;
+			for(int i=0; i<4; i++)
+			{
+				for(int j=0; j<16; j++)
+					stats.RX[i].CH_value[j] += IPC_msg.IOBOX_data.RX[i].CH_value[j];
+				stats.RX[i].index = IPC_msg.IOBOX_data.RX[i].index;
+				stats.RX[i].status = IPC_msg.IOBOX_data.RX[i].status;
+				stats.RX[i].success = IPC_msg.IOBOX_data.RX[i].success;
+				RX_mem += IOBOX_RXs_mem_offset;
+			}
+			stats.counter++;
+			if(stats.counter > 10)
 			{
 				logstat_IOBOX(path_to_logstat_dir, &stats);
 				stats.counter = 0;
-			}
-			else
-			{
-				//Load Wireless Inductive Power Supply data to stats
-				stats.Supply_Vin += IPC_msg.IOBOX_data.Supply_Vin;
-				for(int i=0; i<4; i++)
-				{
-					stats.Supply_meas[i].Vout += IPC_msg.IOBOX_data.Supply_meas[i].Vout;
-					stats.Supply_meas[i].Iout += IPC_msg.IOBOX_data.Supply_meas[i].Iout;
-				}
-				//Load RXs Data to stats
-				offset = 25;
-				for(int i=0; i<4; i++)
-				{
-					for(int j=0; j<16; j++)
-						stats.RX[i].CH_value[j] += IPC_msg.IOBOX_data.RX[i].CH_value[j];
-					stats.RX[i].index = IPC_msg.IOBOX_data.RX[i].index;
-					stats.RX[i].status = IPC_msg.IOBOX_data.RX[i].status;
-					stats.RX[i].success = IPC_msg.IOBOX_data.RX[i].success;
-					offset += 25;
-				}
-				stats.counter++;
 			}
 		}
 		usleep(100000);

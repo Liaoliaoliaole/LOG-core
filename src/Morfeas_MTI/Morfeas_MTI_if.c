@@ -473,7 +473,7 @@ void MTI_status_to_IPC(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 			}
 		}
 	}
-	else
+	else if(stats->MTI_Radio_config.Tele_dev_type>=Dev_type_min && stats->MTI_Radio_config.Tele_dev_type<=Dev_type_max)
 		IPC_msg.MTI_report.amount_of_Linkable_tele = 1;
 	//Load error code to report IPC_msg
 	IPC_msg.MTI_report.status = stats->error;
@@ -600,8 +600,12 @@ void IPC_RMSW_MUX_data(int FIFO_fd, struct Morfeas_MTI_if_stats *stats)
 	//Load RMSW/MUX data to IPC_msg
 	IPC_msg.MTI_RMSW_MUX_data.Devs_data.amount_of_devices = stats->Tele_data.as_RMSWs.amount_of_devices;
 	IPC_msg.MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove = stats->Tele_data.as_RMSWs.amount_to_be_remove;
-	memcpy(IPC_msg.MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed, stats->Tele_data.as_RMSWs.IDs_to_be_removed, stats->Tele_data.as_RMSWs.amount_to_be_remove);
-	memcpy(IPC_msg.MTI_RMSW_MUX_data.Devs_data.det_devs_data, stats->Tele_data.as_RMSWs.det_devs_data, stats->Tele_data.as_RMSWs.amount_of_devices * sizeof(struct RMSW_MUX_Mini_data_struct));
+	memcpy(IPC_msg.MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed,
+		   stats->Tele_data.as_RMSWs.IDs_to_be_removed,
+		   stats->Tele_data.as_RMSWs.amount_to_be_remove);
+	memcpy(IPC_msg.MTI_RMSW_MUX_data.Devs_data.det_devs_data,
+		   stats->Tele_data.as_RMSWs.det_devs_data,
+		   stats->Tele_data.as_RMSWs.amount_of_devices * sizeof(struct RMSW_MUX_Mini_data_struct));
 	//Send status report to Morfeas_opc_ua
 	IPC_msg_TX(FIFO_fd, &IPC_msg);
 }

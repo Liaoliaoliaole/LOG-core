@@ -143,8 +143,8 @@ typedef struct IOBOX_data_msg_struct{
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int IOBOX_IPv4;
 	float Supply_Vin;
-	struct Power_Supply Supply_meas[4];
-	struct RXs RX[4];
+	struct IOBOX_Power_Supply Supply_meas[4];
+	struct IOBOX_RXs RX[4];
 }IOBOX_data_msg;
 
 typedef struct IOBOX_channels_reg_msg_struct{

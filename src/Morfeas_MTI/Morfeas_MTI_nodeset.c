@@ -975,7 +975,7 @@ void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Nod
 	size_t inputArgumentsAmount;
 	char **inp_descriptions, **inp_names;
 	UA_Argument inputArguments[4];
-	
+
 	//Configure inputArguments
 	switch(dev_type)
 	{
@@ -1017,13 +1017,12 @@ void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Nod
 	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","ctrl_tele_SWs()");
 	Method_Attr.executable = true;
 	Method_Attr.userExecutable = true;
-	UA_Server_addMethodNode(server_ptr,
-							UA_NODEID_STRING(1, Node_id),
-							UA_NODEID_STRING(1, Parent_id),
-							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-							UA_QUALIFIEDNAME(1, Node_id),
-							Method_Attr, &Morfeas_ctrl_tele_SWs_method_callback,
-							inputArgumentsAmount, inputArguments,
-							1, &outputArgument,
-							NULL, NULL);
+	UA_Server_addMethodNode(server_ptr, UA_NODEID_STRING(1, Node_id),
+										UA_NODEID_STRING(1, Parent_id),
+										UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+										UA_QUALIFIEDNAME(1, Node_id),
+										Method_Attr, &Morfeas_ctrl_tele_SWs_method_callback,
+										inputArgumentsAmount, inputArguments,
+										1, &outputArgument,
+										NULL, NULL);
 }

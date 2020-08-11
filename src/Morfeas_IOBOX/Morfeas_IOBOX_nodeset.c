@@ -86,10 +86,10 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 						{
 							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
-							for(unsigned char i=1; i<=4; i++)
+							for(unsigned char i=1; i<=IOBOX_Amount_of_RXs; i++)
 							{
 								//Change Value and status of Channels to error code
-								for(unsigned char j=1; j<=16; j++)
+								for(unsigned char j=1; j<=IOBOX_Amount_of_channels; j++)
 								{
 									//Add variables for channels: meas, status, status_value (Linkable)
 									sprintf(Node_name, "IOBOX.%u.RX%hhu.CH%hhu", IPC_msg_dec->IOBOX_report.IOBOX_IPv4, i, j);
@@ -121,7 +121,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					//Add Object for Receivers
 					sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 					Morfeas_opc_ua_add_object_node(server, IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, Node_ID_str, "Receivers");
-					for(unsigned char i=1; i<=4; i++)
+					for(unsigned char i=1; i<=IOBOX_Amount_of_RXs; i++)
 					{
 						sprintf(Node_ID_child_str, "%s.RX%hhu", Node_ID_str, i);
 						sprintf(Node_name, "RX%1hhu", i);
@@ -134,7 +134,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						sprintf(val_Node_ID_str, "%s.success", Node_ID_child_str);
 						Morfeas_opc_ua_add_variable_node(server, Node_ID_child_str, val_Node_ID_str, "RX_success", UA_TYPES_BYTE);
 						//Variables of Channels measurements
-						for(unsigned char j=1; j<=16; j++)
+						for(unsigned char j=1; j<=IOBOX_Amount_of_channels; j++)
 						{
 							sprintf(Node_ID_child_child_str, "%s.CH%hhu", Node_ID_child_str, j);
 							sprintf(Node_name, "CH%02hhu", j);
@@ -160,7 +160,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 				//Load power supply measurements to OPC-UA variables
 				sprintf(Node_ID_str, "%s.Ind_link.Vin", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_Vin), UA_TYPES_FLOAT);
-				for(unsigned char i=0; i<4; i++)
+				for(unsigned char i=0; i<IOBOX_Amount_of_RXs; i++)
 				{
 					sprintf(Node_ID_str, "%s.Ind_link.CH%1hhu.Vout", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Vout), UA_TYPES_FLOAT);
@@ -168,7 +168,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Iout), UA_TYPES_FLOAT);
 				}
 				//Load values to variables
-				for(unsigned char i=0; i<4; i++)
+				for(unsigned char i=0; i<IOBOX_Amount_of_RXs; i++)
 				{
 					//Variables for receiver
 					sprintf(Node_ID_str, "%s.RXs.RX%hhu", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);
@@ -182,7 +182,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 
 					//Variables of Telemetry Channels (Linkable)
 					sprintf(Node_name, "IOBOX.%u", IPC_msg_dec->IOBOX_data.IOBOX_IPv4);
-					for(unsigned char j=0; j<16; j++)
+					for(unsigned char j=0; j<IOBOX_Amount_of_channels; j++)
 					{
 						sprintf(Node_ID_str, "%s.RX%hhu.CH%hhu", Node_name, i+1, j+1);
 						sprintf(val_Node_ID_str, "%s.meas", Node_ID_str);
@@ -192,11 +192,10 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 							//Check for No sensor (values higher that 1500 shows open TC)
 							if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] > 1500.0)
 							{
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str),
-																   &nan, UA_TYPES_FLOAT);
-								status_byte = Tele_channel_noSensor;
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
 								sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "No sensor", UA_TYPES_STRING);
+								status_byte = Tele_channel_noSensor;
 							}
 							else //Sensor okay, update value
 							{

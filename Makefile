@@ -192,7 +192,7 @@ clean:
 	rm -f $(WORK_dir)/* $(BUILD_dir)/*
 
 install:
-	@echo "Installation of executable Binaries..."
+	@echo "\nInstallation of executable Binaries..."
 	@install $(BUILD_dir)/* -v -t /usr/local/bin/
 	@echo "Instalation of D-Bus configuration"
 	cp -r -n ./dbus/* /etc/dbus-1/system.d/
@@ -202,7 +202,7 @@ install:
 	@echo  "# systemctl enable Morfeas_system.service"
 
 uninstall:
-	@echo  "Stop Morfeas_system service..."
+	@echo  "\nStop Morfeas_system service..."
 	@systemctl stop Morfeas_system.service
 	@echo  "Remove related binaries and Systemd unit files..."
 	@rm /usr/local/bin/Morfeas_*
