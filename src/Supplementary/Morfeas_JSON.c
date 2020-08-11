@@ -617,7 +617,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							cJSON_AddNumberToObject(CHs, "PWM_max", stats->Tele_data.as_QUAD.gen_config[i].max);
 							cJSON_AddNumberToObject(CHs, "PWM_min", stats->Tele_data.as_QUAD.gen_config[i].min);
 							cJSON_AddItemToObject(CHs, "Saturation_mode", cJSON_CreateBool(stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.saturation));
-							cJSON_AddItemToObject(CHs, "Fixed_freq", cJSON_CreateBool(stats->Tele_data.as_QUAD.gen_config[i].pwm_mode.dec.fixed_freq));
+							cJSON_AddNumberToObject(CHs, "Scaler", stats->Tele_data.as_QUAD.gen_config[i].scaler);
 							cJSON_AddItemToArray(PWM_config, CHs);
 						}
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());

@@ -145,7 +145,11 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			stats->Tele_data.as_QUAD.CNTs[0] = *cur_MTI_Tele_data.as_QUAD.Channel_1;
 			stats->Tele_data.as_QUAD.CNTs[1] = *cur_MTI_Tele_data.as_QUAD.Channel_2;
 			for(i=0; i<2; i++)
-				stats->Tele_data.as_QUAD.CHs[i] = stats->Tele_data.as_QUAD.CNTs[i] * stats->user_config.QUAD_Tele_cnt_scalers[i];
+			{
+				//Load scalers from User_config
+				stats->Tele_data.as_QUAD.gen_config[i].scaler = stats->user_config.gen_config[i].scaler;
+				stats->Tele_data.as_QUAD.CHs[i] = stats->Tele_data.as_QUAD.CNTs[i] * stats->Tele_data.as_QUAD.gen_config[i].scaler;
+			}
 			//Get Pulse Generators Configuration
 			if(modbus_read_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(Pulse_gen_conf)/sizeof(short), (unsigned short*)&Pulse_gen_conf)<=0)
 			{
@@ -340,12 +344,13 @@ int ctrl_tele_switch(modbus_t *ctx, unsigned char mem_pos, unsigned char tele_ty
 int set_MTI_PWM_gens(modbus_t *ctx, struct Gen_config_struct *new_Config)
 {
 	struct MTI_PWM_config_struct new_PWM_config = {.PWM_out_freq=10000};
-	for(int i=0; i<2; i++)
+	for(int i=0; i<Amount_OF_GENS; i++)
 	{
 		new_PWM_config.CHs[i].cnt_max = new_Config[i].max;
 		new_PWM_config.CHs[i].cnt_min = new_Config[i].min;
 		new_PWM_config.CHs[i].middle_val = new_Config[i].min + (new_Config[i].max - new_Config[i].min)/2;
-		new_PWM_config.CHs[i].cnt_mode = new_Config[i].pwm_mode.as_byte | 1<<7;//always set fixed_freq flag
+		new_PWM_config.CHs[i].cnt_mode = new_Config[i].pwm_mode.as_byte;
+		new_PWM_config.CHs[i].cnt_mode |= 0x82;//Or Mask to set fixed_freq and mid_val_use
 	}
 	if(modbus_write_registers(ctx, MTI_PULSE_GEN_OFFSET, sizeof(new_PWM_config)/sizeof(short), (unsigned short*)&new_PWM_config)<=0)
 		return errno;

@@ -248,17 +248,20 @@ int main(int argc, char *argv[])
 	stats.error = 0;//load no error on stats
 	MTI_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 
-	//Get old user_config form config_file
-	if(!user_config(&stats, "r"))
+	//Get old user_config from config_file
+	if(user_config(&stats, "r"))//Check for failure
 	{
-		if(MTI_set_user_config(ctx, &stats))
-			state = error;
+		for(int i=0; i<Amount_OF_GENS; i++)
+		{
+			stats.user_config.gen_config[i].scaler=1.0;
+			stats.user_config.gen_config[i].max=100;
+			stats.user_config.gen_config[i].min=0;
+			stats.user_config.gen_config[i].pwm_mode.as_byte = 0;
+		}
 	}
-	else
-	{
-		for(int i=0; i<sizeof(stats.user_config.QUAD_Tele_cnt_scalers)/sizeof(*(stats.user_config.QUAD_Tele_cnt_scalers)); i++)
-			stats.user_config.QUAD_Tele_cnt_scalers[i]=1.0;
-	}
+	//Set MTI to User_config
+	if(MTI_set_user_config(ctx, &stats))
+		state = error;
 
 	//Start D-Bus listener function in a thread
 	pthread_create(&DBus_listener_Thread_id, NULL, MTI_DBus_listener, &passer);

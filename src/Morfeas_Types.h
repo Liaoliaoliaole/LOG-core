@@ -118,7 +118,7 @@ union MTI_specific_regs{
 	unsigned char as_array[2];
 	unsigned short as_short;
 };
-struct MTI_Radio_config_status_struct{
+struct MTI_Radio_config_struct{
 	unsigned RF_channel:7;
 	unsigned Data_rate:2;
 	unsigned Tele_dev_type:3;
@@ -149,12 +149,14 @@ struct TC16_data_struct{
 	float CHs[16];
 };
 struct Gen_config_struct{
+	float scaler;
 	unsigned int max;
 	unsigned int min;
 	union generator_mode{
 		struct decoder_for_generator_mode{
 			unsigned saturation:1;
-			unsigned reserved:6;
+			unsigned mid_val_use:1;
+			unsigned reserved:5;
 			unsigned fixed_freq:1;
 		}__attribute__((packed, aligned(1))) dec;
 		unsigned char as_byte;
@@ -215,7 +217,6 @@ typedef struct MTI_stored_config_struct{
 	unsigned char Tele_dev_type;
 	union MTI_specific_regs sRegs;
 	struct Gen_config_struct gen_config[Amount_OF_GENS];
-	float QUAD_Tele_cnt_scalers[Amount_OF_GENS];
 }__attribute__((packed, aligned(1))) MTI_stored_config;
 
 //Morfeas_MTI_if_stats stats struct, used in Morfeas_MTI_if
@@ -225,7 +226,7 @@ struct Morfeas_MTI_if_stats{
 	int error;
 	MTI_stored_config user_config;
 	struct MTI_status_struct MTI_status;
-	struct MTI_Radio_config_status_struct MTI_Radio_config;
+	struct MTI_Radio_config_struct MTI_Radio_config;
 	union MTI_Telemetry_data{
 		struct TC4_data_struct as_TC4;
 		struct TC8_data_struct as_TC8;

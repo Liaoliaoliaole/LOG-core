@@ -109,6 +109,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
 									sprintf(Node_ID_str, "%s.CH%u.status_byte", anchor, i);
 									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
+									//Update telemetry's Channel specific variables (Non Linkable)
 									switch(IPC_msg_dec->MTI_report.Tele_dev_type)
 									{
 										case Tele_TC8:
@@ -256,6 +257,17 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 										//Add Raw counter channel
 										sprintf(Node_ID_str, "%s.raw", Node_ID_parent_str);
 										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Raw Counter", UA_TYPES_INT32);
+										sprintf(Node_ID_str, "%s.pwm_gen", Node_ID_parent_str);
+										Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Pulses Gen");
+										strcpy(Node_ID_parent_str, Node_ID_str);
+										sprintf(Node_ID_str, "%s.scaler", Node_ID_parent_str);
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Scaler", UA_TYPES_FLOAT);
+										sprintf(Node_ID_str, "%s.min", Node_ID_parent_str);
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Min", UA_TYPES_FLOAT);
+										sprintf(Node_ID_str, "%s.max", Node_ID_parent_str);
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Max", UA_TYPES_FLOAT);
+										sprintf(Node_ID_str, "%s.saturate", Node_ID_parent_str);
+										Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Saturate", UA_TYPES_BOOLEAN);
 										sprintf(Node_ID_str, "%s.new_Gen_config", Node_ID_parent_str);
 										Morfeas_add_new_Gen_config(server, Node_ID_parent_str, Node_ID_str);
 										break;
@@ -402,6 +414,20 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							case Tele_quad:
 								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.raw", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &cnt, UA_TYPES_INT32);
+								//Update Channel's Pulse Gen Status 
+								sprintf(Node_ID_parent_str, "%s.Radio.Tele.CH%u.pwm_gen", IPC_msg_dec->MTI_tele_data.Dev_or_Bus_name, i);
+								sprintf(Node_ID_str, "%s.scaler", Node_ID_parent_str);
+								ref = IPC_msg_dec->MTI_tele_data.data.as_QUAD.gen_config[i-1].scaler;
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &ref, UA_TYPES_FLOAT);
+								sprintf(Node_ID_str, "%s.min", Node_ID_parent_str);
+								meas = IPC_msg_dec->MTI_tele_data.data.as_QUAD.gen_config[i-1].min*ref;
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+								sprintf(Node_ID_str, "%s.max", Node_ID_parent_str);
+								meas = IPC_msg_dec->MTI_tele_data.data.as_QUAD.gen_config[i-1].max*ref;
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+								sprintf(Node_ID_str, "%s.saturate", Node_ID_parent_str);
+								status_value = IPC_msg_dec->MTI_tele_data.data.as_QUAD.gen_config[i-1].pwm_mode.dec.saturation;
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BOOLEAN);
 								break;
 						}
 					}

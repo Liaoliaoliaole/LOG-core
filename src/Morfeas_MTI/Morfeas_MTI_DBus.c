@@ -66,7 +66,7 @@ int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *repl
 	//--- Local Functions ---//
 char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH, unsigned char *new_mode, union MTI_specific_regs *snew_sRegs);
 char * ctrl_tele_SWs_argValidator(cJSON *JSON_args, unsigned char *mem_pos, unsigned char *tele_type, unsigned char *sw_name);
-char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[], float cnt_scalers[]);
+char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[]);
 
 //D-Bus listener function
 void * MTI_DBus_listener(void *varg_pt)//Thread function.
@@ -78,20 +78,22 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	cJSON *JSON_args = NULL;
 	//D-Bus related variables
 	char *dbus_server_name_if, *param;
-	int i, err;
+	int i, err, method_num;
 	DBusConnection *conn;
 	DBusMessage *msg;
 	DBusMessageIter call_args;
 	//Local variables and structures
 	char *err_str;
 	unsigned char new_RF_CH, new_mode, mem_pos, RMSW_tele_type, sw_name;
-	union MTI_specific_regs sregs;
-	struct Gen_config_struct PWM_gens_config[Amount_OF_GENS];
-	float cnt_scalers[Amount_OF_GENS];
+	union MTI_specific_regs local_sregs;
+	struct Gen_config_struct local_PWM_gens_config[Amount_OF_GENS];
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
-
+	
+	//Load local PWM_gen_config and cnt_scalers from user_config
+	memcpy(local_PWM_gens_config, stats->user_config.gen_config, sizeof(local_PWM_gens_config));
+	
 	dbus_error_init (&dbus_error);
 	Logger("Thread for D-Bus listener Started\n");
 	//Connects to a bus daemon and registers with it.
@@ -136,10 +138,10 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 			if((msg = dbus_connection_pop_message(conn)))
 			{
 				//Analyze received message
-				i=0;
-				while(Method[i])
+				method_num=0;
+				while(Method[method_num])
 				{
-					if(dbus_message_is_method_call(msg, dbus_server_name_if, Method[i]))//Validate the method of the call
+					if(dbus_message_is_method_call(msg, dbus_server_name_if, Method[method_num]))//Validate the method of the call
 					{
 						//Read the arguments of the call
 						if (!dbus_message_iter_init(msg, &call_args))//Validate for zero amount of arguments
@@ -149,7 +151,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 						else
 						{
 							dbus_message_iter_get_basic(&call_args, &param);//Get first argument.
-							if(i==echo)//Check for echo method
+							if(method_num==echo)//Check for echo method
 							{
 								DBus_reply_msg(conn, msg, param);
 								break;
@@ -160,10 +162,10 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 								break;
 							}
 							err = 0;//Reset error state
-							switch(i)//Method execution
+							switch(method_num)//Method execution
 							{
 								case new_MTI_config:
-									if((err_str = new_MTI_config_argValidator(JSON_args, &new_RF_CH, &new_mode, &sregs)))
+									if((err_str = new_MTI_config_argValidator(JSON_args, &new_RF_CH, &new_mode, &local_sregs)))
 									{
 										DBus_reply_msg(conn, msg, err_str);
 										break;
@@ -174,12 +176,16 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 											if(!(err = set_MTI_Radio_config(ctx,
 																			new_RF_CH,
 																			new_mode,
-																			&sregs)))
+																			&local_sregs)))
 											{
-												DBus_reply_msg(conn, msg, "new_MTI_config(): Success");
+												if(new_mode == Tele_quad)
+													err = set_MTI_PWM_gens(ctx, local_PWM_gens_config);
+												if(!err)
+													DBus_reply_msg(conn, msg, "new_MTI_config(): Success");
 												stats->user_config.RF_channel = new_RF_CH;
 												stats->user_config.Tele_dev_type = new_mode;
-												memcpy(&(stats->user_config.sRegs), &sregs, sizeof(sregs));
+												memcpy(&(stats->user_config.sRegs), &local_sregs, sizeof(local_sregs));
+												
 												if(user_config(stats, "w"))
 													Logger("Storing of user_config failed!!!\n");
 											}
@@ -244,7 +250,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 									pthread_mutex_unlock(&MTI_access);
 									break;
 								case new_PWM_config:
-									if((err_str = new_PWM_config_argValidator(JSON_args, PWM_gens_config, cnt_scalers)))
+									if((err_str = new_PWM_config_argValidator(JSON_args, local_PWM_gens_config)))
 									{
 										DBus_reply_msg(conn, msg, err_str);
 										break;
@@ -254,11 +260,10 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 										{
 											if(!(err = stats->error))
 											{
-												if(!(err = set_MTI_PWM_gens(ctx, PWM_gens_config)))
+												if(!(err = set_MTI_PWM_gens(ctx, local_PWM_gens_config)))
 												{
 													DBus_reply_msg(conn, msg, "new_PWM_config() Success");
-													memcpy(stats->user_config.gen_config, PWM_gens_config, sizeof(PWM_gens_config));
-													memcpy(stats->user_config.QUAD_Tele_cnt_scalers, cnt_scalers, sizeof(cnt_scalers));
+													memcpy(stats->user_config.gen_config, local_PWM_gens_config, sizeof(local_PWM_gens_config));
 													if(user_config(stats, "w"))
 														Logger("Storing of user_config failed!!!\n");
 												}
@@ -275,7 +280,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 						}
 						break;
 					}
-					i++;
+					method_num++;
 				}
 				dbus_message_unref(msg);
 			}
@@ -384,6 +389,8 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 	if(cJSON_GetObjectItem(JSON_args,"new_RF_CH")->type != cJSON_Number)
 		return "new_MTI_config(): new_RF_CH in NAN";
 	*new_RF_CH = cJSON_GetObjectItem(JSON_args,"new_RF_CH")->valueint;
+	if(*new_RF_CH%2)
+		return "new_MTI_config(): new_RF_CH%2 != 0";
 	if(cJSON_GetObjectItem(JSON_args,"new_mode")->type != cJSON_String)//Check if new_mode is string
 		return "new_MTI_config(): new_mode is NOT a string";
 	buf = cJSON_GetObjectItem(JSON_args,"new_mode")->valuestring;
@@ -453,9 +460,10 @@ char * ctrl_tele_SWs_argValidator(cJSON *JSON_args, unsigned char *mem_pos, unsi
 	return NULL;
 }
 
-char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[], float cnt_scalers[])
+char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PWM_gens_config[])
 {
 	static char ret_str[100];
+	int i, j;
 	cJSON *JSON_Array_element, *JSON_Array;
 
 	if(!JSON_args||!PWM_gens_config)
@@ -467,14 +475,19 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 	JSON_Array = cJSON_GetObjectItem(JSON_args,"PWM_gens_config");
 	if(cJSON_GetArraySize(JSON_Array)!=Amount_OF_GENS)
 		return "new_PWM_config(): PWM_gens_config wrong size Array";
-	for(int i=0; i<Amount_OF_GENS; i++)
+	for(i=0, j=0; i<Amount_OF_GENS; i++)
 	{
+		PWM_gens_config[i].pwm_mode.dec.reserved = 0;//Set unused bits to zero
+		PWM_gens_config[i].pwm_mode.dec.fixed_freq = 1;//Always set gen at fixed out frequency
+		PWM_gens_config[i].pwm_mode.dec.mid_val_use = 1;//Always set mid_val_use
 		JSON_Array_element = cJSON_GetArrayItem(JSON_Array, i);
+		if(cJSON_IsNull(JSON_Array_element))
+			continue;
 		if(!cJSON_HasObjectItem(JSON_Array_element,"scaler")||
 		   !cJSON_HasObjectItem(JSON_Array_element,"max")||
 		   !cJSON_HasObjectItem(JSON_Array_element,"min")||
 		   !cJSON_HasObjectItem(JSON_Array_element,"saturation"))
-			continue;//return "new_PWM_config(): Missing Arguments";
+			return "new_PWM_config(): Missing Arguments";
 		if(cJSON_GetObjectItem(JSON_Array_element,"scaler")->type != cJSON_Number)
 		{
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].scaler is NAN", i);
@@ -495,15 +508,19 @@ char * new_PWM_config_argValidator(cJSON *JSON_args, struct Gen_config_struct PW
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].min is NAN", i);
 			return ret_str;
 		}
-		cnt_scalers[i]= cJSON_GetObjectItem(JSON_Array_element,"scaler")->valuedouble;
-		PWM_gens_config[i].max = (int)(cJSON_GetObjectItem(JSON_Array_element,"max")->valuedouble/cnt_scalers[i]);
-		PWM_gens_config[i].min = (int)(cJSON_GetObjectItem(JSON_Array_element,"min")->valuedouble/cnt_scalers[i]);
+		PWM_gens_config[i].pwm_mode.dec.saturation = cJSON_GetObjectItem(JSON_Array_element,"saturation")->valueint?1:0;
+		PWM_gens_config[i].scaler= cJSON_GetObjectItem(JSON_Array_element,"scaler")->valuedouble;
+		PWM_gens_config[i].max = (int)(cJSON_GetObjectItem(JSON_Array_element,"max")->valuedouble/PWM_gens_config[i].scaler);
+		PWM_gens_config[i].min = (int)(cJSON_GetObjectItem(JSON_Array_element,"min")->valuedouble/PWM_gens_config[i].scaler);
 		if(PWM_gens_config[i].max<=PWM_gens_config[i].min)
 		{
 			sprintf(ret_str, "new_PWM_config(): PWM_gens_config[%u].max <= PWM_gens_config[%u].min", i, i);
 			return ret_str;
 		}
-		PWM_gens_config[i].pwm_mode.dec.saturation = cJSON_GetObjectItem(JSON_Array_element,"saturation")->valueint?1:0;
+		j++;
 	}
-	return NULL;
+	if(j)
+		return NULL;
+	else
+		return "Array have only null elements!!!";
 }
