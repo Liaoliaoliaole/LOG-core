@@ -53,12 +53,14 @@ enum Tele_status_enum{
 };
 
 //Array with strings of the Supported Interface_names.
-extern char *Morfeas_IPC_handler_type_name[];
+extern const char *Morfeas_IPC_handler_type_name[];
 //Arrays with MTI related strings
-extern char *MTI_charger_state_str[];
-extern char *MTI_Data_rate_str[];
-extern char *MTI_Tele_dev_type_str[];
-extern char *MTI_RM_dev_type_str[];
+extern const char *MTI_charger_state_str[];
+extern const char *MTI_Data_rate_str[];
+extern const char *MTI_Tele_dev_type_str[];
+extern const char *MTI_RM_dev_type_str[];
+extern const char *MTI_RMSW_SW_names[];
+extern const char *MTI_MUX_Sel_names[];
 
 /*Structs for IOBOX_handler*/
 struct IOBOX_Power_Supply{

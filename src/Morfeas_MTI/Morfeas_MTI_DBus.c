@@ -350,28 +350,27 @@ unsigned char get_rmswORmux_sw_name(unsigned char tele_type, char *buf)
 	switch(tele_type)
 	{
 		case MUX:
-			if(!strcmp(buf,"Sel_1"))
+			if(!strcmp(buf, MTI_MUX_Sel_names[Sel_1]))
 				return Sel_1;
-			else if(!strcmp(buf,"Sel_2"))
+			else if(!strcmp(buf, MTI_MUX_Sel_names[Sel_2]))
 				return Sel_2;
-			else if(!strcmp(buf,"Sel_3"))
+			else if(!strcmp(buf, MTI_MUX_Sel_names[Sel_3]))
 				return Sel_3;
-			else if(!strcmp(buf,"Sel_4"))
+			else if(!strcmp(buf, MTI_MUX_Sel_names[Sel_4]))
 				return Sel_4;
 			break;
 		case RMSW_2CH:
-			if(!strcmp(buf,"Main_SW"))
+			if(!strcmp(buf,MTI_RMSW_SW_names[Main_SW]))
 				return Main_SW;
-			else if(!strcmp(buf,"SW_1"))
+			else if(!strcmp(buf,MTI_RMSW_SW_names[SW_1]))
 				return SW_1;
-			else if(!strcmp(buf,"SW_2"))
+			else if(!strcmp(buf,MTI_RMSW_SW_names[SW_2]))
 				return SW_2;
 			break;
 		case Mini_RMSW:
-			if(!strcmp(buf,"Main_SW"))
+			if(!strcmp(buf,MTI_RMSW_SW_names[Main_SW]))
 				return Main_SW;
 			break;
-		default : return -1;
 	}
 	return -1;
 }

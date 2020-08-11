@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Morfeas_IPC.h"
 
-char *Morfeas_IPC_handler_type_name[]={
+const char *Morfeas_IPC_handler_type_name[]={
 	"SDAQ","MDAQ","IOBOX","MTI",NULL //,"NOX","CPAD"
 };
 	//----TX Functions----//
