@@ -963,6 +963,19 @@ UA_StatusCode Morfeas_ctrl_tele_SWs_method_callback(UA_Server *server,
                          size_t inputSize, const UA_Variant *input,
                          size_t outputSize, UA_Variant *output)
 {
+	/*
+	char mem_offset_NodeId_str[40]="";
+	UA_NodeId mem_offset_NodeId;
+	UA_Variant mem_offset;
+
+	if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, mem_offset_NodeId_str), &mem_offset_NodeId))//Check if mem_offset_NodeId exist
+	{
+		UA_Server_readValue(server, mem_offset_NodeId, &mem_offset);
+		UA_clear(&mem_offset_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+	}
+	else
+		return UA_STATUSCODE_BADNODATA;
+	*/
 	return UA_STATUSCODE_GOOD;
 }
 
