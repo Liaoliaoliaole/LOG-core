@@ -44,7 +44,7 @@ int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name,
 	conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
 	if (dbus_error_is_set(&err))
 	{
-		UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, err.message);
+		UA_LOG_WARNING(UA_Log_Stdout, UA_LOGLEVEL_ERROR, "DBUS_Error: %s", err.message);
 		dbus_error_free(&err);
 	}
 	if (!conn)
@@ -90,7 +90,10 @@ int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name,
 	if(reply)	
 		*reply = UA_STRING_ALLOC(reply_str);
 	else
-		ret = strstr(reply_str, "Success")?EXIT_SUCCESS:EXIT_FAILURE;
+	{
+		if((ret=strstr(reply_str, "Success")?EXIT_SUCCESS:EXIT_FAILURE))
+			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGLEVEL_WARNING, "DBUS_method_call:\"%s\" on interface:\"%s\" return:\"%s\"", method, interface, reply_str);
+	}
 	//Free error, reply and close connection
 	dbus_error_free(&err);
 	dbus_message_unref(msg);

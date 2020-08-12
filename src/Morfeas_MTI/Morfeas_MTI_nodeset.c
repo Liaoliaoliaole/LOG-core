@@ -468,7 +468,6 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						//Add current RMSW/MUX related variables nodes and load static values
 						sprintf(Node_ID_str, "%s.mem_offset", Node_ID_parent_str);
 						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Memory Offset", UA_TYPES_BYTE);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].pos_offset), UA_TYPES_BYTE);
 						sprintf(Node_ID_str, "%s.type", Node_ID_parent_str);
 						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Type", UA_TYPES_STRING);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), MTI_RM_dev_type_str[IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type], UA_TYPES_STRING);
@@ -560,6 +559,8 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 					sprintf(Node_ID_parent_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
 					//Update current RMSW/MUX Device values
+					sprintf(Node_ID_str, "%s.mem_offset", Node_ID_parent_str);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].pos_offset), UA_TYPES_BYTE);
 					sprintf(Node_ID_str, "%s.last_msg", Node_ID_parent_str);
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].time_from_last_mesg), UA_TYPES_BYTE);
 					sprintf(Node_ID_str, "%s.dev_temp", Node_ID_parent_str);
