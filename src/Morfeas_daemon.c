@@ -185,8 +185,8 @@ int main(int argc, char *argv[])
 		//TO-DO: check led status and light green
 		sleep(1);
 	}
-	//Send SIGINT to group
-	kill(0,SIGINT);
+	//Send SIGTERM to group
+	kill(0,SIGTERM);
 	//Wait until all threads ends
 	for(int i=0; i<max_num_of_threads; i++)
 	{
