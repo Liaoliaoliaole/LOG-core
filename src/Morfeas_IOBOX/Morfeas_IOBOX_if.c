@@ -214,24 +214,21 @@ int main(int argc, char *argv[])
 			RX_mem = IOBOX_RXs_mem_offset;
 			for(int i=0; i<IOBOX_Amount_of_RXs; i++)
 			{
-				if(IOBOX_regs[IOBOX_Index_reg_pos+RX_mem])
+				if(old_indexes[i]!=IOBOX_regs[IOBOX_Index_reg_pos+RX_mem])//Check if message in valid, by compering Message index with the old
 				{
-					if(old_indexes[i]!=IOBOX_regs[IOBOX_Index_reg_pos+RX_mem])//Check if message in valid, by compering Message index with the old
-					{
-						for(int j=0; j<IOBOX_Amount_of_channels; j++)
-							IPC_msg.IOBOX_data.RX[i].CH_value[j] = ((short)IOBOX_regs[j+RX_mem])/16.0;//Recast the value to signed
-						IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
-						IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[IOBOX_Status_reg_pos+RX_mem];
-						IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[IOBOX_Success_reg_pos+RX_mem];
-					}
-					else
-					{
-						IPC_msg.IOBOX_data.RX[i].status = 0;
-						IPC_msg.IOBOX_data.RX[i].success = 0;
-					}
-					old_indexes[i] = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
-					RX_mem += IOBOX_RXs_mem_offset;
+					for(int j=0; j<IOBOX_Amount_of_channels; j++)
+						IPC_msg.IOBOX_data.RX[i].CH_value[j] = ((short)IOBOX_regs[j+RX_mem])/16.0;//Recast the value to signed
+					IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
+					IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[IOBOX_Status_reg_pos+RX_mem];
+					IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[IOBOX_Success_reg_pos+RX_mem];
 				}
+				else
+				{
+					IPC_msg.IOBOX_data.RX[i].status = 0;
+					IPC_msg.IOBOX_data.RX[i].success = 0;
+				}
+				old_indexes[i] = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
+				RX_mem += IOBOX_RXs_mem_offset;
 			}
 			//Send measurements
 			IPC_msg_TX(FIFO_fd, &IPC_msg);
