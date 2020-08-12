@@ -64,12 +64,11 @@ int main(int argc, char *argv[])
 	modbus_t *ctx;
 	int rc, RX_mem;
 	//Apps variables
-	unsigned short old_indexes[IOBOX_Amount_of_RXs] = {0};
 	char *path_to_logstat_dir;
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	struct Morfeas_IOBOX_if_stats stats = {0};
-	unsigned short IOBOX_regs[IOBOX_imp_reg];
+	unsigned short IOBOX_regs[IOBOX_imp_reg], old_indexes[IOBOX_Amount_of_RXs] = {0};
 	//FIFO file descriptor
 	int FIFO_fd;
 	//Check for call without arguments
@@ -186,8 +185,7 @@ int main(int argc, char *argv[])
 		rc = modbus_read_registers(ctx, IOBOX_start_reg, IOBOX_imp_reg, IOBOX_regs);
 		if (rc <= 0)
 		{
-			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror(errno));
-			stats.error = errno;//load errno to stats
+			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror((stats.error = errno)));//load errno to stats and report to Logger 
 			IOBOX_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 			while(modbus_connect(ctx) && handler_run)//Attempt to reconnection
 			{
@@ -206,7 +204,7 @@ int main(int argc, char *argv[])
 			// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
 			//Load Data for "Wireless Inductive Power Supply"
 			IPC_msg.IOBOX_data.Supply_Vin = IOBOX_regs[0]/100.0;
-			for(int i=0, j=1; i<4; i++)
+			for(int i=0, j=1; i<IOBOX_Amount_of_RXs; i++)
 			{
 				IPC_msg.IOBOX_data.Supply_meas[i].Vout = IOBOX_regs[j++]/100.0;
 				IPC_msg.IOBOX_data.Supply_meas[i].Iout = IOBOX_regs[j++]/100.0;
@@ -216,21 +214,24 @@ int main(int argc, char *argv[])
 			RX_mem = IOBOX_RXs_mem_offset;
 			for(int i=0; i<IOBOX_Amount_of_RXs; i++)
 			{
-				if(old_indexes[i]^IOBOX_regs[IOBOX_Status_reg_pos+RX_mem])//Check if message in valid
+				if(IOBOX_regs[IOBOX_Index_reg_pos+RX_mem])
 				{
-					for(int j=0; j<IOBOX_Amount_of_channels; j++)
-						IPC_msg.IOBOX_data.RX[i].CH_value[j] = ((short)IOBOX_regs[j+RX_mem])/16.0;//Recast the value to signed
-					IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
-					IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[IOBOX_Status_reg_pos+RX_mem];
-					IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[IOBOX_Success_reg_pos+RX_mem];
+					if(old_indexes[i]!=IOBOX_regs[IOBOX_Index_reg_pos+RX_mem])//Check if message in valid, by compering Message index with the old
+					{
+						for(int j=0; j<IOBOX_Amount_of_channels; j++)
+							IPC_msg.IOBOX_data.RX[i].CH_value[j] = ((short)IOBOX_regs[j+RX_mem])/16.0;//Recast the value to signed
+						IPC_msg.IOBOX_data.RX[i].index = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
+						IPC_msg.IOBOX_data.RX[i].status = IOBOX_regs[IOBOX_Status_reg_pos+RX_mem];
+						IPC_msg.IOBOX_data.RX[i].success = IOBOX_regs[IOBOX_Success_reg_pos+RX_mem];
+					}
+					else
+					{
+						IPC_msg.IOBOX_data.RX[i].status = 0;
+						IPC_msg.IOBOX_data.RX[i].success = 0;
+					}
+					old_indexes[i] = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
+					RX_mem += IOBOX_RXs_mem_offset;
 				}
-				else
-				{
-					IPC_msg.IOBOX_data.RX[i].status = 0;
-					IPC_msg.IOBOX_data.RX[i].success = 0;
-				}
-				old_indexes[i] = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
-				RX_mem += IOBOX_RXs_mem_offset;
 			}
 			//Send measurements
 			IPC_msg_TX(FIFO_fd, &IPC_msg);

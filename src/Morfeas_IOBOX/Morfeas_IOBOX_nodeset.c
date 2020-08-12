@@ -189,8 +189,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						//Check if RX status to check if telemetry is active
 						if(IPC_msg_dec->IOBOX_data.RX[i].status)
 						{
-							//Check for No sensor (values higher that 1500 shows open TC)
-							if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] > 1500.0)
+							if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] >= NO_SENSOR_VALUE)//Check for No sensor
 							{
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
 								sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
