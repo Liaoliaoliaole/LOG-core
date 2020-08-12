@@ -1021,6 +1021,7 @@ UA_StatusCode Morfeas_ctrl_tele_SWs_method_callback(UA_Server *server,
 		UA_Server_readValue(server, mem_offset_NodeId, &temp);
 		mem_offset = *(char *)(temp.data);
 		UA_clear(&mem_offset_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+		UA_clear(&temp, &UA_TYPES[UA_TYPES_VARIANT]);
 	}
 	else
 		return UA_STATUSCODE_BADNODATA;
