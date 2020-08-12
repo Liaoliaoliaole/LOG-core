@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 		rc = modbus_read_registers(ctx, IOBOX_start_reg, IOBOX_imp_reg, IOBOX_regs);
 		if (rc <= 0)
 		{
-			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror((stats.error = errno)));//load errno to stats and report to Logger 
+			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror((stats.error = errno)));//load errno to stats and report to Logger
 			IOBOX_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 			while(modbus_connect(ctx) && handler_run)//Attempt to reconnection
 			{

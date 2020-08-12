@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 	//Setup config for Morfeas_OPC_UA Server
 	if((retval = Morfeas_OPC_UA_config(&conf, app_name, VERSION)))
 	{
-		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Morfeas_OPC_UA_config() Failed!!!!");
+		UA_LOG_INFO(UA_Log_Stdout, UA_LOGLEVEL_ERROR, "Morfeas_OPC_UA_config() Failed!!!!");
 		goto Exit;
 	}
 	//Init OPC_UA Server

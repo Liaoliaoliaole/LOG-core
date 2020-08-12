@@ -642,6 +642,43 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			break;
 	}
 }
+//Function that get the string sec_num section from NodeId. Return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+int get_NodeId_sec(const UA_NodeId *NodeId, unsigned char sec_num, char *sec_str, size_t sec_str_size)
+{
+	int i=0;
+	unsigned char dot_cnt=0, *NodeId_str;
+
+	if(!NodeId || !sec_str || !sec_str_size)
+		return EXIT_FAILURE;
+	if(NodeId->identifierType != UA_NODEIDTYPE_STRING)
+		return EXIT_FAILURE;
+	NodeId_str = (NodeId->identifier.string.data);
+	if(sec_num)
+	{
+		while(dot_cnt<sec_num)
+		{
+			while(NodeId_str[i]!='.')
+			{
+				i++;
+				if(i>=NodeId->identifier.string.length)
+					return EXIT_FAILURE;
+			}
+			i++;
+			dot_cnt++;
+		}
+		NodeId_str = NodeId->identifier.string.data+i;
+	}
+	i=0;
+	while(NodeId_str[i]!='.')
+	{
+		sec_str[i]=NodeId_str[i];
+		i++;
+		if(i >= sec_str_size)
+			return EXIT_FAILURE;
+	}
+	sec_str[i]='\0';
+	return EXIT_SUCCESS;
+}
 
 UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
                          const UA_NodeId *sessionId, void *sessionHandle,
@@ -678,13 +715,8 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	if(new_mode_val > Dev_type_max)
 		return UA_STATUSCODE_BADSYNTAXERROR;
 	//Get Dev_name
-	i=0;
-	while(methodId->identifier.string.data[i]!='.')
-	{
-		dev_name[i]=methodId->identifier.string.data[i];
-		i++;
-	}
-	dev_name[i]='\0';
+	if(get_NodeId_sec(methodId, 0, dev_name, sizeof(dev_name)))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
 	//Construct contents for DBus method call (as JSON object)
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "new_RF_CH", new_RF_CH);
@@ -772,7 +804,7 @@ UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
                          size_t outputSize, UA_Variant *output)
 {
 	char contents[50], dev_name[Dev_or_Bus_name_str_size];
-    int ret = UA_STATUSCODE_GOOD, i=0;
+    int ret = UA_STATUSCODE_GOOD;
 	bool G_P_state = input[0].data ? *(bool *)(input[0].data):0,
 		 G_S_state = input[1].data ? *(bool *)(input[1].data):0;
 	cJSON *root = NULL;
@@ -782,13 +814,8 @@ UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
 	if(!input[0].data)
 		return UA_STATUSCODE_BADSYNTAXERROR;
 	//Get Dev_name
-	i=0;
-	while(methodId->identifier.string.data[i]!='.')
-	{
-		dev_name[i]=methodId->identifier.string.data[i];
-		i++;
-	}
-	dev_name[i]='\0';
+	if(get_NodeId_sec(methodId, 0, dev_name, sizeof(dev_name)))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
 	//Construct contents for DBus method call (as JSON object)
 	root = cJSON_CreateObject();
 	cJSON_AddItemToObject(root, "G_P_state", cJSON_CreateBool(G_P_state));
@@ -860,7 +887,7 @@ UA_StatusCode Morfeas_new_Gen_config_method_callback(UA_Server *server,
                          size_t outputSize, UA_Variant *output)
 {
 	char contents[100], dev_name[Dev_or_Bus_name_str_size];
-    int ret = UA_STATUSCODE_GOOD, i=0;
+    int ret = UA_STATUSCODE_GOOD;
 	unsigned char CH_num;
 	float gain, min, max;
 	bool saturate;
@@ -873,15 +900,10 @@ UA_StatusCode Morfeas_new_Gen_config_method_callback(UA_Server *server,
 	gain = *(float *)(input[0].data);
 	min  = *(float *)(input[1].data);
 	max  = *(float *)(input[2].data);
-	saturate = input[3].data ? *(bool *)(input[3].data):0,
+	saturate = input[3].data ? *(bool *)(input[3].data):0;
 	//Get Dev_name
-	i=0;
-	while(methodId->identifier.string.data[i]!='.')
-	{
-		dev_name[i]=methodId->identifier.string.data[i];
-		i++;
-	}
-	dev_name[i]='\0';
+	if(get_NodeId_sec(methodId, 0, dev_name, sizeof(dev_name)))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
 	//Get Channel Number
 	sscanf(strstr((char *)methodId->identifier.string.data, "CH"), "CH%hhu.", &CH_num);
 	//Construct contents for DBus method call (as JSON object)
@@ -963,30 +985,81 @@ UA_StatusCode Morfeas_ctrl_tele_SWs_method_callback(UA_Server *server,
                          size_t inputSize, const UA_Variant *input,
                          size_t outputSize, UA_Variant *output)
 {
-	/*
-	char mem_offset_NodeId_str[40]="";
+	char contents[80], mem_offset_NodeId_str[50], dev_name[Dev_or_Bus_name_str_size], Ctrl_Dev_ID[5];
+	const char **sw_names;
+	unsigned char Ctrl_Dev_type, mem_offset, i, null_inp;
+	cJSON *root = NULL;
 	UA_NodeId mem_offset_NodeId;
-	UA_Variant mem_offset;
 
+	//Get Dev_name
+	if(get_NodeId_sec(methodId, 0, dev_name, sizeof(dev_name)))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	//Get Ctrl_Dev_ID
+	if(get_NodeId_sec(methodId, 3, Ctrl_Dev_ID, sizeof(Ctrl_Dev_ID)))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	switch(inputSize)
+	{
+		case 1: //Mini_RMSW
+			Ctrl_Dev_type = Mini_RMSW;
+			sw_names = MTI_RMSW_SW_names;
+			break;
+		case 3: //RMSW_2CH
+			Ctrl_Dev_type = RMSW_2CH;
+			sw_names = MTI_RMSW_SW_names;
+			break;
+		case 4: //MUX
+			Ctrl_Dev_type = MUX;
+			sw_names = MTI_MUX_Sel_names;
+			break;
+		default: return UA_STATUSCODE_BADSYNTAXERROR;
+	}
+	//Get MODBus Memory offset for the Device of method call
+	sprintf(mem_offset_NodeId_str, "%s.Radio.Tele.%s.mem_offset", dev_name, Ctrl_Dev_ID);
 	if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, mem_offset_NodeId_str), &mem_offset_NodeId))//Check if mem_offset_NodeId exist
 	{
-		UA_Server_readValue(server, mem_offset_NodeId, &mem_offset);
+		UA_Variant temp;
+		UA_Server_readValue(server, mem_offset_NodeId, &temp);
+		mem_offset = *(char *)(temp.data);
 		UA_clear(&mem_offset_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 	}
 	else
 		return UA_STATUSCODE_BADNODATA;
-	*/
+	for(i=0, null_inp=0; i<inputSize; i++)
+	{
+		if(!input[i].data)
+		{
+			null_inp++;
+			continue;
+		}
+		//Construct contents for DBus method call (as JSON object)
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "mem_pos", mem_offset);
+		cJSON_AddStringToObject(root, "tele_type", MTI_RM_dev_type_str[Ctrl_Dev_type]);
+		cJSON_AddStringToObject(root, "sw_name", sw_names[i]);
+		cJSON_AddBoolToObject(root, "new_state", *(bool *)(input[i].data));
+		//Stringify the root JSON object
+		if(!cJSON_PrintPreallocated(root, contents, sizeof(contents), 0))
+		{
+			cJSON_Delete(root);
+			return UA_STATUSCODE_BADOUTOFMEMORY;
+		}
+		cJSON_Delete(root);
+		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "ctrl_tele_SWs", contents, NULL))
+			return UA_STATUSCODE_BADDEVICEFAILURE;
+	}
+	if(null_inp == inputSize)
+		return UA_STATUSCODE_BADSYNTAXERROR;
 	return UA_STATUSCODE_GOOD;
 }
 
 void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id, unsigned char dev_type)
 {
-	const char *inp_descriptions_rmsw[] = {"Main Switch", "CH1 Switch", "CH2 Switch", NULL};
+	const char inp_description_rmsw[] = "FALSE:OFF, TRUE:ON";
+	const char inp_description_mux[] = "FALSE:A, TRUE:B";
 	const char *inp_names_rmsw[] = {"Main","CH1","CH2",NULL};
-	const char *inp_descriptions_mux[] = {"CH1 Selector", "CH2 Selector", "CH3 Selector", "CH4 Selector", NULL};
 	const char *inp_names_mux[] = {"CH1","CH2","CH3","CH4",NULL};
 	size_t inputArgumentsAmount;
-	char **inp_descriptions, **inp_names;
+	char *inp_description, **inp_names;
 	UA_Argument inputArguments[4];
 
 	//Configure inputArguments
@@ -994,36 +1067,29 @@ void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Nod
 	{
 		case Mini_RMSW:
 			inputArgumentsAmount = 1;
-			inp_descriptions = (char **)inp_descriptions_rmsw;
+			inp_description = (char *)inp_description_rmsw;
 			inp_names = (char **)inp_names_rmsw;
 			break;
 		case RMSW_2CH:
 			inputArgumentsAmount = 3;
-			inp_descriptions = (char **)inp_descriptions_rmsw;
+			inp_description = (char *)inp_description_rmsw;
 			inp_names = (char **)inp_names_rmsw;
 			break;
 		case MUX:
 			inputArgumentsAmount = 4;
-			inp_descriptions = (char **)inp_descriptions_mux;
+			inp_description = (char *)inp_description_mux;
 			inp_names = (char **)inp_names_mux;
 			break;
-		default : return;
+		default: return;
 	}
 	for(int i=0; i<inputArgumentsAmount; i++)
 	{
 		UA_Argument_init(&inputArguments[i]);
-		inputArguments[i].description = UA_LOCALIZEDTEXT("en-US", inp_descriptions[i]);
+		inputArguments[i].description = UA_LOCALIZEDTEXT("en-US", inp_description);
 		inputArguments[i].name = UA_STRING(inp_names[i]);
 		inputArguments[i].dataType = UA_TYPES[UA_TYPES_BOOLEAN].typeId;
 		inputArguments[i].valueRank = UA_VALUERANK_SCALAR_OR_ONE_DIMENSION;
 	}
-	//Configure outputArgument
-	UA_Argument outputArgument;
-	UA_Argument_init(&outputArgument);
-	outputArgument.description = UA_LOCALIZEDTEXT("en-US", "Return of the method call");
-	outputArgument.name = UA_STRING("Return");
-	outputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
-	outputArgument.valueRank = UA_VALUERANK_SCALAR;
 
 	UA_MethodAttributes Method_Attr = UA_MethodAttributes_default;
 	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method ctrl_tele_SWs");
@@ -1036,6 +1102,5 @@ void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Nod
 										UA_QUALIFIEDNAME(1, Node_id),
 										Method_Attr, &Morfeas_ctrl_tele_SWs_method_callback,
 										inputArgumentsAmount, inputArguments,
-										1, &outputArgument,
-										NULL, NULL);
+										0, NULL, NULL, NULL);
 }
