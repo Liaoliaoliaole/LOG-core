@@ -225,6 +225,7 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 				return EXIT_FAILURE;
 			break;
 		case MTI:
+			//Check if first part of anchor is
 			//Check existence and validity of Tele_type field
 			i=Tele_TC16;//Start checking from Tele_TC16 value
 			while(!(tele_type_or_id = strstr(anchor_str, MTI_Tele_dev_type_str[i])) && MTI_Tele_dev_type_str[i])
@@ -425,7 +426,8 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	int i;
 	xmlNode *check_element;
 	struct Link_entry *list_cur_Links_node_data;
-	char *iso_channel_str = NULL, *dev_type_str = NULL, *anchor_ptr = NULL, tele_type_or_id[10];
+	char *iso_channel_str = NULL, *dev_type_str = NULL, *anchor_ptr = NULL;
+	char tele_type_or_id[10], format_str[30];
 
 	g_slist_free_full(*cur_Links, free_Link_entry);//Free List cur_Links
 	*cur_Links = NULL;
@@ -459,21 +461,30 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 															&(list_cur_Links_node_data->channel));
 							break;
 						case MTI:
-							sscanf(anchor_ptr, "%u.%s.CH%hhu", &(list_cur_Links_node_data->identifier),
-															   tele_type_or_id,
-															   &(list_cur_Links_node_data->channel));
-							if(strstr(tele_type_or_id, "ID:"))//Check if anchor referring to MiniRMSW
+							if(strstr(anchor_ptr, "ID:"))//Check if anchor referring to MiniRMSW
 							{
 								list_cur_Links_node_data->rxNum_teleType_or_value = RMSW_MUX;
 								list_cur_Links_node_data->tele_ID = atoi(tele_type_or_id+3);//3 = sizeof("ID:")
+								sprintf(format_str, "%%u.ID:%u.CH%%hhu", list_cur_Links_node_data->tele_ID);
 							}
 							else
 							{
-								i=0;
-								while(strcmp(tele_type_or_id, MTI_Tele_dev_type_str[i]))
+								i=Tele_TC16;
+								while(!strstr(anchor_ptr, MTI_Tele_dev_type_str[i]))
 									i++;
 								list_cur_Links_node_data->rxNum_teleType_or_value = i;//number or Tele_type
+								sprintf(format_str, "%%u.%s.CH%%hhu", MTI_Tele_dev_type_str[i]);
 							}
+							sscanf(anchor_ptr, format_str, &(list_cur_Links_node_data->identifier),
+														   &(list_cur_Links_node_data->channel));
+
+							fprintf(stderr,"tele_type_or_id_str = %s\n", tele_type_or_id);
+							fprintf(stderr,"identifier = %d, TeleType = %s, Channel = %d, TeleID = %d\n",
+																list_cur_Links_node_data->identifier,
+																MTI_Tele_dev_type_str[list_cur_Links_node_data->rxNum_teleType_or_value],
+																list_cur_Links_node_data->channel,
+																list_cur_Links_node_data->tele_ID);
+
 							break;
 					}
 					*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
