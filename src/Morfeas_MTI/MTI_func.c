@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 const char *MTI_charger_state_str[]={"Discharging", "Full", "", "Charging"};
 const char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
-const char *MTI_Tele_dev_type_str[]={"Disabled", "", "TC16", "TC8", "RMSW/MUX", "2CH_QUAD", "TC4", NULL};
+const char *MTI_Tele_dev_type_str[]={"", "Disabled", "TC16", "TC8", "RMSW/MUX", "QUAD", "TC4", NULL};
 const char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW", NULL};
 const char *MTI_RMSW_SW_names[]={"Main_SW","SW_1","SW_2"};
 const char *MTI_MUX_Sel_names[]={"Sel_1","Sel_2","Sel_3","Sel_4"};
@@ -90,6 +90,8 @@ int get_MTI_Radio_config(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 		case RMSW_MUX:
 			stats->MTI_Radio_config.sRegs.as_array[0] = cur_RX_config.Specific_reg[0];
 			stats->MTI_Radio_config.sRegs.as_array[1] = cur_RX_config.Specific_reg[21];
+			stats->MTI_Radio_config.sRegs.for_rmsw_dev.res_1 = 0;
+			stats->MTI_Radio_config.sRegs.for_rmsw_dev.res_2 = 0;//reset reserved bits
 			break;
 	}
 	return EXIT_SUCCESS;
@@ -204,7 +206,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 					stats->Tele_data.as_RMSWs.det_devs_data[pos].pos_offset = i;
 					stats->Tele_data.as_RMSWs.det_devs_data[pos].dev_type = cur_MTI_Tele_data.as_MUXs_RMSWs[i].dev_type;
 					stats->Tele_data.as_RMSWs.det_devs_data[pos].dev_id = cur_MTI_Tele_data.as_MUXs_RMSWs[i].dev_id;
-					stats->Tele_data.as_RMSWs.det_devs_data[pos].time_from_last_mesg = cur_MTI_Tele_data.as_MUXs_RMSWs[i].time_from_last_mesg;
+					stats->Tele_data.as_RMSWs.det_devs_data[pos].time_from_last_mesg = 120 - cur_MTI_Tele_data.as_MUXs_RMSWs[i].time_from_last_mesg;
 					stats->Tele_data.as_RMSWs.det_devs_data[pos].dev_temp = ((short)cur_MTI_Tele_data.as_MUXs_RMSWs[i].temp)/128.0;
 					stats->Tele_data.as_RMSWs.det_devs_data[pos].input_voltage = cur_MTI_Tele_data.as_MUXs_RMSWs[i].input_voltage/1000.0;
 					stats->Tele_data.as_RMSWs.det_devs_data[pos].switch_status.as_byte = cur_MTI_Tele_data.as_MUXs_RMSWs[i].switch_status;
@@ -238,7 +240,7 @@ int set_MTI_Radio_config(modbus_t *ctx, unsigned char new_RF_CH, unsigned char n
 	struct MTI_RTX_config_struct new_Radio_config = {.RF_channel=new_RF_CH, .Tele_dev_type=new_mode};
 	unsigned char amount = 3;//default amount of configuration registers
 	//Disable MTI's Transceiver
-	if(modbus_write_register(ctx, TRX_MODE_REG, 0)<=0)
+	if(modbus_write_register(ctx, TRX_MODE_REG, Disabled)<=0)
 		return errno;
 	//Preparing specific registers for new MTI config
 	switch(new_mode)

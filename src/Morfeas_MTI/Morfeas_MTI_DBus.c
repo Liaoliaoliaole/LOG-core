@@ -85,7 +85,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	//Local variables and structures
 	char *err_str;
 	unsigned char new_RF_CH, new_mode, mem_pos, RMSW_tele_type, sw_name;
-	union MTI_specific_regs local_sregs;
+	union MTI_specific_regs local_sregs={0};
 	struct Gen_config_struct local_PWM_gens_config[Amount_OF_GENS];
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
@@ -171,25 +171,36 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 										break;
 									}
 									pthread_mutex_lock(&MTI_access);
-										if(!(err = stats->error))
-										{	//Sent config to MTI
-											if(!(err = set_MTI_Radio_config(ctx,
-																			new_RF_CH,
-																			new_mode,
-																			&local_sregs)))
+										if(stats->MTI_Radio_config.RF_channel != new_RF_CH ||
+										   stats->MTI_Radio_config.Tele_dev_type != new_mode ||
+										   stats->MTI_Radio_config.sRegs.as_short != local_sregs.as_short)
+										{
+											if(!(err = stats->error))
 											{
-												if(new_mode == Tele_quad)
-													err = set_MTI_PWM_gens(ctx, local_PWM_gens_config);
-												if(!err)
-													DBus_reply_msg(conn, msg, "new_MTI_config(): Success");
-												stats->user_config.RF_channel = new_RF_CH;
-												stats->user_config.Tele_dev_type = new_mode;
-												memcpy(&(stats->user_config.sRegs), &local_sregs, sizeof(local_sregs));
-
-												if(user_config(stats, "w"))
-													Logger("Storing of user_config failed!!!\n");
+												if(!new_RF_CH && new_mode!=RMSW_MUX)//Set RF_channel from stats if new_RF_CH == 0
+													new_RF_CH = stats->MTI_Radio_config.RF_channel;
+												else if(new_mode==RMSW_MUX)
+													stats->Tele_data.as_RMSWs.amount_of_devices = 0;
+												//Sent config to MTI
+												if(!(err = set_MTI_Radio_config(ctx,
+																				new_RF_CH,
+																				new_mode,
+																				&local_sregs)))
+												{
+													if(new_mode == Tele_quad)
+														err = set_MTI_PWM_gens(ctx, local_PWM_gens_config);
+													if(!err)
+														DBus_reply_msg(conn, msg, "new_MTI_config(): Success");
+													stats->user_config.RF_channel = new_RF_CH;
+													stats->user_config.Tele_dev_type = new_mode;
+													memcpy(&(stats->user_config.sRegs), &local_sregs, sizeof(local_sregs));
+													if(user_config(stats, "w"))
+														Logger("Storing of user_config failed!!!\n");
+												}
 											}
 										}
+										else if(!err)
+											DBus_reply_msg(conn, msg, "new_MTI_config(): Success (Nothing to Change)");
 									pthread_mutex_unlock(&MTI_access);
 									break;
 								case MTI_Global_SWs:
@@ -381,15 +392,11 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 
 	if(!JSON_args||!new_RF_CH||!new_mode||!new_sRegs)
 		return "NULL at Argument(s)";
-
 	//Validate data in argument
 	if(!cJSON_HasObjectItem(JSON_args,"new_RF_CH") || !cJSON_HasObjectItem(JSON_args,"new_mode"))
 		return "new_MTI_config(): Method's Arguments are Invalid";
 	if(cJSON_GetObjectItem(JSON_args,"new_RF_CH")->type != cJSON_Number)
 		return "new_MTI_config(): new_RF_CH in NAN";
-	*new_RF_CH = cJSON_GetObjectItem(JSON_args,"new_RF_CH")->valueint;
-	if(*new_RF_CH%2)
-		return "new_MTI_config(): new_RF_CH%2 != 0";
 	if(cJSON_GetObjectItem(JSON_args,"new_mode")->type != cJSON_String)//Check if new_mode is string
 		return "new_MTI_config(): new_mode is NOT a string";
 	buf = cJSON_GetObjectItem(JSON_args,"new_mode")->valuestring;
@@ -397,6 +404,12 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 		;
 	if(*new_mode>Dev_type_max)//Check if new_mode is valid
 		return "new_MTI_config(): new_mode is Unknown";
+	*new_RF_CH = cJSON_GetObjectItem(JSON_args,"new_RF_CH")->valueint;
+	if(*new_RF_CH%2 && *new_mode != Tele_quad)
+		return "new_MTI_config(): new_RF_CH%2 != 0";
+	else if(*new_mode == Tele_quad)
+		*new_RF_CH = 0;
+	new_sRegs->as_short = 0;
 	if(*new_mode != RMSW_MUX && *new_mode != Tele_quad)
 	{
 		if(cJSON_HasObjectItem(JSON_args,"StV") && cJSON_HasObjectItem(JSON_args,"StF"))
@@ -422,7 +435,6 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 	{
 		if(cJSON_HasObjectItem(JSON_args,"G_SW") && cJSON_HasObjectItem(JSON_args,"G_SL"))
 		{
-			new_sRegs->for_rmsw_dev.reserver = 0;//reset reserved bits
 			new_sRegs->for_rmsw_dev.G_SW = cJSON_GetObjectItem(JSON_args,"G_SW")->valueint?1:0;
 			new_sRegs->for_rmsw_dev.G_SL = cJSON_GetObjectItem(JSON_args,"G_SL")->valueint?1:0;
 		}

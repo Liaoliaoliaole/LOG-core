@@ -203,10 +203,9 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 								sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "Okay", UA_TYPES_STRING);
 							}
-						}//Check success for messages in receivers buffer
+						}//Check success for messages in receivers buffer, if is zero report "Disconnected"
 						else if(!IPC_msg_dec->IOBOX_data.RX[i].success)
 						{
-							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
 							sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "Disconnected", UA_TYPES_STRING);
 							status_byte = Disconnected;

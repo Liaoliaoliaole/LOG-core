@@ -174,57 +174,60 @@ int get_anchor_comp(char *anchor_str, char handler_type)
 	//Check anchor_str for correct anchor component names
 	if(!atoi(anchor_str)) //identifier component check
 		return EXIT_FAILURE;
-	if(!(channel = strstr(anchor_str, ".CH")))//channel component check 
+	if(!(channel = strstr(anchor_str, ".CH")))//channel component check
 		return EXIT_FAILURE;
 	if(!atoi(channel+strlen(".CH")))//Channel value check
 		return EXIT_FAILURE;
-	if(handler_type == IOBOX)
+	switch(handler_type)
 	{
-		if(!(receiver_or_value = strchr(anchor_str, '.')))//Receiver component check
+		case IOBOX:
+			if(!(receiver_or_value = strchr(anchor_str, '.')))//Receiver component check
+				return EXIT_FAILURE;
+			if(*(receiver_or_value+1)=='R'&&*(receiver_or_value+2)=='X')
+			{
+				if(!atoi(receiver_or_value+strlen(".RX")))//Receiver value check
+					return EXIT_FAILURE;
+				if(strstr(anchor_str, ".RX")>=channel)//If Receiver exist must be before channels component
+					return EXIT_FAILURE;
+				sscanf(anchor_str, "%u.RX%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
+				if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
+					return EXIT_FAILURE;
+			}
+			else
+				return EXIT_FAILURE;
+			break;
+		case MDAQ:
+			if(!(receiver_or_value = strstr(anchor_str, ".CH")))//Value component check
+				return EXIT_FAILURE;
+			receiver_or_value+=strlen(".CH?");
+			if(*(receiver_or_value+1)=='V'&&*(receiver_or_value+2)=='a'&&*(receiver_or_value+3)=='l')
+			{
+				if(!atoi(receiver_or_value+strlen(".CH?")))//Value's value check
+					return EXIT_FAILURE;
+				if(strstr(anchor_str, ".Val")<=channel)//If Value exist must be after channels component
+					return EXIT_FAILURE;
+				sscanf(anchor_str, "%u.CH%u.Val%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
+				if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
+					return EXIT_FAILURE;
+			}
+			else
+				return EXIT_FAILURE;
+			break;
+		case SDAQ:
+			if(!(channel = strchr(anchor_str, '.')))//Channel component check
+				return EXIT_FAILURE;
+			if(*(channel+1)=='C' && *(channel+2)=='H')
+			{
+				sscanf(anchor_str, "%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1]);
+				if(!anchor_arg_int[0]||!anchor_arg_int[1])
+					return EXIT_FAILURE;
+			}
+			else
+				return EXIT_FAILURE;
+			break;
+		case MTI:
 			return EXIT_FAILURE;
-		if(*(receiver_or_value+1)=='R'&&*(receiver_or_value+2)=='X')
-		{
-			if(!atoi(receiver_or_value+strlen(".RX")))//Receiver value check
-				return EXIT_FAILURE;
-			if(strstr(anchor_str, ".RX")>=channel)//If Receiver exist must be before channels component
-				return EXIT_FAILURE;
-			sscanf(anchor_str, "%u.RX%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
-			if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
-				return EXIT_FAILURE;
-		}
-		else
-			return EXIT_FAILURE;
-	}
-	if(handler_type == MDAQ)
-	{
-		if(!(receiver_or_value = strstr(anchor_str, ".CH")))//Value component check
-			return EXIT_FAILURE;
-		receiver_or_value+=strlen(".CH?");
-		if(*(receiver_or_value+1)=='V'&&*(receiver_or_value+2)=='a'&&*(receiver_or_value+3)=='l')
-		{
-			if(!atoi(receiver_or_value+strlen(".CH?")))//Value's value check
-				return EXIT_FAILURE;
-			if(strstr(anchor_str, ".Val")<=channel)//If Value exist must be after channels component
-				return EXIT_FAILURE;
-			sscanf(anchor_str, "%u.CH%u.Val%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
-			if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
-				return EXIT_FAILURE;
-		}
-		else
-			return EXIT_FAILURE;
-	}
-	else if(handler_type == SDAQ)
-	{
-		if(!(channel = strchr(anchor_str, '.')))//Channel component check
-			return EXIT_FAILURE;
-		if(*(channel+1)=='C' && *(channel+2)=='H')
-		{
-			sscanf(anchor_str, "%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1]);
-			if(!anchor_arg_int[0]||!anchor_arg_int[1])
-				return EXIT_FAILURE;
-		}
-		else
-			return EXIT_FAILURE;
+			break;
 	}
 	return EXIT_SUCCESS;
 }
@@ -329,8 +332,8 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 			//TO-DO: More checks on values
 			if(get_anchor_comp(content, if_type_str_2_num(dev_type_str)))
 			{
-				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" (Type: \"%s\") is NOT valid !!!!\n\n", content, 
-																												  iso_channel, 
+				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" (Type: \"%s\") is NOT valid !!!!\n\n", content,
+																												  iso_channel,
 																												  dev_type_str);
 				return EXIT_FAILURE;
 			}

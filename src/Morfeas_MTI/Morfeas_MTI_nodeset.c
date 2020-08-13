@@ -233,7 +233,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							{
 								//Add telemetry's Channel node
 								sprintf(Node_ID_parent_str, "%s.Radio.Tele", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
-								sprintf(name_buff, "CH%02u", i);
+								IPC_msg_dec->MTI_Update_Radio.Tele_dev_type == Tele_TC16 ? sprintf(name_buff, "CH%02u", i) : sprintf(name_buff, "CH%u", i);
 								sprintf(Node_ID_str, "%s.CH%u", Node_ID_parent_str, i);
 								Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, name_buff);
 								//Add telemetry's Channel specific variables (Linkable)
@@ -755,7 +755,7 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id)
 {
 	const char *inp_descriptions[] = {"Range:(0..126)",
-									  "Accepted values:{Disabled,TC16,TC8,TC4,2CH_QUAD,RMSW/MUX}",
+									  "Accepted values:{Disabled,TC16,TC8,TC4,QUAD,RMSW/MUX}",
 									  "Successful receptions to set valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
 									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
 									  "Global ON/OFF mode(Used with mode RMSW/MUX)",

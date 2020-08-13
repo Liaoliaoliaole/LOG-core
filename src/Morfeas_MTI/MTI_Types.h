@@ -42,7 +42,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //--- Enumerators for MTI Telemetry types---//
 enum MTI_Telemetry_Dev_type_enum{
-	Tele_TC16 = 2,
+	Disabled = 1,
+	Tele_TC16,
 	Tele_TC8,
 	RMSW_MUX,
 	Tele_quad,

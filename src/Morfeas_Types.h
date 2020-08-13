@@ -119,9 +119,10 @@ union MTI_specific_regs{
 	struct dec_for_controlling_devices{
 		unsigned G_SW:1;
 		unsigned G_SL:1;
-		unsigned reserver:6;
+		unsigned res_1:6;
 		unsigned G_P_state:1;
 		unsigned G_S_state:1;
+		unsigned res_2:6;
 	}__attribute__((packed, aligned(1))) for_rmsw_dev;
 	unsigned char as_array[2];
 	unsigned short as_short;
