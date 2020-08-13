@@ -177,11 +177,11 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 										{
 											if(!(err = stats->error))
 											{
-												if(!new_RF_CH && new_mode!=RMSW_MUX)//Set RF_channel from stats if new_RF_CH == 0
+												if(!new_RF_CH && new_mode!=RMSW_MUX)//Set RF_channel from stats if new_RF_CH == 0, RF_CH 0 is only for RMSW/MUX
 													new_RF_CH = stats->MTI_Radio_config.RF_channel;
-												else if(new_mode==RMSW_MUX)
-													stats->Tele_data.as_RMSWs.amount_of_devices = 0;
-												//Sent config to MTI
+												else if(stats->MTI_Radio_config.Tele_dev_type!=new_mode && new_mode==RMSW_MUX)
+													stats->Tele_data.as_RMSWs.amount_of_devices = 0;//Clean amount_of_devices in case that previous mode was not RMSW/MUX
+												//Send new configuration to MTI
 												if(!(err = set_MTI_Radio_config(ctx,
 																				new_RF_CH,
 																				new_mode,
@@ -405,9 +405,9 @@ char * new_MTI_config_argValidator(cJSON *JSON_args, unsigned char *new_RF_CH,un
 	if(*new_mode>Dev_type_max)//Check if new_mode is valid
 		return "new_MTI_config(): new_mode is Unknown";
 	*new_RF_CH = cJSON_GetObjectItem(JSON_args,"new_RF_CH")->valueint;
-	if(*new_RF_CH%2 && *new_mode != Tele_quad)
+	if(*new_RF_CH%2 && *new_mode != RMSW_MUX)
 		return "new_MTI_config(): new_RF_CH%2 != 0";
-	else if(*new_mode == Tele_quad)
+	else if(*new_mode == RMSW_MUX)
 		*new_RF_CH = 0;
 	new_sRegs->as_short = 0;
 	if(*new_mode != RMSW_MUX && *new_mode != Tele_quad)

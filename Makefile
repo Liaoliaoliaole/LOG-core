@@ -34,6 +34,7 @@ HEADERS = $(SRC_dir)/IPC/*.h \
 Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_daemon.o \
 					  $(WORK_dir)/Morfeas_XML.o \
+					  $(WORK_dir)/MTI_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o
 
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
@@ -176,7 +177,7 @@ $(WORK_dir)/Morfeas_Logger.o: $(SRC_dir)/Supplementary/Morfeas_Logger.c
 $(WORK_dir)/Morfeas_JSON.o: $(SRC_dir)/Supplementary/Morfeas_JSON.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Supplementary/Morfeas_XML.c
+$(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Supplementary/Morfeas_XML.c 
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_run_check.o: $(SRC_dir)/Supplementary/Morfeas_run_check.c

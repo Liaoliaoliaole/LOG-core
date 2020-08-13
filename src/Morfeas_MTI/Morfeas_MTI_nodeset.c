@@ -501,7 +501,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						switch(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type)
 						{
 							case Mini_RMSW:
-								sprintf(anchor, "MTI.%u.%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+								sprintf(anchor, "MTI.%u.ID:%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
 								//Add Mini_RMSW Channels related nodes (Linkable)
 								for(j=1; j<=4; j++)
 								{

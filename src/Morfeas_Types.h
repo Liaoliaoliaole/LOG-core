@@ -308,11 +308,11 @@ struct LogBook{
 //Data of the List Links, used in Morfeas_opc_ua
 struct Link_entry{
 	char ISO_channel_name[ISO_channel_name_size];
-	char interface_type[10];
 	unsigned char interface_type_num;
 	unsigned int identifier;
 	unsigned char channel;
-	unsigned char receiver_or_value;
+	unsigned char rxNum_teleType_or_value;
+	unsigned char tele_ID;
 };
 /*struct for system_stats*/
 struct system_stats{

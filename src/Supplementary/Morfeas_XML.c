@@ -163,12 +163,11 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 #define max_arg_range 3
 #define anchor_check_buff_size 100
 
-//Get anchor's components as string and unsigned integer.
-// Return 0 on success or -1 on failure.
-int get_anchor_comp(char *anchor_str, char handler_type)
+//Function that validate the anchor's components. Return 0 on success or -1 on failure.
+int validate_anchor_comp(char *anchor_str, char handler_type)
 {
-	unsigned int anchor_arg_int[max_arg_range];
-	char *channel, *receiver_or_value;
+	unsigned int anchor_arg_int[max_arg_range], i;
+	char *channel, *receiver_or_value, *tele_type_or_id;
 	if(!anchor_str)
 		return EXIT_FAILURE;
 	//Check anchor_str for correct anchor component names
@@ -226,7 +225,29 @@ int get_anchor_comp(char *anchor_str, char handler_type)
 				return EXIT_FAILURE;
 			break;
 		case MTI:
-			return EXIT_FAILURE;
+			//Check existence and validity of Tele_type field
+			i=Tele_TC16;//Start checking from Tele_TC16 value
+			while(!(tele_type_or_id = strstr(anchor_str, MTI_Tele_dev_type_str[i])) && MTI_Tele_dev_type_str[i])
+				i++;
+			if(!MTI_Tele_dev_type_str[i])
+			{
+				if(!(tele_type_or_id = strstr(anchor_str, ".ID:")))
+					return EXIT_FAILURE;
+			}
+			else
+				if(*tele_type_or_id-1 != '.' && *(tele_type_or_id+strlen(MTI_Tele_dev_type_str[i])) != '.')
+					return EXIT_FAILURE;
+			//Channel component check
+			if(!(channel = strstr(anchor_str, ".CH")))
+				return EXIT_FAILURE;
+			if(tele_type_or_id<channel)//Check if channel is after tele_type_or_id
+			{
+				sscanf(channel, ".CH%u", &anchor_arg_int[0]);
+				if(!anchor_arg_int[0])
+					return EXIT_FAILURE;
+			}
+			else
+				return EXIT_FAILURE;
 			break;
 	}
 	return EXIT_SUCCESS;
@@ -330,7 +351,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		{
 			fl.as_struct.anchor = 1;
 			//TO-DO: More checks on values
-			if(get_anchor_comp(content, if_type_str_2_num(dev_type_str)))
+			if(validate_anchor_comp(content, if_type_str_2_num(dev_type_str)))
 			{
 				fprintf(stderr, "\nANCHOR : \"%s\" of ISO_CHANNEL : \"%s\" (Type: \"%s\") is NOT valid !!!!\n\n", content,
 																												  iso_channel,
@@ -401,9 +422,10 @@ int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList *
 
 int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 {
+	int i;
 	xmlNode *check_element;
 	struct Link_entry *list_cur_Links_node_data;
-	char *iso_channel_str = NULL, *dev_type_str = NULL, *anchor_ptr = NULL;
+	char *iso_channel_str = NULL, *dev_type_str = NULL, *anchor_ptr = NULL, tele_type_or_id[10];
 
 	g_slist_free_full(*cur_Links, free_Link_entry);//Free List cur_Links
 	*cur_Links = NULL;
@@ -420,19 +442,40 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 				if(list_cur_Links_node_data)
 				{
 					memccpy(&(list_cur_Links_node_data->ISO_channel_name), iso_channel_str, '\0', sizeof(list_cur_Links_node_data->ISO_channel_name));
-					memccpy(&(list_cur_Links_node_data->interface_type), dev_type_str, '\0', sizeof(list_cur_Links_node_data->interface_type));
-					list_cur_Links_node_data->interface_type_num = if_type_str_2_num(dev_type_str);
-					if(list_cur_Links_node_data->interface_type_num == IOBOX)
-						sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
-															   &(list_cur_Links_node_data->receiver_or_value),
+					switch((list_cur_Links_node_data->interface_type_num = if_type_str_2_num(dev_type_str)))
+					{
+						case IOBOX:
+							sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
+																   &(list_cur_Links_node_data->rxNum_teleType_or_value),
+																   &(list_cur_Links_node_data->channel));
+							break;
+						case MDAQ:
+							sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),
+																	&(list_cur_Links_node_data->channel),
+																	&(list_cur_Links_node_data->rxNum_teleType_or_value));
+							break;
+						case SDAQ:
+							sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier),
+															&(list_cur_Links_node_data->channel));
+							break;
+						case MTI:
+							sscanf(anchor_ptr, "%u.%s.CH%hhu", &(list_cur_Links_node_data->identifier),
+															   tele_type_or_id,
 															   &(list_cur_Links_node_data->channel));
-					else if(list_cur_Links_node_data->interface_type_num == MDAQ)
-						sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),
-																&(list_cur_Links_node_data->channel),
-																&(list_cur_Links_node_data->receiver_or_value));
-					else if(list_cur_Links_node_data->interface_type_num == SDAQ)
-						sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier),
-														&(list_cur_Links_node_data->channel));
+							if(strstr(tele_type_or_id, "ID:"))//Check if anchor referring to MiniRMSW
+							{
+								list_cur_Links_node_data->rxNum_teleType_or_value = RMSW_MUX;
+								list_cur_Links_node_data->tele_ID = atoi(tele_type_or_id+3);//3 = sizeof("ID:")
+							}
+							else
+							{
+								i=0;
+								while(strcmp(tele_type_or_id, MTI_Tele_dev_type_str[i]))
+									i++;
+								list_cur_Links_node_data->rxNum_teleType_or_value = i;//number or Tele_type
+							}
+							break;
+					}
 					*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
 				}
 				else

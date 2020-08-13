@@ -365,22 +365,36 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 				switch(Node_data->interface_type_num)
 				{
 					case SDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type,
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
 																   Node_data->identifier,
 																   Node_data->channel,
 																   req_value);
 						break;
 					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type,
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
 																		   Node_data->identifier,
 																		   Node_data->channel,
-																		   Node_data->receiver_or_value,
+																		   Node_data->rxNum_teleType_or_value,
 																		   req_value);
 						break;
 					case IOBOX:
-						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type,
+						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
 																		  Node_data->identifier,
-																		  Node_data->receiver_or_value,
+																		  Node_data->rxNum_teleType_or_value,
+																		  Node_data->channel,
+																		  req_value);
+						break;
+					case MTI:
+						if(Node_data->rxNum_teleType_or_value == RMSW_MUX)
+							sprintf(src_NodeId_str, "%s.%u.ID:%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			   Node_data->identifier,
+																			   Node_data->tele_ID,
+																			   Node_data->channel,
+																			   req_value);
+						else
+							sprintf(src_NodeId_str, "%s.%u.%s.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																		  Node_data->identifier,
+																		  MTI_Tele_dev_type_str[Node_data->rxNum_teleType_or_value],
 																		  Node_data->channel,
 																		  req_value);
 						break;
@@ -421,7 +435,7 @@ UA_StatusCode Dev_update_value(UA_Server *server_ptr,
 			{
 				Node_data = List_Links_Node->data;
 				//check if the source node exist
-				sprintf(src_NodeId_str, "%s.%u.%s", Node_data->interface_type, Node_data->identifier, req_value);
+				sprintf(src_NodeId_str, "%s.%u.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num], Node_data->identifier, req_value);
 				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 				{
 					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
@@ -447,7 +461,7 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 	struct Link_entry *Node_data;
 	UA_NodeId src_NodeId;
 	UA_String t_str;
-	char *ISO_Channel, *req_value, src_NodeId_str[128];
+	char *ISO_Channel, *req_value, src_NodeId_str[200];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
@@ -459,24 +473,37 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 				switch(Node_data->interface_type_num)
 				{
 					case SDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Node_data->interface_type,
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
 																   Node_data->identifier,
 																   Node_data->channel,
 																   req_value);
 						break;
 					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Node_data->interface_type,
-																   Node_data->identifier,
-																   Node_data->channel,
-																   Node_data->receiver_or_value,
-																   req_value);
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																		   Node_data->identifier,
+																		   Node_data->channel,
+																		   Node_data->rxNum_teleType_or_value,
+																		   req_value);
 						break;
 					case IOBOX:
-						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Node_data->interface_type,
-																   Node_data->identifier,
-																   Node_data->receiver_or_value,
-																   Node_data->channel,
-																   req_value);
+						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																		  Node_data->identifier,
+																		  Node_data->rxNum_teleType_or_value,
+																	      Node_data->channel,
+																	      req_value);
+					case MTI:
+						if(Node_data->rxNum_teleType_or_value == RMSW_MUX)
+							sprintf(src_NodeId_str, "%s.%u.ID:%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			   Node_data->identifier,
+																			   Node_data->tele_ID,
+																			   Node_data->channel,
+																			   req_value);
+						else
+							sprintf(src_NodeId_str, "%s.%u.%s.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																		  Node_data->identifier,
+																		  MTI_Tele_dev_type_str[Node_data->rxNum_teleType_or_value],
+																		  Node_data->channel,
+																		  req_value);
 						break;
 					default: return UA_STATUSCODE_GOOD;
 				}
@@ -623,7 +650,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_date_opcua_date, UA_TYPES_DATETIME);
 			}
 			else
-				UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Calibration Date is invalid");
+				UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Calibration Date \"%s\" on line %d is invalid !!!", cal_date_str, node->line);
 		}
 		if((cal_period_str = XML_node_get_content(node, "CAL_PERIOD")))
 		{
