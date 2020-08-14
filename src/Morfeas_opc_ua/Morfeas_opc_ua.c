@@ -595,10 +595,16 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		{
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
-			sprintf(tmp_str,"%s.period",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
+			if((XML_node_get_content(node, "CAL_DATE")))
+			{
+				sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
+			}
+			if((XML_node_get_content(node, "CAL_PERIOD")))
+			{
+				sprintf(tmp_str,"%s.period",ISO_channel_name);
+				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
+			}
 			//Special Device related variables
 			switch(if_type)
 			{
