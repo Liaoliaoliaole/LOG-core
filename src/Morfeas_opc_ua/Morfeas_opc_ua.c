@@ -491,7 +491,6 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 																		  Node_data->rxNum_teleType_or_value,
 																	      Node_data->channel,
 																	      req_value);
-						break;
 					case MTI:
 						if(Node_data->rxNum_teleType_or_value == RMSW_MUX)
 							sprintf(src_NodeId_str, "%s.%u.ID:%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
@@ -537,12 +536,10 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50], *ISO_channel_name, *unit_str, *cal_date_str, *cal_period_str;
+	char tmp_str[50], *ISO_channel_name, *anchor_dec, *unit_str, *cal_date_str, *cal_period_str;
 	float t_min_max;
-	unsigned int if_type;
-	unsigned char cal_period;
-	struct Link_entry *List_Links_Node_data;
-	GSList *List_Links_Node;
+	unsigned int ID, if_type;
+	unsigned char CH, RX, cal_period;
 	UA_DateTimeStruct cal_date_opcua_struct;
 	UA_DateTime cal_date_opcua_date;
 	UA_NodeId out;
@@ -572,11 +569,14 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE, CH_update_value);
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING, CH_update_value);
+
 			//Device related
 			sprintf(tmp_str,"%s.Address",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_BYTE, Dev_update_value);
 			sprintf(tmp_str,"%s.onBus",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "SDAQnet", UA_TYPES_STRING, Dev_update_value);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Found on BUS", UA_TYPES_STRING, Dev_update_value);
+			sprintf(tmp_str,"%s.Samplerate",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Samplerate", UA_TYPES_BYTE, Dev_update_value);
 			sprintf(tmp_str,"%s.Type",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING, Dev_update_value);
 		}
@@ -599,43 +599,25 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
 			sprintf(tmp_str,"%s.period",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
-			//Special Device related variables
-			switch(if_type)
+			if(if_type == IOBOX)
 			{
-				case IOBOX:
-					sprintf(tmp_str,"%s.rx",ISO_channel_name);
-					Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Receiver", UA_TYPES_BYTE);
-					break;
-				case MTI:
-					sprintf(tmp_str,"%s.tele_type",ISO_channel_name);
-					Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Telemetry Type", UA_TYPES_STRING);
-					break;
+				sprintf(tmp_str,"%s.rx",ISO_channel_name);
+				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Receiver", UA_TYPES_BYTE);
 			}
 		}
 	}
 	else
 		UA_clear(&out, &UA_TYPES[UA_TYPES_NODEID]);
-	//Update values of regular variables with data from List_Links
-	List_Links_Node = g_slist_find_custom(Links, ISO_channel_name, List_Links_cmp);
-	if(List_Links_Node)
+	//Decode Anchor from the XML_doc tree to it's elements
+	anchor_dec = XML_node_get_content(node, "ANCHOR");
+	if(if_type == IOBOX)
 	{
-		List_Links_Node_data = List_Links_Node->data;
-		sprintf(tmp_str,"%s.id",ISO_channel_name);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->identifier), UA_TYPES_UINT32);
-		sprintf(tmp_str,"%s.channel",ISO_channel_name);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->channel), UA_TYPES_BYTE);
-		switch(if_type)
-		{
-			case IOBOX:
-				sprintf(tmp_str,"%s.rx",ISO_channel_name);
-				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->rxNum_teleType_or_value), UA_TYPES_BYTE);
-				break;
-			case MTI:
-				sprintf(tmp_str,"%s.tele_type",ISO_channel_name);
-				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), MTI_Tele_dev_type_str[List_Links_Node_data->rxNum_teleType_or_value], UA_TYPES_STRING);
-				break;
-		}
+		sscanf(anchor_dec, "%u.RX%hhu.CH%hhu", &ID, &RX, &CH);
+		sprintf(tmp_str,"%s.rx",ISO_channel_name);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &RX, UA_TYPES_BYTE);
 	}
+	else
+		sscanf(anchor_dec, "%u.CH%hhu", &ID, &CH);
 	//Update values of regular variables with data from Configuration XML
 	sprintf(tmp_str,"%s.desc",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
@@ -645,6 +627,10 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
+	sprintf(tmp_str,"%s.id",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &ID, UA_TYPES_UINT32);
+	sprintf(tmp_str,"%s.channel",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &CH, UA_TYPES_BYTE);
 	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI)
 	{
 		if((unit_str = XML_node_get_content(node, "UNIT")))

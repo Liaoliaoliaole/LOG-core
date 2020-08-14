@@ -49,7 +49,6 @@ enum Tele_status_enum{
 	Tele_channel_noSensor,
 	Tele_channel_Error,
 	Disconnected = 127,
-	Out_of_gange,
 	OFF_line = -1
 };
 
