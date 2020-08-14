@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define Configs_dir "/var/tmp/Morfeas_MTI_Configurations/"
-#define VERSION "0.9" /*Release Version of Morfeas_MTI_if*/
+#define VERSION "1.0" /*Release Version of Morfeas_MTI_if*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -290,8 +290,9 @@ int main(int argc, char *argv[])
 				pthread_mutex_lock(&MTI_access);
 					MTI_status_to_IPC(FIFO_fd, &stats);//Send Okay status report to Morfeas_opc_ua via IPC
 					stats.counter = 0;//Reset sample counter
+					//Restore MTI to User_config
+					state = MTI_set_user_config(ctx, &stats)?error:get_config;
 				pthread_mutex_unlock(&MTI_access);
-				state = get_config;
 				break;
 			case get_config:
 				pthread_mutex_lock(&MTI_access);

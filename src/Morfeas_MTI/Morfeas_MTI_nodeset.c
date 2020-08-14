@@ -100,7 +100,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								if(IPC_msg_dec->MTI_report.Tele_dev_type != RMSW_MUX)
 									sprintf(anchor, "MTI.%u.%s", IPC_msg_dec->MTI_report.MTI_IPv4, MTI_Tele_dev_type_str[IPC_msg_dec->MTI_report.Tele_dev_type]);
 								else
-									sprintf(anchor, "MTI.%u.%u", IPC_msg_dec->MTI_report.MTI_IPv4, IPC_msg_dec->MTI_report.IDs_of_MiniRMSWs[j]);
+									sprintf(anchor, "MTI.%u.ID:%u", IPC_msg_dec->MTI_report.MTI_IPv4, IPC_msg_dec->MTI_report.IDs_of_MiniRMSWs[j]);
 								for(i=1; i<=lim; i++)
 								{
 									//Update telemetry's Channel specific variables (Linkable)
@@ -583,7 +583,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								case 1: meas = .2; break;
 							}
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
-							sprintf(anchor, "MTI.%u.%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
+							sprintf(anchor, "MTI.%u.ID:%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
 							for(j=1; j<=4; j++)
 							{
 								meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j-1];
