@@ -14,6 +14,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define VERSION "1.0" /*Release Version of Morfeas_SDAQ_if software*/
+
 #define LogBooks_dir "/var/tmp/Morfeas_LogBooks/"
 #define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
@@ -113,7 +115,9 @@ int main(int argc, char *argv[])
 	//Directory pointer variables
 	DIR *dir;
 	//Operational variables
-	char *logstat_path = argv[2];
+	int c;
+	char *logstat_path;
+	unsigned char i2c_bus_num = I2C_BUS_NUM;
 	unsigned long msg_cnt=0;
 	struct SDAQ_info_entry *SDAQ_data;
 	//Variables for CANBus Port Electric
@@ -145,10 +149,29 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 		exit(1);
 	}
-	//Check if program already runs on same bus.
-	if(check_already_run_with_same_arg(argv[0], argv[1]))
+	opterr = 1;
+	while ((c = getopt (argc, argv, "hvb:")) != -1)
 	{
-		fprintf(stderr, "%s for interface \"%s\" Already Running!!!\n", argv[0], argv[1]);
+		switch (c)
+		{
+			case 'h'://help
+				print_usage(argv[0]);
+				exit(EXIT_SUCCESS);
+			case 'v'://Version
+				printf(VERSION"\n");
+				exit(EXIT_SUCCESS);
+			case 'b':
+				i2c_bus_num=atoi(optarg);
+				break;
+			case '?':
+				print_usage(argv[0]);
+				exit(EXIT_FAILURE);
+		}
+	}
+	//Check if program already runs on same bus.
+	if(check_already_run_with_same_arg(argv[0], argv[optind]))
+	{
+		fprintf(stderr, "%s for interface \"%s\" Already Running!!!\n", argv[0], argv[optind]);
 		exit(EXIT_SUCCESS);
 	}
 
@@ -171,13 +194,13 @@ int main(int argc, char *argv[])
 		perror("Error while opening socket");
 		exit(EXIT_FAILURE);
 	}
-	if(strlen(argv[1])>=Dev_or_Bus_name_str_size)//Check if the size of the CAN-IF is bigger than the limit
+	if(strlen(argv[optind])>=Dev_or_Bus_name_str_size)//Check if the size of the CAN-IF is bigger than the limit
 	{
 		fprintf(stderr, "Interface name too big (>=%d)\n",Dev_or_Bus_name_str_size);
 		exit(EXIT_FAILURE);
 	}
 	//Link interface name to socket
-	strcpy(ifr.ifr_name, argv[1]); // get value from CAN-IF arguments
+	strcpy(ifr.ifr_name, argv[optind]); // get value from CAN-IF arguments
 	if(ioctl(CAN_socket_num, SIOCGIFINDEX, &ifr))
 	{
 		char if_error[30];
@@ -185,9 +208,9 @@ int main(int argc, char *argv[])
 		perror(if_error);
 		exit(EXIT_FAILURE);
 	}
-	stats.CAN_IF_name = argv[1];
+	stats.CAN_IF_name = argv[optind];
 	//Logstat.json
-	if(!logstat_path)
+	if(!(logstat_path = argv[optind+1]))
 		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
 	else
 	{
@@ -246,10 +269,10 @@ int main(int argc, char *argv[])
 	if(stats.port>=0 && stats.port<=3)
 	{
 		//Init SDAQ_NET Port's CSA
-		if(!MAX9611_init(stats.port, I2C_BUS_NUM))
+		if(!MAX9611_init(stats.port, i2c_bus_num))
 		{
 			//Read Port's CSA Configuration from EEPROM
-			if(!read_port_config(&port_meas_config, stats.port, I2C_BUS_NUM))
+			if(!read_port_config(&port_meas_config, stats.port, i2c_bus_num))
 			{
 				flags.port_meas_exist = 1;
 				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month,
@@ -391,7 +414,7 @@ int main(int argc, char *argv[])
 			//Get Electrics for BUS port
 			if(flags.port_meas_exist)
 			{
-				if(!get_port_meas(&port_meas, stats.port,I2C_BUS_NUM))
+				if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
 				{
 					stats.Bus_voltage = roundf(100.0 * (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler)/100.0;
 					stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
@@ -486,9 +509,13 @@ void print_usage(char *prog_name)
     "under certain conditions; for details see LICENSE.\n"
 	};
 	const char exp[] = {
-	"\tCAN-IF: The name of the CAN-Bus adapter\n\n"
+	"\tCAN-IF: The name of the CAN-Bus adapter\n"
+	"\tOptions:\n"
+	"\t         -h : Print Help\n"
+	"\t         -v : Print Version\n"
+	"\t         -b : I2C Bus number for Morfeas_RPI_hat (Default: 1)\n"
 	};
-	printf("%s\nUsage: %s CAN-IF [/path/to/logstat/directory] \n\n%s\n", preamp, prog_name,exp);
+	printf("%s\nUsage: %s [options] CAN-IF [/path/to/logstat/directory] \n\n%s\n", preamp, prog_name, exp);
 	return;
 }
 
