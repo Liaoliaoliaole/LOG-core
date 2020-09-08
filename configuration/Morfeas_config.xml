@@ -8,7 +8,6 @@
 	<COMPONENTS>
 		<OPC_UA_SERVER>
 			<APP_NAME>Morfeas_test(Proto)</APP_NAME>
-			<CONFIG_FILE>OPC_UA_Config.xml</CONFIG_FILE>
 		</OPC_UA_SERVER>
 		<SDAQ_HANDLER Disable="false">
 			<CANBUS_IF>can0</CANBUS_IF>

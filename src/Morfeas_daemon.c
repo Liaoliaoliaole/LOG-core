@@ -240,7 +240,7 @@ void * Morfeas_thread(void *varg_pt)
 													  XML_node_get_content(t_arg->component, "APP_NAME"),
 													  t_arg->configs_Dir_path,
 													  t_arg->configs_Dir_path[strlen(t_arg->configs_Dir_path)-1]=='/'?"":"/",
-													  XML_node_get_content(t_arg->component, "CONFIG_FILE"),
+													  "OPC_UA_Config.xml",// XML_node_get_content(t_arg->component, "CONFIG_FILE")
 													  t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
