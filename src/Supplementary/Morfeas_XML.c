@@ -565,6 +565,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 			fprintf(stderr, "\"APP_NAME\" XML child node of \"OPC_UA_SERVER\" not found\n");
 			return EXIT_FAILURE;
 		}
+		/*
 		if((content = (xmlChar *) XML_node_get_content(xml_node, "CONFIG_FILE")))
 		{
 			int check_ret = check_file((char*)config_Dir, (char*)content);
@@ -586,6 +587,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 			fprintf(stderr, "\"CONFIG_FILE\" XML child node of \"OPC_UA_SERVER\" not found\n");
 			return EXIT_FAILURE;
 		}
+		*/
 	}
 	else
 	{
