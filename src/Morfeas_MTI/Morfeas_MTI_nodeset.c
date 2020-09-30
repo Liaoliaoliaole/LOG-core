@@ -481,11 +481,6 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						sprintf(Node_ID_str, "%s.sup_volt", Node_ID_parent_str);
 						Morfeas_opc_ua_add_variable_node(server, Node_ID_parent_str, Node_ID_str, "Supply Voltage(V)", UA_TYPES_FLOAT);
 						//Add objects and variables nodes for Controls and Measurement
-						if(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_type == Mini_RMSW)
-						{
-							sprintf(Node_ID_str, "%s.meas", Node_ID_parent_str);
-							Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Measurements");
-						}
 						sprintf(Node_ID_str, "%s.Controls", Node_ID_parent_str);
 						Morfeas_opc_ua_add_object_node(server, Node_ID_parent_str, Node_ID_str, "Controls");
 						strcpy(Node_ID_parent_str, Node_ID_str);
