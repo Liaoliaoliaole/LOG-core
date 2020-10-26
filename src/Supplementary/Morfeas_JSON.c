@@ -230,6 +230,10 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 			node_dec->meas_acc/=(float)node_dec->cnt;
 			cJSON_AddNumberToObject(node_data, "Meas_avg", roundf(1000.0 * node_dec->meas_acc)/1000.0);
 			node_dec->meas_acc = 0;
+			cJSON_AddNumberToObject(node_data, "Meas_max", roundf(1000.0 * node_dec->meas_max)/1000.0);
+			node_dec->meas_max = 0;
+			cJSON_AddNumberToObject(node_data, "Meas_min", roundf(1000.0 * node_dec->meas_min)/1000.0);
+			node_dec->meas_min = 0;			
 			node_dec->cnt = 0;
 		}
 		else

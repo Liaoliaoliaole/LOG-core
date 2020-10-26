@@ -294,6 +294,8 @@ struct Channel_acc_meas_entry{
 	unsigned char status;
 	unsigned char unit_code;
 	float meas_acc;
+	float meas_min;
+	float meas_max;
 	unsigned short cnt;
 };
 // Data entry of a LogBook file, used in Morfeas_SDAQ_if

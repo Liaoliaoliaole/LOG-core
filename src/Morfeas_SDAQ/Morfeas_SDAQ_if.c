@@ -963,6 +963,10 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 		sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
 		sdaq_Channels_acc_meas_node->status = meas_dec->status;
 		sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
+		if(meas_dec->meas > sdaq_Channels_acc_meas_node->meas_max || !sdaq_Channels_acc_meas_node->meas_max)
+			sdaq_Channels_acc_meas_node->meas_max = meas_dec->meas;
+		if(meas_dec->meas < sdaq_Channels_acc_meas_node->meas_min || !sdaq_Channels_acc_meas_node->meas_min)
+			sdaq_Channels_acc_meas_node->meas_min = meas_dec->meas;
 		sdaq_Channels_acc_meas_node->cnt++;
 		return EXIT_SUCCESS;
 	}
