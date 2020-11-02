@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 const char *MTI_charger_state_str[]={"Discharging", "Full", "", "Charging"};
 const char *MTI_Data_rate_str[]={"250kbps", "1Mbps", "2Mbps"};
-const char *MTI_Tele_dev_type_str[]={"", "Disabled", "TC16", "TC8", "RMSW/MUX", "QUAD", "TC4", NULL};
+const char *MTI_Tele_dev_type_str[]={"Disabled", "Disabled", "TC16", "TC8", "RMSW/MUX", "QUAD", "TC4", NULL};
 const char *MTI_RM_dev_type_str[]={"", "RMSW", "MUX", "Mini_RMSW", NULL};
 const char *MTI_RMSW_SW_names[]={"Main_SW","SW_1","SW_2"};
 const char *MTI_MUX_Sel_names[]={"Sel_1","Sel_2","Sel_3","Sel_4"};
@@ -143,7 +143,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 				return EXIT_FAILURE;
 			}
 			//Convert data and load them to stats
-			stats->Tele_data.as_QUAD.Data_isValid = cur_MTI_Tele_data.as_QUAD.index!=stats->Tele_data.as_QUAD.packet_index?1:0;
+			stats->Tele_data.as_QUAD.Data_isValid = (unsigned short)cur_MTI_Tele_data.as_QUAD.index!=stats->Tele_data.as_QUAD.packet_index?1:0;
 			stats->Tele_data.as_QUAD.packet_index = cur_MTI_Tele_data.as_QUAD.index;
 			stats->Tele_data.as_QUAD.RX_status = cur_MTI_Tele_data.as_QUAD.rx_status;
 			stats->Tele_data.as_QUAD.RX_Success_ratio = cur_MTI_Tele_data.as_QUAD.success;
