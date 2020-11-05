@@ -1,6 +1,6 @@
 # Re-Compilation of the source
 
-### Get the Latest Source and Submodules Releases
+### Get the latest Source and sub-modules release
 ```
 $ cd Morfeas_core
 $ # Get Latest Source
@@ -8,21 +8,23 @@ $ git pull
 $ # Get Latest Source for the submodules
 $ git submodules foreach git pull origin master
 ```
-### Re-Compilation and installation of the submodules
+### Re-Compilation and installation of the sub-modules
 
 #### cJSON
 ```
-$ cd src/cJSON
+$ cd src/cJSON/build
 $ make clean
 $ make -j$(nproc)
 $ sudo make install
+$ cd ../../..
 ```
 #### open62541
 ```
-$ cd src/open62541
+$ cd src/open62541/build
 $ make clean
 $ make -j$(nproc)
 $ sudo make install
+$ cd ../../..
 ```
 #### SDAQ_worker
 ```
@@ -30,6 +32,7 @@ $ cd src/sdaq_worker
 $ make clean
 $ make -j$(nproc)
 $ sudo make install
+$ cd ../..
 ```
 ### Re-Compilation and installation of the Morfeas-core Project
 ```
