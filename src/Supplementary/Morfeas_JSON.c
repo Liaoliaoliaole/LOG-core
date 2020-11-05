@@ -222,6 +222,7 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 		cJSON_AddNumberToObject(channel_status, "Channel_status_val", node_dec->status);
 		cJSON_AddItemToObject(channel_status, "Out_of_Range", cJSON_CreateBool(node_dec->status & (1<<Out_of_range)));
 		cJSON_AddItemToObject(channel_status, "No_Sensor", cJSON_CreateBool(node_dec->status & (1<<No_sensor)));
+		cJSON_AddItemToObject(channel_status, "Over_Range", cJSON_CreateBool(node_dec->status & (1<<Over_range)));
 		//-- Add Unit of Channel --//
 		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->unit_code]));
 		//-- Add Averaged measurement of Channel --//
