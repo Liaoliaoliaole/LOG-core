@@ -453,6 +453,8 @@ char * ctrl_tele_SWs_argValidator(cJSON *JSON_args, unsigned char *mem_pos, unsi
 	if(!cJSON_HasObjectItem(JSON_args,"mem_pos") || !cJSON_HasObjectItem(JSON_args,"tele_type")||
 	   !cJSON_HasObjectItem(JSON_args,"sw_name") || !cJSON_HasObjectItem(JSON_args,"new_state"))
 		return "ctrl_tele_SWs(): Missing Arguments";
+	if(cJSON_GetObjectItem(JSON_args,"new_state")->type != cJSON_Number)
+		return "ctrl_tele_SWs(): new_state is NAN";
 	if(cJSON_GetObjectItem(JSON_args,"mem_pos")->type != cJSON_Number)
 		return "ctrl_tele_SWs(): mem_pos is NAN";
 	*mem_pos = cJSON_GetObjectItem(JSON_args,"mem_pos")->valueint;
