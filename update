@@ -3,7 +3,7 @@ if [ "$(whoami)" == "root" ]; then
 	echo "Don't run this as root."
 	exit 1
 fi
-# Get Latest Source
+echo 'Get Latest Source'
 if git pull; then
 	echo 'Get Latest Source for the submodules'
 	git submodule foreach git pull origin master
