@@ -6,13 +6,13 @@ fi
 # Get Latest Source
 if git pull; then
 	echo 'Get Latest Source for the submodules'
-	#git submodule foreach git pull origin master
+	git submodule foreach git pull origin master
 else
 	exit 1
 fi
 echo 'Recompile?[y/n]'
 read inp
-if [ $inp == 'y' ] || [ $inp == 'Y']; then
+if [ $inp == 'y' ] || [ $inp == 'Y' ]; then
 	cd src/cJSON/build && make clean && make -j && sudo make install 
 	cd ../../open62541/build && make clean && make -j && sudo make install 
 	cd ../../sdaq-worker &&	make clean && make -j && sudo make install
