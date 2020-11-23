@@ -1,0 +1,23 @@
+#!/bin/bash
+if [ "$(whoami)" == "root" ]; then
+	echo "Don't run this as root."
+	exit 1
+fi
+echo 'Get Latest Source'
+if git pull; then
+	echo 'Get Latest Source for the submodules'
+	git submodule foreach git pull origin master
+else
+	exit 1
+fi
+echo 'Recompile?[y/n]'
+read inp
+if [ $inp == 'y' ] || [ $inp == 'Y' ]; then
+	cd src/cJSON/build && make clean && make -j && sudo make install 
+	cd ../../open62541/build && make clean && make -j && sudo make install 
+	cd ../../sdaq-worker &&	make clean && make -j && sudo make install
+	cd ../.. &&	make clean && make -j && sudo make install && sudo service Morfeas_system restart
+fi
+echo 'Bye Bye'
+	
+

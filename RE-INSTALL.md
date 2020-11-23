@@ -6,7 +6,7 @@ $ cd Morfeas_core
 $ # Get Latest Source
 $ git pull
 $ # Get Latest Source for the submodules
-$ git submodules foreach git pull origin master
+$ git submodule foreach git pull origin master
 ```
 ### Re-Compilation and installation of the sub-modules
 
