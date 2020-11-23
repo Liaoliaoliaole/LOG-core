@@ -1,5 +1,9 @@
 \documentclass{article}
-\usepackage[utf8]{inputenc}
+\usepackage{ucs}
+\usepackage[utf8x]{inputenc}
+\usepackage[greek,english]{babel}
+\usepackage{dirtree}
+\usepackage{lmodern}
 \usepackage[a4paper, margin=1in]{geometry}
 \usepackage{enumitem}
 \usepackage{xfrac}
@@ -16,24 +20,15 @@
 \usepackage{listings}
 \usepackage[bottom]{footmisc}
 
-
-%Commands
-%text overline command
-\newcommand{\textoverline}[1]{$\overline{\mbox{#1}}$}
-%symbols declaration
-\DeclareUnicodeCharacter{2127}{\mho}
-
 %Title declaration
-\title{Morfeas-Core\\Chapter:``Reference Guide''}
-\date{Feb 4, 12020}
+\title{Morfeas-Core\\''Reference Guide''}
 \author{Sam Harry Tzavaras}
-
 \begin{document}
 %Title page
 \clearpage
 \begin{figure}
 \centering
-  \includegraphics[width=2in]{ArtWork/Morfeas_logo_cyan.png}
+  \includegraphics[width=2in]{ArtWork/Morfeas_logo.png}
 \end{figure}
 \maketitle
 \thispagestyle{empty}
@@ -46,12 +41,265 @@ under the terms of the GNU Free Documentation License, Version 1.3
 or any later version published by the Free Software Foundation;
 with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
 A copy of the license is included in the section entitled "GNU Free Documentation License".
-\newpage
+%History page
+\section{Project's History}
+\date{Feb 4, 12020}:\author{Sam Harry Tzavaras} -- Initial Work.
+
 %Contents page
 \newpage
 \tableofcontents
 \newpage
-
 \section{Introduction}
+The Morfeas project was initially start as an implementation of a software gateway solution system
+(currently named Morfeas-Proto) that provide (and translate) measurements data from some proprietary devices (SDAQ family)
+with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
 
+As the Morfeas project developed additional support added for other devices (MDAQ, IO-BOX, MTI) with different interfaces (ModBus-TCP, USB).
+
+Furthermore, a web interface sub-project added to the Morfeas project under the name "Morfeas-web".
+Thisof, will provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
+
+\section{Installation}
+To install the Morfeas Core it's required to be install the following dependencies:\\
+* [GCC] - The GNU Compilers Collection\\
+* [GNU Make] - GNU make utility\\
+* [CMake] - Cross-platform family of open source tools for package build.\\
+* [NCURSES] - A free (libre) software emulation library of curses.\\
+* [GLib] - GNOME core application building blocks libraries.\\
+* [LibGTop] - A library to get system specific data.\\
+* [libxml2] - Library for parsing XML documents.\\
+* [libmodbus] - A free software library for communication via ModBus protocol.\\
+* [libi2c] - A library that provide I2C functionality to Userspace\\
+* [libdbus] - The library of the D-Bus.\\
+* [CAN-Utils] - CANBus utilities.\\
+* [I2C-tools] - Heterogeneous set of I2C tools for Linux kernel.\\
+Also the following submodules:\\
+* [SDAQ worker] - A libre \(free\) utilities suite for SDAQ devices.\\
+* [cJSON] - An Ultralightweight open source JSON parser for ANSI C.\\
+* [open62541] - An open source C \(C99\) implementation of OPC-UA.\\
+
+Compilation and installation instructions can be found in the README.md file at the root of source.
+
+\section{Morfeas System Architecture}
+The Morfeas system is the group of programs that implementing the operations. The design architecture that used was "Microsystem".
+Multiple software that is made to doing one or more specific task(s) where communicating via Inter Processing Communication(IPC).
+
+This design philosophy described by the name of the project ``Morfeas'' where is the is the Latinisation of of the Greek word
+\selectlanguage{greek}``Μορφέας''.\selectlanguage{english} Which translate to: Him that can give or change form (or shape).
+
+\section{Morfeas IPC}
+The main communication way between the morfeas components is the Morfeas IPC. The Morfeas IPC is nothing more from a protocol that define the type and
+the way of the data that transferred between the components. Is simplex with multiple source and one receptor (the transmission always start from a
+Drivers/Handlers type component and end to the Morfeas OPC-UA).
+The transaction mechanism that used for this is based on \textbf{Named Pipes} (or \textbf{FIFO}). In GNU (and as well in other UNIX like and based OSes) a named pipe represent by a file.
+For the Morfeas System the named pipe file located under \textbf{/tmp} and have name \textbf{Morfeas\_handlers\_FIFO}.
+If the named pipe file does not exist will be created by the first active component.
+
+The data that transferred via the Morfeas IPC is follow the Morfeas IPC Protocol where defined at files under ``./src/IPC`` directory.
+In details is leave from each componentin a message form with static size the maximum amount of data of the protocol. In other words the size of the data union.
+Each component use the Morfeas IPC to in three ways: Register and Unregister itself and to transfer data to the Morfeas OPC-UA.
+\section{Morfeas Components}
+All the Morfeas components are design to run from the usespace without any special privilege.
+At the following subsection will be explain in details how the implemented components works and behave.
+
+\subsection{Morfeas Daemon}
+The Morfeas Daemon is the program of the Morfeas components group where is responsible to start each component of the Morfeas system as is configured
+at the Morfeas\_config.xml file. Although that the Morfeas Daemon can run standalone, is more common to work together with the Systemd daemon.
+The procedure of integration of the Morfeas Daemon to the Systemd and also the configuration is described in details at README.md file at the root of source.
+
+The responsibilities of the Morfeas Daemon is to read on start the Morfeas\_config.xml (Example at listing \ref{lst:Morfeas_config.xml}),
+validate it and if the validation is successful then start each component as child process (fork). The maximum amount of components is set to 16.
+The stdout of each component redirected to the Morfeas daemon and then reported to the systemd or if it runs standalone, print the report to the stdout.
+
+\begin{lstlisting}[frame=single,caption=Example of Morfeas\_config.xml,label=lst:Morfeas_config.xml]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
+<CONFIG>
+  <CONFIGS_DIR>/home/morfeas-test/configuration</CONFIGS_DIR>
+  <LOGGERS_DIR>/mnt/ramdisk/Morfeas_Loggers/</LOGGERS_DIR>
+  <LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
+  <COMPONENTS>
+    <OPC_UA_SERVER><!--Can be only one-->
+      <APP_NAME>Morfeas-tester(Sam)</APP_NAME>
+    </OPC_UA_SERVER>
+    <SDAQ_HANDLER>
+      <CANBUS_IF>vcan0</CANBUS_IF>
+    </SDAQ_HANDLER>
+    <SDAQ_HANDLER>
+      <CANBUS_IF>vcan1</CANBUS_IF>
+    </SDAQ_HANDLER>
+    <MDAQ_HANDLER>
+      <DEV_NAME>LAB_MDAQ</DEV_NAME>
+      <IPv4_ADDR>10.0.0.10</IPv4_ADDR>
+    </MDAQ_HANDLER>
+    <IOBOX_HANDLER>
+      <DEV_NAME>LAB_IOBOX</DEV_NAME>
+      <IPv4_ADDR>10.0.0.7</IPv4_ADDR>
+    </IOBOX_HANDLER>
+    <MTI_HANDLER>
+      <DEV_NAME>LAB_MTI</DEV_NAME>
+      <IPv4_ADDR>10.0.0.11</IPv4_ADDR>
+    </MTI_HANDLER>
+  </COMPONENTS>
+</CONFIG>
+\end{lstlisting}
+
+\newpage
+\subsection{Morfeas OPC-UA}
+The Morfeas OPC-UA is the Morfeas component that acts as OPC-UA server of the system. The OPC-UA functionality is implemented by use of the open62541 library where is a free and open source
+implementation of the OPC-UA protocol. The Morfeas OPC-UA is a multithreading program where have as main responsibility to serve the OPC-UA clients, this functionality is done at the main
+thread. One other specific thread is implemented to act as Morfeas IPC receiver. This received, decoded and loaded the senders data at the Interface object of the nodeset.
+The corresponding object
+for each sender (Driver/Handler) component is occupied dynamically at registration.\\
+Also an another tread exist with purpose to checking for changes on the OPC\_UA\_Config.xml file where is contains the ISO\_Channels configuration.
+If the file found to be updated and after the a successful validation used to recreate the ISO\_Channels object.\\
+
+An example for the OPC\_UA\_Config.xml is given at listing \ref{lst:OPC_UA_Config.xml}. 
+The root node for this configuration xml file is the \textbf{NODESet}.
+As childnodes is tagged as \textbf{Channel} and used in the construction of the children of ISO\_CHANNEL OPC-UA nodes. 
+The childnodes of each \textbf{Channel} node guide the Morfeas OPC-UA how to handle and also give some addition information.
+The content from each \textbf{ISO\_CHANNEL} node used as name for the ISO\_CHANNEL child object. 
+The \textbf{INTERFACE\_TYPE} and \textbf{ANCHOR} give the information of handling and the rest(\textbf{DESCRIPTION, MIN, MAX, UNIT}) is use as static information for the ISO\_CHANNEL.
+
+A tree view of the Morfeas OPC-UA nodeset given bellow.
+\dirtree{%
+ .1 /.
+	.2 ISO\_Channels.
+		.3 (..).
+	.2 Interfaces.
+		.3 IOBOX-ifs.
+			.4 IOBOX-if(*).
+				.5 Device\_name.
+				.5 IO-BOX Status.
+				.5 IO-BOX Status value.
+				.5 IPv4 Address.
+				.5 I-Link Power Supply.
+					.6 Power Supply Vin(V).
+					.6 CH(1..4).
+						.7 Iout(A).
+						.7 Vout(V).
+				.5 Receivers.
+					.6 RX(1..4).
+						.7 CH(1..16).
+							.8 Status.
+							.8 Status\_value.
+							.8 Value.
+						.7 Index.
+						.7 RX\_Status.
+						.7 RX\_success.
+		.3 MDAQ-ifs.
+			.4 MDAQ-if(*).
+				.5 Device Name.
+				.5 IPv4 Address.
+				.5 Index.
+				.5 MDAQ Status.
+				.5 MDAQ Status value.
+				.5 Board Temperature(°C).
+				.5 Channels.
+					.6 (CH1..8).
+						.7 Value1..3.
+							.8 Measurement.
+							.8 Status.
+							.8 Status value.
+		.3 SDAQ-ifs.
+			.4 SDAQ-if(*).
+				.5 Bus\_Util(\%).
+				.5 Dev\_on\_Bus.
+				.5 Electrics(If Morfeas\_RPI\_hat is detected).
+					.6 Amperage(A).
+					.6 Voltage(V).
+					.6 Shunt Temp(°C).
+				.5 SDAQnet.
+					.6 SDAQ-*(\#\#).
+						.7 Address.
+						.7 Connected on Bus.
+						.7 S/N.
+						.7 TimeDiff.
+						.7 Info.
+							.8 Channels on SDAQ.
+							.8 Firm\_rev.
+							.8 HW\_rev.
+							.8 Max\_cal\_points.
+							.8 Samplerate.
+							.8 Type.
+						.7 Status.
+							.8 Error.
+							.8 Mode.
+							.8 Status.
+							.8 inSync.
+						.7 Channels.
+							.8 CH1..n.
+								.9 Calibration Date.
+								.9 Calibration Points.
+								.9 Period (Months).
+								.9 Status.
+								.9 Status value.
+								.9 Timestamp.
+								.9 Unit.
+								.9 Value.
+		.3 MTI-ifs.
+			.4 MTI-if(*).
+				.5 Device Name.
+				.5 IPv4 Address.
+				.5 MTI Status.
+				.5 MTI Status value.
+				.5 MTI Health.
+					.6 Battery Capacity(\%).
+					.6 Battery Voltage(V).
+					.6 Battery Status(\%).
+					.6 CPU Temperature(°C).
+				.5 Radio.
+					.6 Data rate.
+					.6 RF Channel.
+					.6 Tele Dev type.
+					.6 new\_MTI\_config().
+					.6 Tele(Dev type depended see bellow).
+						.7 **.
+	.2 RPI\_Health\_status.
+		.3 CPU\_Util(\%).
+		.3 CPU\_Temp(°C).
+		.3 Disk\_Util(\%).
+		.3 RAM\_Util(\%).
+}
+\newpage
+\begin{lstlisting}[frame=single,caption=Example of OPC\_UA\_Config.xml,label=lst:OPC_UA_Config.xml]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE NODESet SYSTEM "Morfeas.dtd">
+<NODESet>
+  <CHANNEL>
+    <ISO_CHANNEL>OT_LS790</ISO_CHANNEL>
+    <INTERFACE_TYPE>SDAQ</INTERFACE_TYPE>
+    <ANCHOR>1.CH1</ANCHOR>
+    <DESCRIPTION>Leakage Alarm Trough B</DESCRIPTION>
+    <MIN>0</MIN>
+    <MAX>20</MAX>
+  </CHANNEL>
+  <CHANNEL>
+    <ISO_CHANNEL>TE01</ISO_CHANNEL>
+    <INTERFACE_TYPE>MDAQ</INTERFACE_TYPE>
+    <ANCHOR>167772170.CH1.Val1</ANCHOR>
+    <DESCRIPTION>Test for LAB_MDAQ CH1</DESCRIPTION>
+    <MIN>0</MIN>
+    <MAX>0</MAX>
+    <UNIT>V</UNIT>
+  </CHANNEL>
+  <CHANNEL>
+    <ISO_CHANNEL>TE02</ISO_CHANNEL>
+    <INTERFACE_TYPE>IOBOX</INTERFACE_TYPE>
+    <ANCHOR>117440522.RX1.CH2</ANCHOR>
+    <DESCRIPTION>Test for LAB_IOBOX RX1 CH2</DESCRIPTION>
+    <MIN>-200</MIN>
+    <MAX>1200</MAX>
+    <UNIT>C</UNIT>
+  </CHANNEL>
+</NODESet>
+\end{lstlisting}
+
+\subsection{Morfeas Drivers/Handlers}
+
+\subsubsection{Morfeas SDAQ-if}
+\subsubsection{Morfeas MDAQ-if}
+\subsubsection{Morfeas IOBOX-if}
+\subsubsection{Morfeas MTI-if}
+\section{Integration}
 \end{document}
