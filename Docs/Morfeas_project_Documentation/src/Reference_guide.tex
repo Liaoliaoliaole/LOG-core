@@ -19,10 +19,28 @@
 \usepackage{varwidth}
 \usepackage{listings}
 \usepackage[bottom]{footmisc}
+\usepackage[most]{tcolorbox}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Morfeas-Core}
+\chead{Reference Guide}
+\rhead{Page \thepage}
+\rfoot{Page \thepage}
+
+\newtcolorbox{tree_box}[1][]{%
+	sharp corners,
+	enhanced,
+	breakable,
+	colback=white,
+	#1
+}
 
 %Title declaration
-\title{Morfeas-Core\\''Reference Guide''}
-\author{Sam Harry Tzavaras}
+\title{Morfeas Core\\Reference Guide }
+\author{}
+\date{}
 \begin{document}
 %Title page
 \clearpage
@@ -42,8 +60,8 @@ or any later version published by the Free Software Foundation;
 with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
 A copy of the license is included in the section entitled "GNU Free Documentation License".
 %History page
-\section{Project's History}
-\date{Feb 4, 12020}:\author{Sam Harry Tzavaras} -- Initial Work.
+\section{Change History}
+Feb 4,12020 : Sam Harry Tzavaras -- Initial Work.
 
 %Contents page
 \newpage
@@ -81,36 +99,123 @@ Also the following submodules:\\
 Compilation and installation instructions can be found in the README.md file at the root of source.
 
 \section{Morfeas System Architecture}
-The Morfeas system is the group of programs that implementing the operations. The design architecture that used was "Microsystem".
-Multiple software that is made to doing one or more specific task(s) where communicating via Inter Processing Communication(IPC).
+The Morfeas system defined as the collection of programs where works as group to implement the scopes of the introduction.
+The Morfeas System designed with the "Microsystem" architecture model. Multiple programs where are design to do one or more specific tasks.
+The tasks that the Morfeas system is responsible to do are the controlling, extraction of data and to translation this data from one protocol or form to other.
+The communication between the components of the system done via Inter Processing Communication (IPC) mechanism.
 
-This design philosophy described by the name of the project ``Morfeas'' where is the is the Latinisation of of the Greek word
-\selectlanguage{greek}``Μορφέας''.\selectlanguage{english} Which translate to: Him that can give or change form (or shape).
+This design philosophy described by the name of the project ``Morfeas'' which is the Latinisation of the Greek word
+\selectlanguage{greek}``Μορφέας''.\selectlanguage{english} where translate to: Him that can give or change form (or shape).
 
 \section{Morfeas IPC}
 The main communication way between the morfeas components is the Morfeas IPC. The Morfeas IPC is nothing more from a protocol that define the type and
-the way of the data that transferred between the components. Is simplex with multiple source and one receptor (the transmission always start from a
-Drivers/Handlers type component and end to the Morfeas OPC-UA).
-The transaction mechanism that used for this is based on \textbf{Named Pipes} (or \textbf{FIFO}). In GNU (and as well in other UNIX like and based OSes) a named pipe represent by a file.
-For the Morfeas System the named pipe file located under \textbf{/tmp} and have name \textbf{Morfeas\_handlers\_FIFO}.
-If the named pipe file does not exist will be created by the first active component.
+the way of communication between the components. The Morfeas IPC utilities simplex communication between multiple source with one receptor.
+The transaction mechanism that used for this is based on \textbf{Named Pipes} (or \textbf{FIFO}). In GNU a named pipe represent by a file.
+For the Morfeas System this file located under \textbf{/tmp} and have name \textbf{Morfeas\_handlers\_FIFO}.
+If the named pipe file does not exist will be created by the first component the will detect this on it's start.
 
 The data that transferred via the Morfeas IPC is follow the Morfeas IPC Protocol where defined at files under ``./src/IPC`` directory.
-In details is leave from each componentin a message form with static size the maximum amount of data of the protocol. In other words the size of the data union.
-Each component use the Morfeas IPC to in three ways: Register and Unregister itself and to transfer data to the Morfeas OPC-UA.
+In details, the data that transmitted from a a component is in a telegram form with static size.
+The size of the telegram is defined by the biggest message of the protocol. The messages where does not occupied the wholly telegram space filling the remain with zero.
+Each component use the Morfeas IPC to in three ways: To register them self to receiver, to transfer data, and to unregister if they are terminated.
+
 \section{Morfeas Components}
 All the Morfeas components are design to run from the usespace without any special privilege.
-At the following subsection will be explain in details how the implemented components works and behave.
+At the following subsection will be explained how the implemented components works and behave. For further information you can always take a look at the source.
 
 \subsection{Morfeas Daemon}
-The Morfeas Daemon is the program of the Morfeas components group where is responsible to start each component of the Morfeas system as is configured
-at the Morfeas\_config.xml file. Although that the Morfeas Daemon can run standalone, is more common to work together with the Systemd daemon.
-The procedure of integration of the Morfeas Daemon to the Systemd and also the configuration is described in details at README.md file at the root of source.
+The Morfeas Daemon one of the Morfeas components and it's made to execute specific purpose. This is to start each component as is specified by the user.
+The specification done by a configuration file, this file have name Morfeas\_config.xml (Example at listing \ref{lst:Morfeas_config.xml}).
+The Morfeas\_config.xml file contains the amount and type of components that consist the Morfeas system with also some arguments (or settings) for them.\\
+The construction for the Morfeas\_config.xml must done in respect to Morfeas.dtd file. 
 
-The responsibilities of the Morfeas Daemon is to read on start the Morfeas\_config.xml (Example at listing \ref{lst:Morfeas_config.xml}),
-validate it and if the validation is successful then start each component as child process (fork). The maximum amount of components is set to 16.
-The stdout of each component redirected to the Morfeas daemon and then reported to the systemd or if it runs standalone, print the report to the stdout.
+Although that the Morfeas Daemon can run in a standalone mode is more common to work together with the Systemd. The Systemd is a software suite that developed initially by the RedHat
+and provide a initialization, start, and control of daemons. Also is a standard packet in many distributions of the GNU operating system.
+The integration procedure for Morfeas Daemon to Systemd described in details at README.md file.
 
+When the Morfeas Daemon starts read the Morfeas\_config.xml (where provided as argument) validation it and if the validation is successful then attempt to start
+each component with the arguments that are given in the configuration file. For each component the Morfeas Daemon will make a new thread that will fork the component program.
+The stdout of component program will be redirected to the Morfeas daemon and then will provided as reported to the systemd or if it runs in a standalone mode will print it.
+Also in the order of termination the Morfeas Daemon have the responsibility to terminate each one of it's child processes before it terminate. This done by the signaling mechanisme that
+provided from the GNU/Linux.
+\newpage
+\subsection{Morfeas OPC-UA}
+The Morfeas OPC-UA is the Morfeas component that works as the OPC-UA server of the Morfeas system. The OPC-UA functionality is implemented by use of the Open62541 library where is an open source
+implementation of the OPC-UA protocol. The Morfeas OPC-UA is a multithreading program with three threads. The main thread of it is responsible for the OPC-UA functionality. The other two threads are for provide
+receiving functionality for the Morfeas IPC and a reader of the OPC\_UA\_config.xml file.
+The thread where is responsible to act as Morfeas IPC receiver doing the reception of the Morfeas IPC telegram, the decoding and transferring of the data to the OPC-UA nodeset.
+The last thread of the Morfeas OPC-UA is the reader of the OPC\_UA\_config.xml file. This thread check the file for changes, read it (on change), validate the contents and
+if the validation is successful then it's (re)build the children of \textbf{ISO Channels} node (An example for the OPC\_UA\_Config.xml is given at listing \ref{lst:OPC_UA_Config.xml}).
+Every childnode where tagged as \textbf{CHANNEL} contains nodes with the configuration argument for each ISO Channels OPC-UA nodes.\\
+
+In details:
+The content of node \textbf{ISO\_CHANNEL} provide the ISO code name of the ISO Channel.\\
+The contents of nodes \textbf{INTERFACE\_TYPE} and \textbf{ANCHOR} give the information of handler type and the location of the physical channel that the data will be extracted.\\
+The contents of nodes \textbf{DESCRIPTION, MIN, MAX, UNIT}) used to fill the static information for the ISO\_CHANNEL. One exception to this is the unit node that does not used
+at the ISO Channels with interface type SDAQ.\\
+The construction for the OPC\_UA\_Config.xml must done in respect to Morfeas.dtd file.
+
+The OPC-UA nodeset (page~\pageref{tree:OPC_UA_nodeset}) reconstructed dynamically in every update of the configuration file (as described above) and also in every new registration of a component.
+The value of a variable that owned by an object that related to a component (or a device) is updated in every successful new message reception.
+
+Also the variables childs of the RPI\_Health\_Status object is updates every 1sec.
+
+\subsubsection{Status and Status value}
+
+\newpage
+\subsection{Morfeas Drivers/Handlers}
+The following subsection referred to Morfeas components that handing a specific type of device or controlling a wholly network of devices.
+\subsubsection{Morfeas SDAQ-if}
+The Morfeas SDAQ-if is a program that made specifically to controlling a SDAQnet. The SDAQnet is a network that consider form SDAQ type devices.
+On Layer 0 the SDAQnet can be describes as CANBus with the addition of power at the network cabling. The network topology of this is daisy chain.
+
+The Morfeas SDAQ-if is basing it's operation to SocketCAN where is a groovy way to integrate CANBus on a computer system. The SocketCAN provided as a module from the Linux
+foundation and can be used in every computer that runs GNU operating system with Linux as kernel. The principle behind SocketCAN is to provide similar functionality as regular internet sockets to CANbus.
+The Morfeas SDAQ-if used also the filter functionality that provided from the same kernel module with purpose to reduce the amount of jiffies that used in the decoding procedure.\\
+The Morfeas SDAQ-if have the following functionalities:
+\begin{itemize}
+	\item Control one specific SDAQnet port.
+	\item Get electrical measurements of the SDAQnet port that controlling (if it's possible).
+	\item Give new or old known address to all SDAQ devices.
+	\item Avoid duplicate addresses.
+	\item Report the arrival or departure of an SDAQ from the SDAQnet.
+	\item Collect device and calibration (not points) information from the SDAQs that is connected on the SDAQnet port.
+	\item Set a SDAQ device in measuring if it's ready and all the data are collected.
+	\item Read messages from the SDAQs and decode them
+	\item Transfer the measurements to the Morfeas OPC-UA.
+	\item Synchronize the SDAQs.
+\end{itemize}
+The Morfeas SDAQ-if is design to controlling a unique SDAQnet that provided as argument at the program call. The SDAQs that are behind this port are also controlled in a strict way.\\
+If a new SDAQ arrived the first procedure is to give and set it to an unique address. The algorithm that doing this described bellow.
+\begin{enumerate}
+	\item Check if the current address is parking or if it conflicting with some other. If not, leave it as it is and report this to the LogBook. Algorithm is done
+	\item Otherwise, check if the device's S/N is registered to LogBook. if yes then give it the old address. Algorithm is done.
+	\item If not, give the first available and report it to the LogBook.
+\end{enumerate}
+The LogBook is a file stored under ``/var/tmp/Morfeas\_LogBooks/" directory and contains the correlation between address and serial number for each device that have appear on SDAQnet.
+The content of this file is in a binary form.
+
+After of the addressing procedure the Morfeas SDAQ-if request the device status and calibration data. Then if the device answer the Morfeas SDAQ-if report it's existence to the Morfeas OPC-UA
+and also report the information where mentioned before. After all this the Morfeas SDAQ-if put the device in Measuring mode.
+
+The synchronization of the SDAQs is done by sending a special CANbus message as it's described at the SDAQ's white papers. This implemented with a timer that calling a synchronization function in every alarm.
+The alarm period of the timer is set to 10 sec. Also in the same function is done the cleanup procedure.
+This works as follow: The SDAQs send a report message (approx every 10sec), if two report messages does not received then the device is reported as dead.
+
+All the data that used inside in the Morfeas SDAQ-if is stored in memory in a dynamic form of linked lists.
+\subsubsection{Morfeas MDAQ-if \& Morfeas IOBOX-if}
+Both of this components are made similarly and provide the capability to control some specific devices by MODBus-TCP. MODBus-TCP is a protocol that based on MODBus-RTU that was a RS-485 base protocol made by MODicon and have
+as purpose to give a way of communication between PLCs.
+
+Morfeas MDAQ-if and Morfeas IO-BOX-if are single thread FSM type programs. The ModBus-TCP functionality is achieved by using the LibModbus library where is a free/libre library that provide MODBus RTU and TCP functionality.
+
+Both programs start register them sel to the Morfeas OPC-UA and then open a special TCP socket that used as the way to extract information from IO-BOX and MDAQ type device. Then if the socket open successfully the programs report this to the Morfeas OPC-UA
+and start requesting data. The request of data done via MODbus registers read commands and when the data from the MODBus registers enters the program are decoded and transmitted to the Morfeas OPC-UA via Morfeas IPC.
+\subsubsection{Morfeas MTI-if}
+
+\section{Integration}
+\newpage
+\section{Appendix}
 \begin{lstlisting}[frame=single,caption=Example of Morfeas\_config.xml,label=lst:Morfeas_config.xml]
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE CONFIG SYSTEM "Morfeas.dtd">
@@ -119,8 +224,8 @@ The stdout of each component redirected to the Morfeas daemon and then reported 
   <LOGGERS_DIR>/mnt/ramdisk/Morfeas_Loggers/</LOGGERS_DIR>
   <LOGSTAT_DIR>/mnt/ramdisk/</LOGSTAT_DIR>
   <COMPONENTS>
-    <OPC_UA_SERVER><!--Can be only one-->
-      <APP_NAME>Morfeas-tester(Sam)</APP_NAME>
+    <OPC_UA_SERVER>
+      <APP_NAME>Default Application</APP_NAME>
     </OPC_UA_SERVER>
     <SDAQ_HANDLER>
       <CANBUS_IF>vcan0</CANBUS_IF>
@@ -143,145 +248,36 @@ The stdout of each component redirected to the Morfeas daemon and then reported 
   </COMPONENTS>
 </CONFIG>
 \end{lstlisting}
-
-\newpage
-\subsection{Morfeas OPC-UA}
-The Morfeas OPC-UA is the Morfeas component that acts as OPC-UA server of the system. The OPC-UA functionality is implemented by use of the open62541 library where is a free and open source
-implementation of the OPC-UA protocol. The Morfeas OPC-UA is a multithreading program where have as main responsibility to serve the OPC-UA clients, this functionality is done at the main
-thread. One other specific thread is implemented to act as Morfeas IPC receiver. This received, decoded and loaded the senders data at the Interface object of the nodeset.
-The corresponding object
-for each sender (Driver/Handler) component is occupied dynamically at registration.\\
-Also an another tread exist with purpose to checking for changes on the OPC\_UA\_Config.xml file where is contains the ISO\_Channels configuration.
-If the file found to be updated and after the a successful validation used to recreate the ISO\_Channels object.\\
-
-An example for the OPC\_UA\_Config.xml is given at listing \ref{lst:OPC_UA_Config.xml}. 
-The root node for this configuration xml file is the \textbf{NODESet}.
-As childnodes is tagged as \textbf{Channel} and used in the construction of the children of ISO\_CHANNEL OPC-UA nodes. 
-The childnodes of each \textbf{Channel} node guide the Morfeas OPC-UA how to handle and also give some addition information.
-The content from each \textbf{ISO\_CHANNEL} node used as name for the ISO\_CHANNEL child object. 
-The \textbf{INTERFACE\_TYPE} and \textbf{ANCHOR} give the information of handling and the rest(\textbf{DESCRIPTION, MIN, MAX, UNIT}) is use as static information for the ISO\_CHANNEL.
-
-A tree view of the Morfeas OPC-UA nodeset given bellow.
-\dirtree{%
- .1 /.
-	.2 ISO\_Channels.
-		.3 (..).
-	.2 Interfaces.
-		.3 IOBOX-ifs.
-			.4 IOBOX-if(*).
-				.5 Device\_name.
-				.5 IO-BOX Status.
-				.5 IO-BOX Status value.
-				.5 IPv4 Address.
-				.5 I-Link Power Supply.
-					.6 Power Supply Vin(V).
-					.6 CH(1..4).
-						.7 Iout(A).
-						.7 Vout(V).
-				.5 Receivers.
-					.6 RX(1..4).
-						.7 CH(1..16).
-							.8 Status.
-							.8 Status\_value.
-							.8 Value.
-						.7 Index.
-						.7 RX\_Status.
-						.7 RX\_success.
-		.3 MDAQ-ifs.
-			.4 MDAQ-if(*).
-				.5 Device Name.
-				.5 IPv4 Address.
-				.5 Index.
-				.5 MDAQ Status.
-				.5 MDAQ Status value.
-				.5 Board Temperature(°C).
-				.5 Channels.
-					.6 (CH1..8).
-						.7 Value1..3.
-							.8 Measurement.
-							.8 Status.
-							.8 Status value.
-		.3 SDAQ-ifs.
-			.4 SDAQ-if(*).
-				.5 Bus\_Util(\%).
-				.5 Dev\_on\_Bus.
-				.5 Electrics(If Morfeas\_RPI\_hat is detected).
-					.6 Amperage(A).
-					.6 Voltage(V).
-					.6 Shunt Temp(°C).
-				.5 SDAQnet.
-					.6 SDAQ-*(\#\#).
-						.7 Address.
-						.7 Connected on Bus.
-						.7 S/N.
-						.7 TimeDiff.
-						.7 Info.
-							.8 Channels on SDAQ.
-							.8 Firm\_rev.
-							.8 HW\_rev.
-							.8 Max\_cal\_points.
-							.8 Samplerate.
-							.8 Type.
-						.7 Status.
-							.8 Error.
-							.8 Mode.
-							.8 Status.
-							.8 inSync.
-						.7 Channels.
-							.8 CH1..n.
-								.9 Calibration Date.
-								.9 Calibration Points.
-								.9 Period (Months).
-								.9 Status.
-								.9 Status value.
-								.9 Timestamp.
-								.9 Unit.
-								.9 Value.
-		.3 MTI-ifs.
-			.4 MTI-if(*).
-				.5 Device Name.
-				.5 IPv4 Address.
-				.5 MTI Status.
-				.5 MTI Status value.
-				.5 MTI Health.
-					.6 Battery Capacity(\%).
-					.6 Battery Voltage(V).
-					.6 Battery Status(\%).
-					.6 CPU Temperature(°C).
-				.5 Radio.
-					.6 Data rate.
-					.6 RF Channel.
-					.6 Tele Dev type.
-					.6 new\_MTI\_config().
-					.6 Tele(Dev type depended see bellow).
-						.7 **.
-	.2 RPI\_Health\_status.
-		.3 CPU\_Util(\%).
-		.3 CPU\_Temp(°C).
-		.3 Disk\_Util(\%).
-		.3 RAM\_Util(\%).
-}
 \newpage
 \begin{lstlisting}[frame=single,caption=Example of OPC\_UA\_Config.xml,label=lst:OPC_UA_Config.xml]
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE NODESet SYSTEM "Morfeas.dtd">
 <NODESet>
   <CHANNEL>
-    <ISO_CHANNEL>OT_LS790</ISO_CHANNEL>
-    <INTERFACE_TYPE>SDAQ</INTERFACE_TYPE>
-    <ANCHOR>1.CH1</ANCHOR>
-    <DESCRIPTION>Leakage Alarm Trough B</DESCRIPTION>
-    <MIN>0</MIN>
-    <MAX>20</MAX>
-  </CHANNEL>
-  <CHANNEL>
     <ISO_CHANNEL>TE01</ISO_CHANNEL>
     <INTERFACE_TYPE>MDAQ</INTERFACE_TYPE>
     <ANCHOR>167772170.CH1.Val1</ANCHOR>
-    <DESCRIPTION>Test for LAB_MDAQ CH1</DESCRIPTION>
-    <MIN>0</MIN>
-    <MAX>0</MAX>
+    <DESCRIPTION>Test for LAB_MDAQ</DESCRIPTION>
+    <MIN>-15</MIN>
+    <MAX>15</MAX>
     <UNIT>V</UNIT>
+  </CHANNEL>
+  <CHANNEL>
+    <ISO_CHANNEL>TE03</ISO_CHANNEL>
+    <INTERFACE_TYPE>MTI</INTERFACE_TYPE>
+    <ANCHOR>184549386.ID:4.CH4</ANCHOR>
+    <DESCRIPTION>Test for LAB_MTI</DESCRIPTION>
+    <MIN>0</MIN>
+    <MAX>50</MAX>
+    <UNIT>C</UNIT>
+  </CHANNEL>
+  <CHANNEL>
+    <ISO_CHANNEL>TE00</ISO_CHANNEL>
+    <INTERFACE_TYPE>SDAQ</INTERFACE_TYPE>
+    <ANCHOR>1.CH1</ANCHOR>
+    <DESCRIPTION>Test for SDAQ</DESCRIPTION>
+    <MIN>-10</MIN>
+    <MAX>1000</MAX>
   </CHANNEL>
   <CHANNEL>
     <ISO_CHANNEL>TE02</ISO_CHANNEL>
@@ -294,12 +290,211 @@ A tree view of the Morfeas OPC-UA nodeset given bellow.
   </CHANNEL>
 </NODESet>
 \end{lstlisting}
-
-\subsection{Morfeas Drivers/Handlers}
-
-\subsubsection{Morfeas SDAQ-if}
-\subsubsection{Morfeas MDAQ-if}
-\subsubsection{Morfeas IOBOX-if}
-\subsubsection{Morfeas MTI-if}
-\section{Integration}
+\newpage
+\begin{tree_box}[label=tree:OPC_UA_nodeset, title=Morfeas OPC-UA Nodeset]
+\dirtree{%
+	.1 /.
+		.2 ISO\_Channels.
+			.3 (..).
+		.2 Interfaces.
+			.3 IOBOX-ifs.
+			.3 MDAQ-ifs.
+			.3 SDAQ-ifs.
+			.3 MTI-ifs.
+		.2 RPI\_Health\_status.
+			.3 CPU\_Util(\%).
+			.3 CPU\_Temp(°C).
+			.3 Disk\_Util(\%).
+			.3 RAM\_Util(\%).
+}
+\end{tree_box}
+\begin{tree_box}[title=OPC-UA nodeset for IOBOX-ifs]
+	\dirtree{%
+		.4 IOBOX-if(*).
+			.5 Device\_name.
+			.5 IO-BOX Status.
+			.5 IO-BOX Status value.
+			.5 IPv4 Address.
+			.5 I-Link Power Supply.
+				.6 Power Supply Vin(V).
+				.6 CH(1..4).
+					.7 Iout(A).
+					.7 Vout(V).
+			.5 Receivers.
+				.6 RX(1..4).
+					.7 CH(1..16).
+						.8 Status.
+						.8 Status\_value.
+						.8 Value.
+					.7 Index.
+					.7 RX\_Status.
+					.7 RX\_success.
+	}
+\end{tree_box}
+\begin{tree_box}[title=OPC-UA nodeset for MDAQ-ifs]
+	\dirtree{%
+		.4 MDAQ-if(*).
+			.5 Device Name.
+			.5 IPv4 Address.
+			.5 Index.
+			.5 MDAQ Status.
+			.5 MDAQ Status value.
+			.5 Board Temperature(°C).
+			.5 Channels.
+				.6 (CH1..8).
+					.7 Value1..3.
+						.8 Measurement.
+						.8 Status.
+						.8 Status value.
+	}
+\end{tree_box}
+\begin{tree_box}[title=OPC-UA nodeset for SDAQ-ifs]
+	\dirtree{%
+		.4 SDAQ-if(*).
+			.5 Bus\_Util(\%).
+			.5 Dev\_on\_Bus.
+			.5 Electrics\DTcomment{Only if Morfeas\_RPI\_hat is detected and calibrated}.
+				.6 Amperage(A).
+				.6 Voltage(V).
+				.6 Shunt Temp(°C).
+			.5 SDAQnet.
+				.6 SDAQ-*(\#\#).
+					.7 Address.
+					.7 Connected on Bus.
+					.7 S/N.
+					.7 TimeDiff.
+					.7 Info.
+						.8 Channels on SDAQ.
+						.8 Firm\_rev.
+						.8 HW\_rev.
+						.8 Max\_cal\_points.
+						.8 Samplerate.
+						.8 Type.
+					.7 Status.
+						.8 Error.
+						.8 Mode.
+						.8 Status.
+						.8 inSync.
+					.7 Channels.
+						.8 CH1..n.
+							.9 Calibration Date.
+							.9 Calibration Points.
+							.9 Period (Months).
+							.9 Status.
+							.9 Status value.
+							.9 Timestamp.
+							.9 Unit.
+							.9 Value.
+	}
+\end{tree_box}
+\newpage
+\begin{tree_box}[title=OPC-UA nodeset for MTI-ifs]
+	\dirtree{%
+		.4 MTI-if(*).
+			.5 Device Name.
+			.5 IPv4 Address.
+			.5 MTI Status.
+			.5 MTI Status value.
+			.5 MTI Health.
+				.6 Battery Capacity(\%).
+				.6 Battery Voltage(V).
+				.6 Battery Status(\%).
+				.6 CPU Temperature(°C).
+			.5 Radio.
+				.6 Data rate.
+				.6 RF Channel.
+				.6 Tele Dev type.
+				.6 new\_MTI\_config()\DTcomment{Method to control the radio mode}.
+				.6 Tele(***)\DTcomment{Contents depends at radio mode}.
+	}
+\end{tree_box}
+\begin{tree_box}[title=OPC-UA nodeset MTI's Tele object at TC mode]
+	\dirtree{%
+		.1 Tele(TC\#).
+			.2 Packet Index.
+			.2 RX Success ratio(\%).
+			.2 RX Status.
+			.2 Sample to Fail.
+			.2 Samples to Validate.
+			.2 isValid.
+			.2 CH(1..N).\DTcomment{N=amount of inputs}.
+				.3 Status.
+				.3 Status Value.
+				.3 Value.
+	}
+\end{tree_box}
+\begin{tree_box}[title=OPC-UA nodeset MTI's Tele object at QUAD mode]
+	\dirtree{%
+		.1 Tele(QUAD).
+			.2 Packet Index.
+			.2 RX Success ratio(\%).
+			.2 RX Status.
+			.2 isValid.
+			.2 CH1..2.
+				.3 Raw Counter
+				.3 Status.
+				.3 Status Value.
+				.3 Value.
+				.3 Pulse Gen.
+					.4 Max.
+					.4 Min.
+					.4 Saturate.
+					.4 Scale.
+					.4 new\_Gen\_config()\DTcomment{Method to configure PWM Gens}.
+	}
+\end{tree_box}
+\newpage
+\begin{tree_box}[title=OPC-UA nodeset MTI's Tele object at RMSW/MUX mode]
+	\dirtree{%
+		.6 Tele(RMSW/MUX).
+			.7 Amount of Devices.
+			.7 Global Controls.
+				.8 Global ON/OFF Control.
+				.8 Global ON/OFF state.
+				.8 Global Sleep Control.
+				.8 Global Sleep state.
+				.8 MTI\_Global\_SWs()\DTcomment{Method to configure the controls}.
+			.7 MUX(ID:\#).
+				.8 Device temp(°C).
+				.8 ID.
+				.8 Last RX(sec).
+				.8 Memory Offset.
+				.8 Supply Voltage(V).
+				.8 Type.
+				.8 Controls.
+					.9 CH(1..4)\_state.
+					.9 TX Rate(sec).
+					.9 ctrl\_tele\_SWs()\DTcomment{Method to control the Multiplexers}.
+			.7 Mini\_RMSW(ID:\#).
+				.8 Device temp(°C).
+				.8 ID.
+				.8 Last RX(sec).
+				.8 Memory Offset.
+				.8 Supply Voltage(V).
+				.8 Type.
+				.8 CH(1..4).
+					.9 Measurement.
+					.9 Status.
+					.9 Status value.
+				.8 Controls.
+					.9 Main Switch.
+					.9 TX Rate(sec).
+					.9 ctrl\_tele\_SWs()\DTcomment{Method to control the Main switch}.
+			.7 RMSW(ID:\#).
+				.8 Device temp(°C).
+				.8 ID.
+				.8 Last RX(sec).
+				.8 Memory Offset.
+				.8 Supply Voltage(V).
+				.8 Type.
+				.8 Controls.
+					.9 CH(1..2)\_state.
+					.9 Main switch.
+					.9 TX Rate(sec).
+					.9 ctrl\_tele\_SWs()\DTcomment{Method to control the Switches}.
+				.8 CH(1..2).
+					.9 CH\# Amperage(A).
+					.9 CH\# Voltage(V).
+	}
+\end{tree_box}
 \end{document}
