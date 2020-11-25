@@ -93,8 +93,8 @@ To install the Morfeas Core it's required to be install the following dependenci
 * [I2C-tools] - Heterogeneous set of I2C tools for Linux kernel.\\
 Also the following submodules:\\
 * [SDAQ worker] - A libre \(free\) utilities suite for SDAQ devices.\\
-* [cJSON] - An Ultralightweight open source JSON parser for ANSI C.\\
-* [open62541] - An open source C \(C99\) implementation of OPC-UA.\\
+* [cJSON] - An ultralightweight open source JSON parser for ANSI C.\\
+* [open62541] - An open source C (C99) implementation of OPC-UA.\\
 
 Compilation and installation instructions can be found in the README.md file at the root of source.
 
@@ -127,7 +127,7 @@ At the following subsection will be explained how the implemented components wor
 The Morfeas Daemon one of the Morfeas components and it's made to execute specific purpose. This is to start each component as is specified by the user.
 The specification done by a configuration file, this file have name Morfeas\_config.xml (Example at listing \ref{lst:Morfeas_config.xml}).
 The Morfeas\_config.xml file contains the amount and type of components that consist the Morfeas system with also some arguments (or settings) for them.\\
-The construction for the Morfeas\_config.xml must done in respect to Morfeas.dtd file. 
+The construction for the Morfeas\_config.xml must done in respect to Morfeas.dtd file.
 
 Although that the Morfeas Daemon can run in a standalone mode is more common to work together with the Systemd. The Systemd is a software suite that developed initially by the RedHat
 and provide a initialization, start, and control of daemons. Also is a standard packet in many distributions of the GNU operating system.
@@ -158,9 +158,33 @@ The construction for the OPC\_UA\_Config.xml must done in respect to Morfeas.dtd
 The OPC-UA nodeset (page~\pageref{tree:OPC_UA_nodeset}) reconstructed dynamically in every update of the configuration file (as described above) and also in every new registration of a component.
 The value of a variable that owned by an object that related to a component (or a device) is updated in every successful new message reception.
 
-Also the variables childs of the RPI\_Health\_Status object is updates every 1sec.
+Also the variables childs of the RPI\_Health\_Status object are updated every second.
 
 \subsubsection{Status and Status value}
+ The variables of 'status' and 'status value' are ubiquitous in every object that related with measurements or with the state of some device.
+ The 'status' variable is represent the current state of each channel, handler, or device in a string that is human readable. The 'Status value' is the equivalent of status for a machine
+ and represent the current status with a number. At the following table will present the accepted values and the meaning of them.
+ \begin{center}
+ \begin{tabular}{||c | c||} 
+ \hline
+ Status Value & Meaning \\ [0.5ex] 
+ \hline\hline
+ 0 & Everything Okay \\ 
+ \hline
+ 1 & No sensor\\
+ \hline
+ 2 & Out of Calibration range\\
+ \hline
+ 4 & Over the input range\\
+ \hline
+ 110 & Connection timed out\\
+ \hline
+ 127 & Telemetry is Disconnected\\
+ \hline
+ 255 & OFF-Line\\
+ \hline
+\end{tabular}
+\end{center}
 
 \newpage
 \subsection{Morfeas Drivers/Handlers}
@@ -184,6 +208,7 @@ The Morfeas SDAQ-if have the following functionalities:
 	\item Read messages from the SDAQs and decode them
 	\item Transfer the measurements to the Morfeas OPC-UA.
 	\item Synchronize the SDAQs.
+	\item Report the state of program and the devices on SDAQnet at a Logstat file with JSON format.
 \end{itemize}
 The Morfeas SDAQ-if is design to controlling a unique SDAQnet that provided as argument at the program call. The SDAQs that are behind this port are also controlled in a strict way.\\
 If a new SDAQ arrived the first procedure is to give and set it to an unique address. The algorithm that doing this described bellow.
@@ -198,22 +223,30 @@ The content of this file is in a binary form.
 After of the addressing procedure the Morfeas SDAQ-if request the device status and calibration data. Then if the device answer the Morfeas SDAQ-if report it's existence to the Morfeas OPC-UA
 and also report the information where mentioned before. After all this the Morfeas SDAQ-if put the device in Measuring mode.
 
-The synchronization of the SDAQs is done by sending a special CANbus message as it's described at the SDAQ's white papers. This implemented with a timer that calling a synchronization function in every alarm.
-The alarm period of the timer is set to 10 sec. Also in the same function is done the cleanup procedure.
-This works as follow: The SDAQs send a report message (approx every 10sec), if two report messages does not received then the device is reported as dead.
+The synchronization of the SDAQs is done by sending a special CANbus message as it's described at the SDAQ's white papers. This implemented with a timer where is programmed to rise the alarm signal every second.
+The signaling mechanism is programmed at initialization to call a function in every alarm. This function is responsible to to many things one of them is to broadcast a synchronization signal to the SDAQnet every 10 seconds.
+An another responsibility of this function it to doing cleanup of the dead SDAQs from the data lists, this works as follow: The SDAQs send a report message (approx every 10sec),
+if two report messages does not received then the device is defined dead, deleted from the lists and reported to the Morfeas OPC-UA.
 
-All the data that used inside in the Morfeas SDAQ-if is stored in memory in a dynamic form of linked lists.
+The functionality of exporting JSON Logstat file is done in the main function and driven by a flag that set inside in the timers function.
+
+The Morfeas SDAQ-if get reference for the SDAQ message decoding from the SDAQWorker project, submodule of the Morfeas-core.
 \subsubsection{Morfeas MDAQ-if \& Morfeas IOBOX-if}
-Both of this components are made similarly and provide the capability to control some specific devices by MODBus-TCP. MODBus-TCP is a protocol that based on MODBus-RTU that was a RS-485 base protocol made by MODicon and have
-as purpose to give a way of communication between PLCs.
+Both of this components are made similarly and provide the capability to get the measurements from some specific devices by ModBus-TCP. ModBus-TCP is a protocol that based on ModBus-RTU where is a RS-485 base protocol made by MODicon and have
+as purpose to give a way of communication between PLCs. Nowadays the ModBus protocol is maintained by the Modbus organization and provided as a free of charge and free to use protocol.
 
-Morfeas MDAQ-if and Morfeas IO-BOX-if are single thread FSM type programs. The ModBus-TCP functionality is achieved by using the LibModbus library where is a free/libre library that provide MODBus RTU and TCP functionality.
+Morfeas MDAQ-if and Morfeas IO-BOX-if are single thread FSM type programs. The ModBus-TCP functionality is achieved using the LibModbus library where is a free/libre library that provide MODBus RTU and TCP functionality.
 
 Both programs start register them sel to the Morfeas OPC-UA and then open a special TCP socket that used as the way to extract information from IO-BOX and MDAQ type device. Then if the socket open successfully the programs report this to the Morfeas OPC-UA
-and start requesting data. The request of data done via MODbus registers read commands and when the data from the MODBus registers enters the program are decoded and transmitted to the Morfeas OPC-UA via Morfeas IPC.
+and start requesting data. The request of data done via ModBus registers read commands with repetition of 100ms. When the data from the ModBus registers enters the program are decoded and transmitted to the Morfeas OPC-UA via Morfeas IPC.
+
+Similarly with Morfeas SDAQ-if a JSON Logstat file is exported with measurement and other status information every second.
 \subsubsection{Morfeas MTI-if}
 
 \section{Integration}
+All the future component must follow the principles of the project in every matter. 
+
+To integrate a new component in to the project you must have a complete understanding of all the mechanisms and techniques.   
 \newpage
 \section{Appendix}
 \begin{lstlisting}[frame=single,caption=Example of Morfeas\_config.xml,label=lst:Morfeas_config.xml]
@@ -228,10 +261,13 @@ and start requesting data. The request of data done via MODbus registers read co
       <APP_NAME>Default Application</APP_NAME>
     </OPC_UA_SERVER>
     <SDAQ_HANDLER>
-      <CANBUS_IF>vcan0</CANBUS_IF>
+      <CANBUS_IF>can0</CANBUS_IF>
     </SDAQ_HANDLER>
     <SDAQ_HANDLER>
-      <CANBUS_IF>vcan1</CANBUS_IF>
+      <CANBUS_IF>can1</CANBUS_IF>
+    </SDAQ_HANDLER>
+	<SDAQ_HANDLER>
+      <CANBUS_IF>vcan0</CANBUS_IF>
     </SDAQ_HANDLER>
     <MDAQ_HANDLER>
       <DEV_NAME>LAB_MDAQ</DEV_NAME>
