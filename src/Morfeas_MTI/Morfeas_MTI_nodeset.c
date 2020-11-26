@@ -749,7 +749,7 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 
 void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *Node_id)
 {
-	const char *inp_descriptions[] = {"Range:(0..126)",
+	const char *inp_descriptions[] = {"Range:(0..126) Only even numbers",
 									  "Accepted values:{Disabled,TC16,TC8,TC4,QUAD,RMSW/MUX}",
 									  "Successful receptions to set valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
 									  "Failed receptions to reset valid flag(Range:1..254, 0=Unchanged, 255=Disable)",
