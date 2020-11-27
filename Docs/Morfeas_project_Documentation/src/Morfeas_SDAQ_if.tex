@@ -4,7 +4,7 @@ On Layer 0 the SDAQnet can be describes as CANBus with the addition of power at 
 
 The Morfeas SDAQ-if is basing it's operation to SocketCAN where is a groovy way to integrate CANBus on a computer system. The SocketCAN provided as a module from the Linux
 foundation and can be used in every computer that runs GNU operating system with Linux as kernel. The principle behind SocketCAN is to provide similar functionality as regular internet sockets to CANbus.
-The Morfeas SDAQ-if used also the filter functionality that provided from the same kernel module with purpose to reduce the amount of jiffies that used in the decoding procedure.\\
+The Morfeas SDAQ-if used also the filter functionality that provided from the same kernel module with purpose to reduce the amount of jiffies that used in the procedure of decoding.\\
 The Morfeas SDAQ-if have the following functionalities:
 \begin{itemize}
 	\item Control one specific SDAQnet port.
@@ -24,7 +24,7 @@ If a new SDAQ arrived the first procedure is to give and set it to an unique add
 \begin{enumerate}
 	\item Check if the current address is parking or if it conflicting with some other. If not, leave it as it is and report this to the LogBook. Algorithm is done
 	\item Otherwise, check if the device's S/N is registered to LogBook. if yes then give it the old address. Algorithm is done.
-	\item If not, give the first available and report it to the LogBook.
+	\item If not, give the first available address and report it to the LogBook.
 \end{enumerate}
 The LogBook is a file stored under ``/var/tmp/Morfeas\_LogBooks/" directory and contains the correlation between address and serial number for each device that have appear on SDAQnet.
 The content of this file is in a binary form.

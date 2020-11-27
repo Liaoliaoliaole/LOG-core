@@ -19,5 +19,3 @@ The compiled documentation located under the **./build-doc** directory.
 
 ## License
 The source code of the Documentation of Morfeas project is licensed under FDLv1.3 or later - see the [License](../../fdl-1.3.md) file for details.
-
-

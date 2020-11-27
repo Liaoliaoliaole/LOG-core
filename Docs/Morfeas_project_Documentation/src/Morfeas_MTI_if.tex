@@ -85,15 +85,45 @@ On listing~\ref{lst:ctrl_tele_SWs} present the structure and contents of the JSO
 This argument is provided by the Morfeas MTI-if to the OPC-UA and also to the exported Logstat file.\\
 The argument \textbf{tele\_type} is an additional validation mechanism for the Morfeas MTI-if that checks if the device that linked to MODBus register space on \textbf{mem\_pos} is match with the user's order.
 Must have a value from the allowed one where showed at listing~\ref{lst:ctrl_tele_SWs}.\\
-The argument \textbf{sw\_name} give the information for which switch of the RMSW/MUX family type device the new\_state will go. Values of \textbf{"Sel\_(1..4)"} are referred to MUX tele\_types only.   
+The argument \textbf{sw\_name} give the information for which switch of the RMSW/MUX family type device the new\_state will go. Values of \textbf{"Sel\_(1..4)"} are referred to MUX tele\_type only.
 
-**if this global switch mechanism is active the method "ctrl\_tele\_SWs" does not have effect at RMSW and Mini\_RMSW tele\_types. And will report a dedicated error on call.
+**if this global switch mechanism is active the method "ctrl\_tele\_SWs" does not have effect at RMSW and Mini\_RMSW tele\_type. And will report a dedicated error on call.
 
 \begin{lstlisting}[frame=single,caption=Argument for new\_PWM\_config(), label=lst:new_PWM_config]
 {
-  "mem_pos":0-32,
-  "tele_type":"Mini_RMSW"|"RMSW"|"MUX",
-  "sw_name":"Main_SW"|"SW_(1..2)"|"Sel_(1..4)",
-  "new_state":true-false
+  "PWM_gens_config":
+    [
+	  { //Configuration for Gen 1
+		"scaler":(Real number),
+		"min":(Real number),//Low limit
+		"max":(Real number),//High limit
+		"saturation":true-false // Set get to stop at limits.
+	  },
+	  {  //Configuration for Gen 2 same as above
+            ...
+	  }
+    ]
 }
 \end{lstlisting}
+On listing~\ref{lst:new_PWM_config} the structure of the argument for method ``new\_PWM\_config()" is presented.
+This as is shown given as a JSON object with tag ``PWM\_gens\_config" that contains an array with two elements. The position of the element define and to in which generator the configuration will go.
+In case that only one of two generators will be configured the element on the position of the other can be replace with \textbf{null}.
+The positions with \textbf{null} as content will not affect the configuration of the generator, or in other words will leave it as it was before.
+
+The argument \textbf{scaler} given in a form of real number and have meaning to provide the correlation between the RAW counts and the physical unit that measured by the quadrature telemetry.
+The argument argument \textbf{scaler} have units of $\displaystyle\frac{\text{Physical unit}}{count}$. Internally the RAW counter value multiplied with the scaler and provides as value for the channel.
+
+The arguments \textbf{min},\textbf{max} are setting the limits for each of MTI's generator. This arguments given in real number from and have units the physical unit that is measured.
+The \textbf{min} define in which value the generator will have 0\% modulation and the \textbf{max} accordingly for 100\%.
+
+The last argument ("saturation") is boolean and controlling the behavior of the generator in counting. If it's set to true the pulse output will lock on the limits values.
+This means that the modulation factor of the output will remain at 0 or 100\% even if the channels value pass the limits.\\
+if the argument "saturation" set to false the modulation of the generator will reset each time that the value pass a multiple of the limit. This configuration have meaning to done
+only if the physical unit that is measured is periodical (eg. position of a rotational shaft).
+
+The method \textbf{echo} used for testing purposes and it's echoing back what ever string the client have sent as argument.
+
+All the methods return a report in a string form that explain if the requested command is executed or the kind of error that make it failed.
+
+The configuration of the MTI stored on a local file, that used to restore back to the previous in every new start of the Morfeas MTI-if.
+This file located at '/var/tmp/Morfeas\_MTI\_Configurations/' and have name 'Morfeas\_MTI\_(Device name)'.
