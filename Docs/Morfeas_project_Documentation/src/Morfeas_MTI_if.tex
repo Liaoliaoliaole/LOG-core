@@ -47,9 +47,9 @@ The following paragraphs will explain in details the required arguments for each
 }
 \end{lstlisting}
 
-The \texbf{new\_RF\_CH} argument give the information on the radio channel that the MTI will be tuned. Must be an even number between 0 and 126.
+The \textbf{new\_RF\_CH} argument give the information on the radio channel that the MTI will be tuned. Must be an even number between 0 and 126.
 
-The \texbf{new\_mode} argument is controlling the mode of the MTI's radio and modem. This must have one of the values that showed above. The mode "Disable"
+The \textbf{new\_mode} argument is controlling the mode of the MTI's radio and modem. This must have one of the values that showed above. The mode "Disable"
 set the Radio off and the RMSW/MUX on the TRX. All the other modes set the Radio to simplex reception.
 
 The \textbf{StV} and \textbf{StF} are arguments that controlling the ``data valid flag'' mechanism. \textbf{StV} is abbreviation of the sentence "Samples to Validate",
@@ -61,8 +61,6 @@ The \textbf{G\_SW} and \textbf{G\_SL} are arguments that used to setup the MTI's
 The \textbf{G\_SW} is abbreviation for "Global Switch" and when is true is energizing the mechanism that mentioned before.
 When this is active the state of the switches can be control by the method "MTI\_Global\_SWs"(listing~\ref{lst:MTI_Global_SWs}) and can be read from the OPC-UA variables under "Global Controls" object (see appendix page:~\pageref{tree:RMSW/MUX}).
 In addition to the previous controlling of the Global Switches can be done also from the button PB2.
-
-**if this mechanism is active the method "ctrl\_tele\_SWs" does not have any effect.
 
 The \textbf{G\_SL} is abbreviation for "Global Sleep" and when is true is energizing the Sleep mechanism. This mechanism have only effect on Mini\_RMSW and purpose to reduce the
 telemetry update rate, with result to lower the consumption. It's can be control and read similarly like \textbf{G\_SW}. The button PB3 can also control the state of this mechanism.
@@ -82,4 +80,20 @@ telemetry update rate, with result to lower the consumption. It's can be control
   "new_state":true-false
 }
 \end{lstlisting}
+On listing~\ref{lst:ctrl_tele_SWs} present the structure and contents of the JSON string that use as argument to method ctrl\_tele\_SWs().
+\textbf{mem\_pos} is the argument that shows to Morfeas MTI-if D-BUS Server where from the MTI's MODBus register space is linked with the RMSW/MUX type device that the configuration will be bone.
+This argument is provided by the Morfeas MTI-if to the OPC-UA and also to the exported Logstat file.\\
+The argument \textbf{tele\_type} is an additional validation mechanism for the Morfeas MTI-if that checks if the device that linked to MODBus register space on \textbf{mem\_pos} is match with the user's order.
+Must have a value from the allowed one where showed at listing~\ref{lst:ctrl_tele_SWs}.\\
+The argument \textbf{sw\_name} give the information for which switch of the RMSW/MUX family type device the new\_state will go. Values of \textbf{"Sel\_(1..4)"} are referred to MUX tele\_types only.   
 
+**if this global switch mechanism is active the method "ctrl\_tele\_SWs" does not have effect at RMSW and Mini\_RMSW tele\_types. And will report a dedicated error on call.
+
+\begin{lstlisting}[frame=single,caption=Argument for new\_PWM\_config(), label=lst:new_PWM_config]
+{
+  "mem_pos":0-32,
+  "tele_type":"Mini_RMSW"|"RMSW"|"MUX",
+  "sw_name":"Main_SW"|"SW_(1..2)"|"Sel_(1..4)",
+  "new_state":true-false
+}
+\end{lstlisting}
