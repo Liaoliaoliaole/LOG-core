@@ -5,14 +5,17 @@ receiving functionality for the Morfeas IPC and a live reader/validator of the O
 The thread where is responsible to act as Morfeas IPC receiver doing the reception of the Morfeas IPC telegram, decoding and transferring of the data to the OPC-UA nodeset.
 The last thread of the Morfeas OPC-UA is the live reader of the OPC\_UA\_config.xml file. This thread check the file for changes, read it (on change), validate the contents and
 if the validation is successful then attempt to (re)build the children of \textbf{ISO Channels} node (An example for the OPC\_UA\_Config.xml is given at listing \ref{lst:OPC_UA_Config.xml}).
-Every childnode where tagged as \textbf{CHANNEL} contains nodes with the configuration argument for each ISO Channels OPC-UA nodes.\\
+Every childnode where tagged as \textbf{CHANNEL} contains nodes with the configuration argument for each ISO Channels OPC-UA nodes.
 
 In details:\\
 The content of node \textbf{ISO\_CHANNEL} provide the ``ISO code name'' of the ISO Channel.\\
-The contents of nodes \textbf{INTERFACE\_TYPE} and \textbf{ANCHOR} give the information of handler type and the location of the physical channel that the data will be extracted.\\
+The contents of nodes \textbf{INTERFACE\_TYPE} and \textbf{ANCHOR}*** give the information of handler type and the location of the physical channel that the data will be extracted.\\
 The contents of nodes \textbf{DESCRIPTION, MIN, MAX, UNIT}) used to fill the static information for the ISO\_CHANNEL. One exception to this is the unit node that does not used
 at the ISO Channels with interface type SDAQ.\\
-The construction for the OPC\_UA\_Config.xml must done in respect to Morfeas.dtd file.
+The construction for the OPC\_UA\_Config.xml must done in respect to Morfeas.dtd file.\\
+
+*** The value of node \textbf{ANCHOR} present the linking for the ISO Channel with the Physical input. In general is a dot separated string that contains the identifier of
+the Device and the name of the Channel that is linked. The identifier of each device is provided at the Logstat that exported from the Morfeas component that handling it.\\
 
 The OPC-UA nodeset (page~\pageref{tree:OPC_UA_nodeset}) reconstructed dynamically in every update of the configuration file (as described above) and also in every new registration of a component.
 The value of a variable that owned by an object that related to a component (or a device) is updated in every successful new message reception.
@@ -24,11 +27,11 @@ Also the variables that owned by the RPI\_Health\_Status object are updated ever
  The 'status' variable is represent the current state of each channel, handler, or device in a string that is human readable. The 'Status value' is the equivalent of status for a machine
  and represent the current status with a number. At the following table will present the accepted values and the meaning of them.
  \begin{center}
- \begin{tabular}{||c | c||} 
+ \begin{tabular}{||c | c||}
  \hline
- Status Value & Meaning \\ [0.5ex] 
+ Status Value & Meaning \\ [0.5ex]
  \hline\hline
- 0 & Everything Okay \\ 
+ 0 & Everything Okay \\
  \hline
  1 & No sensor\\
  \hline
