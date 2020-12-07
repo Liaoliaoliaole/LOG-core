@@ -7,8 +7,8 @@ Latex_FLAGS=-pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -outdir
 all: $(BUILD_dir)/Morfeas_RPi_Hat.pdf
 
 #Compiling of the document
-$(BUILD_dir)/Morfeas_RPi_Hat.pdf: $(SRC_dir)/Morfeas_RPi_Hat.tex
-	latexmk $(Latex_FLAGS) $^ && mv $(WORK_dir)/*.pdf $(BUILD_dir)/
+$(BUILD_dir)/Morfeas_RPi_Hat.pdf: $(SRC_dir)/*.tex
+	latexmk $(Latex_FLAGS) $(SRC_dir)/Morfeas_RPi_Hat.tex && mv $(WORK_dir)/*.pdf $(BUILD_dir)/
 
 tree:
 	mkdir -p $(BUILD_dir) $(WORK_dir)

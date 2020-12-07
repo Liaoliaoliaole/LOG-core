@@ -1,5 +1,5 @@
 \documentclass{article}
-\usepackage[utf8]{inputenc}
+\usepackage[utf8x]{inputenc}
 \usepackage[a4paper, margin=1in]{geometry}
 \usepackage{enumitem}
 \usepackage{xfrac}
@@ -15,28 +15,37 @@
 \usepackage{varwidth}
 \usepackage{listings}
 \usepackage[bottom]{footmisc}
+\usepackage{fancyhdr}
 
-
-%Commands
-%text overline command
-\newcommand{\textoverline}[1]{$\overline{\mbox{#1}}$}
-%symbols declaration
-\DeclareUnicodeCharacter{2127}{\mho}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Morfeas RPi Hat}
+\chead{Technical Reference}
+\rhead{Page \thepage}
+\rfoot{Page \thepage}
 
 %Title declaration
-\title{Morfeas-Core\\Chapter:``Morfeas RPi Hat''}
-\date{Build:\today}
-\author{Sam Harry Tzavaras}
+\title{\Huge``Morfeas RPi Hat''\\Technical Reference}
+\date{}
+\author{}
 
 \begin{document}
 %Title page
 \clearpage
 \begin{figure}
 \centering
-  \includegraphics[width=2in]{../../../Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo_green.png}
+	\includegraphics[width=3in]{../../../Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo_cyan.png}
 \end{figure}
 \maketitle
 \thispagestyle{empty}
+\begin{figure}
+\centering
+	\includegraphics[width=3in]{./Artwork/PCB_3d_render.png}
+\end{figure}
+\newpage
+%History page
+\section{Change History}
+Dec 7,12020 : Sam Harry Tzavaras -- Initial Work.
 %License page
 \newpage
 \section{License}
@@ -47,19 +56,17 @@ or any later version published by the Free Software Foundation;
 with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
 A copy of the license is included in the section entitled "GNU Free Documentation License".
 \section{Disclaimers}
+The following document referred as Technical Reference of the Morfeas RPI hat. Thus, evolving description of hardware. Any modification of it must take as responsibility of
+the technician which did it. The author of this document does not have any responsible for any damage that this device can make after or before of any kind of modification. 
+
+\input{./Doc_src/Introduction}
 \newpage
 %Contents page
 \newpage
 \tableofcontents
 \newpage
-\section{Introduction}
-This document refereed as Documentation for the "Morfeas\_RPi\_Hat" device, where is a PCB shield designed to be compatible to Raspberry Pi pin header.
-The purpose of this device is to provide electrical measurements and electronic fuse for the SDAQnet port, to provide real time clock for the RPi,
-and to support the backport teletype RS-323 serial port of the Morfeas system unit. The measurements that supporter is Output voltage of the port,
-Supplied port's current and temperature of each current sense amplifier (CSA) silicon die.\\
-In addition an electronic fuse is provided for each port that limit the supply current to $\approx$4A.
-Also an EEPROM with the calibration data for each CSA is located on board. The communication between the onboard devices and the RPi done
-via Inter-Integrated Circuit ($I^2C$) Bus.
-
+\input{./Doc_src/Hardware_Design}
+\input{./Doc_src/Morfeas_RPI_Hat_software}
+\input{./Doc_src/Appendix}
 \end{document}
 
