@@ -64,8 +64,8 @@ COMMANDS:
 	save p# = Save Port's configuration to EEPROM
 ```
 
-##Documentation 
-The documentation is located under the *[Docs](./Docs) directory.
+## Documentation 
+The documentation is located under the [Docs](./Docs) directory.
 
 ## Authors
 * **Sam Harry Tzavaras** - *Initial work*
