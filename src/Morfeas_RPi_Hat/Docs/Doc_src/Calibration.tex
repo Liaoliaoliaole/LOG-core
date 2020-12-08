@@ -48,14 +48,14 @@ All of the above briefly:
 	\item Issue ``set p\# czero".
 	\item Record the Voltage measurement from DMM.\label{voltage}
 	\item Issue ``set p\# vgain Rec\_Value" with the previously recorded value.
-	\item Compare measurement DMM with SCA. if error ($>5\%$) go to \ref{voltage} and repeat.
+	\item Compare measurement DMM with SCA. if error ($>1\%$) go to \ref{voltage} and repeat.
 	\item Load the port.\label{current}
 	\item Record Value of current from DMM.
 	\item Issue ``set p\# cgain Rec\_value" with the previously recorded value.
 	\item Check Linearity ($\leq1\%$) by comparing readings of DMM and CSA.\\ if not satisfied go to \ref{current} and repeat.
 	\item Issue ``save p\#" to save the port's configuration to EEPROM.
 	\item Go to \ref{loop} and repeat for next port.
-	\item Mark ``CAL OK". 
+	\item Mark ``CAL OK".
 	\item Issue Start of the Morfeas System.
 	\item Done.
 \end{enumerate}
