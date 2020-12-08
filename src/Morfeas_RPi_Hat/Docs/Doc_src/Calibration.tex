@@ -23,7 +23,7 @@ For the calibration procedure are required:
 	\item One DMM configured as voltmeter.
 	\item One DMM configured as Ammeter.
 	\item Banana terminal cables.
-	\item A short(10") 4pin Lemo cable
+	\item A short($\leq10''$) 4pin Lemo cable
 \end{itemize}
 \newpage
 \subsection{Calibration Procedure}
@@ -34,7 +34,8 @@ The first command where is issued is ``set p\# czero" (with all the switches ope
 at the DMM is recorded. After of this issue ``set p\# vgain Rec\_Value". This will correct the reading of voltage. After of this calibration of current follow by apply some load to the port.
 $3/4$ of the maximum value($4A$) is a good start. The value from the DMM that measure current is recorded and issued as correction with command ``set p\# cgain Rec\_value".
 Load now can be removed. A Check for linearity can be done by comparing the readings of DMM and CSA in different load values. A $1\%$ error is the maximum allowed.
-In case that this is not satisfied repeat the current calibration with a different load. Otherwise save the configuration with command ``save p\#" and continue by repeating the above for the next port.\\
+In case that this is not satisfied repeat the current calibration with a different load. Otherwise save the configuration with command ``save p\#" and continue by repeating the above for the next port.
+After of the calibration finish place a bullet on the ``CAL OK" mark on the front of the PCB
 ***The ``\#" on the above must be replaced with the number of the Port.\\
 
 All of the above briefly:
@@ -54,6 +55,7 @@ All of the above briefly:
 	\item Check Linearity ($\leq1\%$) by comparing readings of DMM and CSA.\\ if not satisfied go to \ref{current} and repeat.
 	\item Issue ``save p\#" to save the port's configuration to EEPROM.
 	\item Go to \ref{loop} and repeat for next port.
+	\item Mark ``CAL OK". 
 	\item Issue Start of the Morfeas System.
 	\item Done.
 \end{enumerate}
