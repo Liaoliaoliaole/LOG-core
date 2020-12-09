@@ -64,7 +64,7 @@ In addition to the previous controlling of the Global Switches can be done also 
 
 The \textbf{G\_SL} is abbreviation for "Global Sleep" and when is true is energizing the Sleep mechanism. This mechanism have only effect on Mini\_RMSW and purpose to reduce the
 telemetry update rate, with result to lower the consumption. It's can be control and read similarly like \textbf{G\_SW}. The button PB3 can also control the state of this mechanism.
-\newpage
+
 \begin{lstlisting}[frame=single,caption=Argument for MTI\_Global\_SWs(), label=lst:MTI_Global_SWs]
 {
   "G_P_state":true-false,//Ctrl state of GLobal Switch.
@@ -111,7 +111,7 @@ In case that only one of two generators will be configured the element on the po
 The positions with \textbf{null} as content will not affect the configuration of the generator, or in other words will leave it as it was before.
 
 The argument \textbf{scaler} given in a form of real number and have meaning to provide the correlation between the RAW counts and the physical unit that measured by the quadrature telemetry.
-The argument argument \textbf{scaler} have units of $\displaystyle\frac{\text{Physical unit}}{count}$. Internally the RAW counter value multiplied with the scaler and provides as value for the channel.
+The argument \textbf{scaler} have unit $\displaystyle\frac{\text{Physical unit}}{count}$. Internally the RAW counter value multiplied with the scaler and provides as value for the channel.
 
 The arguments \textbf{min},\textbf{max} are setting the limits for each of MTI's generator. This arguments given in real number from and have units the physical unit that is measured.
 The \textbf{min} define in which value the generator will have 0\% modulation and the \textbf{max} accordingly for 100\%.
