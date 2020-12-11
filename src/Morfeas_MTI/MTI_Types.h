@@ -1,6 +1,6 @@
 /*
 File: MTI_types.h, Contain the Declaration for data types that related to MTI, Part of Morfeas_project.
-Copyright (C) 12019-12020  Sam harry Tzavaras
+Copyright (C) 12019-12021  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

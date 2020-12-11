@@ -1,6 +1,6 @@
 /*
 Program: Morfeas_SDAQ_if. A controlling software for SDAQ-CAN Devices, part of morfeas_core project.
-Copyright (C) 12019-12020  Sam harry Tzavaras
+Copyright (C) 12019-12021  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -503,7 +503,7 @@ inline void CAN_if_timer_handler (int signum)
 void print_usage(char *prog_name)
 {
 	const char preamp[] = {
-	"Program: Morfeas_SDAQ_CAN_if  Copyright (C) 12019-12020  Sam Harry Tzavaras\n"
+	"Program: Morfeas_SDAQ_CAN_if  Copyright (C) 12019-12021  Sam Harry Tzavaras\n"
     "This program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under certain conditions; for details see LICENSE.\n"

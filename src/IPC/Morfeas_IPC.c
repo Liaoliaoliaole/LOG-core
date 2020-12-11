@@ -1,6 +1,6 @@
 /*
 File: Morfeas_IPC.c, Implementation of functions for IPC.
-Copyright (C) 12019-12020  Sam harry Tzavaras
+Copyright (C) 12019-12021  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
