@@ -716,10 +716,3 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 	}
 	return EXIT_SUCCESS;
 }
-
-
-
-
-
-
-
