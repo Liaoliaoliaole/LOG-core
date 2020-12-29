@@ -27,11 +27,11 @@ The implemented methods derived at the table \ref{tab:MTI-if_D-BUS_methods}.
       \hline
 	  \textbf{Method name} & \textbf{Description}\\
       \hline
-	  echo & Method that echoing to the client the sent argument\\
       new\_MTI\_config & Configuration of the MTI's Radio mode.\\
       MTI\_Global\_SWs & Configuration of the MTI's Global switches (Only for RMSW/MUX).\\
 	  ctrl\_tele\_SWs & Control of RMSW/MUX switches or multiplexers(Only for RMSW/MUX)\\
       new\_PWM\_config & Configuration of the MTI's outputs PWM 1\&2 (Only for QUAD).\\
+	  echo & Method that echoing to the client the sent argument\\
 	  \hline
     \end{tabular}
 	\caption{Morfeas MTI-if D-BUS methods}
@@ -102,7 +102,7 @@ The argument \textbf{sw\_name} give the information for which switch of the RMSW
 		"scaler":(Real number),
 		"min":(Real number),//Low limit
 		"max":(Real number),//High limit
-		"saturation":true-false // Set get to stop at limits.
+		"saturation":true-false // Set modulation stop at limits.
 	  },
 	  {  //Configuration for Gen 2 same as above
             ...
@@ -124,11 +124,11 @@ The \textbf{min} define in which value the generator will have 0\% modulation an
 The last argument ("saturation") is boolean and controlling the behavior of the generator in counting. If it's set to true the pulse output will lock on the limits values.
 This means that the modulation factor of the output will remain at 0 or 100\% even if the channels value pass the limits.\\
 if the argument "saturation" set to false the modulation of the generator will reset each time that the value pass a multiple of the limit. This configuration have meaning to done
-only if the physical unit that is measured is periodical (eg. position of a rotational shaft).
+only if the physical unit that is measured is periodical (eg. position of a rotational shaft).\\
 
-The method \textbf{echo} used for testing purposes and it's echoing back what ever string the client have sent as argument.
+The method \textbf{echo} used for testing purposes and it's echoing back what ever string the client have sent as argument.\\
 
-All the methods return a report in a string form that explain if the requested command is executed or the kind of error that make it failed.
+All the methods return a report in a string form that explain if the requested command is executed or the kind of error that make it fail.\\
 
-The configuration of the MTI stored on a local file, that used to restore back to the previous in every new start of the Morfeas MTI-if.
+The configuration of the MTI stored on a local file in binary form. This, used in every new start and restoring the MTI to the previous state.
 This file located at '/var/tmp/Morfeas\_MTI\_Configurations/' and have name 'Morfeas\_MTI\_(Device name)'.
