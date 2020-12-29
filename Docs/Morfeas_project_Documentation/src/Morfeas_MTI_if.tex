@@ -1,24 +1,28 @@
 \subsubsection{Morfeas MTI-if}
-The Morfeas MTI-if is a multithread program where is made to provide functionality of support and system integration of MTI (Mobile telemetry Interface).
-The MTI is a proprietary device made from a Finnish company with name iCraft. The purpose of this device is to provide some data from some slow speed digital telemetries
-to MODBus-TCP. The Morfeas MTI-if similarly with IO-BOX and MDAQ interfaces are utilize the libModbus to implement communication with the device. However the different of this component
-is that the remote communication is bidirectional. Not only read data but also send commands as control of the MTI.
+The Morfeas MTI-if is a multithread program where is made to provide functionality of support and system integration for MTIs (Mobile telemetry Interface).
+The purpose of this kind of devices is to provide the measurements from some slow speed digital telemetries via MODBus-TCP protocol.
+The Morfeas MTI-if similarly with IO-BOX and MDAQ interfaces are utilize the libModbus to implement communication with the device.
+However, the different of this Morfeas component is that the remote communication is bidirectional.
+Thus, not only read data but also send controlling commands.
 
-The Morfeas MTI-if have two threads one for the read of data and one the executing user's order and sending commands to the MTI. The first thread is responsible for reading the telemetry(ies) data from the
-MTI. This done in a similar way like the MDAQ and IO-BOX ifs. The second thread is build a D-Bus server that read and execute instruction of the user.
-The D-Bus is full duplex IPC mechanism that provide remote procedure call (RPC) on the software that implement it. Developed initialy by Red hat, inc to support a standardized communication way
-on GLDE (GNU/Linux Desktop Environment). The Morfeas MTI-if using the low level implementation library that provided from ``freedesktop.org''.\\
+The Morfeas MTI-if using two threads. One for the read and decode of data and a second one that executing commands and sending messages to MTI.
+The first thread is responsible for reading the telemetry(ies) data from the MTI and reading data in a similar way like the MDAQ and IO-BOX ifs.
+Due to this the functionality of the first thread will not be discus further in this section.
+The second thread making a D-Bus server that read and execute instruction from the callers.
 
-The mechanism that have been implemented works as follows:\\
+The D-Bus is full duplex IPC mechanism that provide remote procedure call (RPC) on the software that implement it.
+Developed initialy by Red hat, inc to support a standardized communication way on GLDE (GNU/Linux Desktop Environment).
+The Morfeas MTI-if using the low level implementation library that provided from ``freedesktop.org''.\\
+
+The mechanism of the second thread (D-Bus server) described as follows:\\
 The Morfeas MTI-if's D-Bus server start by claiming a D-Bus server name with form \\``org.freedesktop.Morfeas.MTI.\(Dev\_name\)'' at the D-Bus system bus.
-On this name an D-BUS interface is linked with name ``Morfeas.MTI.(Dev\_name)''. With this information a D-BUS clients can request service from the Morfeas MTI-if.
-This done by calling a dedicated method on the D-BUS interface of the Morfeas MTI-if and provide the required argument to it.
+On this name an D-BUS interface is linked with name ``Morfeas.MTI.(Dev\_name)''.
+Using this information a D-BUS clients can request service from the Morfeas MTI-if.
+This done by calling a dedicated method on the D-BUS interface of the Morfeas MTI-if and provide the required argument with it.
 The arguments for all methods must gives as string in JSON format.
 The implemented methods derived at the table \ref{tab:MTI-if_D-BUS_methods}.
 \begin{table}[h!]
   \begin{center}
-    \caption{Morfeas MTI-if D-BUS methods}
-    \label{tab:MTI-if_D-BUS_methods}
     \begin{tabular}{|l|l|}
       \hline
 	  \textbf{Method name} & \textbf{Description}\\
@@ -30,10 +34,12 @@ The implemented methods derived at the table \ref{tab:MTI-if_D-BUS_methods}.
       new\_PWM\_config & Configuration of the MTI's outputs PWM 1\&2 (Only for QUAD).\\
 	  \hline
     \end{tabular}
+	\caption{Morfeas MTI-if D-BUS methods}
+	\label{tab:MTI-if_D-BUS_methods}
   \end{center}
 \end{table}
 
-Each method required as input argument a string in JSON format and the output of the method is string with a report of the request in human readable form.
+Each method required as input argument a string in JSON format. The output of each method is also a string with a report of the request in a human readable form.
 The following paragraphs will explain in details the required arguments for each method.
 
 \begin{lstlisting}[frame=single,caption=Argument for new\_MTI\_config()]
@@ -47,23 +53,22 @@ The following paragraphs will explain in details the required arguments for each
 }
 \end{lstlisting}
 
-The \textbf{new\_RF\_CH} argument give the information on the radio channel that the MTI will be tuned. Must be an even number between 0 and 126.
+The \textbf{new\_RF\_CH} argument give the radio channel that the MTI will be tuned. Must be an even number between 0 and 126.
 
-The \textbf{new\_mode} argument is controlling the mode of the MTI's radio and modem. This must have one of the values that showed above. The mode "Disable"
-set the Radio off and the RMSW/MUX on the TRX. All the other modes set the Radio to simplex reception.
+The \textbf{new\_mode} argument is controlling the mode of the MTI's radio and modem.
+This must have one of the values that showed above. The mode "Disable" set the Radio off and the "RMSW/MUX" at TRX mode.
+All the other modes set the Radio to simplex reception.
 
-The \textbf{StV} and \textbf{StF} are arguments that controlling the ``data valid flag'' mechanism. \textbf{StV} is abbreviation of the sentence "Samples to Validate",
-and the purpose of it is to set the amount of sequential valid RX messages that need to be valid before the "isValid" flag set.
-The \textbf{StF} is abbreviation of the sentence "Samples to Failure" and is exactly the opposite of \textbf{StV}.
-The amount of sequential non valid samples than need to pass before the "isValid" flag reset.
+The \textbf{StV} and \textbf{StF} are arguments that controlling the ``data valid flag'' mechanism.
+\textbf{StV} is abbreviation of the sentence "Samples to Validate" and the purpose of it is to set the amount of sequential RX messages that need to be valid before set the "isValid" flag.
+\textbf{StF} is abbreviation of the sentence "Samples to Failure" and is exactly opposite of \textbf{StV}, the amount of sequential non valid samples than need to pass before the "isValid" flag reset.
 
-The \textbf{G\_SW} and \textbf{G\_SL} are arguments that used to setup the MTI's Global control mechanism that take affect in RMSW/MUX radio mode.
-The \textbf{G\_SW} is abbreviation for "Global Switch" and when is true is energizing the mechanism that mentioned before.
-When this is active the state of the switches can be control by the method "MTI\_Global\_SWs"(listing~\ref{lst:MTI_Global_SWs}) and can be read from the OPC-UA variables under "Global Controls" object (see appendix page:~\pageref{tree:RMSW/MUX}).
-In addition to the previous controlling of the Global Switches can be done also from the button PB2.
+The \textbf{G\_SW} and \textbf{G\_SL} are arguments that used to setup the MTI's Global control mechanism, take affect only at ``RMSW/MUX" radio mode.
+The \textbf{G\_SW} is abbreviation for "Global Switch", when this is true the state of the switches can be control by the method "MTI\_Global\_SWs"(listing~\ref{lst:MTI_Global_SWs}).
 
-The \textbf{G\_SL} is abbreviation for "Global Sleep" and when is true is energizing the Sleep mechanism. This mechanism have only effect on Mini\_RMSW and purpose to reduce the
-telemetry update rate, with result to lower the consumption. It's can be control and read similarly like \textbf{G\_SW}. The button PB3 can also control the state of this mechanism.
+The \textbf{G\_SL} is abbreviation for "Global Sleep" and when it's true is energizing the Sleep mechanism. 
+This mechanism have only effect on Mini\_RMSWs and have purpose to reduce the telemetry update rate with have as result to lower the power consumption.
+It's can be control similarly like \textbf{G\_SW}.
 
 \begin{lstlisting}[frame=single,caption=Argument for MTI\_Global\_SWs(), label=lst:MTI_Global_SWs]
 {
@@ -80,8 +85,8 @@ telemetry update rate, with result to lower the consumption. It's can be control
   "new_state":true-false
 }
 \end{lstlisting}
-On listing~\ref{lst:ctrl_tele_SWs} present the structure and contents of the JSON string that use as argument to method ctrl\_tele\_SWs().
-\textbf{mem\_pos} is the argument that shows to Morfeas MTI-if D-BUS Server where from the MTI's MODBus register space is linked with the RMSW/MUX type device that the configuration will be bone.
+On listing~\ref{lst:ctrl_tele_SWs} presented the structure and contents of the JSON string that use as argument to method ctrl\_tele\_SWs().
+\textbf{mem\_pos} is the argument that shows to Morfeas MTI-if D-BUS Server which part of the MTI's MODBus register space is linked with the RMSW/MUX type device that the configuration will be bone.
 This argument is provided by the Morfeas MTI-if to the OPC-UA and also to the exported Logstat file.\\
 The argument \textbf{tele\_type} is an additional validation mechanism for the Morfeas MTI-if that checks if the device that linked to MODBus register space on \textbf{mem\_pos} is match with the user's order.
 Must have a value from the allowed one where showed at listing~\ref{lst:ctrl_tele_SWs}.\\
