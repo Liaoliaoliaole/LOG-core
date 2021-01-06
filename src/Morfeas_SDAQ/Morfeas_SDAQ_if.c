@@ -865,7 +865,8 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			sdaq_node = list_node->data;
 			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
 			time(&(sdaq_node->last_seen));
-			sdaq_node->reg_status = Pending_Calibration_data;
+			if(sdaq_node->reg_status < Pending_Calibration_data)
+				sdaq_node->reg_status = Pending_Calibration_data;
 			//(Release and ) Allocate memory for the Channels_current_meas
 			if(sdaq_node->SDAQ_Channels_curr_meas)
 				free(sdaq_node->SDAQ_Channels_curr_meas);
@@ -941,7 +942,8 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			//if this is the last calibration date message, mark entry as "info complete"
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)
 			{
-				sdaq_node->reg_status = Ready;
+				if(sdaq_node->reg_status < Ready)
+					sdaq_node->reg_status = Ready;
 				return EXIT_SUCCESS;
 			}
 		}
