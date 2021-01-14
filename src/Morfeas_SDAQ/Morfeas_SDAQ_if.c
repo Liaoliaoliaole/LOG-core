@@ -343,8 +343,7 @@ int main(int argc, char *argv[])
 						if(logstat_path)//Add current measurements to Average Accumulator
 							acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//add meas to acc
 						if(SDAQ_data->SDAQ_Channels_curr_meas && sdaq_id_dec->channel_num <= SDAQ_data->SDAQ_info.num_of_ch)
-						{
-							//Load meas to Current meas buffer
+						{	//Load meas to Current meas buffer
 							memcpy(&(SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1]), meas_dec, sizeof(struct Channel_curr_meas));
 							if(sdaq_id_dec->channel_num == SDAQ_data->SDAQ_info.num_of_ch)
 							{	//Send measurement through IPC
@@ -378,7 +377,15 @@ int main(int argc, char *argv[])
 								SDAQ_data->reg_status = Registered;
 							}
 							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Registered SDAQ reporting status but without info and calibration data
-								QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+							{
+								if(!SDAQ_data->pedding_device_info || SDAQ_data->query_dev_info_failure_cnt == -1)
+								{
+									SDAQ_data->pedding_device_info = 1;
+									QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+								}
+								else
+									SDAQ_data->query_dev_info_failure_cnt++;
+							}
 							else if(SDAQ_data->reg_status == Ready && !incomplete_SDAQs(&stats))//Registered SDAQ reporting status but without info and calibration data
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 						}

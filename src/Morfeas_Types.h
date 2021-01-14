@@ -282,6 +282,8 @@ struct SDAQ_info_entry{
 	struct Channel_curr_meas *SDAQ_Channels_curr_meas;
 	time_t last_seen;
 	unsigned reg_status:2;
+	unsigned pedding_device_info:1;
+	unsigned query_dev_info_failure_cnt:3;
 };
 // Data of a SDAQ_cal_dates node
 struct Channel_date_entry{

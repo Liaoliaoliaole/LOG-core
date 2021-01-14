@@ -43,6 +43,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
         UA_ServerConfig_clean(config);
         return retval;
     }
+	config->allowEmptyVariables = UA_RULEHANDLING_ACCEPT; //Allow creation of empty variables without logging them.
 	//--Delete default Contents--//
 	UA_clear(&(config->buildInfo.productUri), &UA_TYPES[UA_TYPES_STRING]);
 	UA_clear(&(config->applicationDescription.applicationUri), &UA_TYPES[UA_TYPES_STRING]);
