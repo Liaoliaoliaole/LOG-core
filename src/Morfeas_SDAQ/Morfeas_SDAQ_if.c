@@ -378,10 +378,12 @@ int main(int argc, char *argv[])
 							}
 							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Registered SDAQ reporting status but without info and calibration data
 							{
-								if(!SDAQ_data->pedding_device_info || SDAQ_data->query_dev_info_failure_cnt == -1)
+								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) || 
+								    SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
 								{
-									SDAQ_data->pedding_device_info = 1;
+									Logger("QueryDeviceInfo\n");
 									QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+									SDAQ_data->query_dev_info_failure_cnt++;
 								}
 								else
 									SDAQ_data->query_dev_info_failure_cnt++;
