@@ -375,23 +375,18 @@ int main(int argc, char *argv[])
 																									  status_dec->dev_sn,
 																									  SDAQ_data->SDAQ_address);
 								SDAQ_data->reg_status = Registered;
+								SDAQ_data->query_dev_info_failure_cnt = 0;
 							}
 							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Registered SDAQ reporting status but without info and calibration data
-							{
-								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) || 
-								    SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
-								{
-									Logger("QueryDeviceInfo\n");
+							{	//Request Dev_info after from initial registration or after of multiple failed info/dates receptions.
+								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) || SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
 									QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
-									SDAQ_data->query_dev_info_failure_cnt++;
-								}
-								else
-									SDAQ_data->query_dev_info_failure_cnt++;
+								SDAQ_data->query_dev_info_failure_cnt++;
 							}
 							else if(SDAQ_data->reg_status == Ready && !incomplete_SDAQs(&stats))//Registered SDAQ reporting status but without info and calibration data
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 						}
-						else if(status_dec->status & SDAQ_ERROR_mask)
+						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
 							Logger("SDAQ (%s) with S/N: %010u -> Address: %02hhu Report ERROR!!!\n", dev_type_str[status_dec->dev_type],
 																									 status_dec->dev_sn,
 																									 SDAQ_data->SDAQ_address);
