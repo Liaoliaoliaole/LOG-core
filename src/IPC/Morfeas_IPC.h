@@ -17,8 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define OK_status 0
 #define REG 0
 #define UNREG 1
-#define Dev_or_Bus_name_str_size 20
+#define Dev_or_Bus_name_str_size IFNAMSIZ
 #define Data_FIFO "/tmp/.Morfeas_handlers_FIFO"
+
+#include <net/if.h>
 
 #include "../Morfeas_Types.h"
 

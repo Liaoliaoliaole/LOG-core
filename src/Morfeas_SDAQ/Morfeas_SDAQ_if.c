@@ -188,19 +188,20 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
+	//Check if the size of the CAN-IF is bigger than the limit.
+	if(strlen(argv[optind])>=Dev_or_Bus_name_str_size)
+	{
+		fprintf(stderr, "Interface name too big (>=%d)\n",Dev_or_Bus_name_str_size);
+		exit(EXIT_FAILURE);
+	}
 	//CAN Socket Opening
 	if((CAN_socket_num = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
 	{
 		perror("Error while opening socket");
 		exit(EXIT_FAILURE);
 	}
-	if(strlen(argv[optind])>=Dev_or_Bus_name_str_size)//Check if the size of the CAN-IF is bigger than the limit
-	{
-		fprintf(stderr, "Interface name too big (>=%d)\n",Dev_or_Bus_name_str_size);
-		exit(EXIT_FAILURE);
-	}
 	//Link interface name to socket
-	strcpy(ifr.ifr_name, argv[optind]); // get value from CAN-IF arguments
+	strncpy(ifr.ifr_name, argv[optind], IFNAMSIZ-1); // get value from CAN-IF arguments
 	if(ioctl(CAN_socket_num, SIOCGIFINDEX, &ifr))
 	{
 		char if_error[30];
