@@ -34,7 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Local functions
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass);
 
-//delete logstat file for SDAQnet_Handler
+//Delete logstat file for SDAQnet_Handler
 int delete_logstat_sys(char *logstat_path)
 {
 	if(!logstat_path)
