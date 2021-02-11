@@ -45,8 +45,8 @@ Project documentation located @:[/Docs/Morfeas_project_Documentation](./Docs/Mor
 For compilation of this project the following dependencies required.
 * [GCC](https://gcc.gnu.org/) - The GNU Compilers Collection
 * [GNU Make](https://www.gnu.org/software/make/) - GNU make utility
-* [libiberty](https://gcc.gnu.org/onlinedocs/libiberty/) - GNU project's tools library.
 * [CMake](https://cmake.org/) - Cross-platform family of open source tools for package build.
+* [zlib](https://www.zlib.net/zlib_how.html) - A free software library used for data compression.
 * [NCURSES](https://www.gnu.org/software/ncurses/ncurses.html) - A free (libre) software emulation library of curses.
 * [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
 * [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data.
