@@ -234,7 +234,7 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 			cJSON_AddNumberToObject(node_data, "Meas_max", roundf(1000.0 * node_dec->meas_max)/1000.0);
 			node_dec->meas_max = 0;
 			cJSON_AddNumberToObject(node_data, "Meas_min", roundf(1000.0 * node_dec->meas_min)/1000.0);
-			node_dec->meas_min = 0;			
+			node_dec->meas_min = 0;
 			node_dec->cnt = 0;
 		}
 		else
@@ -268,6 +268,8 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		cJSON_AddItemToObject(SDAQ_status, "Mode", cJSON_CreateString(status_byte_dec((node_dec->SDAQ_status).status, Mode)));
 		//-- Add SDAQ's Info --//
 		cJSON_AddItemToObject(node_data, "SDAQ_info", SDAQ_info = cJSON_CreateObject());
+		if(dev_input_mode_str[node_dec->SDAQ_info.dev_type][node_dec->inp_mode])
+			cJSON_AddItemToObject(SDAQ_info, "input_mode", cJSON_CreateString(dev_input_mode_str[node_dec->SDAQ_info.dev_type][node_dec->inp_mode]));
 		cJSON_AddNumberToObject(SDAQ_info, "firm_rev", (node_dec->SDAQ_info).firm_rev);
 		cJSON_AddNumberToObject(SDAQ_info, "hw_rev", (node_dec->SDAQ_info).hw_rev);
 		cJSON_AddNumberToObject(SDAQ_info, "Number_of_channels", (node_dec->SDAQ_info).num_of_ch);

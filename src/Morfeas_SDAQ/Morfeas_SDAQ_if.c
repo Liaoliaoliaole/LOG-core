@@ -60,6 +60,7 @@ enum SDAQ_registeration_status{
 	Unregistered = 0,
 	Registered,
 	Pending_Calibration_data,
+	Pending_input_mode,
 	Ready
 };
 
@@ -95,6 +96,8 @@ struct SDAQ_info_entry * find_SDAQ(unsigned char address, struct Morfeas_SDAQ_if
 struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id *sdaq_id_dec, sdaq_status *status_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating "Device Info" of a SDAQ. Used in FSM
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats);
+//Function for Updating Input mode of a SDAQ. Used in FSM
+int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating "Calibration Date" of a SDAQ's channel. Used in FSM
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function that add current meas to channel's accumulator of a SDAQ's channel. Used in FSM
@@ -139,6 +142,7 @@ int main(int argc, char *argv[])
 	sdaq_sync_debug_data *ts_dec = (sdaq_sync_debug_data *)frame_rx.data;
 	sdaq_calibration_date *date_dec = (sdaq_calibration_date *)frame_rx.data;
 	sdaq_meas *meas_dec = (sdaq_meas *)frame_rx.data;
+	sdaq_sysvar *sysvar_dec = (sdaq_sysvar *)frame_rx.data;
 	//data_and stats of the Morfeas-SDAQ_IF
 	struct Morfeas_SDAQ_if_stats stats = {0};
 	//Timers related Variables
@@ -378,10 +382,12 @@ int main(int argc, char *argv[])
 								SDAQ_data->reg_status = Registered;
 								SDAQ_data->query_dev_info_failure_cnt = 0;
 							}
-							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Registered SDAQ reporting status but without info and calibration data
-							{	//Request Dev_info after from initial registration or after of multiple failed info/dates receptions.
+							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Registered SDAQ without info and calibration data reporting status.
+							{	//Request Dev_info after initial registration or after multiple failed info/dates receptions.
 								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) || SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
-									QueryDeviceInfo(CAN_socket_num,SDAQ_data->SDAQ_address);
+									QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
+								else if(SDAQ_data->reg_status == Pending_input_mode) // Check if device pending "input mode" value  
+									QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
 								SDAQ_data->query_dev_info_failure_cnt++;
 							}
 							else if(SDAQ_data->reg_status == Ready && !incomplete_SDAQs(&stats))//Registered SDAQ reporting status but without info and calibration data
@@ -398,6 +404,9 @@ int main(int argc, char *argv[])
 					break;
 				case Device_info:
 					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
+					break;
+				case System_variable:
+					update_input_mode(sdaq_id_dec->device_addr, sysvar_dec, &stats);
 					break;
 				case Calibration_Date:
 					add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats);
@@ -772,6 +781,8 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 				return EXIT_FAILURE;
 			}
 		}
+		else
+			return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
@@ -862,7 +873,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 	IPC_message IPC_msg = {0};
 	GSList *list_node = NULL;
 	struct SDAQ_info_entry *sdaq_node;
-	if (stats->list_SDAQs)
+	if(stats->list_SDAQs)
 	{
 		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
@@ -890,6 +901,47 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 		else
 			return EXIT_FAILURE;
 	}
+	else
+		return EXIT_FAILURE;
+	return EXIT_SUCCESS;
+}
+/*Function for Updating Input mode of a SDAQ. Used in FSM*/
+int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Morfeas_SDAQ_if_stats *stats)
+{
+	IPC_message IPC_msg = {0};
+	GSList *list_node = NULL;
+	struct SDAQ_info_entry *sdaq_node;
+
+	if(sysvar_dec->type)//Return if SDAQ's sysvar msg have types >0.
+		return EXIT_SUCCESS;
+	if(stats->list_SDAQs)
+	{
+		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
+		if(list_node)
+		{
+			sdaq_node = list_node->data;
+			time(&(sdaq_node->last_seen));
+			if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type])//Check if selected dev_type of sdaq_node have available input mode.
+			{
+				sdaq_node->inp_mode = sysvar_dec->var_val.as_uint32;
+				if(sdaq_node->reg_status < Ready)
+					sdaq_node->reg_status = Ready;
+				//Send SDAQ's input mode through IPC
+				IPC_msg.SDAQ_inpMode.IPC_msg_type = IPC_SDAQ_inpMode;
+				sprintf(IPC_msg.SDAQ_inpMode.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
+				IPC_msg.SDAQ_inpMode.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
+				IPC_msg.SDAQ_inpMode.Dev_type = sdaq_node->SDAQ_info.dev_type;
+				IPC_msg.SDAQ_inpMode.Input_mode = sysvar_dec->var_val.as_uint32;
+				IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
+			}
+			else
+				return EXIT_SUCCESS;
+		}
+		else
+			return EXIT_FAILURE;
+	}
+	else
+		return EXIT_FAILURE;
 	return EXIT_SUCCESS;
 }
 //Function that found and return the status of a node from the list_SDAQ with SDAQ_address == address, Used in FSM
@@ -947,7 +999,9 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			//if this is the last calibration date message, mark entry as "info complete"
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)
 			{
-				if(sdaq_node->reg_status < Ready)
+				if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type] && sdaq_node->reg_status < Pending_input_mode)
+					sdaq_node->reg_status = Pending_input_mode;
+				else if(sdaq_node->reg_status < Ready)
 					sdaq_node->reg_status = Ready;
 				return EXIT_SUCCESS;
 			}
@@ -1197,6 +1251,8 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		//Delete empty nodes from the list
 		stats->list_SDAQs = g_slist_remove_all(stats->list_SDAQs, NULL);
 	}
+	else
+		return EXIT_FAILURE;
 	return EXIT_SUCCESS;
 }
 

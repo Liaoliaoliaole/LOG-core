@@ -277,11 +277,12 @@ struct SDAQ_info_entry{
 	unsigned short Last_Timestamp;
 	sdaq_status SDAQ_status;
 	sdaq_info SDAQ_info;
+	unsigned char inp_mode;
 	GSList *SDAQ_Channels_cal_dates;
 	GSList *SDAQ_Channels_acc_meas;
 	struct Channel_curr_meas *SDAQ_Channels_curr_meas;
 	time_t last_seen;
-	unsigned reg_status:2;
+	unsigned reg_status:3;
 	unsigned query_dev_info_failure_cnt:2;
 };
 // Data of a SDAQ_cal_dates node

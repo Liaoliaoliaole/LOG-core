@@ -127,6 +127,23 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 		case IPC_SDAQ_info:
 			SDAQ2OPC_UA_register_update_info(server, (SDAQ_info_msg*)IPC_msg_dec);//mutex inside
 			break;
+		case IPC_SDAQ_inpMode:
+			pthread_mutex_lock(&OPC_UA_NODESET_access);
+				UA_NodeId_init(&NodeId);
+				sprintf(Node_ID_str, "SDAQ.%d.Input_Mode", IPC_msg_dec->SDAQ_inpMode.SDAQ_serial_number);
+				//Check if OPC-UA variable "Input Mode" is registered.
+				if(UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+				{
+					sprintf(meas_status_str, "SDAQ.%d.Info", IPC_msg_dec->SDAQ_inpMode.SDAQ_serial_number);
+					Morfeas_opc_ua_add_variable_node(server, meas_status_str, Node_ID_str, "Input Mode", UA_TYPES_STRING);
+				}
+				else
+					UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), 
+												   dev_input_mode_str[IPC_msg_dec->SDAQ_inpMode.Dev_type][IPC_msg_dec->SDAQ_inpMode.Input_mode],
+												   UA_TYPES_STRING);
+			pthread_mutex_unlock(&OPC_UA_NODESET_access);
+			break;
 		case IPC_SDAQ_cal_date:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				sprintf(Node_ID_str, "SDAQ.%d.CH%hhu.Cal_date", IPC_msg_dec->SDAQ_cal_date.SDAQ_serial_number,
