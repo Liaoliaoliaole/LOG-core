@@ -187,7 +187,7 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 {
 	struct Channel_date_entry *node_dec = node;
-	struct tm cal_date = {0};
+	struct tm cal_date = {.tm_mday=1};
 	cJSON *array = arg_pass;
 	cJSON *node_data;
 	if(node)
