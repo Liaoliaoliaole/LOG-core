@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
 	timer.it_value.tv_usec = timer.it_interval.tv_usec;
 	//Get start time
 	clock_gettime(CLOCK_MONOTONIC_RAW, &tstart);
-	//start timer
+	//Start timer
 	setitimer(ITIMER_REAL, &timer, NULL);
 
 	//-----Actions on the bus-----//
@@ -386,7 +386,7 @@ int main(int argc, char *argv[])
 							{	//Request Dev_info after initial registration or after multiple failed info/dates receptions.
 								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) || SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
 									QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
-								else if(SDAQ_data->reg_status == Pending_input_mode) // Check if device pending "input mode" value  
+								else if(SDAQ_data->reg_status == Pending_input_mode) // Check if device pending "input mode" value
 									QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
 								SDAQ_data->query_dev_info_failure_cnt++;
 							}
