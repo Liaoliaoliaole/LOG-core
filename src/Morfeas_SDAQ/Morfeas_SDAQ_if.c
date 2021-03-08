@@ -56,14 +56,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_Logger.h"
 #include "../Morfeas_RPi_Hat/Morfeas_RPi_Hat.h"
 
-enum SDAQ_registeration_status{
-	Unregistered = 0,
-	Registered,
-	Pending_Calibration_data,
-	Pending_input_mode,
-	Ready
-};
-
 static volatile struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
 	unsigned led_existent :1;
@@ -107,7 +99,7 @@ int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM, also send IPC msg t opc_ua.
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for construction of message for registration or update of a SDAQ
-int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char amount);
+int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char reg_status, unsigned char amount);
 
 	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
@@ -397,7 +389,7 @@ int main(int argc, char *argv[])
 							Logger("SDAQ (%s) with S/N: %010u -> Address: %02hhu Report ERROR!!!\n", dev_type_str[status_dec->dev_type],
 																									 status_dec->dev_sn,
 																									 SDAQ_data->SDAQ_address);
-						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, stats.detected_SDAQs);
+						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, SDAQ_data->reg_status, stats.detected_SDAQs);
 					}
 					else
 						Logger("Maximum amount of addresses is reached!!!!\n");
@@ -1257,7 +1249,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 }
 
 //Function for construction of message for registration or update of a SDAQ
-int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char amount)
+int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char reg_status, unsigned char amount)
 {
 	IPC_message IPC_reg_msg = {0};
 	//Send SDAQ registration over IPC
@@ -1266,6 +1258,7 @@ int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address
 	IPC_reg_msg.SDAQ_reg_update.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	IPC_reg_msg.SDAQ_reg_update.address = address;
 	memcpy(&(IPC_reg_msg.SDAQ_reg_update.SDAQ_status), SDAQ_status,  sizeof(sdaq_status));
+	IPC_reg_msg.SDAQ_reg_update.reg_status = reg_status;
 	IPC_reg_msg.SDAQ_reg_update.t_amount = amount;
 	return IPC_msg_TX(FIFO_fd, &IPC_reg_msg);
 }

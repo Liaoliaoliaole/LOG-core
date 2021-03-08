@@ -325,6 +325,8 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Error", UA_TYPES_STRING);
 			sprintf(tmp_str,"SDAQ.%u.Mode",ptr->SDAQ_status.dev_sn);
 			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Mode", UA_TYPES_STRING);
+			sprintf(tmp_str,"SDAQ.%u.Reg_status",ptr->SDAQ_status.dev_sn);
+			Morfeas_opc_ua_add_variable_node(server_ptr, tmp_str2, tmp_str, "Registration", UA_TYPES_STRING);
 		}
 		else
 			UA_clear(&Node_Id, &UA_TYPES[UA_TYPES_NODEID]);
@@ -344,5 +346,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Error), UA_TYPES_STRING);
 		sprintf(tmp_str,"SDAQ.%u.Mode",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
+		sprintf(tmp_str,"SDAQ.%u.Reg_status",ptr->SDAQ_status.dev_sn);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), SDAQ_reg_status_str[ptr->reg_status], UA_TYPES_STRING);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }

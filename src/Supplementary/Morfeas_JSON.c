@@ -266,6 +266,7 @@ void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
 		cJSON_AddItemToObject(SDAQ_status, "Error", cJSON_CreateBool((node_dec->SDAQ_status).status & (1<<Error)));
 		cJSON_AddItemToObject(SDAQ_status, "State", cJSON_CreateString(status_byte_dec((node_dec->SDAQ_status).status, State)));
 		cJSON_AddItemToObject(SDAQ_status, "Mode", cJSON_CreateString(status_byte_dec((node_dec->SDAQ_status).status, Mode)));
+		cJSON_AddItemToObject(SDAQ_status, "Registration_status", cJSON_CreateString(SDAQ_reg_status_str[node_dec->reg_status]));
 		//-- Add SDAQ's Info --//
 		cJSON_AddItemToObject(node_data, "SDAQ_info", SDAQ_info = cJSON_CreateObject());
 		if(dev_input_mode_str[node_dec->SDAQ_info.dev_type][node_dec->inp_mode])
