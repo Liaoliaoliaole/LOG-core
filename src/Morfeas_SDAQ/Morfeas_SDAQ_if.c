@@ -374,15 +374,16 @@ int main(int argc, char *argv[])
 								SDAQ_data->reg_status = Registered;
 								SDAQ_data->query_dev_info_failure_cnt = 0;
 							}
-							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Registered SDAQ without info and calibration data reporting status.
+							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Check reg_status of current SDAQ.
 							{	//Request Dev_info after initial registration or after multiple failed info/dates receptions.
-								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) || SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
+								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) ||
+									SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
 									QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
 								else if(SDAQ_data->reg_status == Pending_input_mode) // Check if device pending "input mode" value
 									QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
 								SDAQ_data->query_dev_info_failure_cnt++;
 							}
-							else if(SDAQ_data->reg_status == Ready && !incomplete_SDAQs(&stats))//Registered SDAQ reporting status but without info and calibration data
+							else if(SDAQ_data->reg_status == Ready && !incomplete_SDAQs(&stats))//Check if all SDAQs are fully registered, and if yes put current SDAQ to measure mode.
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 						}
 						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
