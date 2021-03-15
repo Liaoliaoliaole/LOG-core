@@ -25,38 +25,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Morfeas_IPC.h"
 
-const char *Morfeas_IPC_handler_type_name[]={
-	"SDAQ","MDAQ","IOBOX","MTI",NULL //,"NOX","CPAD"
+const char *Morfeas_IPC_handler_type_name[] = {
+	"SDAQ", "MDAQ", "IOBOX", "MTI", "NOX", NULL //"CPAD"
 };
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
-size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr)//const char *path_to_FIFO,
+size_t IPC_msg_TX(int FIFO_fd, IPC_message *IPC_msg_ptr)
 {
-	/*
-	fd_set writeCheck;
-    fd_set errCheck;
-    struct timeval timeout;
-	int select_ret;
-
-	FD_ZERO(&writeCheck);
-    FD_ZERO(&errCheck);
-	FD_SET(FIFO_fd, &writeCheck);
-	FD_SET(FIFO_fd, &errCheck);
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 100000;
-	select_ret = select(FIFO_fd+1, NULL, &writeCheck, &errCheck, &timeout);
-	if (select_ret < 0)
-		perror("TX -> Select failed ");
-	else if (FD_ISSET(FIFO_fd, &errCheck))
-		perror("TX -> FD error ");
-	else if (FD_ISSET(FIFO_fd, &writeCheck))
-		return write(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
-	return 0;
-	*/
 	return write(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
 }
 //Function for construction of message for registration of a Handler
-size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *Dev_or_Bus_name, unsigned char unreg)//const char *path_to_FIFO,
+size_t IPC_Handler_reg_op(int FIFO_fd, unsigned char handler_type, char *Dev_or_Bus_name, unsigned char unreg)
 {
 	IPC_message IPC_reg_msg = {0};
 	//Construct and send Handler registration msg
