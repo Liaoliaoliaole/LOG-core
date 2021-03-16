@@ -510,7 +510,7 @@ inline void CAN_if_timer_handler (int signum)
 void print_usage(char *prog_name)
 {
 	const char preamp[] = {
-	"Program: Morfeas_SDAQ_CAN_if  Copyright (C) 12019-12021  Sam Harry Tzavaras\n"
+	"Program: Morfeas_SDAQ_if  Copyright (C) 12019-12021  Sam Harry Tzavaras\n"
     "This program comes with ABSOLUTELY NO WARRANTY; for details see LICENSE.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under certain conditions; for details see LICENSE.\n"

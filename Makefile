@@ -18,7 +18,7 @@
 
 GCC_opt=gcc -O3 #-g3
 CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall # -Werror
-LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libmodbus dbus-1) #libusb
+LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libsocketcan libmodbus dbus-1) #libusb
 BUILD_dir=build
 WORK_dir=work
 SRC_dir=src
@@ -29,7 +29,8 @@ HEADERS = $(SRC_dir)/IPC/*.h \
 		  $(SRC_dir)/Morfeas_opc_ua/*.h \
 		  $(SRC_dir)/Supplementary/*.h \
 		  $(SRC_dir)/Morfeas_RPi_Hat/*.h \
-		  $(SRC_dir)/Morfeas_MTI/*.h
+		  $(SRC_dir)/Morfeas_MTI/*.h \
+		  $(SRC_dir)/Morfeas_NOX/*.h
 
 Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_daemon.o \
@@ -48,6 +49,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_MDAQ_nodeset.o \
 					  $(WORK_dir)/Morfeas_IOBOX_nodeset.o \
 					  $(WORK_dir)/Morfeas_MTI_nodeset.o \
+					  $(WORK_dir)/Morfeas_NOX_nodeset.o \
 					  $(WORK_dir)/Morfeas_XML.o \
 					  $(WORK_dir)/Morfeas_JSON.o
 
@@ -86,12 +88,23 @@ Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
 					 $(WORK_dir)/Morfeas_Logger.o
 
+Morfeas_NOX_if_DEP = $(WORK_dir)/NOX_func.o \
+					 $(WORK_dir)/Morfeas_run_check.o \
+					 $(WORK_dir)/Morfeas_NOX_if.o \
+					 $(WORK_dir)/Morfeas_NOX_DBus.o \
+					 $(WORK_dir)/Morfeas_JSON.o \
+					 $(WORK_dir)/SDAQ_drv.o \
+					 $(WORK_dir)/MTI_func.o \
+					 $(WORK_dir)/Morfeas_IPC.o \
+					 $(WORK_dir)/Morfeas_Logger.o
+
 all: $(BUILD_dir)/Morfeas_daemon \
 	 $(BUILD_dir)/Morfeas_opc_ua \
 	 $(BUILD_dir)/Morfeas_SDAQ_if \
 	 $(BUILD_dir)/Morfeas_MDAQ_if \
 	 $(BUILD_dir)/Morfeas_IOBOX_if \
-	 $(BUILD_dir)/Morfeas_MTI_if
+	 $(BUILD_dir)/Morfeas_MTI_if \
+	 $(BUILD_dir)/Morfeas_NOX_if
 
 #Compilation of Morfeas applications
 $(BUILD_dir)/Morfeas_daemon: $(Morfeas_daemon_DEP) $(HEADERS)
@@ -110,6 +123,9 @@ $(BUILD_dir)/Morfeas_IOBOX_if: $(Morfeas_IOBOX_if_DEP) $(HEADERS)
 	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_dir)/Morfeas_MTI_if: $(Morfeas_MTI_if_DEP) $(HEADERS)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+$(BUILD_dir)/Morfeas_NOX_if: $(Morfeas_NOX_if_DEP) $(HEADERS)
 	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 #Compilation of Morfeas_IPC
@@ -170,6 +186,19 @@ $(WORK_dir)/MTI_func.o: $(SRC_dir)/Morfeas_MTI/MTI_func.c
 $(WORK_dir)/Morfeas_MTI_nodeset.o: $(SRC_dir)/Morfeas_MTI/Morfeas_MTI_nodeset.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
+#Dependencies for the Morfeas_NOX_if
+$(WORK_dir)/Morfeas_NOX_if.o: $(SRC_dir)/Morfeas_NOX/Morfeas_NOX_if.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_NOX_DBus.o: $(SRC_dir)/Morfeas_NOX/Morfeas_NOX_DBus.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/NOX_func.o: $(SRC_dir)/Morfeas_NOX/NOX_func.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_NOX_nodeset.o: $(SRC_dir)/Morfeas_NOX/Morfeas_NOX_nodeset.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
 #Supplementary dependencies
 $(WORK_dir)/Morfeas_Logger.o: $(SRC_dir)/Supplementary/Morfeas_Logger.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
@@ -177,7 +206,7 @@ $(WORK_dir)/Morfeas_Logger.o: $(SRC_dir)/Supplementary/Morfeas_Logger.c
 $(WORK_dir)/Morfeas_JSON.o: $(SRC_dir)/Supplementary/Morfeas_JSON.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Supplementary/Morfeas_XML.c 
+$(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Supplementary/Morfeas_XML.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_run_check.o: $(SRC_dir)/Supplementary/Morfeas_run_check.c

@@ -55,6 +55,7 @@ For compilation of this project the following dependencies required.
 * [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 * [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace
 * [libdbus](https://www.freedesktop.org/wiki/Software/dbus/#index1h1) - The library of the D-Bus
+* [Libsocketcan](https://lalten.github.io/libsocketcan/Documentation/html/group__extern.html) - library to control some basic functions in SocketCAN from userspace
 
 ##### Optionally
 * [CAN-Utils](https://elinux.org/Can-utils) - CANBus utilities
