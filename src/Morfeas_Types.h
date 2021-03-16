@@ -43,6 +43,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "sdaq-worker/src/SDAQ_drv.h"
 //Include MTI data type header
 #include "Morfeas_MTI/MTI_Types.h"
+//Include NOX data type header
+#include "Morfeas_NOX/NOX_Types.h"
 
 enum Tele_status_enum{
 	Okay = 0,
@@ -245,6 +247,20 @@ struct Morfeas_MTI_if_stats{
 		struct RMSW_MUX_Devs_data_struct as_RMSWs;
 	}Tele_data;
 	unsigned int counter;
+};
+
+/*Structs for NOX_handler*/
+//Morfeas_NOX-if stats struct, used in Morfeas_NOX_if
+struct Morfeas_NOX_if_stats{
+	int FIFO_fd;
+	char *CAN_IF_name;
+	unsigned char port;
+	float Bus_util;
+	//Electrics and last calibration date for Morfeas_Rpi_hat
+	unsigned int Morfeas_RPi_Hat_last_cal;
+	float Bus_voltage;
+	float Bus_amperage;
+	float Shunt_temp;
 };
 
 /*Structs for SDAQ_handler*/

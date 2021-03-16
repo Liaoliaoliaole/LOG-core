@@ -14,9 +14,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
-#define NOX_Sensor_high_addr 0x18F00F52
-#define NOX_Sensor_low_addr 0x18F00E51
+#define NOx_Bitrate 250000
+#define NOx_high_addr 0x18F00F52
+#define NOx_low_addr 0x18F00E51
+#define NOx_filter 0x18F00E50
+#define NOx_mask 0x1FFFFEFC
 
 extern const char *Supply_valid_str[];
 extern const char *Heater_valid_str[];
@@ -25,7 +27,15 @@ extern const char *Oxygen_valid_str[];
 extern const char *Heater_mode_str[];
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
-typedef struct{
+
+/* SDAQ's CAN identifier encoder/decoder */
+typedef struct NOX_Identifier_Enc_Dec{
+	unsigned NOx_addr : 29;
+	unsigned flags : 3;//EFF/RTR/ERR flags
+} NOx_can_id;
+
+/* NOX Received message frame decoder*/
+typedef struct NOX_RX_frame_struct{
 	unsigned short NOx_value;
 	unsigned short O2_value;
 	unsigned Supply_valid :2;
@@ -41,8 +51,10 @@ typedef struct{
 	unsigned NU_3 :3;
 } NOx_RX_frame;
 
-typedef struct{
+/* NOX Transmit message frame encoder*/
+typedef struct NOX_TX_frame_struct{
 	unsigned char res[7];
 	unsigned char start_code;
 } NOx_TX_frame;
+
 #pragma pack(pop)//Disable packing

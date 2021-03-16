@@ -41,6 +41,9 @@ int check_already_run_with_same_arg(const char *called_prog_name,const char *arg
 	const char *prog_name = called_prog_name;
 	char out_str[1024] = {0}, *cmd, *buff, *tok, *word;
 	unsigned int i=0;
+	
+	if(!called_prog_name || !arg_check)
+		return EXIT_FAILURE;
 	//Allocate memory for buff, where is the size of called_prog_name
 	if(!(buff = calloc(strlen(called_prog_name)+1, sizeof(*buff))))
 	{

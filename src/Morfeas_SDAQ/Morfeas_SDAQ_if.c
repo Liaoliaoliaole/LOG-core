@@ -257,9 +257,8 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, quit_signal_handler);
 	signal(SIGPIPE, quit_signal_handler);
 	Logger("Morfeas_SDAQ_if (%s) Program Started\n",stats.CAN_IF_name);
-	//initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
-	flags.led_existent = led_init(stats.CAN_IF_name);
-	if(!flags.led_existent)
+	//Initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
+	if(!(flags.led_existent = led_init(stats.CAN_IF_name)))
 		Logger(Morfeas_hat_error());
 	//Get SDAQ_NET Port config
 	stats.port = get_port_num(stats.CAN_IF_name);
@@ -440,7 +439,7 @@ int main(int argc, char *argv[])
 			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 			//Write Stats to Logstat JSON file
-			logstat_SDAQ(logstat_path,&stats);
+			logstat_SDAQ(logstat_path, &stats);
 		}
 		led_stat(&stats);
 	}

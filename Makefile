@@ -93,6 +93,7 @@ Morfeas_NOX_if_DEP = $(WORK_dir)/NOX_func.o \
 					 $(WORK_dir)/Morfeas_NOX_if.o \
 					 $(WORK_dir)/Morfeas_NOX_DBus.o \
 					 $(WORK_dir)/Morfeas_JSON.o \
+					 $(WORK_dir)/Morfeas_RPi_Hat.o \
 					 $(WORK_dir)/SDAQ_drv.o \
 					 $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
