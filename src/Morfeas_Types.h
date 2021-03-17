@@ -267,7 +267,6 @@ struct UniNOx_sensor{
 		unsigned NOx : 2;
 		unsigned O2 : 2;
 	} errors;
-	unsigned char t_cnt;
 };
 //Morfeas_NOX-if stats struct, used in Morfeas_NOX_if
 struct Morfeas_NOX_if_stats{
@@ -280,6 +279,8 @@ struct Morfeas_NOX_if_stats{
 	float Bus_voltage;
 	float Bus_amperage;
 	float Shunt_temp;
+	unsigned short auto_switch_off_value;
+	unsigned short auto_switch_off_cnt;
 	struct UniNOx_sensor NOXs_data[2];
 	struct NOx_values_avg_struct{
 		unsigned char NOx_value_sample_cnt;

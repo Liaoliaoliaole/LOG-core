@@ -777,15 +777,18 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	}
 	//Add BUS_util to JSON root
 	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
+	//Add auto power off value and counter
+	cJSON_AddNumberToObject(root, "Auto_SW_OFF_value", stats->auto_switch_off_value);
+	cJSON_AddNumberToObject(root, "Auto_SW_OFF_cnt", stats->auto_switch_off_cnt);
 	//Add NOx Sensor's data to NOx_array
 	cJSON_AddItemToObject(root, "NOx_sensors", NOx_array = cJSON_CreateArray());
 	for(int i=0; i<2; i++)
 	{
 		if((now_time - stats->NOXs_data[i].last_seen) <= 10)
 		{
-			cJSON_InsertItemInArray(NOx_array, i, curr_NOx_data = cJSON_CreateObject());
+			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
+			cJSON_AddNumberToObject(curr_NOx_data, "addr", i);
 			cJSON_AddNumberToObject(curr_NOx_data, "last_seen", stats->NOXs_data[i].last_seen);
-			value = NAN;
 			if(stats->NOx_values_avg[i].NOx_value_sample_cnt)
 			{
 				value = stats->NOx_values_avg[i].NOx_value_avg/stats->NOx_values_avg[i].NOx_value_sample_cnt;
@@ -793,8 +796,9 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 				stats->NOx_values_avg[i].NOx_value_avg = 0;
 				stats->NOx_values_avg[i].NOx_value_sample_cnt = 0;
 			}
+			else
+				value = NAN;
 			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_avg", value);
-			value = NAN;
 			if(stats->NOx_values_avg[i].O2_value_sample_cnt)
 			{
 				value = stats->NOx_values_avg[i].O2_value_avg/stats->NOx_values_avg[i].O2_value_sample_cnt;
@@ -802,6 +806,8 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 				stats->NOx_values_avg[i].O2_value_avg = 0;
 				stats->NOx_values_avg[i].O2_value_sample_cnt = 0;
 			}
+			else
+				value = NAN;
 			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_avg", value);
 			//Add status and errors for curr_NOx_data
 			cJSON_AddItemToObject(curr_NOx_data, "status", NOx_status = cJSON_CreateObject());
@@ -816,6 +822,8 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			cJSON_AddStringToObject(NOx_errors, "NOx", Errors_dec_str[stats->NOXs_data[i].errors.NOx]);
 			cJSON_AddStringToObject(NOx_errors, "O2", Errors_dec_str[stats->NOXs_data[i].errors.O2]);
 		}
+		else
+			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
 	}
 	//Print JSON to File
 	JSON_str = cJSON_PrintUnformatted(root);

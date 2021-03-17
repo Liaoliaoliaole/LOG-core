@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
 	char *logstat_path;
 	unsigned char i2c_bus_num = I2C_BUS_NUM;
 	unsigned long msg_cnt=0;
+	time_t t_bfr=0, t_now=0;
 	//Variables for CANBus Port Electric
 	struct tm Morfeas_RPi_Hat_last_cal = {0};
 	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config port_meas_config = {0};
@@ -102,8 +103,8 @@ int main(int argc, char *argv[])
 	NOx_can_id *NOx_id_dec;
 	NOx_RX_frame *NOx_data = (NOx_RX_frame *)&(frame_rx.data);
 	NOX_start_code startcode = {0};
-	//Stats of the Morfeas-NOX_IF
-	struct Morfeas_NOX_if_stats stats = {0};
+	//Stats of Morfeas_NOX_IF
+	struct Morfeas_NOX_if_stats stats = {.auto_switch_off_value = -1};
 
 	if(argc == 1)
 	{
@@ -326,13 +327,22 @@ int main(int argc, char *argv[])
 					stats.NOx_values_avg[sensor_index].O2_value_avg = NAN;
 					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt = 0;
 				}
-				stats.NOXs_data[sensor_index].t_cnt++;
-				if(stats.NOXs_data[sensor_index].t_cnt >= 20)//approx every second
+				t_now = time(NULL);
+				if(t_now - t_bfr)//approx every second
 				{
-					//mutex here	
+					//mutex here
+						if(stats.auto_switch_off_value && startcode.as_byte)
+						{
+							stats.auto_switch_off_cnt++;
+							if(stats.auto_switch_off_cnt >= stats.auto_switch_off_value)
+							{
+								startcode.as_byte = 0;
+								stats.auto_switch_off_cnt = 0;
+							}
+						}
 						NOx_heater(CAN_socket_num, startcode.as_byte);
 					flags.export_logstat = 1;
-					stats.NOXs_data[sensor_index].t_cnt = 0;
+					t_bfr = t_now;
 				}
 			}
 		}

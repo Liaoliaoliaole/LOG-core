@@ -45,7 +45,7 @@ int NOx_heater(int socket_fd, unsigned char start_code)
 	struct can_frame frame_tx = {0};
 	NOx_can_id *NOX_id_ptr = (NOx_can_id *)&(frame_tx.can_id);
 	NOx_TX_frame *NOX_tx_data_ptr = (NOx_TX_frame *)&(frame_tx.data);
-	
+
 	//construct identifier for synchronization measure message
 	NOX_id_ptr->flags = 4;//set the EFF
 	NOX_id_ptr->NOx_addr = NOx_TX_addr;
