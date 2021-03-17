@@ -250,6 +250,25 @@ struct Morfeas_MTI_if_stats{
 };
 
 /*Structs for NOX_handler*/
+struct UniNOx_sensor{
+	float NOx_value;
+	float O2_value;
+	time_t last_seen;
+	unsigned meas_state : 1;
+	struct NOx_sensor_status{
+		unsigned supply_in_range : 1;
+		unsigned in_temperature : 1;
+		unsigned is_NOx_value_valid : 1;
+		unsigned is_O2_value_valid : 1;
+		unsigned heater_mode_state : 2;
+	} status;
+	struct NOx_sensor_errors{
+		unsigned heater : 2;
+		unsigned NOx : 2;
+		unsigned O2 : 2;
+	} errors;
+	unsigned char t_cnt;
+};
 //Morfeas_NOX-if stats struct, used in Morfeas_NOX_if
 struct Morfeas_NOX_if_stats{
 	int FIFO_fd;
@@ -261,6 +280,13 @@ struct Morfeas_NOX_if_stats{
 	float Bus_voltage;
 	float Bus_amperage;
 	float Shunt_temp;
+	struct UniNOx_sensor NOXs_data[2];
+	struct NOx_values_avg_struct{
+		unsigned char NOx_value_sample_cnt;
+		float NOx_value_avg;
+		unsigned char O2_value_sample_cnt;
+		float O2_value_avg;
+	} NOx_values_avg[2];
 };
 
 /*Structs for SDAQ_handler*/

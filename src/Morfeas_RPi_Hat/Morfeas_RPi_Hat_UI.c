@@ -124,13 +124,20 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s Already Running!!!\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
+	/*
 	//Check if Morfeas_SDAQ_if running.
 	if(check_already_run("Morfeas_SDAQ_if"))
 	{
 		fprintf(stderr, "Morfeas_SDAQ_if detected to run, %s can't run!!!\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
-
+	//Check if Morfeas_NOX_if running.
+	if(check_already_run("Morfeas_NOX_if"))
+	{
+		fprintf(stderr, "Morfeas_NOX_if detected to run, %s can't run!!!\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	*/
 	//Init and Detect amount of CSAs and get config for each
 	stats.det_ports=0;
 	for(i=0;i<4;i++)

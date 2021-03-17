@@ -36,6 +36,7 @@ Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_daemon.o \
 					  $(WORK_dir)/Morfeas_XML.o \
 					  $(WORK_dir)/MTI_func.o \
+					  $(WORK_dir)/NOX_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o
 
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
@@ -43,6 +44,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_opc_ua_config.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/MTI_func.o \
+					  $(WORK_dir)/NOX_func.o \
 					  $(WORK_dir)/Morfeas_DBus_method_caller.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
@@ -59,6 +61,7 @@ Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_RPi_Hat.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/MTI_func.o \
+					  $(WORK_dir)/NOX_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_Logger.o \
 					  $(CANif_DEP_HEADERS_dir)
@@ -68,6 +71,7 @@ Morfeas_MDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/MTI_func.o \
+					  $(WORK_dir)/NOX_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_Logger.o
 
@@ -76,6 +80,7 @@ Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/Morfeas_JSON.o \
 					   $(WORK_dir)/SDAQ_drv.o \
 					   $(WORK_dir)/MTI_func.o \
+					   $(WORK_dir)/NOX_func.o \
 					   $(WORK_dir)/Morfeas_IPC.o \
 					   $(WORK_dir)/Morfeas_Logger.o
 
@@ -85,6 +90,7 @@ Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_MTI_DBus.o \
 					 $(WORK_dir)/Morfeas_JSON.o \
 					 $(WORK_dir)/SDAQ_drv.o \
+					 $(WORK_dir)/NOX_func.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
 					 $(WORK_dir)/Morfeas_Logger.o
 
@@ -229,7 +235,7 @@ install:
 	cp -r -n ./dbus/* /etc/dbus-1/system.d/
 	@echo "\nInstallation of Systemd service for Morfeas_daemon..."
 	cp -r -n ./systemd/* /etc/systemd/system/
-	@echo "\n If you want to run the Morfeas-System at boot, execute:"
+	@echo "\nIf you want to run the Morfeas-System at boot, execute:"
 	@echo  "# systemctl enable Morfeas_system.service"
 
 uninstall:

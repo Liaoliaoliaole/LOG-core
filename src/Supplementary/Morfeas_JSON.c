@@ -61,19 +61,17 @@ int logstat_sys(char *logstat_path, void *stats_arg)
 	FILE * pFile;
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash;
-	//make time_t variable and get unix time
-	time_t now_time = time(NULL);
 
 	//cJSON related variables
-	char *JSON_str = NULL;
-	cJSON *root = NULL;
+	char *JSON_str;
+	cJSON *root;
 
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen("/logstat_sys.json") + 2);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_sys.json",logstat_path, slash);
 
 	root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", time(NULL));
 	cJSON_AddNumberToObject(root, "CPU_temp", roundf(100.0 * sys_stats->CPU_temp)/100.0);
 	cJSON_AddNumberToObject(root, "CPU_Util", roundf(100.0 * sys_stats->CPU_Util)/100.0);
 	cJSON_AddNumberToObject(root, "RAM_Util", roundf(100.0 * sys_stats->RAM_Util)/100.0);
@@ -82,7 +80,7 @@ int logstat_sys(char *logstat_path, void *stats_arg)
 
 	//JSON_str = cJSON_Print(root);
 	JSON_str = cJSON_PrintUnformatted(root);
-	pFile = fopen (logstat_path_and_name, "w");
+	pFile = fopen(logstat_path_and_name, "w");
 	if(pFile)
 	{
 		fputs(JSON_str, pFile);
@@ -129,21 +127,19 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	FILE * pFile;
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash;
-	//make time_t variable and get unix time
-	time_t now_time = time(NULL);
 
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_SDAQs_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_SDAQs_%s.json",logstat_path, slash, stats->CAN_IF_name);
 	//cJSON related variables
-	char *JSON_str = NULL;
-	cJSON *root = NULL;
-	cJSON *electrics = NULL;
-    cJSON *logstat = NULL;
+	char *JSON_str;
+	cJSON *root;
+	cJSON *electrics;
+    cJSON *logstat;
 
     //printf("Version: %s\n", cJSON_Version());
 	root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", time(NULL));
 	cJSON_AddItemToObject(root, "CANBus_interface", cJSON_CreateString(stats->CAN_IF_name));
 	//Add electrics to LogStat JSON, if port SCA is calibrated
 	if(stats->Morfeas_RPi_Hat_last_cal)
@@ -162,9 +158,8 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 		cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
 		g_slist_foreach(stats->list_SDAQs, extract_list_SDAQnode_data, logstat);
 	}
-	//JSON_str = cJSON_Print(root);
 	JSON_str = cJSON_PrintUnformatted(root);
-	pFile = fopen (logstat_path_and_name, "w");
+	pFile = fopen(logstat_path_and_name, "w");
 	if(pFile)
 	{
 		fputs(JSON_str, pFile);
@@ -316,22 +311,19 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	char *logstat_path_and_name, *slash;
 	char str_buff[10] = {0};
 	float value;
-	//make time_t variable and get unix time
-	time_t now_time = time(NULL);
+
 	//Correct logstat_path_and_name
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_IOBOX_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_IOBOX_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
-	char *JSON_str = NULL;
-	cJSON *root = NULL;
-    cJSON *pow_supp_data = NULL;
-	cJSON *RX_json = NULL;
+	char *JSON_str;
+	cJSON *root, *pow_supp_data, *RX_json;
 
 	//Convert IPv4 to IOBOX's Identifier
 	inet_pton(AF_INET, stats->IOBOX_IPv4_addr, &Identifier);
 	root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", time(NULL));
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->IOBOX_IPv4_addr));
 	cJSON_AddNumberToObject(root, "Identifier", Identifier);
@@ -384,9 +376,8 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
-	//JSON_str = cJSON_Print(root);
 	JSON_str = cJSON_PrintUnformatted(root);
-	pFile = fopen (logstat_path_and_name, "w");
+	pFile = fopen(logstat_path_and_name, "w");
 	if(pFile)
 	{
 		fputs(JSON_str, pFile);
@@ -435,20 +426,18 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash;
 	char str_buff[30] = {0};
-	//make time_t variable and get unix time
-	time_t now_time = time(NULL);
 	//Correct logstat_path_and_name
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MDAQ_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MDAQ_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
-	char *JSON_str = NULL;
-	cJSON *root = NULL, *Channels_array = NULL, *Channel = NULL, *values = NULL, *warnings = NULL;
+	char *JSON_str;
+	cJSON *root, *Channels_array, *Channel, *values, *warnings;
 
 	//Convert IPv4 to MDAQ's Identifier
 	inet_pton(AF_INET, stats->MDAQ_IPv4_addr, &Identifier);
 	root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", time(NULL));
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->MDAQ_IPv4_addr));
 	cJSON_AddNumberToObject(root, "Identifier", Identifier);
@@ -491,9 +480,8 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
-	//JSON_str = cJSON_Print(root);
 	JSON_str = cJSON_PrintUnformatted(root);
-	pFile = fopen (logstat_path_and_name, "w");
+	pFile = fopen(logstat_path_and_name, "w");
 	if(pFile)
 	{
 		fputs(JSON_str, pFile);
@@ -524,21 +512,19 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	static unsigned char write_error = 0;
 	char *logstat_path_and_name, *slash;
 
-	//make time_t variable and get unix time
-	time_t now_time = time(NULL);
 	//Correct logstat_path_and_name
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
 	//cJSON related variables
-	char *JSON_str = NULL;
-	cJSON *root = NULL, *MTI_status = NULL, *MTI_button_state = NULL, *PWM_outDuty_CHs = NULL, *PWM_config = NULL,
-	      *MTI_global_state = NULL, *Tele_data = NULL, *CHs = NULL, *REFs = NULL, *RMSW_t = NULL;
+	char *JSON_str;
+	cJSON *root, *MTI_status, *MTI_button_state, *PWM_outDuty_CHs, *PWM_config,
+	      *MTI_global_state, *Tele_data, *CHs, *REFs, *RMSW_t;
 
 	//Convert IPv4 to MTI's Identifier
 	inet_pton(AF_INET, stats->MTI_IPv4_addr, &Identifier);
 	root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", time(NULL));
 	cJSON_AddItemToObject(root, "Dev_name", cJSON_CreateString(stats->dev_name));
 	cJSON_AddItemToObject(root, "IPv4_address", cJSON_CreateString(stats->MTI_IPv4_addr));
 	cJSON_AddNumberToObject(root, "Identifier", Identifier);
@@ -719,9 +705,8 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
-	//JSON_str = cJSON_Print(root);
 	JSON_str = cJSON_PrintUnformatted(root);
-	pFile = fopen (logstat_path_and_name, "w");
+	pFile = fopen(logstat_path_and_name, "w");
 	if(pFile)
 	{
 		fputs(JSON_str, pFile);
@@ -752,6 +737,119 @@ int delete_logstat_MTI(char *logstat_path, void *stats_arg)
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->dev_name) + strlen("/logstat_MTI_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
 	sprintf(logstat_path_and_name,"%s%slogstat_MTI_%s.json",logstat_path, slash, stats->dev_name);
+	//Delete logstat file
+	ret_val = unlink(logstat_path_and_name);
+	free(logstat_path_and_name);
+	return ret_val;
+}
+
+//Converting and exporting function for ΝΟΧ stats, Convert it to JSON format and save it to logstat_path
+int logstat_NOX(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+	struct Morfeas_NOX_if_stats *stats = stats_arg;
+	float value;
+	FILE * pFile;
+	static unsigned char write_error = 0;
+	char *logstat_path_and_name, *slash;
+	//make time_t variable and get unix time
+	time_t now_time = time(NULL);
+	//Correct logstat_path_and_name
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_NOXs_.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_NOXs_%s.json",logstat_path, slash, stats->CAN_IF_name);
+	//cJSON related variables
+	char *JSON_str;
+	cJSON *root, *electrics, *NOx_array, *curr_NOx_data, *NOx_status, *NOx_errors;
+
+	root = cJSON_CreateObject();
+	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddItemToObject(root, "CANBus_interface", cJSON_CreateString(stats->CAN_IF_name));
+	//Add electrics to LogStat JSON, if port SCA is calibrated
+	if(stats->Morfeas_RPi_Hat_last_cal)
+	{
+		cJSON_AddItemToObject(root, "Electrics", electrics = cJSON_CreateObject());
+		cJSON_AddNumberToObject(electrics, "Last_calibration_UNIX", stats->Morfeas_RPi_Hat_last_cal);
+		cJSON_AddNumberToObject(electrics, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
+		cJSON_AddNumberToObject(electrics, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
+		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", roundf(10.0 * stats->Shunt_temp)/10.0);
+	}
+	//Add BUS_util to JSON root
+	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
+	//Add NOx Sensor's data to NOx_array
+	cJSON_AddItemToObject(root, "NOx_sensors", NOx_array = cJSON_CreateArray());
+	for(int i=0; i<2; i++)
+	{
+		if((now_time - stats->NOXs_data[i].last_seen) <= 10)
+		{
+			cJSON_InsertItemInArray(NOx_array, i, curr_NOx_data = cJSON_CreateObject());
+			cJSON_AddNumberToObject(curr_NOx_data, "last_seen", stats->NOXs_data[i].last_seen);
+			value = NAN;
+			if(stats->NOx_values_avg[i].NOx_value_sample_cnt)
+			{
+				value = stats->NOx_values_avg[i].NOx_value_avg/stats->NOx_values_avg[i].NOx_value_sample_cnt;
+				value = roundf(1000.0 * value)/1000.0;
+				stats->NOx_values_avg[i].NOx_value_avg = 0;
+				stats->NOx_values_avg[i].NOx_value_sample_cnt = 0;
+			}
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_avg", value);
+			value = NAN;
+			if(stats->NOx_values_avg[i].O2_value_sample_cnt)
+			{
+				value = stats->NOx_values_avg[i].O2_value_avg/stats->NOx_values_avg[i].O2_value_sample_cnt;
+				value = roundf(1000.0 * value)/1000.0;
+				stats->NOx_values_avg[i].O2_value_avg = 0;
+				stats->NOx_values_avg[i].O2_value_sample_cnt = 0;
+			}
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_avg", value);
+			//Add status and errors for curr_NOx_data
+			cJSON_AddItemToObject(curr_NOx_data, "status", NOx_status = cJSON_CreateObject());
+			cJSON_AddItemToObject(NOx_status, "meas_state", cJSON_CreateBool(stats->NOXs_data[i].meas_state));
+			cJSON_AddItemToObject(NOx_status, "supply_in_range", cJSON_CreateBool(stats->NOXs_data[i].status.supply_in_range));
+			cJSON_AddItemToObject(NOx_status, "in_temperature", cJSON_CreateBool(stats->NOXs_data[i].status.in_temperature));
+			cJSON_AddItemToObject(NOx_status, "is_NOx_value_valid", cJSON_CreateBool(stats->NOXs_data[i].status.is_NOx_value_valid));
+			cJSON_AddItemToObject(NOx_status, "is_O2_value_valid", cJSON_CreateBool(stats->NOXs_data[i].status.is_O2_value_valid));
+			cJSON_AddStringToObject(NOx_status, "heater_mode_state", Heater_mode_str[stats->NOXs_data[i].status.heater_mode_state]);
+			cJSON_AddItemToObject(curr_NOx_data, "errors", NOx_errors = cJSON_CreateObject());
+			cJSON_AddStringToObject(NOx_errors, "heater", Errors_dec_str[stats->NOXs_data[i].errors.heater]);
+			cJSON_AddStringToObject(NOx_errors, "NOx", Errors_dec_str[stats->NOXs_data[i].errors.NOx]);
+			cJSON_AddStringToObject(NOx_errors, "O2", Errors_dec_str[stats->NOXs_data[i].errors.O2]);
+		}
+	}
+	//Print JSON to File
+	JSON_str = cJSON_PrintUnformatted(root);
+	pFile = fopen(logstat_path_and_name, "w");
+	if(pFile)
+	{
+		fputs(JSON_str, pFile);
+		fclose (pFile);
+		if(write_error)
+			fprintf(stderr,"Write error @ Statlog file, Restored\n");
+		write_error = 0;
+	}
+	else if(!write_error)
+	{
+		fprintf(stderr,"Write error @ Statlog file!!!\n");
+		write_error = -1;
+	}
+	cJSON_Delete(root);
+	free(JSON_str);
+	free(logstat_path_and_name);
+	return 0;
+}
+//Delete logstat file for NOX_handler
+int delete_logstat_NOX(char *logstat_path, void *stats_arg)
+{
+	if(!logstat_path || !stats_arg)
+		return -1;
+	int ret_val;
+	char *logstat_path_and_name, *slash;
+	struct Morfeas_NOX_if_stats *stats = stats_arg;
+
+	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_NOXs_.json") + 1);
+	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
+	sprintf(logstat_path_and_name,"%s%slogstat_NOXs_%s.json",logstat_path, slash, stats->CAN_IF_name);
 	//Delete logstat file
 	ret_val = unlink(logstat_path_and_name);
 	free(logstat_path_and_name);

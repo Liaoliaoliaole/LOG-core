@@ -39,3 +39,8 @@ int delete_logstat_IOBOX(char *logstat_path, void *stats_arg);
 int logstat_MTI(char *logstat_path, void *stats_arg);
 //Delete logstat file for MTI_handler
 int delete_logstat_MTI(char *logstat_path, void *stats_arg);
+
+//Converting and exporting function for NOx's stats struct. Convert it to JSON format and save it to logstat_path
+int logstat_NOX(char *logstat_path, void *stats_arg);
+//Delete logstat file for NOX_handler
+int delete_logstat_NOX(char *logstat_path, void *stats_arg);

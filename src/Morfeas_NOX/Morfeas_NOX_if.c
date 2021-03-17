@@ -56,13 +56,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 enum bitrate_check_return_values{
 	bitrate_check_success,
 	bitrate_check_error,
-	bitrate_check_invalid,
+	bitrate_check_invalid
 };
 
 static volatile struct Morfeas_NOX_if_flags{
 	unsigned run : 1;
 	unsigned port_meas_exist :1;
-	unsigned bus_info :1;
+	unsigned export_logstat :1;
 }flags = {.run=1,0};
 
 /* Local function (declaration)
@@ -71,6 +71,10 @@ static volatile struct Morfeas_NOX_if_flags{
 int CAN_if_bitrate_check(char *CAN_IF_name, int *bitrate);
 void quit_signal_handler(int signum);//SIGINT handler function
 void print_usage(char *prog_name);//print the usage manual
+
+/*UniNOx functions*/
+int NOx_heater(int socket_fd, unsigned char start_code);
+unsigned char NOx_error_dec(unsigned char error_code);
 
 int main(int argc, char *argv[])
 {
@@ -88,6 +92,7 @@ int main(int argc, char *argv[])
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	//Variables for Socket CAN and NOX_id decoder
+	unsigned char sensor_index = -1;
 	int RX_bytes, CAN_socket_num;
 	struct timeval tv;
 	struct ifreq ifr;
@@ -95,6 +100,8 @@ int main(int argc, char *argv[])
 	struct can_frame frame_rx;
 	struct can_filter RX_filter;
 	NOx_can_id *NOx_id_dec;
+	NOx_RX_frame *NOx_data = (NOx_RX_frame *)&(frame_rx.data);
+	NOX_start_code startcode = {0};
 	//Stats of the Morfeas-NOX_IF
 	struct Morfeas_NOX_if_stats stats = {0};
 
@@ -226,6 +233,12 @@ int main(int argc, char *argv[])
 				Morfeas_RPi_Hat_last_cal.tm_mday = port_meas_config.last_cal_date.day;
 				Morfeas_RPi_Hat_last_cal.tm_year = port_meas_config.last_cal_date.year + 100;
 				stats.Morfeas_RPi_Hat_last_cal = mktime(&Morfeas_RPi_Hat_last_cal);//Convert Morfeas_RPi_Hat_last_cal to time_t
+				if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
+				{
+					stats.Bus_voltage = roundf(100.0 * (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler)/100.0;
+					stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
+					stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
+				}
 			}
 			else
 				Logger(Morfeas_hat_error());
@@ -260,19 +273,91 @@ int main(int argc, char *argv[])
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
 		if(RX_bytes==sizeof(frame_rx))
 		{
+			msg_cnt++;//increase message counter
 			switch(NOx_id_dec->NOx_addr)
 			{
 				case NOx_low_addr:
-					Logger("RX from NOx_low_addr\n");
+					sensor_index = 0;
+					//mutex here
+						stats.NOXs_data[0].meas_state = startcode.fields.meas_low_addr;
 					break;
 				case NOx_high_addr:
-					Logger("RX from NOx_high_addr\n");
+					sensor_index = 1;
+					//mutex here
+						stats.NOXs_data[1].meas_state = startcode.fields.meas_high_addr;
 					break;
+				default: sensor_index = -1;
 			}
-			msg_cnt++;//increase message counter
+			if(sensor_index>=0 && sensor_index<=1)//Decode and Load NOx sensor frame
+			{
+				stats.NOXs_data[sensor_index].last_seen = time(NULL);
+				//Decode and Load Sensor's status
+				stats.NOXs_data[sensor_index].status.supply_in_range = NOx_data->Supply_valid == 1;
+				stats.NOXs_data[sensor_index].status.in_temperature = NOx_data->Heater_valid == 1;
+				stats.NOXs_data[sensor_index].status.is_NOx_value_valid = NOx_data->NOx_valid == 1;
+				stats.NOXs_data[sensor_index].status.is_O2_value_valid = NOx_data->Oxygen_valid == 1;
+				stats.NOXs_data[sensor_index].status.heater_mode_state = NOx_data->Heater_mode;
+				//Decode and Load Sensor's errors
+				stats.NOXs_data[sensor_index].errors.heater = NOx_error_dec(NOx_data->Heater_error);
+				stats.NOXs_data[sensor_index].errors.NOx = NOx_error_dec(NOx_data->NOx_error);
+				stats.NOXs_data[sensor_index].errors.O2 = NOx_error_dec(NOx_data->O2_error);
+				//Decode, check, scale and load values.
+				if(stats.NOXs_data[sensor_index].status.is_NOx_value_valid)
+				{
+					stats.NOXs_data[sensor_index].NOx_value = NOx_val_scaling(NOx_data->NOx_value);
+					stats.NOx_values_avg[sensor_index].NOx_value_avg += stats.NOXs_data[sensor_index].NOx_value;
+					stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt++;
+				}
+				else
+				{
+					stats.NOXs_data[sensor_index].NOx_value = NAN;
+					stats.NOx_values_avg[sensor_index].NOx_value_avg = NAN;
+					stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt = 0;
+				}
+				if(stats.NOXs_data[sensor_index].status.is_O2_value_valid)
+				{
+					stats.NOXs_data[sensor_index].O2_value = O2_val_scaling(NOx_data->O2_value);
+					stats.NOx_values_avg[sensor_index].O2_value_avg += stats.NOXs_data[sensor_index].O2_value;
+					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt++;
+				}
+				else
+				{
+					stats.NOXs_data[sensor_index].O2_value = NAN;
+					stats.NOx_values_avg[sensor_index].O2_value_avg = NAN;
+					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt = 0;
+				}
+				stats.NOXs_data[sensor_index].t_cnt++;
+				if(stats.NOXs_data[sensor_index].t_cnt >= 20)//approx every second
+				{
+					//mutex here	
+						NOx_heater(CAN_socket_num, startcode.as_byte);
+					flags.export_logstat = 1;
+					stats.NOXs_data[sensor_index].t_cnt = 0;
+				}
+			}
 		}
-		else if(RX_bytes<0)
-			Logger("Timeout\n");
+		else if(flags.run)
+			flags.export_logstat = 1;
+		if(flags.export_logstat)
+		{
+			flags.export_logstat = 0;
+			//Calculate CANBus utilization
+			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
+			msg_cnt = 0;
+			if(flags.port_meas_exist)
+			{
+				if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
+				{
+					stats.Bus_voltage = roundf(100.0 * (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler)/100.0;
+					stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
+					stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
+				}
+			}
+			//TODO:Send data via Morfeas_IPC
+
+			//Write Stats to Logstat JSON file
+			logstat_NOX(logstat_path, &stats);
+		}
 	}
 	Logger("Morfeas_NOX_if (%s) Exiting...\n",stats.CAN_IF_name);
 	close(CAN_socket_num);//Close CAN_socket
@@ -281,10 +366,10 @@ int main(int argc, char *argv[])
 	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, 1);
 	Logger("Morfeas_NOX_if (%s) Removed from OPC-UA\n", stats.CAN_IF_name);
 	close(stats.FIFO_fd);
+	*/
 	//Delete logstat file
 	if(logstat_path)
 		delete_logstat_NOX(logstat_path, &stats);
-	*/
 	return EXIT_SUCCESS;
 }
 
