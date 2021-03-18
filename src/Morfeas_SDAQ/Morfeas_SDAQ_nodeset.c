@@ -92,18 +92,18 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
-		case IPC_CAN_BUS_info:
+		case IPC_SDAQ_CAN_BUS_info:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
-				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.BUS_utilization), UA_TYPES_FLOAT);
-				if(IPC_msg_dec->BUS_info.Electrics)
+				sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec->SDAQ_BUS_info.Dev_or_Bus_name);
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+				if(IPC_msg_dec->SDAQ_BUS_info.Electrics)
 				{
-					sprintf(Node_ID_str, "%s.volts", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.voltage), UA_TYPES_FLOAT);
-					sprintf(Node_ID_str, "%s.amps", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.amperage), UA_TYPES_FLOAT);
-					sprintf(Node_ID_str, "%s.shunt", IPC_msg_dec->BUS_info.Dev_or_Bus_name);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->BUS_info.shunt_temp), UA_TYPES_FLOAT);
+					sprintf(Node_ID_str, "%s.volts", IPC_msg_dec->SDAQ_BUS_info.Dev_or_Bus_name);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_BUS_info.voltage), UA_TYPES_FLOAT);
+					sprintf(Node_ID_str, "%s.amps", IPC_msg_dec->SDAQ_BUS_info.Dev_or_Bus_name);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_BUS_info.amperage), UA_TYPES_FLOAT);
+					sprintf(Node_ID_str, "%s.shunt", IPC_msg_dec->SDAQ_BUS_info.Dev_or_Bus_name);
+					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->SDAQ_BUS_info.shunt_temp), UA_TYPES_FLOAT);
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
@@ -139,7 +139,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				}
 				else
 					UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
-				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), 
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   dev_input_mode_str[IPC_msg_dec->SDAQ_inpMode.Dev_type][IPC_msg_dec->SDAQ_inpMode.Input_mode],
 												   UA_TYPES_STRING);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);

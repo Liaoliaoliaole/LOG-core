@@ -29,7 +29,7 @@ enum Morfeas_IPC_msg_type{
 	IPC_Handler_unregister,
 	//SDAQ_related IPC messages
 	IPC_SDAQ_register_or_update,
-	IPC_CAN_BUS_info,
+	IPC_SDAQ_CAN_BUS_info,
 	IPC_SDAQ_clean_up,
 	IPC_SDAQ_info,
 	IPC_SDAQ_inpMode,
@@ -78,7 +78,18 @@ enum Morfeas_IPC_handler_type{
 };
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
-	//---Bus Handlers related---//
+  //--- SDAQnet Port related ---//
+typedef struct CAN_BUS_info_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	float BUS_utilization;
+	unsigned char Electrics;//Boolean: false -> No Electrics info
+	float amperage;
+	float voltage;
+	float shunt_temp;
+}CAN_BUS_info_msg;
+
+  //---Bus Handlers related---//
 typedef struct Handler_register_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
@@ -140,16 +151,6 @@ typedef struct SDAQ_measure_msg_struct{
 	unsigned short Last_Timestamp;
 	struct Channel_curr_meas SDAQ_channel_meas[SDAQ_MAX_AMOUNT_OF_CHANNELS-1];
 }SDAQ_meas_msg;
-
-typedef struct CAN_BUS_info_msg_struct{
-	unsigned char IPC_msg_type;
-	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
-	float BUS_utilization;
-	unsigned char Electrics;//Boolean: false -> No Electrics info
-	float amperage;
-	float voltage;
-	float shunt_temp;
-}CAN_BUS_info_msg;
 
 	//------ IO-BOX related ------//
 typedef struct IOBOX_data_msg_struct{
@@ -266,7 +267,7 @@ typedef union{
 	SDAQ_cal_date_msg SDAQ_cal_date;
 	SDAQ_timediff_msg SDAQ_timediff;
 	SDAQ_meas_msg SDAQ_meas;
-	CAN_BUS_info_msg BUS_info;
+	CAN_BUS_info_msg SDAQ_BUS_info;
 	//IO-BOX related
 	IOBOX_data_msg IOBOX_data;
 	IOBOX_channels_reg_msg IOBOX_channels_reg;

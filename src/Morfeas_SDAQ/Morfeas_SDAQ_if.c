@@ -426,17 +426,17 @@ int main(int argc, char *argv[])
 					stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
 					stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
 				}
-				IPC_msg.BUS_info.Electrics = -1;
-				IPC_msg.BUS_info.voltage = stats.Bus_voltage;
-				IPC_msg.BUS_info.amperage = stats.Bus_amperage;
-				IPC_msg.BUS_info.shunt_temp = stats.Shunt_temp;
+				IPC_msg.SDAQ_BUS_info.Electrics = -1;
+				IPC_msg.SDAQ_BUS_info.voltage = stats.Bus_voltage;
+				IPC_msg.SDAQ_BUS_info.amperage = stats.Bus_amperage;
+				IPC_msg.SDAQ_BUS_info.shunt_temp = stats.Shunt_temp;
 			}
 			else
-				IPC_msg.BUS_info.Electrics = 0;
+				IPC_msg.SDAQ_BUS_info.Electrics = 0;
 			//transfer bus utilization to opc_ua
-			IPC_msg.BUS_info.IPC_msg_type = IPC_CAN_BUS_info;
-			sprintf(IPC_msg.BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);
-			IPC_msg.BUS_info.BUS_utilization = stats.Bus_util;
+			IPC_msg.SDAQ_BUS_info.IPC_msg_type = IPC_SDAQ_CAN_BUS_info;
+			sprintf(IPC_msg.SDAQ_BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);
+			IPC_msg.SDAQ_BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 			//Write Stats to Logstat JSON file
 			logstat_SDAQ(logstat_path, &stats);
