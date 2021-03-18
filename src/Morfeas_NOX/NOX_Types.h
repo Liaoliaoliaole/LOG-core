@@ -80,8 +80,8 @@ typedef struct NOX_TX_frame_struct{
 #pragma pack(pop)//Disable packing
 
 struct Morfeas_NOX_if_flags{
-	unsigned port_meas_exist :1;
-	unsigned export_logstat :1;
+	unsigned port_meas_exist : 1;
+	unsigned export_logstat : 1;
 };
 
 //Struct used to passing arguments to D-Bus listener

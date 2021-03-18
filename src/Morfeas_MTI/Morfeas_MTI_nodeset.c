@@ -33,7 +33,6 @@ void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Nod
 //The DBus method caller function. Return 0 if not internal error.
 int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
 
-
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	int negative_one = -1;

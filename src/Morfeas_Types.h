@@ -249,7 +249,8 @@ struct Morfeas_MTI_if_stats{
 	unsigned int counter;
 };
 
-/*Structs for NOX_handler*/
+/*Structs and typedefs for NOX_handler*/
+typedef unsigned short auto_switch_off_var;
 struct UniNOx_sensor{
 	float NOx_value;
 	float O2_value;
@@ -279,8 +280,8 @@ struct Morfeas_NOX_if_stats{
 	float Bus_voltage;
 	float Bus_amperage;
 	float Shunt_temp;
-	unsigned short auto_switch_off_value;
-	unsigned short auto_switch_off_cnt;
+	auto_switch_off_var auto_switch_off_value;
+	auto_switch_off_var auto_switch_off_cnt;
 	struct UniNOx_sensor NOXs_data[2];
 	struct NOx_values_avg_struct{
 		unsigned char NOx_value_sample_cnt;

@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Morfeas_IPC.h"
 
 const char *Morfeas_IPC_handler_type_name[] = {
-	"SDAQ", "MDAQ", "IOBOX", "MTI", "NOX", NULL //"CPAD"
+	"SDAQ", "MDAQ", "IOBOX", "MTI", "NOX", "CPAD", NULL
 };
 	//----TX Functions----//
 //function for TX, return the amount of bytes that transmitted through the FIFO, or 0 in failure
@@ -87,6 +87,10 @@ int if_type_str_2_num(const char * if_type_str)
 		return IOBOX;
 	else if(!strcmp(if_type_str, Morfeas_IPC_handler_type_name[MTI]))
 		return MTI;
+	else if(!strcmp(if_type_str, Morfeas_IPC_handler_type_name[NOX]))
+		return NOX;
+	else if(!strcmp(if_type_str, Morfeas_IPC_handler_type_name[CPAD]))
+		return CPAD;
 	else
 		return -1;
 }

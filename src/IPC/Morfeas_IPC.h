@@ -74,7 +74,7 @@ enum Morfeas_IPC_handler_type{
 	IOBOX,
 	MTI, //Mobile Telemetry Interface
 	NOX, //UNI-NOx
-	//CPAD
+	CPAD
 };
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)

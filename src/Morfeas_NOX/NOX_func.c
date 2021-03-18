@@ -25,7 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#include "NOX_Types.h"
+#include "../Morfeas_Types.h"
+#include "../Supplementary/Morfeas_Logger.h"
 
 const char *Heater_mode_str[]={
 	"Automatic mode",

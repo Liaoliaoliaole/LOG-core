@@ -1,6 +1,6 @@
 /*
 File "Morfeas_NOX_DBus.c" Implementation of D-Bus listener for the NOX handler.
-Copyright (C) 12019-12021  Sam harry Tzavaras
+Copyright (C) 12021-12022  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -37,6 +37,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //External Global variables from Morfeas_ΝΟΧ_if.c
 extern volatile unsigned char NOX_handler_run;
 extern pthread_mutex_t NOX_access;
+
+int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode);//Read and write NOX_handler configuration file
 
 	//--- Local Enumerators and constants---//
 static const char *const Method[] = {"NOX_heater", "NOX_auto_sw_off", "echo", NULL};
@@ -162,7 +164,7 @@ void * NOX_DBus_listener(void *varg_pt)//Thread function.
 											DBus_reply_msg(conn, msg, "NOX_heater(): NOx_address is out of range!!!");
 									}
 									else
-										DBus_reply_msg(conn, msg, "NOX_heater(): Wrong type argument");
+										DBus_reply_msg(conn, msg, "NOX_heater(): Wrong arguments type");
 									break;
 								case NOX_auto_sw_off:
 									if(!cJSON_HasObjectItem(JSON_args, "NOx_auto_sw_off_value"))
@@ -175,11 +177,15 @@ void * NOX_DBus_listener(void *varg_pt)//Thread function.
 									{
 										pthread_mutex_lock(&NOX_access);
 											stats->auto_switch_off_value = auto_pw_off_val->valueint;
+											if(stats->auto_switch_off_value != auto_pw_off_val->valueint)
+												Logger("Overflow at auto_switch_off_value (%d != %d)!!!\n", stats->auto_switch_off_value, auto_pw_off_val->valueint);
+											if(NOX_handler_config_file(stats, "w"))
+												Logger("Error at write of configuration file!!!\n");
 										pthread_mutex_unlock(&NOX_access);
 										DBus_reply_msg(conn, msg, "NOX_auto_sw_off(): Success");
 									}
 									else
-										DBus_reply_msg(conn, msg, "NOX_auto_sw_off(): Wrong type argument");
+										DBus_reply_msg(conn, msg, "NOX_auto_sw_off(): Wrong argument type");
 									break;
 							}
 							cJSON_Delete(JSON_args);

@@ -94,16 +94,16 @@ Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
 					 $(WORK_dir)/Morfeas_Logger.o
 
-Morfeas_NOX_if_DEP = $(WORK_dir)/NOX_func.o \
-					 $(WORK_dir)/Morfeas_run_check.o \
+Morfeas_NOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					 $(WORK_dir)/Morfeas_NOX_if.o \
 					 $(WORK_dir)/Morfeas_NOX_DBus.o \
 					 $(WORK_dir)/Morfeas_JSON.o \
 					 $(WORK_dir)/Morfeas_RPi_Hat.o \
+					 $(WORK_dir)/Morfeas_Logger.o \
 					 $(WORK_dir)/SDAQ_drv.o \
+					 $(WORK_dir)/NOX_func.o \
 					 $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
-					 $(WORK_dir)/Morfeas_Logger.o
 
 all: $(BUILD_dir)/Morfeas_daemon \
 	 $(BUILD_dir)/Morfeas_opc_ua \

@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define VERSION "0.8" /*Release Version of Morfeas_NOX_if software*/
-
 #define MAX_CANBus_FPS 1700.7 //Maximum amount of frames per sec for 250Kbaud
+#define Configs_dir "/var/tmp/Morfeas_NOX_Configurations/" //Directory with NOX_handler's Configuration file
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,6 +70,7 @@ pthread_mutex_t NOX_access = PTHREAD_MUTEX_INITIALIZER;
 int CAN_if_bitrate_check(char *CAN_IF_name, int *bitrate);
 void quit_signal_handler(int signum);//SIGINT handler function
 void print_usage(char *prog_name);//print the usage manual
+int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode);//Read and write NOX_handler configuration file
 
 //--- D-Bus Listener function ---//
 void * NOX_DBus_listener(void *varg_pt);//Thread function.
@@ -261,6 +262,9 @@ int main(int argc, char *argv[])
 		stats.Bus_amperage = NAN;
 		stats.Shunt_temp = NAN;
 	}
+	//Get stored configuration
+	if(NOX_handler_config_file(&stats, "r"))
+		Logger("Error at reading of the configuration file !!!\n");
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	/*
@@ -437,4 +441,76 @@ int CAN_if_bitrate_check(char *CAN_IF_name, int *bitrate)
 	if(bt.bitrate!=NOx_Bitrate)
 		return bitrate_check_invalid;
 	return bitrate_check_success;
+}
+
+//Read and write NOX_handler config file;
+int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode)
+{
+	struct NOX_config_file_struct{
+		struct{
+			auto_switch_off_var value;
+		} payload;
+		unsigned char checksum;
+	} config_file_data;
+	FILE *fp;
+	DIR *dir;
+	size_t read_bytes;
+	char *config_file_path;
+	unsigned char checksum;
+	int retval = EXIT_SUCCESS;
+
+	if(!stats || !mode)
+		return EXIT_FAILURE;
+	if(!(config_file_path = calloc(strlen(Configs_dir)+strlen(stats->CAN_IF_name)+strlen("Morfeas_NOXs_")+10, sizeof(char))))
+	{
+		fprintf(stderr, "Memory Error!!!\n");
+		exit(EXIT_FAILURE);
+	}
+	sprintf(config_file_path, Configs_dir"Morfeas_NOXs_%s", stats->CAN_IF_name);
+	if(!strcmp(mode, "r"))
+	{
+		if((fp = fopen(config_file_path, mode)))
+		{
+			read_bytes = fread(&config_file_data, 1, sizeof(struct NOX_config_file_struct), fp);
+			if(read_bytes == sizeof(struct NOX_config_file_struct))
+			{
+				checksum = Checksum(&(config_file_data.payload), sizeof(config_file_data.payload));
+				if(!(config_file_data.checksum ^ checksum))
+					stats->auto_switch_off_value = config_file_data.payload.value;
+			}
+			else
+				retval = EXIT_FAILURE;
+			fclose(fp);
+		}
+		else
+			retval = EXIT_FAILURE;
+	}
+	else if(!strcmp(mode, "w"))
+	{
+		//Check the existence of the Morfeas_NOX_configs directory
+		if ((dir = opendir(Configs_dir)))
+			closedir(dir);
+		else
+		{
+			Logger("Making NOX_Configurations_dir \n");
+			if(mkdir(Configs_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))
+			{
+				perror("Error at MTI_Configurations_dir creation!!!");
+				exit(EXIT_FAILURE);
+			}
+		}
+		if((fp = fopen(config_file_path, mode)))
+		{
+			config_file_data.payload.value = stats->auto_switch_off_value;
+			config_file_data.checksum = Checksum(&(config_file_data.payload), sizeof(config_file_data.payload));
+			read_bytes = fwrite(&config_file_data, 1, sizeof(struct NOX_config_file_struct), fp);
+			if(read_bytes != sizeof(struct NOX_config_file_struct))
+				retval = EXIT_FAILURE;
+			fclose(fp);
+		}
+		else
+			retval = EXIT_FAILURE;
+	}
+	free(config_file_path);
+	return retval;
 }
