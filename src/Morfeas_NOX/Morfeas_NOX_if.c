@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.1" /*Release Version of Morfeas_NOX_if software*/
+#define VERSION "0.8" /*Release Version of Morfeas_NOX_if software*/
 
 #define MAX_CANBus_FPS 1700.7 //Maximum amount of frames per sec for 250Kbaud
 
@@ -59,11 +59,10 @@ enum bitrate_check_return_values{
 	bitrate_check_invalid
 };
 
-static volatile struct Morfeas_NOX_if_flags{
-	unsigned run : 1;
-	unsigned port_meas_exist :1;
-	unsigned export_logstat :1;
-}flags = {.run=1,0};
+//Global varables
+volatile unsigned char NOX_handler_run = 1;
+static volatile struct Morfeas_NOX_if_flags flags = {0};
+pthread_mutex_t NOX_access = PTHREAD_MUTEX_INITIALIZER;
 
 /* Local function (declaration)
  * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success. Except of other notice
@@ -71,6 +70,9 @@ static volatile struct Morfeas_NOX_if_flags{
 int CAN_if_bitrate_check(char *CAN_IF_name, int *bitrate);
 void quit_signal_handler(int signum);//SIGINT handler function
 void print_usage(char *prog_name);//print the usage manual
+
+//--- D-Bus Listener function ---//
+void * NOX_DBus_listener(void *varg_pt);//Thread function.
 
 /*UniNOx functions*/
 int NOx_heater(int socket_fd, unsigned char start_code);
@@ -105,6 +107,9 @@ int main(int argc, char *argv[])
 	NOX_start_code startcode = {0};
 	//Stats of Morfeas_NOX_IF
 	struct Morfeas_NOX_if_stats stats = {.auto_switch_off_value = -1};
+	//Variables for threads
+	pthread_t DBus_listener_Thread_id;
+	struct NOX_DBus_thread_arguments_passer passer = {&startcode, &stats};
 
 	if(argc == 1)
 	{
@@ -267,9 +272,12 @@ int main(int argc, char *argv[])
 	Logger("Morfeas_NOX_if (%s) Registered on OPC-UA\n",stats.CAN_IF_name);
 	*/
 
+	//Start D-Bus listener function in a thread
+	pthread_create(&DBus_listener_Thread_id, NULL, NOX_DBus_listener, &passer);
+
 	//-----Actions on the bus-----//
 	NOx_id_dec = (NOx_can_id *)&(frame_rx.can_id);
-	while(flags.run)//FSM of Morfeas_NOX_if
+	while(NOX_handler_run)//FSM of Morfeas_NOX_if
 	{
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
 		if(RX_bytes==sizeof(frame_rx))
@@ -279,13 +287,15 @@ int main(int argc, char *argv[])
 			{
 				case NOx_low_addr:
 					sensor_index = 0;
-					//mutex here
+					pthread_mutex_lock(&NOX_access);
 						stats.NOXs_data[0].meas_state = startcode.fields.meas_low_addr;
+					pthread_mutex_unlock(&NOX_access);
 					break;
 				case NOx_high_addr:
 					sensor_index = 1;
-					//mutex here
+					pthread_mutex_lock(&NOX_access);
 						stats.NOXs_data[1].meas_state = startcode.fields.meas_high_addr;
+					pthread_mutex_unlock(&NOX_access);
 					break;
 				default: sensor_index = -1;
 			}
@@ -330,47 +340,52 @@ int main(int argc, char *argv[])
 				t_now = time(NULL);
 				if(t_now - t_bfr)//approx every second
 				{
-					//mutex here
+					pthread_mutex_lock(&NOX_access);
 						if(stats.auto_switch_off_value && startcode.as_byte)
 						{
 							stats.auto_switch_off_cnt++;
-							if(stats.auto_switch_off_cnt >= stats.auto_switch_off_value)
+							if(stats.auto_switch_off_cnt > stats.auto_switch_off_value)
 							{
 								startcode.as_byte = 0;
 								stats.auto_switch_off_cnt = 0;
 							}
 						}
+						else
+							stats.auto_switch_off_cnt = 0;
 						NOx_heater(CAN_socket_num, startcode.as_byte);
+					pthread_mutex_unlock(&NOX_access);
 					flags.export_logstat = 1;
 					t_bfr = t_now;
 				}
 			}
 		}
-		else if(flags.run)
+		else if(NOX_handler_run)
 			flags.export_logstat = 1;
 		if(flags.export_logstat)
 		{
 			flags.export_logstat = 0;
-			//Calculate CANBus utilization
-			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
-			msg_cnt = 0;
-			if(flags.port_meas_exist)
-			{
-				if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
+			pthread_mutex_lock(&NOX_access);
+				//Calculate CANBus utilization
+				stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
+				msg_cnt = 0;
+				if(flags.port_meas_exist)
 				{
-					stats.Bus_voltage = roundf(100.0 * (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler)/100.0;
-					stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
-					stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
+					if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
+					{
+						stats.Bus_voltage = roundf(100.0 * (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler)/100.0;
+						stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
+						stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
+					}
 				}
-			}
-			//TODO:Send data via Morfeas_IPC
-
-			//Write Stats to Logstat JSON file
-			logstat_NOX(logstat_path, &stats);
+				//Write Stats to Logstat JSON file
+				logstat_NOX(logstat_path, &stats);
+			pthread_mutex_unlock(&NOX_access);
 		}
 	}
 	Logger("Morfeas_NOX_if (%s) Exiting...\n",stats.CAN_IF_name);
 	close(CAN_socket_num);//Close CAN_socket
+	pthread_join(DBus_listener_Thread_id, NULL);// wait DBus_listener thread to end
+	pthread_detach(DBus_listener_Thread_id);//deallocate DBus_listener thread's memory
 	/*
 	//Remove Registeration handler to Morfeas_OPC_UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, 1);
@@ -387,9 +402,9 @@ inline void quit_signal_handler(int signum)
 {
 	if(signum == SIGPIPE)
 		fprintf(stderr,"IPC: Force Termination!!!\n");
-	else if(!flags.run && signum == SIGINT)
+	else if(!NOX_handler_run && signum == SIGINT)
 		raise(SIGABRT);
-	flags.run = 0;
+	NOX_handler_run = 0;
 }
 
 void print_usage(char *prog_name)

@@ -16,7 +16,7 @@
 # along with this program; If not, see <https://www.gnu.org/licenses/>.       #
 ###############################################################################
 
-GCC_opt=gcc -O3 #-g3
+GCC_opt=gcc -O3 -s #-g3
 CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall # -Werror
 LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libsocketcan libmodbus dbus-1) #libusb
 BUILD_dir=build

@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define NOx_mask 0x1FFFFEFC
 #define NOx_TX_addr 0x18FEDF00
 
+#define NOx_all_heaters_on 5
+
 #define NOx_val_scaling(val) (val * 0.05 - 200.0)
 #define O2_val_scaling(val) (val * 0.000514 - 12.0)
 
@@ -76,3 +78,15 @@ typedef struct NOX_TX_frame_struct{
 } NOx_TX_frame;
 
 #pragma pack(pop)//Disable packing
+
+struct Morfeas_NOX_if_flags{
+	unsigned port_meas_exist :1;
+	unsigned export_logstat :1;
+};
+
+//Struct used to passing arguments to D-Bus listener
+struct NOX_DBus_thread_arguments_passer
+{
+	NOX_start_code *startcode;
+	struct Morfeas_NOX_if_stats *stats;
+};
