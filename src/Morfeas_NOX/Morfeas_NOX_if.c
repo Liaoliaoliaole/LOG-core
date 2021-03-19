@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
 				IPC_msg.NOX_BUS_info.auto_switch_off_cnt = stats.auto_switch_off_cnt;
 				IPC_msg.NOX_BUS_info.Dev_on_bus = 0;
 				for(int i=0; i<2; i++)
-					if((t_now - stats.NOXs_data[i].last_seen) < 10)//10 seconds
+					if(stats.NOXs_data[i].last_seen && (time(NULL) - stats.NOXs_data[i].last_seen) < 10)//10 seconds
 						IPC_msg.NOX_BUS_info.Dev_on_bus++;
 				IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 				//Write Stats to Logstat JSON file
