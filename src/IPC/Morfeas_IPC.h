@@ -51,6 +51,12 @@ enum Morfeas_IPC_msg_type{
 	IPC_MTI_Update_Health,
 	IPC_MTI_Update_Radio,
 	IPC_MTI_report,
+	//NOX_related IPC messages
+	IPC_NOX_data,
+	IPC_NOX_CAN_BUS_info,
+	/*
+	//CPAD_related IPC messages
+	*/
 	//Set MIN/MAX_num_type, (Min and Max for each IPC_handler_type)
 	//---SDAQ---//
 	Morfeas_IPC_SDAQ_MIN_type = IPC_SDAQ_register_or_update,
@@ -64,8 +70,16 @@ enum Morfeas_IPC_msg_type{
 	//---MTI---//
 	Morfeas_IPC_MTI_MIN_type = IPC_MTI_Tele_data,
 	Morfeas_IPC_MTI_MAX_type = IPC_MTI_report,
+	//---NOX---//
+	Morfeas_IPC_NOX_MIN_type = IPC_NOX_data,
+	Morfeas_IPC_NOX_MAX_type = IPC_NOX_CAN_BUS_info,
+	/*
+	//---CPAD---//
+	Morfeas_IPC_CPAD_MIN_type = ,
+	Morfeas_IPC_CPAD_MAX_type = ,
+	*/
 	//MAX number of any type of IPC message
-	Morfeas_IPC_MAX_type = IPC_MTI_report
+	Morfeas_IPC_MAX_type = Morfeas_IPC_NOX_MAX_type //Morfeas_IPC_CPAD_MAX_type
 };
 
 enum Morfeas_IPC_handler_type{

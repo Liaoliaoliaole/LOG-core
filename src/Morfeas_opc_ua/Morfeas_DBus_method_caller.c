@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
 //The DBus method caller function
-int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply)
+int Morfeas_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply)
 {
 	int ret = EXIT_SUCCESS;
 	char target[100], interface[100], *reply_str=NULL;
@@ -87,7 +87,7 @@ int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name,
 	if(DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&args))
 	  return EXIT_FAILURE;
 	dbus_message_iter_get_basic(&args, &reply_str);
-	if(reply)	
+	if(reply)
 		*reply = UA_STRING_ALLOC(reply_str);
 	else
 	{

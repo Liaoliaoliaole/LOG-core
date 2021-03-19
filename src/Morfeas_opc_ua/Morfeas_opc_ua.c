@@ -289,6 +289,14 @@ void* IPC_Receiver(void *varg_pt)
 						case MTI:
 							MTI_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
+						case NOX:
+							NOX_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
+							break;
+						/*
+						case CPAD:
+							CPAD_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
+							break;
+						*/
 					}
 					break;
 				case IPC_Handler_unregister:
@@ -308,6 +316,12 @@ void* IPC_Receiver(void *varg_pt)
 						IPC_msg_from_MDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
 					else if(type>=Morfeas_IPC_MTI_MIN_type && type<=Morfeas_IPC_MTI_MAX_type)//Msg type from MTI_handler
 						IPC_msg_from_MTI_handler(server, type, &IPC_msg_dec);//mutex inside
+					else if(type>=Morfeas_IPC_NOX_MIN_type && type<=Morfeas_IPC_NOX_MAX_type)//Msg type from NOX_handler
+						IPC_msg_from_NOX_handler(server, type, &IPC_msg_dec);//mutex inside
+					/*
+					else if(type>=Morfeas_IPC_CPAD_MIN_type && type<=Morfeas_IPC_CPAD_MAX_type)//Msg type from CPAD_handler
+						IPC_msg_from_CPAD_handler(server, type, &IPC_msg_dec);//mutex inside
+					*/
 					break;
 			}
 		}

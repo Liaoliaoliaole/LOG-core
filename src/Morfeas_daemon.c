@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define Morfeas_MDAQ_if "Morfeas_MDAQ_if"
 #define Morfeas_IOBOX_if "Morfeas_IOBOX_if"
 #define Morfeas_MTI_if "Morfeas_MTI_if"
+#define Morfeas_NOX_if "Morfeas_NOX_if"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -274,12 +275,12 @@ void * Morfeas_thread(void *varg_pt)
 												XML_node_get_content(t_arg->component, "DEV_NAME"),
 												t_arg->logstat_path);
 		}
-		else if(!strcmp((char *)(t_arg->component->name), "SUPPLEMENTARY"))
+		else if(!strcmp((char *)(t_arg->component->name), "NOX_HANDLER"))
 		{
-			printf("Not yet implemented decoder for Components with type \"SUPPLEMENTARY\"\n");
-			pthread_mutex_unlock(&thread_make_lock);//Unlock threading making
-			free(loggers_path);
-			return NULL;
+			sprintf(Logger_name,"%s_%s.log",Morfeas_NOX_if, XML_node_get_content(t_arg->component, "CANBUS_IF"));
+			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_NOX_if,
+												XML_node_get_content(t_arg->component, "CANBUS_IF"),
+												t_arg->logstat_path);
 		}
 		else
 		{

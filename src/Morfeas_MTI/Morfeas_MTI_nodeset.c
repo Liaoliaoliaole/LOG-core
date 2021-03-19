@@ -31,7 +31,7 @@ void Morfeas_add_new_Gen_config(UA_Server *server_ptr, char *Parent_id, char *No
 void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id, unsigned char dev_type);
 
 //The DBus method caller function. Return 0 if not internal error.
-int Morfeas_MTI_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
+int Morfeas_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
 
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
@@ -735,7 +735,7 @@ UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
 	cJSON_Delete(root);
 	if(!ret)
 	{
-		if(!Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))
+		if(!Morfeas_DBus_method_call("MTI", dev_name, "new_MTI_config", contents, &reply))
 		{
 			UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
 			UA_String_clear(&reply);
@@ -821,7 +821,7 @@ UA_StatusCode Morfeas_MTI_Global_SWs_method_callback(UA_Server *server,
 	cJSON_Delete(root);
 	if(!ret)
 	{
-		if(!Morfeas_MTI_DBus_method_call("MTI", dev_name, "MTI_Global_SWs", contents, &reply))
+		if(!Morfeas_DBus_method_call("MTI", dev_name, "MTI_Global_SWs", contents, &reply))
 		{
 			UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
 			UA_String_clear(&reply);
@@ -918,7 +918,7 @@ UA_StatusCode Morfeas_new_Gen_config_method_callback(UA_Server *server,
 	cJSON_Delete(root);
 	if(!ret)
 	{
-		if(!Morfeas_MTI_DBus_method_call("MTI", dev_name, "new_PWM_config", contents, &reply))
+		if(!Morfeas_DBus_method_call("MTI", dev_name, "new_PWM_config", contents, &reply))
 		{
 			UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
 			UA_String_clear(&reply);
@@ -1040,7 +1040,7 @@ UA_StatusCode Morfeas_ctrl_tele_SWs_method_callback(UA_Server *server,
 			return UA_STATUSCODE_BADOUTOFMEMORY;
 		}
 		cJSON_Delete(root);
-		if(Morfeas_MTI_DBus_method_call("MTI", dev_name, "ctrl_tele_SWs", contents, NULL))
+		if(Morfeas_DBus_method_call("MTI", dev_name, "ctrl_tele_SWs", contents, NULL))
 			return UA_STATUSCODE_BADDEVICEFAILURE;
 	}
 	if(null_inp == inputSize)

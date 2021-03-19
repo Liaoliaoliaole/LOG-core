@@ -612,7 +612,36 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 						{
 							if(!strcmp((char*)content, XML_node_get_content(check_node, "CANBUS_IF")))
 							{
-								fprintf(stderr, "XML Node with name \"CANBUS_IF\" and content \"%s\" found multiple times!!!\n",content);
+								fprintf(stderr, "XML Node with name \"CANBUS_IF\" and content \"%s\" for SDAQ_HANDLER found multiple times!!!\n", content);
+								return EXIT_FAILURE;
+							}
+						}
+					}
+					check_node = check_node->next;
+				}
+			}
+		}
+		xml_node = xml_node->next;
+	}
+	//Scan all NOX_HANDLER nodes for CANBUS_IF with duplicate content
+	xml_node = components_head_node->children;
+	while(xml_node)
+	{
+		if (xml_node->type == XML_ELEMENT_NODE)
+		{
+			if(!strcmp((char*)xml_node->name, "NOX_HANDLER"))
+			{
+				content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF");
+				check_node = xml_node->next;
+				while(check_node)
+				{
+					if (check_node->type == XML_ELEMENT_NODE)
+					{
+						if(!strcmp((char*)check_node->name, "NOX_HANDLER"))
+						{
+							if(!strcmp((char*)content, XML_node_get_content(check_node, "CANBUS_IF")))
+							{
+								fprintf(stderr, "XML Node with name \"CANBUS_IF\" and content \"%s\" for NOX_HANDLER found multiple times!!!\n",content);
 								return EXIT_FAILURE;
 							}
 						}

@@ -30,14 +30,8 @@
 			<DEV_NAME>test3</DEV_NAME>
 			<IPv4_ADDR>10.0.0.11</IPv4_ADDR>
 		</MTI_HANDLER>
-		<SUPPLEMENTARY Disable="true">
-			<PROGRAM>program_name</PROGRAM>
-			<ARGUMENTS>
-				<ARGUMENT>
-					<OPTION>test_option</OPTION>
-					<OPT_ARG>test_option_argument</OPT_ARG>
-				</ARGUMENT>
-			</ARGUMENTS>
-		</SUPPLEMENTARY>
+		<NOX_HANDLER Disable="true">
+			<CANBUS_IF>can1</CANBUS_IF>
+		</NOX_HANDLER>
 	</COMPONENTS>
 </CONFIG>

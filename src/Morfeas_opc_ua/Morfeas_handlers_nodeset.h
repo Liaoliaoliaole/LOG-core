@@ -49,3 +49,11 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 //MTI's Handler related
 void MTI_handler_reg(UA_Server *server, char *dev_name);
 void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);
+//NOX's Handler related
+void NOX_handler_reg(UA_Server *server, char *dev_name);
+void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);
+/*
+//CPAD's Handler related
+void CPAD_handler_reg(UA_Server *server, char *dev_name);
+void IPC_msg_from_CPAD_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);
+*/
