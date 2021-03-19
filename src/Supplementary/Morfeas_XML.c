@@ -565,29 +565,6 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 			fprintf(stderr, "\"APP_NAME\" XML child node of \"OPC_UA_SERVER\" not found\n");
 			return EXIT_FAILURE;
 		}
-		/*
-		if((content = (xmlChar *) XML_node_get_content(xml_node, "CONFIG_FILE")))
-		{
-			int check_ret = check_file((char*)config_Dir, (char*)content);
-			if(check_ret<0)
-			{
-				fprintf(stderr, "Content (%s) of \"CONFIG_FILE\" is invalid:\
-								 \n\t File does not exist or user does not have privileges for read!!!\n",content);
-				return EXIT_FAILURE;
-			}
-			else if(check_ret>0)
-			{
-				fprintf(stderr, "Content (%s) of \"CONFIGS_DIR\" is invalid:\
-								 \n\t Directory does not exist !!!\n",config_Dir);
-				return EXIT_FAILURE;
-			}
-		}
-		else
-		{
-			fprintf(stderr, "\"CONFIG_FILE\" XML child node of \"OPC_UA_SERVER\" not found\n");
-			return EXIT_FAILURE;
-		}
-		*/
 	}
 	else
 	{
@@ -652,6 +629,9 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
+
+	//TO-DO: Check duplicate usage for contents of CANBUS_IF
+
 	//Scan nodes MDAQ,IOBOX,MTI for child node with duplicate and validate content
 	xml_node = components_head_node->children;
 	while(xml_node)

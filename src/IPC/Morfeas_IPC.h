@@ -92,6 +92,13 @@ enum Morfeas_IPC_handler_type{
 };
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
+  //---Bus Handlers related---//
+typedef struct Handler_register_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned char handler_type;
+}Handler_reg_op_msg;
+
   //--- SDAQnet Port related ---//
 typedef struct CAN_BUS_info_msg_struct{
 	unsigned char IPC_msg_type;
@@ -103,14 +110,7 @@ typedef struct CAN_BUS_info_msg_struct{
 	float shunt_temp;
 }CAN_BUS_info_msg;
 
-  //---Bus Handlers related---//
-typedef struct Handler_register_struct{
-	unsigned char IPC_msg_type;
-	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
-	unsigned char handler_type;
-}Handler_reg_op_msg;
-
-  //------ SDAQ + SDAQnet Port related ------//
+  //------ SDAQ related ------//
 typedef struct SDAQ_register_msg_struct{
 	unsigned char IPC_msg_type;
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
@@ -268,10 +268,31 @@ typedef struct MTI_RMSW_MUX_data_msg_struct{
 	unsigned int MTI_IPv4;
 	struct RMSW_MUX_Devs_data_struct Devs_data;
 }MTI_RMSW_MUX_data_msg;
+
+	//------ NOX related ------//
+typedef struct NOX_data_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	unsigned char sensor_addr;
+	struct UniNOx_sensor NOXs_data;
+}NOX_data_msg;
+
+typedef struct NOXs_info_msg_struct{
+	unsigned char IPC_msg_type;
+	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
+	float BUS_utilization;
+	unsigned char Electrics;//Boolean: false -> No Electrics info
+	float amperage;
+	float voltage;
+	float shunt_temp;
+	unsigned char Dev_on_bus;
+	auto_switch_off_var auto_switch_off_value;
+	auto_switch_off_var auto_switch_off_cnt;
+}NOXs_info_msg;
 #pragma pack(pop)//Disable packing
 
 //--IPC_MESSAGE--//
-typedef union{
+typedef union Morfeas_IPC_msg_union{
 	Handler_reg_op_msg Handler_reg;
 	//SDAQ + CANBus related
 	SDAQ_reg_update_msg SDAQ_reg_update;
@@ -297,6 +318,9 @@ typedef union{
 	MTI_Update_Radio_msg MTI_Update_Radio;
 	MTI_tele_data_msg MTI_tele_data;
 	MTI_RMSW_MUX_data_msg MTI_RMSW_MUX_data;
+	//NOX related
+	NOX_data_msg NOX_data;
+	NOXs_info_msg NOX_BUS_info;
 }IPC_message;
 
 //Function that convert interface_type_string to interface_type_num

@@ -72,6 +72,10 @@ void quit_signal_handler(int signum);//SIGINT handler function
 void print_usage(char *prog_name);//print the usage manual
 int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode);//Read and write NOX_handler configuration file
 
+//--- Local Morfeas_IPC functions ---//
+// NOX_meas_to_IPC function. Send Status and measurements of UniNOx sensors to Morfeas_opc_ua via IPC
+void NOX_meas_to_IPC(struct Morfeas_NOX_if_stats *stats, unsigned char sensor_index);
+
 //--- D-Bus Listener function ---//
 void * NOX_DBus_listener(void *varg_pt);//Thread function.
 
@@ -271,7 +275,7 @@ int main(int argc, char *argv[])
 	Logger("Morfeas_NOX_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.CAN_IF_name);
 	//Open FIFO for Write
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
-	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, 0);
+	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, REG);
 	Logger("Morfeas_NOX_if (%s) Registered on OPC-UA\n",stats.CAN_IF_name);
 
 	//Start D-Bus listener function in a thread
@@ -339,8 +343,14 @@ int main(int argc, char *argv[])
 					stats.NOx_values_avg[sensor_index].O2_value_avg = NAN;
 					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt = 0;
 				}
-				t_now = time(NULL);
-				if(t_now - t_bfr)//approx every second
+				if((stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt && stats.NOx_values_avg[sensor_index].O2_value_sample_cnt) &&
+				   (!(stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt%2) || !(stats.NOx_values_avg[sensor_index].O2_value_sample_cnt%2)))
+				{
+					pthread_mutex_lock(&NOX_access);
+						NOX_meas_to_IPC(&stats, sensor_index);
+					pthread_mutex_unlock(&NOX_access);
+				}
+				if((t_now = time(NULL)) - t_bfr)//approx every second
 				{
 					pthread_mutex_lock(&NOX_access);
 						if(stats.auto_switch_off_value && startcode.as_byte)
@@ -378,7 +388,24 @@ int main(int argc, char *argv[])
 						stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
 						stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
 					}
+					IPC_msg.NOX_BUS_info.Electrics = -1;
+					IPC_msg.NOX_BUS_info.voltage = stats.Bus_voltage;
+					IPC_msg.NOX_BUS_info.amperage = stats.Bus_amperage;
+					IPC_msg.NOX_BUS_info.shunt_temp = stats.Shunt_temp;
 				}
+				else
+					IPC_msg.NOX_BUS_info.Electrics = 0;
+				//Transfer BUS utilization and SDAQnet port measurements to opc_ua
+				IPC_msg.NOX_BUS_info.IPC_msg_type = IPC_NOX_CAN_BUS_info;
+				sprintf(IPC_msg.NOX_BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);
+				IPC_msg.NOX_BUS_info.BUS_utilization = stats.Bus_util;
+				IPC_msg.NOX_BUS_info.auto_switch_off_value = stats.auto_switch_off_value;
+				IPC_msg.NOX_BUS_info.auto_switch_off_cnt = stats.auto_switch_off_cnt;
+				IPC_msg.NOX_BUS_info.Dev_on_bus = 0;
+				for(int i=0; i<2; i++)
+					if((t_now - stats.NOXs_data[i].last_seen) < 10)//10 seconds
+						IPC_msg.NOX_BUS_info.Dev_on_bus++;
+				IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 				//Write Stats to Logstat JSON file
 				logstat_NOX(logstat_path, &stats);
 			pthread_mutex_unlock(&NOX_access);
@@ -389,7 +416,7 @@ int main(int argc, char *argv[])
 	pthread_join(DBus_listener_Thread_id, NULL);// wait DBus_listener thread to end
 	pthread_detach(DBus_listener_Thread_id);//deallocate DBus_listener thread's memory
 	//Remove handler from Morfeas_OPC_UA Server
-	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, 1);
+	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, UNREG);
 	Logger("Morfeas_NOX_if (%s) Removed from OPC-UA\n", stats.CAN_IF_name);
 	close(stats.FIFO_fd);
 	//Delete logstat file
@@ -509,4 +536,13 @@ int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode
 	}
 	free(config_file_path);
 	return retval;
+}
+
+void NOX_meas_to_IPC(struct Morfeas_NOX_if_stats *stats, unsigned char sensor_index)
+{
+	IPC_message IPC_msg = {0};
+
+	IPC_msg.NOX_data.IPC_msg_type = IPC_NOX_data;
+	sprintf(IPC_msg.NOX_data.Dev_or_Bus_name, "%s", stats->CAN_IF_name);
+	//IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 }
