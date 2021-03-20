@@ -771,9 +771,9 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	{
 		cJSON_AddItemToObject(root, "Electrics", electrics = cJSON_CreateObject());
 		cJSON_AddNumberToObject(electrics, "Last_calibration_UNIX", stats->Morfeas_RPi_Hat_last_cal);
-		cJSON_AddNumberToObject(electrics, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
-		cJSON_AddNumberToObject(electrics, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
-		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", roundf(10.0 * stats->Shunt_temp)/10.0);
+		cJSON_AddNumberToObject(electrics, "BUS_voltage", stats->Bus_voltage);
+		cJSON_AddNumberToObject(electrics, "BUS_amperage", stats->Bus_amperage);
+		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", stats->Shunt_temp);
 	}
 	//Add BUS_util to JSON root
 	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);

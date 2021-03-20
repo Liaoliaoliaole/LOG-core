@@ -289,6 +289,7 @@ struct Morfeas_NOX_if_stats{
 		unsigned char O2_value_sample_cnt;
 		float O2_value_avg;
 	} NOx_values_avg[2];
+	unsigned char dev_msg_cnt[2];
 };
 
 /*Structs for SDAQ_handler*/

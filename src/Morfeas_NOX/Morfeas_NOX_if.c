@@ -298,6 +298,7 @@ int main(int argc, char *argv[])
 			if(sensor_index>=0 && sensor_index<=1)//Decode and Load NOx sensor frame
 			{
 				stats.NOXs_data[sensor_index].last_seen = time(NULL);
+				stats.dev_msg_cnt[sensor_index]++;
 				//Decode and Load Sensor's status
 				stats.NOXs_data[sensor_index].status.supply_in_range = NOx_data->Supply_valid == 1;
 				stats.NOXs_data[sensor_index].status.in_temperature = NOx_data->Heater_valid == 1;
@@ -333,8 +334,9 @@ int main(int argc, char *argv[])
 					stats.NOx_values_avg[sensor_index].O2_value_avg = NAN;
 					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt = 0;
 				}
-				if(!(msg_cnt%2))//Send Status and measurements of current UniNOx sensors to Morfeas_opc_ua via IPC, Approx every 100ms.
+				if(stats.dev_msg_cnt[sensor_index] >= 2)//Send Status and measurements of current UniNOx sensors to Morfeas_opc_ua via IPC, Approx every 100ms.
 				{
+					stats.dev_msg_cnt[sensor_index] = 0;
 					pthread_mutex_lock(&NOX_access);
 						IPC_msg.NOX_data.IPC_msg_type = IPC_NOX_data;
 						sprintf(IPC_msg.NOX_data.Dev_or_Bus_name, "%s", stats.CAN_IF_name);
@@ -343,7 +345,7 @@ int main(int argc, char *argv[])
 						IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 					pthread_mutex_unlock(&NOX_access);
 				}
-				if((t_now = time(NULL)) - t_bfr)//approx every second
+				if((t_now = time(NULL)) - t_bfr)//Approx every second
 				{
 					pthread_mutex_lock(&NOX_access);
 						if(stats.auto_switch_off_value && startcode.as_byte)
@@ -397,7 +399,7 @@ int main(int argc, char *argv[])
 				IPC_msg.NOX_BUS_info.Dev_on_bus = 0;
 				for(int i=0; i<2; i++)
 				{
-					if((time(NULL) - stats.NOXs_data[i].last_seen) < 10)//10 seconds
+					if((time(NULL) - stats.NOXs_data[i].last_seen) < 5)//5 seconds
 					{
 						IPC_msg.NOX_BUS_info.Dev_on_bus++;
 						IPC_msg.NOX_BUS_info.active_devs[i] = -1;
