@@ -288,6 +288,7 @@ typedef struct NOXs_info_msg_struct{
 	unsigned char Dev_on_bus;
 	auto_switch_off_var auto_switch_off_value;
 	auto_switch_off_var auto_switch_off_cnt;
+	unsigned char active_devs[2];
 }NOXs_info_msg;
 #pragma pack(pop)//Disable packing
 

@@ -72,10 +72,6 @@ void quit_signal_handler(int signum);//SIGINT handler function
 void print_usage(char *prog_name);//print the usage manual
 int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode);//Read and write NOX_handler configuration file
 
-//--- Local Morfeas_IPC functions ---//
-// NOX_meas_to_IPC function. Send Status and measurements of UniNOx sensors to Morfeas_opc_ua via IPC
-void NOX_meas_to_IPC(struct Morfeas_NOX_if_stats *stats, unsigned char sensor_index);
-
 //--- D-Bus Listener function ---//
 void * NOX_DBus_listener(void *varg_pt);//Thread function.
 
@@ -244,12 +240,6 @@ int main(int argc, char *argv[])
 				Morfeas_RPi_Hat_last_cal.tm_mday = port_meas_config.last_cal_date.day;
 				Morfeas_RPi_Hat_last_cal.tm_year = port_meas_config.last_cal_date.year + 100;
 				stats.Morfeas_RPi_Hat_last_cal = mktime(&Morfeas_RPi_Hat_last_cal);//Convert Morfeas_RPi_Hat_last_cal to time_t
-				if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
-				{
-					stats.Bus_voltage = roundf(100.0 * (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler)/100.0;
-					stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
-					stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
-				}
 			}
 			else
 				Logger(Morfeas_hat_error());
@@ -343,11 +333,14 @@ int main(int argc, char *argv[])
 					stats.NOx_values_avg[sensor_index].O2_value_avg = NAN;
 					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt = 0;
 				}
-				if((stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt && stats.NOx_values_avg[sensor_index].O2_value_sample_cnt) &&
-				   (!(stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt%2) || !(stats.NOx_values_avg[sensor_index].O2_value_sample_cnt%2)))
+				if(!(msg_cnt%2))//Send Status and measurements of current UniNOx sensors to Morfeas_opc_ua via IPC, Approx every 100ms.
 				{
 					pthread_mutex_lock(&NOX_access);
-						NOX_meas_to_IPC(&stats, sensor_index);
+						IPC_msg.NOX_data.IPC_msg_type = IPC_NOX_data;
+						sprintf(IPC_msg.NOX_data.Dev_or_Bus_name, "%s", stats.CAN_IF_name);
+						IPC_msg.NOX_data.sensor_addr = sensor_index;
+						memcpy(&(IPC_msg.NOX_data.NOXs_data), &(stats.NOXs_data[sensor_index]), sizeof(struct UniNOx_sensor));
+						IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 					pthread_mutex_unlock(&NOX_access);
 				}
 				if((t_now = time(NULL)) - t_bfr)//approx every second
@@ -403,8 +396,15 @@ int main(int argc, char *argv[])
 				IPC_msg.NOX_BUS_info.auto_switch_off_cnt = stats.auto_switch_off_cnt;
 				IPC_msg.NOX_BUS_info.Dev_on_bus = 0;
 				for(int i=0; i<2; i++)
-					if(stats.NOXs_data[i].last_seen && (time(NULL) - stats.NOXs_data[i].last_seen) < 10)//10 seconds
+				{
+					if((time(NULL) - stats.NOXs_data[i].last_seen) < 10)//10 seconds
+					{
 						IPC_msg.NOX_BUS_info.Dev_on_bus++;
+						IPC_msg.NOX_BUS_info.active_devs[i] = -1;
+					}
+					else
+						IPC_msg.NOX_BUS_info.active_devs[i] = 0;
+				}
 				IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 				//Write Stats to Logstat JSON file
 				logstat_NOX(logstat_path, &stats);
@@ -536,13 +536,4 @@ int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode
 	}
 	free(config_file_path);
 	return retval;
-}
-
-void NOX_meas_to_IPC(struct Morfeas_NOX_if_stats *stats, unsigned char sensor_index)
-{
-	IPC_message IPC_msg = {0};
-
-	IPC_msg.NOX_data.IPC_msg_type = IPC_NOX_data;
-	sprintf(IPC_msg.NOX_data.Dev_or_Bus_name, "%s", stats->CAN_IF_name);
-	//IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 }

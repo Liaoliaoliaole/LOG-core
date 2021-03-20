@@ -63,17 +63,13 @@ void NOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
-	UA_DateTime last_seen_time;
-	//UA_DateTimeStruct calibration_date = {0};
 	char Anchor[30], Node_ID_str[60], meas_status_str[60];
-	unsigned char Channel;
 
 	//Msg type from SDAQ_handler
 	switch(type)
 	{
 		case IPC_NOX_data:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 		case IPC_NOX_CAN_BUS_info:
@@ -94,6 +90,15 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_BUS_info.amperage), UA_TYPES_FLOAT);
 					sprintf(Node_ID_str, "%s.shunt", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name);
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_BUS_info.shunt_temp), UA_TYPES_FLOAT);
+				}
+				for(int i=0; i<2; i++)
+				{
+					if(IPC_msg_dec->NOX_BUS_info.active_devs[i])
+					{
+					}
+					else
+					{
+					}
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;

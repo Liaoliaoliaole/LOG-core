@@ -250,7 +250,6 @@ struct Morfeas_MTI_if_stats{
 };
 
 /*Structs and typedefs for NOX_handler*/
-typedef unsigned short auto_switch_off_var;
 struct UniNOx_sensor{
 	float NOx_value;
 	float O2_value;
@@ -270,6 +269,7 @@ struct UniNOx_sensor{
 	} errors;
 };
 //Morfeas_NOX-if stats struct, used in Morfeas_NOX_if
+typedef unsigned short auto_switch_off_var;
 struct Morfeas_NOX_if_stats{
 	int FIFO_fd;
 	char *CAN_IF_name;
