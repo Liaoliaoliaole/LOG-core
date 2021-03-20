@@ -36,7 +36,6 @@ extern const char *Heater_mode_str[];
 extern const char *Errors_dec_str[];
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
-
 /* SDAQ's CAN identifier encoder/decoder */
 typedef struct NOX_Identifier_Enc_Dec{
 	unsigned NOx_addr : 29;
@@ -76,7 +75,6 @@ typedef struct NOX_TX_frame_struct{
 	unsigned char tbd[7];
 	unsigned char start_code;
 } NOx_TX_frame;
-
 #pragma pack(pop)//Disable packing
 
 struct Morfeas_NOX_if_flags{

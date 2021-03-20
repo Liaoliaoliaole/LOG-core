@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
 		if(flags.bus_info)
 		{
 			//Calculate CANBus utilization
-			stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
+			stats.Bus_util = roundf(10000.0*(msg_cnt/MAX_CANBus_FPS))/100.0;
 			msg_cnt = 0;
 			flags.bus_info = 0;
 			//Get Electrics for BUS port

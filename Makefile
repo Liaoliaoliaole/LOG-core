@@ -18,12 +18,23 @@
 
 GCC_opt=gcc -O3 -s #-g3
 CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall # -Werror
-LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs open62541 libcjson ncurses libxml-2.0 libgtop-2.0 glib-2.0 libsocketcan libmodbus dbus-1) #libusb
+LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs $(LIBs))
 BUILD_dir=build
 WORK_dir=work
 SRC_dir=src
 CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src/*.h
 CANif_DEP_SRC_dir = ./src/sdaq-worker/src
+
+LIBs=open62541 \
+	 libcjson \
+	 ncurses \
+	 libxml-2.0 \
+	 libgtop-2.0 \
+	 glib-2.0 \
+	 libsocketcan \
+	 libwebsockets \
+	 libmodbus \
+	 dbus-1 #\ libusb
 
 HEADERS = $(SRC_dir)/IPC/*.h \
 		  $(SRC_dir)/Morfeas_opc_ua/*.h \

@@ -285,10 +285,14 @@ struct Morfeas_NOX_if_stats{
 	struct UniNOx_sensor NOXs_data[2];
 	struct NOx_values_avg_struct{
 		unsigned char NOx_value_sample_cnt;
-		float NOx_value_avg;
+		float NOx_value_acc;
+		float NOx_value_min;
+		float NOx_value_max;
 		unsigned char O2_value_sample_cnt;
-		float O2_value_avg;
-	} NOx_values_avg[2];
+		float O2_value_acc;
+		float O2_value_min;
+		float O2_value_max;
+	} NOx_statistics[2];
 	unsigned char dev_msg_cnt[2];
 };
 

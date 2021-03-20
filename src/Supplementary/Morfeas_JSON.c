@@ -146,12 +146,12 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	{
 		cJSON_AddItemToObject(root, "Electrics", electrics = cJSON_CreateObject());
 		cJSON_AddNumberToObject(electrics, "Last_calibration_UNIX", stats->Morfeas_RPi_Hat_last_cal);
-		cJSON_AddNumberToObject(electrics, "BUS_voltage", roundf(100.0 * stats->Bus_voltage)/100.0);
-		cJSON_AddNumberToObject(electrics, "BUS_amperage", roundf(1000.0 * stats->Bus_amperage)/1000.0);
-		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", roundf(10.0 * stats->Shunt_temp)/10.0);
+		cJSON_AddNumberToObject(electrics, "BUS_voltage", stats->Bus_voltage);
+		cJSON_AddNumberToObject(electrics, "BUS_amperage", stats->Bus_amperage);
+		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", stats->Shunt_temp);
 	}
 	//Add BUS_util, Amount of Detected_SDAQs, and SDAQs Data
-	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
+	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
 	if(stats->detected_SDAQs)
 	{
@@ -776,7 +776,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", stats->Shunt_temp);
 	}
 	//Add BUS_util to JSON root
-	cJSON_AddNumberToObject(root, "BUS_Utilization", roundf(100.0 * stats->Bus_util)/100.0);
+	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
 	//Add auto power off value and counter
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_value", stats->auto_switch_off_value);
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_cnt", stats->auto_switch_off_cnt);
@@ -789,27 +789,35 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
 			cJSON_AddNumberToObject(curr_NOx_data, "addr", i);
 			cJSON_AddNumberToObject(curr_NOx_data, "last_seen", stats->NOXs_data[i].last_seen);
-			if(stats->NOx_values_avg[i].NOx_value_sample_cnt)
+			//NOx value statistics
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_integral_size", stats->NOx_statistics[i].NOx_value_sample_cnt);
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_min", stats->NOx_statistics[i].NOx_value_min);
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_max", stats->NOx_statistics[i].NOx_value_max);
+			if(stats->NOx_statistics[i].NOx_value_sample_cnt)
 			{
-				value = stats->NOx_values_avg[i].NOx_value_avg/stats->NOx_values_avg[i].NOx_value_sample_cnt;
+				value = stats->NOx_statistics[i].NOx_value_acc/stats->NOx_statistics[i].NOx_value_sample_cnt;
 				value = roundf(1000.0 * value)/1000.0;
-				stats->NOx_values_avg[i].NOx_value_avg = 0;
-				stats->NOx_values_avg[i].NOx_value_sample_cnt = 0;
+				stats->NOx_statistics[i].NOx_value_acc = 0;
+				stats->NOx_statistics[i].NOx_value_sample_cnt = 0;
 			}
 			else
 				value = NAN;
 			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_avg", value);
-			if(stats->NOx_values_avg[i].O2_value_sample_cnt)
+			//O2 value statistics
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_integral_size", stats->NOx_statistics[i].O2_value_sample_cnt);
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_min", stats->NOx_statistics[i].O2_value_min);
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_max", stats->NOx_statistics[i].O2_value_max);
+			if(stats->NOx_statistics[i].O2_value_sample_cnt)
 			{
-				value = stats->NOx_values_avg[i].O2_value_avg/stats->NOx_values_avg[i].O2_value_sample_cnt;
+				value = stats->NOx_statistics[i].O2_value_acc/stats->NOx_statistics[i].O2_value_sample_cnt;
 				value = roundf(1000.0 * value)/1000.0;
-				stats->NOx_values_avg[i].O2_value_avg = 0;
-				stats->NOx_values_avg[i].O2_value_sample_cnt = 0;
+				stats->NOx_statistics[i].O2_value_acc = 0;
+				stats->NOx_statistics[i].O2_value_sample_cnt = 0;
 			}
 			else
 				value = NAN;
 			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_avg", value);
-			//Add status and errors for curr_NOx_data
+			//Add status for curr_NOx_data
 			cJSON_AddItemToObject(curr_NOx_data, "status", NOx_status = cJSON_CreateObject());
 			cJSON_AddItemToObject(NOx_status, "meas_state", cJSON_CreateBool(stats->NOXs_data[i].meas_state));
 			cJSON_AddItemToObject(NOx_status, "supply_in_range", cJSON_CreateBool(stats->NOXs_data[i].status.supply_in_range));
@@ -817,6 +825,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			cJSON_AddItemToObject(NOx_status, "is_NOx_value_valid", cJSON_CreateBool(stats->NOXs_data[i].status.is_NOx_value_valid));
 			cJSON_AddItemToObject(NOx_status, "is_O2_value_valid", cJSON_CreateBool(stats->NOXs_data[i].status.is_O2_value_valid));
 			cJSON_AddStringToObject(NOx_status, "heater_mode_state", Heater_mode_str[stats->NOXs_data[i].status.heater_mode_state]);
+			//Add errors for curr_NOx_data
 			cJSON_AddItemToObject(curr_NOx_data, "errors", NOx_errors = cJSON_CreateObject());
 			cJSON_AddStringToObject(NOx_errors, "heater", Errors_dec_str[stats->NOXs_data[i].errors.heater]);
 			cJSON_AddStringToObject(NOx_errors, "NOx", Errors_dec_str[stats->NOXs_data[i].errors.NOx]);

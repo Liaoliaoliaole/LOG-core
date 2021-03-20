@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define I2C_BUS_NUM 1
 #define MAX9611_temp_scaler 0.48
 #define MAX9611_comp_scaler 0.268
-#define MAX9611_default_volt_meas_scaler 0.014 
+#define MAX9611_default_volt_meas_scaler 0.014
 #define MAX9611_default_current_meas_scaler 0.001222 //for 22 mohm shunt
 
 #pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
@@ -100,11 +100,11 @@ int GPIOWrite(int LED_name, int value);
 //Read value of Morfeas_RPi_Hat LED by name, return value of the LED, or -1 if read failed.
 int GPIORead(int LED_name);
 
-	//---- I2C device related ----//
-	/* All I2C related functions Return:
-	 * 0 in success,
-	 * -1 otherwise
-	 */
+//---- I2C device related ----//
+/* All I2C related functions Return:
+ * 0 in success,
+ * -1 otherwise
+ */
 //Function to init the MAX9611, return 0 in success, -1 otherwise.
 int MAX9611_init(unsigned char port, unsigned char i2c_dev_num);
 //Function that read measurements for MAX9611, store them on memory pointed by meas.

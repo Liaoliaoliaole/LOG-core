@@ -313,26 +313,54 @@ int main(int argc, char *argv[])
 				if(stats.NOXs_data[sensor_index].status.is_NOx_value_valid)
 				{
 					stats.NOXs_data[sensor_index].NOx_value = NOx_val_scaling(NOx_data->NOx_value);
-					stats.NOx_values_avg[sensor_index].NOx_value_avg += stats.NOXs_data[sensor_index].NOx_value;
-					stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt++;
+					if(!stats.NOx_statistics[sensor_index].NOx_value_sample_cnt)
+					{
+						stats.NOx_statistics[sensor_index].NOx_value_min = stats.NOXs_data[sensor_index].NOx_value;
+						stats.NOx_statistics[sensor_index].NOx_value_max = stats.NOXs_data[sensor_index].NOx_value;
+					}
+					else
+					{
+						if(stats.NOXs_data[sensor_index].NOx_value < stats.NOx_statistics[sensor_index].NOx_value_min)//calculate NOx min
+							stats.NOx_statistics[sensor_index].NOx_value_min = stats.NOXs_data[sensor_index].NOx_value;
+						if(stats.NOXs_data[sensor_index].NOx_value > stats.NOx_statistics[sensor_index].NOx_value_max)//calculate NOx max
+							stats.NOx_statistics[sensor_index].NOx_value_max = stats.NOXs_data[sensor_index].NOx_value;
+					}
+					stats.NOx_statistics[sensor_index].NOx_value_acc += stats.NOXs_data[sensor_index].NOx_value;
+					stats.NOx_statistics[sensor_index].NOx_value_sample_cnt++;
 				}
 				else
 				{
 					stats.NOXs_data[sensor_index].NOx_value = NAN;
-					stats.NOx_values_avg[sensor_index].NOx_value_avg = NAN;
-					stats.NOx_values_avg[sensor_index].NOx_value_sample_cnt = 0;
+					stats.NOx_statistics[sensor_index].NOx_value_acc = NAN;
+					stats.NOx_statistics[sensor_index].NOx_value_min = NAN;
+					stats.NOx_statistics[sensor_index].NOx_value_max = NAN;
+					stats.NOx_statistics[sensor_index].NOx_value_sample_cnt = 0;
 				}
 				if(stats.NOXs_data[sensor_index].status.is_O2_value_valid)
 				{
 					stats.NOXs_data[sensor_index].O2_value = O2_val_scaling(NOx_data->O2_value);
-					stats.NOx_values_avg[sensor_index].O2_value_avg += stats.NOXs_data[sensor_index].O2_value;
-					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt++;
+					if(!stats.NOx_statistics[sensor_index].O2_value_sample_cnt)
+					{
+						stats.NOx_statistics[sensor_index].O2_value_min = stats.NOXs_data[sensor_index].O2_value;
+						stats.NOx_statistics[sensor_index].O2_value_max = stats.NOXs_data[sensor_index].O2_value;
+					}
+					else
+					{
+						if(stats.NOXs_data[sensor_index].O2_value < stats.NOx_statistics[sensor_index].O2_value_min)//calculate O2 min
+							stats.NOx_statistics[sensor_index].O2_value_min = stats.NOXs_data[sensor_index].O2_value;
+						if(stats.NOXs_data[sensor_index].O2_value > stats.NOx_statistics[sensor_index].O2_value_max)//calculate O2 max
+							stats.NOx_statistics[sensor_index].O2_value_max = stats.NOXs_data[sensor_index].O2_value;
+					}
+					stats.NOx_statistics[sensor_index].O2_value_acc += stats.NOXs_data[sensor_index].O2_value;
+					stats.NOx_statistics[sensor_index].O2_value_sample_cnt++;
 				}
 				else
 				{
 					stats.NOXs_data[sensor_index].O2_value = NAN;
-					stats.NOx_values_avg[sensor_index].O2_value_avg = NAN;
-					stats.NOx_values_avg[sensor_index].O2_value_sample_cnt = 0;
+					stats.NOx_statistics[sensor_index].O2_value_acc = NAN;
+					stats.NOx_statistics[sensor_index].O2_value_min = NAN;
+					stats.NOx_statistics[sensor_index].O2_value_max = NAN;
+					stats.NOx_statistics[sensor_index].O2_value_sample_cnt = 0;
 				}
 				if(stats.dev_msg_cnt[sensor_index] >= 2)//Send Status and measurements of current UniNOx sensors to Morfeas_opc_ua via IPC, Approx every 100ms.
 				{
@@ -373,7 +401,7 @@ int main(int argc, char *argv[])
 			flags.export_logstat = 0;
 			pthread_mutex_lock(&NOX_access);
 				//Calculate CANBus utilization
-				stats.Bus_util = 100.0*(msg_cnt/MAX_CANBus_FPS);
+				stats.Bus_util = roundf(10000.0*(msg_cnt/MAX_CANBus_FPS))/100.0;
 				msg_cnt = 0;
 				if(flags.port_meas_exist)
 				{
