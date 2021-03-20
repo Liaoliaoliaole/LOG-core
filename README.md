@@ -15,7 +15,7 @@ The Morfeas project was initially start as an implementation of a software gatew
 (currently named Morfeas-Proto) that provide (and translate) measurements data from some proprietary devices (SDAQ family)
 with CANbus compatible interface (SDAQnet) to OPC-UA protocol (Open62541 based).
 
-As the Morfeas project developed additional support added for other devices (MDAQ, IO-BOX, MTI) with different interfaces (ModBus-TCP, USB).
+As the Morfeas project developed additional support added for other devices (MDAQ, IO-BOX, MTI, UniNOx) with different interfaces (ModBus-TCP, USB).
 
 Furthermore, a web interface sub-project added to the Morfeas project under the name ["Morfeas-web"](https://gitlab.com/fantomsam/morfeas_web).
 Thisof, will provide a layman friendly configuration interface for the gateway, the OPC-UA server's Nodeset and the connected devices.
@@ -37,14 +37,13 @@ Project documentation located @:[/Docs/Morfeas_project_Documentation](./Docs/Mor
   * **Morfeas_SDAQ_if**: SDAQ_net handler.
   * **Morfeas_MDAQ_if**: ModBus-TCP handler for MDAQs.
   * **Morfeas_IOBOX_if**: ModBus-TCP handler for IO-BOXes.
-  * **Morfeas_MTI_if**: ModBus-TCP and USB  handler for MTIs.
-
-**MTI**: Mobile Telemetry Interface.
+  * **Morfeas_MTI_if**: ModBus-TCP handler for MTIs.
+  * **Morfeas_NOX_if**: CANBus handler for UniNOx.
 
 ### Requirements
 For compilation of this project the following dependencies required.
-* [GCC](https://gcc.gnu.org/) - The GNU Compilers Collection
-* [GNU Make](https://www.gnu.org/software/make/) - GNU make utility
+* [GCC](https://gcc.gnu.org/) - The GNU Compilers Collection.
+* [GNU Make](https://www.gnu.org/software/make/) - GNU make utility.
 * [CMake](https://cmake.org/) - Cross-platform family of open source tools for package build.
 * [zlib](https://www.zlib.net/zlib_how.html) - A free software library used for data compression.
 * [NCURSES](https://www.gnu.org/software/ncurses/ncurses.html) - A free (libre) software emulation library of curses.
@@ -54,13 +53,13 @@ For compilation of this project the following dependencies required.
 * [libusb](https://libusb.info/) - An ANSI C library that provides generic access to USB devices.
 * [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 * [Libsocketcan](https://directory.fsf.org/wiki/Libsocketcan) - Library to control some basic functions in SocketCAN from userspace.
-* [Libwebsockets](https://libwebsockets.org/) - An ANSI C library for implementing modern network protocols
+* [Libwebsockets](https://libwebsockets.org/) - An ANSI C library for implementing modern network protocols.
 * [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace.
 * [libdbus](https://www.freedesktop.org/wiki/Software/dbus/#index1h1) - The library of the D-Bus.
 
 ##### Optionally
-* [CAN-Utils](https://elinux.org/Can-utils) - CANBus utilities
-* [I2C-tools](https://packages.debian.org/jessie/i2c-tools) - Heterogeneous set of I2C tools for Linux kernel
+* [CAN-Utils](https://elinux.org/Can-utils) - CANBus utilities.
+* [I2C-tools](https://packages.debian.org/jessie/i2c-tools) - Heterogeneous set of I2C tools for Linux kernel.
 
 ## The Source
 The source of the Morfeas-core project have the following submodules:
