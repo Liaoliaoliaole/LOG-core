@@ -233,7 +233,11 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 			node_dec->cnt = 0;
 		}
 		else
+		{
 			cJSON_AddNumberToObject(node_data, "Meas_avg", NAN);
+			cJSON_AddNumberToObject(node_data, "Meas_max", NAN);
+			cJSON_AddNumberToObject(node_data, "Meas_min", NAN);
+		}
 		cJSON_AddItemToObject(array, "Measurement_data", node_data);
 	}
 }
@@ -832,7 +836,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			cJSON_AddStringToObject(NOx_errors, "O2", Errors_dec_str[stats->NOXs_data[i].errors.O2]);
 		}
 		else
-			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
+			cJSON_AddItemToArray(NOx_array, cJSON_CreateObject());//Add empty object to NOx_array.
 	}
 	//Print JSON to File
 	JSON_str = cJSON_PrintUnformatted(root);

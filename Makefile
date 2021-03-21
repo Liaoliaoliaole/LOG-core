@@ -1,6 +1,6 @@
 ###############################################################################
 #                     Makefile for Morfeas_core Project                       #
-# Copyright (C) 12019-12020  Sam harry Tzavaras        	                      #
+# Copyright (C) 12019-12021  Sam harry Tzavaras        	                      #
 #                                                                             #
 # This program is free software; you can redistribute it and/or               #
 #  modify it under the terms of the GNU General Public License                #
@@ -24,7 +24,6 @@ WORK_dir=work
 SRC_dir=src
 CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src/*.h
 CANif_DEP_SRC_dir = ./src/sdaq-worker/src
-
 LIBs=open62541 \
 	 libcjson \
 	 ncurses \

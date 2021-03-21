@@ -401,7 +401,8 @@ int main(int argc, char *argv[])
 			flags.export_logstat = 0;
 			pthread_mutex_lock(&NOX_access);
 				//Calculate CANBus utilization
-				stats.Bus_util = roundf(10000.0*(msg_cnt/MAX_CANBus_FPS))/100.0;
+				stats.Bus_util = (100*msg_cnt)/MAX_CANBus_FPS;
+				stats.Bus_util = roundf(100.0*stats.Bus_util)/100.0;
 				msg_cnt = 0;
 				if(flags.port_meas_exist)
 				{

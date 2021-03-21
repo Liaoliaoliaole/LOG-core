@@ -347,7 +347,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		  &&(dev_type_str = XML_node_get_content(check_element, "INTERFACE_TYPE")))
 		{
 			fl.as_struct.anchor = 1;
-			//TO-DO: More checks on values
+			//TODO: More checks on values
 			if(validate_anchor_comp(content, if_type_str_2_num(dev_type_str)))
 			{
 				fprintf(stderr, "\nANCHOR :\"%s\" of ISO_CHANNEL :\"%s\" (Type:\"%s\") is NOT valid!!!!\n\n", content,
@@ -518,7 +518,7 @@ int check_file(const char *configs_dir, const char *file_name)
 int Morfeas_daemon_config_valid(xmlNode *root_element)
 {
 	xmlNode *xml_node, *components_head_node, *check_node;
-	xmlChar* content, *ipv4_addr, *dev_name, *config_Dir;
+	xmlChar *content, *ipv4_addr, *dev_name, *config_Dir;
 	//Check for nodes with Empty content
 	if((xml_node = scaning_XML_nodes_for_empty(root_element)))
 	{
@@ -589,7 +589,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 						{
 							if(!strcmp((char*)content, XML_node_get_content(check_node, "CANBUS_IF")))
 							{
-								fprintf(stderr, "XML Node with name \"CANBUS_IF\" and content \"%s\" for SDAQ_HANDLER found multiple times!!!\n", content);
+								fprintf(stderr, "XML Node with name \"CANBUS_IF\" with content \"%s\" for SDAQ_HANDLER found multiple times!!!\n", content);
 								return EXIT_FAILURE;
 							}
 						}
@@ -618,7 +618,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 						{
 							if(!strcmp((char*)content, XML_node_get_content(check_node, "CANBUS_IF")))
 							{
-								fprintf(stderr, "XML Node with name \"CANBUS_IF\" and content \"%s\" for NOX_HANDLER found multiple times!!!\n",content);
+								fprintf(stderr, "XML Node with name \"CANBUS_IF\" with content \"%s\" for NOX_HANDLER found multiple times!!!\n",content);
 								return EXIT_FAILURE;
 							}
 						}
@@ -629,9 +629,40 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
-
-	//TO-DO: Check duplicate usage for contents of CANBUS_IF
-
+	/*
+	//Check duplicate usage for contents of CANBUS_IF
+	xmlChar *check_content;
+	xml_node = components_head_node->children;
+	while(xml_node)
+	{
+		if (xml_node->type == XML_ELEMENT_NODE)
+		{
+			if((content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF")))
+			{
+				check_node = xml_node->next;
+				do{
+					check_node = check_node->next;
+				}while(check_node && check_node->type != XML_ELEMENT_NODE);
+				while(check_node)
+				{
+					if (check_node->type == XML_ELEMENT_NODE)
+					{
+						if((check_content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF")))
+						{
+							if(!strcmp((char*)content, (char*)check_content))
+							{
+								fprintf(stderr, "\"CANBUS_IF\":\"%s\" found to be used in multiple Handlers!!!\n",content);
+								return EXIT_FAILURE;
+							}
+						}
+					}
+					check_node = check_node->next;
+				}
+			}
+		}
+		xml_node = xml_node->next;
+	}
+	*/
 	//Scan nodes MDAQ,IOBOX,MTI for child node with duplicate and validate content
 	xml_node = components_head_node->children;
 	while(xml_node)
