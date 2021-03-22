@@ -273,6 +273,7 @@ int main(int argc, char *argv[])
 
 	//-----Actions on the bus-----//
 	NOx_id_dec = (NOx_can_id *)&(frame_rx.can_id);
+	sprintf(IPC_msg.NOX_BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);//Load BUSName to IPC_msg
 	while(NOX_handler_run)//FSM of Morfeas_NOX_if
 	{
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
@@ -421,7 +422,6 @@ int main(int argc, char *argv[])
 					IPC_msg.NOX_BUS_info.Electrics = 0;
 				//Transfer BUS utilization and SDAQnet port measurements to opc_ua
 				IPC_msg.NOX_BUS_info.IPC_msg_type = IPC_NOX_CAN_BUS_info;
-				sprintf(IPC_msg.NOX_BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);
 				IPC_msg.NOX_BUS_info.BUS_utilization = stats.Bus_util;
 				IPC_msg.NOX_BUS_info.auto_switch_off_value = stats.auto_switch_off_value;
 				IPC_msg.NOX_BUS_info.auto_switch_off_cnt = stats.auto_switch_off_cnt;

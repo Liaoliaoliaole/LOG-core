@@ -55,7 +55,7 @@ void NOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 			sprintf(Child_Node_ID_str, "%s.shunt", Dev_or_Bus_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_str, Child_Node_ID_str, "Shunt Temp (°C)", UA_TYPES_FLOAT);
 		}
-		sprintf(Node_ID_str, "%s.Sensors", Dev_or_Bus_name);
+		sprintf(Node_ID_str, "%s.sensors", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "UniNOx");
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }
@@ -63,13 +63,21 @@ void NOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
-	char Anchor[30], Node_ID_str[60], meas_status_str[60];
+	char label_str[30], parent_Node_ID_str[60], Node_ID_str[90];
 
 	//Msg type from SDAQ_handler
 	switch(type)
 	{
 		case IPC_NOX_data:
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
+				/*
+				sprintf(Node_ID_str, "%s.sensors.addr_%d", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name, i);
+				if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+				{
+					UA_Server_deleteNode(server, NodeId, 1);
+					UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+				}
+				*/
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 		case IPC_NOX_CAN_BUS_info:
@@ -93,11 +101,57 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 				}
 				for(int i=0; i<2; i++)
 				{
+					sprintf(Node_ID_str, "%s.sensors.addr_%d", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name, i);
 					if(IPC_msg_dec->NOX_BUS_info.active_devs[i])
 					{
+						if(UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+						{
+							sprintf(parent_Node_ID_str, "%s.sensors", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name);
+							sprintf(label_str, "UniNOx(Addr:%d)", i);
+							Morfeas_opc_ua_add_object_node(server, parent_Node_ID_str, Node_ID_str, label_str);
+							//Populate objects and variables for UniNOx sensor's data
+							strcpy(parent_Node_ID_str, Node_ID_str);
+							sprintf(Node_ID_str, "%s.NOx_value", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "NOx value (ppm)", UA_TYPES_FLOAT);
+							sprintf(Node_ID_str, "%s.O2_value", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "O2 value (%)", UA_TYPES_FLOAT);
+							//Populate objects and variables for UniNOx sensor's status
+							sprintf(Node_ID_str, "%s.sensors.addr_%d.status", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name, i);
+							Morfeas_opc_ua_add_object_node(server, parent_Node_ID_str, Node_ID_str, "Status");
+							strcpy(parent_Node_ID_str, Node_ID_str);
+							sprintf(Node_ID_str, "%s.meas_state", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "Measure state", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.supply", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "Supply in range", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.inTemp", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "in Temperature", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.NOx_valid", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "is NOx_value valid", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.O2_valid", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "is O2_value valid", UA_TYPES_BOOLEAN);
+							sprintf(Node_ID_str, "%s.heater_state", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "Heater state", UA_TYPES_STRING);
+							//Populate objects and variables for UniNOx sensor's errors
+							sprintf(Node_ID_str, "%s.errors.addr_%d.errors", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name, i);
+							Morfeas_opc_ua_add_object_node(server, parent_Node_ID_str, Node_ID_str, "Errors");
+							strcpy(parent_Node_ID_str, Node_ID_str);
+							sprintf(Node_ID_str, "%s.heater_element", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "Heater element", UA_TYPES_STRING);
+							sprintf(Node_ID_str, "%s.NOx_element", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "NOx element", UA_TYPES_STRING);
+							sprintf(Node_ID_str, "%s.O2_element", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "O2 element", UA_TYPES_STRING);
+						}
+						else
+							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 					}
 					else
 					{
+						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+						{
+							UA_Server_deleteNode(server, NodeId, 1);
+							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+						}
 					}
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
