@@ -128,18 +128,48 @@ char * XML_node_get_content(xmlNode *node, const char *node_name)
 	}
 	return NULL;
 }
+/*
+ * Function where check node for attribute "Disable".
+ * Return: 0 if Disable="false",
+		   1 if Disable="true",
+		   -1 if attribute is not found.
+ */
+int getprop_disable(xmlNode *node)
+{
+	int retval;
+	xmlChar *content;
+	while(node)
+	{
+		if(node->type == XML_ELEMENT_NODE)
+		{
+			if((content = xmlGetProp(node, BAD_CAST"Disable")))
+			{
+				if(!strcmp((char *)content, "true"))
+					retval = 1;
+				else if(!strcmp((char *)content, "false"))
+					retval = 0;
+				else
+					retval = -1;
+				xmlFree(content);
+				return retval;
+			}
+		}
+		node = node->next;
+	}
+	return -1;
+}
 
 int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 {
     xmlParserCtxtPtr ctxt;
     //--- create a parser context ---//
-    if (!(ctxt = xmlNewParserCtxt()))
+    if(!(ctxt = xmlNewParserCtxt()))
     {
         fprintf(stderr, "Failed to allocate parser context\n");
 		return EXIT_FAILURE;
     }
     //--- parse the file, activating the DTD validation option ---//
-    if (!(*doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID | XML_PARSE_NOBLANKS)))
+    if(!(*doc = xmlCtxtReadFile(ctxt, filename, NULL, XML_PARSE_DTDVALID | XML_PARSE_NOBLANKS)))
     {
         fprintf(stderr, "Failed to parse %s\n", filename);
         xmlFreeParserCtxt(ctxt);
@@ -268,11 +298,11 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	//Check for Empty XML nodes content and for Invalid Interface_name content
 	for(element = root_element->children; element; element = element->next)
 	{
-		if (element->type == XML_ELEMENT_NODE)
+		if(element->type == XML_ELEMENT_NODE)
 		{
 			for(check_element = element->children; check_element; check_element = check_element->next)
 			{
-				if (check_element->type == XML_ELEMENT_NODE)
+				if(check_element->type == XML_ELEMENT_NODE)
 				{
 					if(!check_element->children)//Empty Check
 					{
@@ -308,7 +338,7 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 	//Check for duplicate ISO_CHANNEL
 	for(element = root_element->children; element->next; element = element->next)
 	{   //print_XML_node(element);
-		if (element->type == XML_ELEMENT_NODE)
+		if(element->type == XML_ELEMENT_NODE)
 		{
 			if((iso_channel = XML_node_get_content(element, "ISO_CHANNEL")))
 			{
@@ -549,6 +579,31 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		fprintf(stderr, "\"COMPONENTS\" XML node not found\n");
 		return EXIT_FAILURE;
 	}
+	//Scan children of node "COMPONENTS" for Attribute errors
+	xml_node = components_head_node->children;
+	while(xml_node)
+	{
+		if (xml_node->type == XML_ELEMENT_NODE)
+		{
+			if((content = xmlGetProp(xml_node, BAD_CAST"Disable")))
+			{
+				if(strcmp((char *)content, "true") && strcmp((char *)content, "false"))
+				{
+					fprintf(stderr, "Attribute Value: \"%s\" for XML node \"COMPONENTS\"(Line:%d) is out of range (true,false)\n",
+						(char*)content, xml_node->line);
+					xmlFree(content);
+					return EXIT_FAILURE;
+				}
+				xmlFree(content);
+			}
+			else
+			{
+				fprintf(stderr, "Unknown Attribute found at Line:%d\n", xml_node->line);
+				return EXIT_FAILURE;
+			}
+		}
+		xml_node = xml_node->next;
+	}
 	//Check for existence of node "OPC_UA_SERVER" and validate it's contents
 	if((xml_node = get_XML_node(components_head_node, "OPC_UA_SERVER")))
 	{
@@ -629,25 +684,21 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
-	/*
 	//Check duplicate usage for contents of CANBUS_IF
 	xmlChar *check_content;
 	xml_node = components_head_node->children;
 	while(xml_node)
 	{
-		if (xml_node->type == XML_ELEMENT_NODE)
+		if (xml_node->type == XML_ELEMENT_NODE )
 		{
-			if((content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF")))
+			if(!getprop_disable(xml_node) && (content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF")))
 			{
 				check_node = xml_node->next;
-				do{
-					check_node = check_node->next;
-				}while(check_node && check_node->type != XML_ELEMENT_NODE);
 				while(check_node)
 				{
 					if (check_node->type == XML_ELEMENT_NODE)
 					{
-						if((check_content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF")))
+						if(!getprop_disable(check_node) && (check_content = (xmlChar *) XML_node_get_content(check_node, "CANBUS_IF")))
 						{
 							if(!strcmp((char*)content, (char*)check_content))
 							{
@@ -662,7 +713,6 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 		}
 		xml_node = xml_node->next;
 	}
-	*/
 	//Scan nodes MDAQ,IOBOX,MTI for child node with duplicate and validate content
 	xml_node = components_head_node->children;
 	while(xml_node)
@@ -724,32 +774,6 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 					}
 					check_node = check_node->next;
 				}
-			}
-		}
-		xml_node = xml_node->next;
-	}
-
-	//Scan children of node "COMPONENTS" for Attribute errors
-	xml_node = components_head_node->children;
-	while(xml_node)
-	{
-		if (xml_node->type == XML_ELEMENT_NODE)
-		{
-			if((content = xmlGetProp(xml_node, BAD_CAST"Disable")))
-			{
-				if(strcmp((char *)content, "true") && strcmp((char *)content, "false"))
-				{
-					fprintf(stderr, "Attribute Value: \"%s\" for XML node \"COMPONENTS\"(Line:%d) is out of range (true,false)\n",
-						(char*)content, xml_node->line);
-					xmlFree(content);
-					return EXIT_FAILURE;
-				}
-				xmlFree(content);
-			}
-			else
-			{
-				fprintf(stderr, "Unknown Attribute found at Line:%d\n", xml_node->line);
-				return EXIT_FAILURE;
 			}
 		}
 		xml_node = xml_node->next;

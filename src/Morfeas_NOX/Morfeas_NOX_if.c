@@ -367,7 +367,7 @@ int main(int argc, char *argv[])
 					stats.dev_msg_cnt[sensor_index] = 0;
 					pthread_mutex_lock(&NOX_access);
 						IPC_msg.NOX_data.IPC_msg_type = IPC_NOX_data;
-						sprintf(IPC_msg.NOX_data.Dev_or_Bus_name, "%s", stats.CAN_IF_name);
+						//sprintf(IPC_msg.NOX_data.Dev_or_Bus_name, "%s", stats.CAN_IF_name);
 						IPC_msg.NOX_data.sensor_addr = sensor_index;
 						memcpy(&(IPC_msg.NOX_data.NOXs_data), &(stats.NOXs_data[sensor_index]), sizeof(struct UniNOx_sensor));
 						IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
