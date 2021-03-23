@@ -30,9 +30,6 @@ void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *No
 void Morfeas_add_new_Gen_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id, unsigned char dev_type);
 
-//The DBus method caller function. Return 0 if not internal error.
-int Morfeas_DBus_method_call(const char *handler_type, const char *dev_name, const char *method, const char *contents, UA_String *reply);
-
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	int negative_one = -1;
@@ -636,43 +633,6 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
 	}
-}
-//Function that get the string sec_num section from NodeId. Return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-int get_NodeId_sec(const UA_NodeId *NodeId, unsigned char sec_num, char *sec_str, size_t sec_str_size)
-{
-	int i=0;
-	unsigned char dot_cnt=0, *NodeId_str;
-
-	if(!NodeId || !sec_str || !sec_str_size)
-		return EXIT_FAILURE;
-	if(NodeId->identifierType != UA_NODEIDTYPE_STRING)
-		return EXIT_FAILURE;
-	NodeId_str = (NodeId->identifier.string.data);
-	if(sec_num)
-	{
-		while(dot_cnt<sec_num)
-		{
-			while(NodeId_str[i]!='.')
-			{
-				i++;
-				if(i>=NodeId->identifier.string.length)
-					return EXIT_FAILURE;
-			}
-			i++;
-			dot_cnt++;
-		}
-		NodeId_str = NodeId->identifier.string.data+i;
-	}
-	i=0;
-	while(NodeId_str[i]!='.')
-	{
-		sec_str[i]=NodeId_str[i];
-		i++;
-		if(i >= sec_str_size)
-			return EXIT_FAILURE;
-	}
-	sec_str[i]='\0';
-	return EXIT_SUCCESS;
 }
 
 UA_StatusCode Morfeas_new_MTI_config_method_callback(UA_Server *server,
