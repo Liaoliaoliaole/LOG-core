@@ -199,13 +199,16 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 	char *channel, *receiver_or_value, *tele_type_or_id;
 	if(!anchor_str)
 		return EXIT_FAILURE;
-	//Check anchor_str for correct anchor component names
-	if(!atoi(anchor_str)) //identifier component check
-		return EXIT_FAILURE;
-	if(!(channel = strstr(anchor_str, ".CH")))//channel component check
-		return EXIT_FAILURE;
-	if(!atoi(channel+strlen(".CH")))//Channel value check
-		return EXIT_FAILURE;
+	if(handler_type != NOX)
+	{
+		//Check anchor_str for correct anchor component names
+		if(!atoi(anchor_str)) //identifier component check
+			return EXIT_FAILURE;
+		if(!(channel = strstr(anchor_str, ".CH")))//channel component check
+			return EXIT_FAILURE;
+		if(!atoi(channel+strlen(".CH")))//Channel value check
+			return EXIT_FAILURE;
+	}
 	switch(handler_type)
 	{
 		case IOBOX:
@@ -276,6 +279,10 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 			if(tele_type_or_id>channel)//Check if channel is after tele_type_or_id
 				return EXIT_FAILURE;
 			break;
+		case NOX:
+			return EXIT_FAILURE;
+			break;
+		default: return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
