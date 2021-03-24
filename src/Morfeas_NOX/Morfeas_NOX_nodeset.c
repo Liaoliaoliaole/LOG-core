@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Local function that adding the new_MTI_config method to the Morfeas OPC_UA nodeset
 void Morfeas_add_new_NOX_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
+void Morfeas_add_NOX_heater_ctrl(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_NOX_global_heater_ctrl(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 
 void NOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
@@ -57,7 +58,7 @@ void NOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 			Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_str, Child_Node_ID_str, "Shunt Temp (°C)", UA_TYPES_FLOAT);
 		}
 		sprintf(Node_ID_str, "%s.sensors", Dev_or_Bus_name);
-		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "UniNOx");
+		Morfeas_opc_ua_add_object_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "UniNOx_net");
 		//Add NOX related methods
 		sprintf(Node_ID_str, "%s.new_NOX_config()", Dev_or_Bus_name);
 		Morfeas_add_new_NOX_config(server_ptr, Dev_or_Bus_name, Node_ID_str);
@@ -69,6 +70,7 @@ void NOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
+	UA_DateTime last_seen;
 	unsigned char value;
 	char label_str[30], parent_Node_ID_str[60], Node_ID_str[90];
 
@@ -83,6 +85,9 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 					if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, parent_Node_ID_str), &NodeId))
 					{
 						UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+						sprintf(Node_ID_str, "%s.last_seen", parent_Node_ID_str);
+						last_seen = UA_DateTime_fromUnixTime(IPC_msg_dec->NOX_data.NOXs_data.last_seen);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &last_seen, UA_TYPES_DATETIME);
 						sprintf(Node_ID_str, "%s.NOx_value", parent_Node_ID_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_data.NOXs_data.NOx_value), UA_TYPES_FLOAT);
 						sprintf(Node_ID_str, "%s.O2_value", parent_Node_ID_str);
@@ -153,10 +158,14 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 							Morfeas_opc_ua_add_object_node(server, parent_Node_ID_str, Node_ID_str, label_str);
 							//Populate objects and variables for UniNOx sensor's data
 							strcpy(parent_Node_ID_str, Node_ID_str);
+							sprintf(Node_ID_str, "%s.last_seen", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "Last seen", UA_TYPES_DATETIME);
 							sprintf(Node_ID_str, "%s.NOx_value", parent_Node_ID_str);
 							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "NOx value (ppm)", UA_TYPES_FLOAT);
 							sprintf(Node_ID_str, "%s.O2_value", parent_Node_ID_str);
 							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "O2 value (%)", UA_TYPES_FLOAT);
+							sprintf(Node_ID_str, "%s.heaters_ctrl()", parent_Node_ID_str);
+							Morfeas_add_NOX_heater_ctrl(server, parent_Node_ID_str, Node_ID_str);
 							//Populate objects and variables for UniNOx sensor's status
 							sprintf(Node_ID_str, "%s.sensors.addr_%d.status", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name, i);
 							Morfeas_opc_ua_add_object_node(server, parent_Node_ID_str, Node_ID_str, "Status");
@@ -274,7 +283,7 @@ void Morfeas_add_new_NOX_config(UA_Server *server_ptr, char *Parent_id, char *No
 							NULL, NULL);
 }
 
-UA_StatusCode Morfeas_add_NOX_globa_heater_ctrl_method_callback(UA_Server *server,
+UA_StatusCode Morfeas_add_NOX_global_heater_ctrl_method_callback(UA_Server *server,
                          const UA_NodeId *sessionId, void *sessionHandle,
                          const UA_NodeId *methodId, void *methodContext,
                          const UA_NodeId *objectId, void *objectContext,
@@ -331,8 +340,8 @@ void Morfeas_add_NOX_global_heater_ctrl(UA_Server *server_ptr, char *Parent_id, 
 	outputArgument.valueRank = UA_VALUERANK_SCALAR;
 
 	UA_MethodAttributes Method_Attr = UA_MethodAttributes_default;
-	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method UniNOx_global_heaters_ctrl");
-	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","UniNOx_global_heaters_ctrl()");
+	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method global_heaters_ctrl");
+	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","global_heaters_ctrl()");
 	Method_Attr.executable = true;
 	Method_Attr.userExecutable = true;
 	UA_Server_addMethodNode(server_ptr,
@@ -340,7 +349,85 @@ void Morfeas_add_NOX_global_heater_ctrl(UA_Server *server_ptr, char *Parent_id, 
 							UA_NODEID_STRING(1, Parent_id),
 							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 							UA_QUALIFIEDNAME(1, Node_id),
-							Method_Attr, &Morfeas_add_NOX_globa_heater_ctrl_method_callback,
+							Method_Attr, &Morfeas_add_NOX_global_heater_ctrl_method_callback,
+							1, &inputArgument,
+							1, &outputArgument,
+							NULL, NULL);
+}
+
+UA_StatusCode Morfeas_add_NOX_heater_ctrl_method_callback(UA_Server *server,
+                         const UA_NodeId *sessionId, void *sessionHandle,
+                         const UA_NodeId *methodId, void *methodContext,
+                         const UA_NodeId *objectId, void *objectContext,
+                         size_t inputSize, const UA_Variant *input,
+                         size_t outputSize, UA_Variant *output)
+{
+	char contents[60], CAN_if[Dev_or_Bus_name_str_size], NOx_addr_str[10], NOx_addr;
+    int ret = UA_STATUSCODE_GOOD;
+	cJSON *root = NULL;
+	UA_String reply={0};
+
+	if(!input[0].data)
+		return UA_STATUSCODE_BADSYNTAXERROR;
+	//Get CAN_if
+	if(get_NodeId_sec(methodId, 0, CAN_if, sizeof(CAN_if)))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	//Get NOx_addr_str from NodeId's second element
+	if(get_NodeId_sec(methodId, 2, NOx_addr_str, sizeof(NOx_addr_str)))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	if(!strstr(NOx_addr_str, "addr_"))
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	sscanf(NOx_addr_str, "addr_%hhu", &NOx_addr); 
+	//Construct contents for DBus method call (as JSON object)
+	root = cJSON_CreateObject();
+	cJSON_AddNumberToObject(root, "NOx_address", NOx_addr);
+	cJSON_AddBoolToObject(root, "NOx_heater", *(bool *)input[0].data);
+	//Stringify the root JSON object
+	if(!cJSON_PrintPreallocated(root, contents, sizeof(contents), 0))
+		ret = UA_STATUSCODE_BADOUTOFMEMORY;
+	cJSON_Delete(root);
+	if(!ret)
+	{
+		if(!Morfeas_DBus_method_call("NOX", CAN_if, "NOX_heater", contents, &reply))
+		{
+			UA_Variant_setScalarCopy(output, &reply, &UA_TYPES[UA_TYPES_STRING]);
+			UA_String_clear(&reply);
+		}
+		else
+			ret = UA_STATUSCODE_BADINTERNALERROR;
+	}
+	return ret;
+}
+
+void Morfeas_add_NOX_heater_ctrl(UA_Server *server_ptr, char *Parent_id, char *Node_id)
+{
+	UA_Argument inputArgument;
+	UA_Argument outputArgument;
+
+	//Configure inputArguments
+	UA_Argument_init(&inputArgument);
+	inputArgument.description = UA_LOCALIZEDTEXT("en-US", "Heater control");
+	inputArgument.name = UA_STRING("heater_ctrl");
+	inputArgument.dataType = UA_TYPES[UA_TYPES_BOOLEAN].typeId;
+	inputArgument.valueRank = UA_VALUERANK_SCALAR_OR_ONE_DIMENSION;
+	//Configure outputArgument
+	UA_Argument_init(&outputArgument);
+	outputArgument.description = UA_LOCALIZEDTEXT("en-US", "Return of the method call");
+	outputArgument.name = UA_STRING("Return");
+	outputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+	outputArgument.valueRank = UA_VALUERANK_SCALAR;
+
+	UA_MethodAttributes Method_Attr = UA_MethodAttributes_default;
+	Method_Attr.description = UA_LOCALIZEDTEXT("en-US","Method heaters_ctrl");
+	Method_Attr.displayName = UA_LOCALIZEDTEXT("en-US","heaters_ctrl()");
+	Method_Attr.executable = true;
+	Method_Attr.userExecutable = true;
+	UA_Server_addMethodNode(server_ptr,
+							UA_NODEID_STRING(1, Node_id),
+							UA_NODEID_STRING(1, Parent_id),
+							UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+							UA_QUALIFIEDNAME(1, Node_id),
+							Method_Attr, &Morfeas_add_NOX_heater_ctrl_method_callback,
 							1, &inputArgument,
 							1, &outputArgument,
 							NULL, NULL);

@@ -170,9 +170,6 @@ $(WORK_dir)/Morfeas_SDAQ_if.o: $(SRC_dir)/Morfeas_SDAQ/Morfeas_SDAQ_if.c
 $(WORK_dir)/SDAQ_drv.o: $(CANif_DEP_SRC_dir)/SDAQ_drv.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
-$(WORK_dir)/Morfeas_RPi_Hat.o: $(SRC_dir)/Morfeas_RPi_Hat/Morfeas_RPi_Hat.c
-	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
-
 $(WORK_dir)/Morfeas_SDAQ_nodeset.o: $(SRC_dir)/Morfeas_SDAQ/Morfeas_SDAQ_nodeset.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
@@ -217,6 +214,9 @@ $(WORK_dir)/Morfeas_NOX_nodeset.o: $(SRC_dir)/Morfeas_NOX/Morfeas_NOX_nodeset.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Supplementary dependencies
+$(WORK_dir)/Morfeas_RPi_Hat.o: $(SRC_dir)/Morfeas_RPi_Hat/Morfeas_RPi_Hat.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
 $(WORK_dir)/Morfeas_Logger.o: $(SRC_dir)/Supplementary/Morfeas_Logger.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
