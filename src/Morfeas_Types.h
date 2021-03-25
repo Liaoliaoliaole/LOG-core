@@ -51,7 +51,7 @@ enum Tele_status_enum{
 	Tele_channel_noSensor,
 	Tele_channel_Error,
 	Disconnected = 127,
-	Out_of_gange,
+	CH_is_Out_of_range,
 	OFF_line = -1
 };
 
@@ -269,6 +269,10 @@ struct UniNOx_sensor{
 	} errors;
 };
 //Morfeas_NOX-if stats struct, used in Morfeas_NOX_if
+enum UniNOx_sensor_value_enum{
+	NOx_val = 1,
+	O2_val
+};
 typedef unsigned short auto_switch_off_var;
 struct Morfeas_NOX_if_stats{
 	int FIFO_fd;
@@ -364,6 +368,7 @@ struct Link_entry{
 	char ISO_channel_name[ISO_channel_name_size];
 	unsigned char interface_type_num;
 	unsigned int identifier;
+	char *CAN_IF_name;//Used with NOX and CPAD handlers.
 	unsigned char channel;
 	unsigned char rxNum_teleType_or_value;
 	unsigned char tele_ID;

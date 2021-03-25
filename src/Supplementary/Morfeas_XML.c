@@ -195,8 +195,8 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 //Function that validate the anchor's components. Return 0 on success or -1 on failure.
 int validate_anchor_comp(char *anchor_str, char handler_type)
 {
-	unsigned int anchor_arg_int[max_arg_range], i;
-	char *channel, *receiver_or_value, *tele_type_or_id;
+	unsigned int anchor_arg_int[max_arg_range], i, dots;
+	char *channel, *receiver_or_value, *tele_type_or_id, *CAN_if_name, *addr=NULL, *UniNOx_val=NULL;
 	if(!anchor_str)
 		return EXIT_FAILURE;
 	if(handler_type != NOX)
@@ -280,7 +280,30 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 				return EXIT_FAILURE;
 			break;
 		case NOX:
-			return EXIT_FAILURE;
+			CAN_if_name = anchor_str;
+			//Check amount of dots('.') in anchor_str.
+			for(dots=0, i=0; anchor_str[i]; i++)
+				if(anchor_str[i] == '.')
+				{
+					dots++;
+					switch(dots)
+					{
+						case 1: addr = anchor_str+i+1; break;
+						case 2: UniNOx_val = anchor_str+i+1; break;
+					}
+				}
+			if(dots != 2)
+				return EXIT_FAILURE;
+			if(!addr || !UniNOx_val)
+				return EXIT_FAILURE;
+			for(i=0; CAN_if_name[i] != '\0'; i++);
+			if(i >= Dev_or_Bus_name_str_size)
+				return EXIT_FAILURE;
+			size_t addr_str_len = strlen("addr_x");
+			if(strncmp(addr, "addr_0", addr_str_len) && strncmp(addr, "addr_1", addr_str_len))
+				return EXIT_FAILURE;
+			if(strcmp(UniNOx_val, "NOx") && strcmp(UniNOx_val, "O2"))
+				return EXIT_FAILURE;
 			break;
 		default: return EXIT_FAILURE;
 	}
@@ -419,6 +442,12 @@ struct Link_entry* new_Link_entry()
 //Deconstructor for Data of Lists with data type "struct Link_entry"
 void free_Link_entry(gpointer data)
 {
+	struct Link_entry *node = (struct Link_entry *) data;
+	if(node->CAN_IF_name)
+	{
+		free(node->CAN_IF_name);
+		node->CAN_IF_name = NULL;
+	}
 	g_slice_free(struct Link_entry, data);
 }
 /*
@@ -430,6 +459,8 @@ void print_List (gpointer data, gpointer user_data)
 	printf("\tInterface_type: %s\n", node_data->interface_type);
 	printf("\tIdentifier: %u\n", node_data->identifier);
 	printf("\tChannel: %hhu\n", node_data->channel);
+	if(node_data->CAN_IF_name)
+		printf("\CAN_IF_name: %s\n", node_data->CAN_IF_name);
 }
 */
 int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList **cur_Links)
@@ -459,7 +490,7 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 	int i;
 	xmlNode *check_element;
 	struct Link_entry *list_cur_Links_node_data;
-	char *iso_channel_str = NULL, *dev_type_str = NULL, *anchor_ptr = NULL, *TeleID;
+	char *iso_channel_str, *dev_type_str, *anchor_ptr, *TeleID;
 	char format_str[30];
 
 	g_slist_free_full(*cur_Links, free_Link_entry);//Free List cur_Links
@@ -510,6 +541,24 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 							}
 							sscanf(anchor_ptr, format_str, &(list_cur_Links_node_data->identifier),
 														   &(list_cur_Links_node_data->channel));
+							break;
+						case NOX:
+							for(i=0; anchor_ptr[i]!='.'; i++);//Count characters until first dot.
+							if(!(list_cur_Links_node_data->CAN_IF_name = calloc(i+1, sizeof(char))))
+							{
+								fprintf(stderr,"Memory error!\n");
+								exit(EXIT_FAILURE);
+							}
+							for(i=0; anchor_ptr[i]!='.'; i++)//copy CAN_IF_name section from anchor to Links_node list.
+								list_cur_Links_node_data->CAN_IF_name[i] = anchor_ptr[i];
+							anchor_ptr[i] = '\0';
+							anchor_ptr += i+strlen("addr_")+1;
+							list_cur_Links_node_data->channel = atoi(anchor_ptr);
+							anchor_ptr += 2;//move to last anchor's argument.
+							if(!strcmp(anchor_ptr, "NOx"))
+								list_cur_Links_node_data->rxNum_teleType_or_value = NOx_val;
+							else if(!strcmp(anchor_ptr, "O2"))
+								list_cur_Links_node_data->rxNum_teleType_or_value = O2_val;
 							break;
 					}
 					*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
@@ -590,7 +639,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 	xml_node = components_head_node->children;
 	while(xml_node)
 	{
-		if (xml_node->type == XML_ELEMENT_NODE)
+		if(xml_node->type == XML_ELEMENT_NODE)
 		{
 			if((content = xmlGetProp(xml_node, BAD_CAST"Disable")))
 			{
@@ -637,7 +686,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 	xml_node = components_head_node->children;
 	while(xml_node)
 	{
-		if (xml_node->type == XML_ELEMENT_NODE)
+		if(xml_node->type == XML_ELEMENT_NODE)
 		{
 			if(!strcmp((char*)xml_node->name, "SDAQ_HANDLER"))
 			{
@@ -666,7 +715,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 	xml_node = components_head_node->children;
 	while(xml_node)
 	{
-		if (xml_node->type == XML_ELEMENT_NODE)
+		if(xml_node->type == XML_ELEMENT_NODE)
 		{
 			if(!strcmp((char*)xml_node->name, "NOX_HANDLER"))
 			{
@@ -696,7 +745,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 	xml_node = components_head_node->children;
 	while(xml_node)
 	{
-		if (xml_node->type == XML_ELEMENT_NODE )
+		if(xml_node->type == XML_ELEMENT_NODE )
 		{
 			if(!getprop_disable(xml_node) && (content = (xmlChar *) XML_node_get_content(xml_node, "CANBUS_IF")))
 			{
@@ -724,7 +773,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 	xml_node = components_head_node->children;
 	while(xml_node)
 	{
-		if (xml_node->type == XML_ELEMENT_NODE)
+		if(xml_node->type == XML_ELEMENT_NODE)
 		{
 			if(!strcmp((char*)xml_node->name, "MDAQ_HANDLER") ||
 			   !strcmp((char*)xml_node->name, "IOBOX_HANDLER")||
@@ -761,7 +810,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 				check_node = xml_node->next;
 				while(check_node)
 				{
-					if (check_node->type == XML_ELEMENT_NODE)
+					if(check_node->type == XML_ELEMENT_NODE)
 					{
 						if(!strcmp((char*)check_node->name, "MDAQ_HANDLER") ||
 						   !strcmp((char*)check_node->name, "IOBOX_HANDLER")||

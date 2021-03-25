@@ -372,8 +372,7 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
 		{
-			List_Links_Node = g_slist_find_custom(Links, ISO_Channel, List_Links_cmp);
-			if(List_Links_Node)
+			if((List_Links_Node = g_slist_find_custom(Links, ISO_Channel, List_Links_cmp)))
 			{
 				Node_data = List_Links_Node->data;
 				switch(Node_data->interface_type_num)
@@ -411,6 +410,17 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 																		  MTI_Tele_dev_type_str[Node_data->rxNum_teleType_or_value],
 																		  Node_data->channel,
 																		  req_value);
+						break;
+					case NOX:
+							switch(Node_data->rxNum_teleType_or_value)
+							{
+								case NOx_val: req_value = "NOx_value"; break;
+								case O2_val: req_value = "O2_value"; break;
+								default: return UA_STATUSCODE_GOOD;
+							}
+							sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.%s", Node_data->CAN_IF_name,
+																			   Node_data->channel,
+																			   req_value);
 						break;
 					default: return UA_STATUSCODE_GOOD;
 				}
@@ -520,12 +530,21 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 																		  Node_data->channel,
 																		  req_value);
 						break;
+					case NOX:
+							sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.status", Node_data->CAN_IF_name,
+																				   Node_data->channel);
+						break;
 					default: return UA_STATUSCODE_GOOD;
 				}
 				//check if the source node exist
 				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 				{
-					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
+					if(Node_data->interface_type_num == NOX)
+					{
+						
+					}
+					else
+						UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
 					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 				}
 				else
@@ -601,11 +620,19 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
-		sprintf(tmp_str,"%s.id",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Identifier", UA_TYPES_UINT32);
-		sprintf(tmp_str,"%s.channel",ISO_channel_name);
-		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
-		if(if_type == IOBOX || if_type == MDAQ || if_type == MTI)
+		if(if_type == NOX)
+		{
+			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "onCAN", UA_TYPES_STRING);
+		}
+		else
+		{
+			sprintf(tmp_str,"%s.id",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Identifier", UA_TYPES_UINT32);
+			sprintf(tmp_str,"%s.channel",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
+		}
+		if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 		{
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
@@ -640,10 +667,18 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	if(List_Links_Node)
 	{
 		List_Links_Node_data = List_Links_Node->data;
-		sprintf(tmp_str,"%s.id",ISO_channel_name);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->identifier), UA_TYPES_UINT32);
-		sprintf(tmp_str,"%s.channel",ISO_channel_name);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->channel), UA_TYPES_BYTE);
+		if(if_type == NOX)
+		{
+			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), List_Links_Node_data->CAN_IF_name, UA_TYPES_STRING);
+		}
+		else
+		{
+			sprintf(tmp_str,"%s.id",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->identifier), UA_TYPES_UINT32);
+			sprintf(tmp_str,"%s.channel",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->channel), UA_TYPES_BYTE);
+		}
 		switch(if_type)
 		{
 			case IOBOX:
@@ -665,7 +700,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
-	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI)
+	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 	{
 		if((unit_str = XML_node_get_content(node, "UNIT")))
 		{

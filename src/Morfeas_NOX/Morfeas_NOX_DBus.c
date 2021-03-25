@@ -90,7 +90,8 @@ void * NOX_DBus_listener(void *varg_pt)//Thread function.
     if(dbus_error_is_set (&dbus_error))
         Log_DBus_error("dbus_bus_request_name() Failed!!!");
 
-    if(ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+    if(ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
+	{
         Logger("DBus: Name not primary owner, ret = %d\n", ret);
         return NULL;
     }
