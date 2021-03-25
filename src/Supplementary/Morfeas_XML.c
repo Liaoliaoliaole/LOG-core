@@ -36,12 +36,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void print_XML_node(xmlNode * node)
 {
     xmlNode *cur_node;
-	if (node->type == XML_ELEMENT_NODE)
+	if(node->type == XML_ELEMENT_NODE)
 	{
 		printf("Node name: %s\n", node->name);
 		for (cur_node = node->children; cur_node; cur_node = cur_node->next)
 		{
-			if (cur_node->type == XML_ELEMENT_NODE)
+			if(cur_node->type == XML_ELEMENT_NODE)
 			{
 				if(cur_node->children)
 				{
@@ -67,16 +67,16 @@ void print_XML_node(xmlNode * node)
 xmlNode* scaning_XML_nodes_for_empty(xmlNode * node)
 {
     xmlNode *cur_node, *ret = NULL;
-	if (node->type == XML_ELEMENT_NODE)
+	if(node->type == XML_ELEMENT_NODE)
 	{
 		for (cur_node = node->children; cur_node; cur_node = cur_node->next)
 		{
-			if (cur_node->type == XML_ELEMENT_NODE)
+			if(cur_node->type == XML_ELEMENT_NODE)
 			{
 				if(cur_node->children)
 				{
 					ret = scaning_XML_nodes_for_empty(cur_node);
-					if (ret)
+					if(ret)
 						return ret;
 				}
 				else
@@ -90,11 +90,11 @@ xmlNode* scaning_XML_nodes_for_empty(xmlNode * node)
 xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name)
 {
 	xmlNode *cur_node, *ret = NULL;
-	if (root_node->type == XML_ELEMENT_NODE)
+	if(root_node->type == XML_ELEMENT_NODE)
 	{
 		for (cur_node = root_node->children; cur_node; cur_node = cur_node->next)
 		{
-			if (cur_node->type == XML_ELEMENT_NODE)
+			if(cur_node->type == XML_ELEMENT_NODE)
 			{
 				if(!strcmp((char *)(cur_node->name), Node_name))
 					return cur_node;
@@ -110,11 +110,11 @@ xmlNode * get_XML_node(xmlNode *root_node, const char *Node_name)
 char * XML_node_get_content(xmlNode *node, const char *node_name)
 {
     xmlNode *cur_node;
-	if (node)
+	if(node)
 	{
 		for (cur_node = node->children; cur_node; cur_node = cur_node->next)
 		{
-			if (cur_node->type == XML_ELEMENT_NODE)
+			if(cur_node->type == XML_ELEMENT_NODE)
 			{
 				if(!strcmp((char *)(cur_node->name), node_name))
 				{
@@ -196,7 +196,7 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 int validate_anchor_comp(char *anchor_str, char handler_type)
 {
 	unsigned int anchor_arg_int[max_arg_range], i, dots;
-	char *channel, *receiver_or_value, *tele_type_or_id, *CAN_if_name, *addr=NULL, *UniNOx_val=NULL;
+	char *channel, *receiver_or_value, *tele_type_or_id, *addr=NULL, *UniNOx_val=NULL;
 	if(!anchor_str)
 		return EXIT_FAILURE;
 	if(handler_type != NOX)
@@ -280,7 +280,6 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 				return EXIT_FAILURE;
 			break;
 		case NOX:
-			CAN_if_name = anchor_str;
 			//Check amount of dots('.') in anchor_str.
 			for(dots=0, i=0; anchor_str[i]; i++)
 			{
@@ -298,7 +297,7 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 				return EXIT_FAILURE;
 			if(!addr || !UniNOx_val)
 				return EXIT_FAILURE;
-			for(i=0; CAN_if_name[i] != '.'; i++); //Count characters of CAN_if_name.
+			for(i=0; anchor_str[i] != '.'; i++); //Count characters of CAN_if_name section of anchor_str.
 			if(i >= Dev_or_Bus_name_str_size)
 				return EXIT_FAILURE;
 			size_t addr_str_len = strlen("addr_x");
@@ -696,7 +695,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 				check_node = xml_node->next;
 				while(check_node)
 				{
-					if (check_node->type == XML_ELEMENT_NODE)
+					if(check_node->type == XML_ELEMENT_NODE)
 					{
 						if(!strcmp((char*)check_node->name, "SDAQ_HANDLER"))
 						{
@@ -725,7 +724,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 				check_node = xml_node->next;
 				while(check_node)
 				{
-					if (check_node->type == XML_ELEMENT_NODE)
+					if(check_node->type == XML_ELEMENT_NODE)
 					{
 						if(!strcmp((char*)check_node->name, "NOX_HANDLER"))
 						{
@@ -754,7 +753,7 @@ int Morfeas_daemon_config_valid(xmlNode *root_element)
 				check_node = xml_node->next;
 				while(check_node)
 				{
-					if (check_node->type == XML_ELEMENT_NODE)
+					if(check_node->type == XML_ELEMENT_NODE)
 					{
 						if(!getprop_disable(check_node) && (check_content = (xmlChar *) XML_node_get_content(check_node, "CANBUS_IF")))
 						{

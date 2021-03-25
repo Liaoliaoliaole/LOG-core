@@ -541,7 +541,12 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 				{
 					if(Node_data->interface_type_num == NOX)
 					{
-						
+						if(!strcmp(req_value, "status"))
+						{
+						}
+						else if(!strcmp(req_value, "status_byte"))
+						{
+						}
 					}
 					else
 						UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
