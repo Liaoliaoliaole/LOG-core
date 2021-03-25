@@ -551,7 +551,7 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 							}
 							for(i=0; anchor_ptr[i]!='.'; i++)//copy CAN_IF_name section from anchor to Links_node list.
 								list_cur_Links_node_data->CAN_IF_name[i] = anchor_ptr[i];
-							anchor_ptr[i] = '\0';
+							list_cur_Links_node_data->CAN_IF_name[i] = '\0';
 							anchor_ptr += i+strlen("addr_")+1;
 							list_cur_Links_node_data->channel = atoi(anchor_ptr);
 							anchor_ptr += 2;//move to last anchor's argument.
