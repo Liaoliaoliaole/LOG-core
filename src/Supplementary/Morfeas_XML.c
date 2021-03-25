@@ -283,6 +283,7 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 			CAN_if_name = anchor_str;
 			//Check amount of dots('.') in anchor_str.
 			for(dots=0, i=0; anchor_str[i]; i++)
+			{
 				if(anchor_str[i] == '.')
 				{
 					dots++;
@@ -292,11 +293,12 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 						case 2: UniNOx_val = anchor_str+i+1; break;
 					}
 				}
-			if(dots != 2)
+			}
+			if(dots != 2)//Check if anchor_str have only 2 dots.
 				return EXIT_FAILURE;
 			if(!addr || !UniNOx_val)
 				return EXIT_FAILURE;
-			for(i=0; CAN_if_name[i] != '\0'; i++);
+			for(i=0; CAN_if_name[i] != '.'; i++); //Count characters of CAN_if_name.
 			if(i >= Dev_or_Bus_name_str_size)
 				return EXIT_FAILURE;
 			size_t addr_str_len = strlen("addr_x");
