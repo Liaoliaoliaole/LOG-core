@@ -483,6 +483,7 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 {
 	GSList *List_Links_Node;
 	struct Link_entry *Node_data;
+	UA_Variant status_node;
 	UA_NodeId src_NodeId;
 	UA_String t_str;
 	char *ISO_Channel, *req_value, src_NodeId_str[200];
@@ -536,13 +537,14 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 						break;
 					default: return UA_STATUSCODE_GOOD;
 				}
-				//check if the source node exist
+				//Check if the source node exist
 				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 				{
 					if(Node_data->interface_type_num == NOX)
 					{
 						if(!strcmp(req_value, "status"))
 						{
+							//status_node
 						}
 						else if(!strcmp(req_value, "status_byte"))
 						{
