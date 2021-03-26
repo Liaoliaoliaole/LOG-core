@@ -542,9 +542,9 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 				{
 					if(Node_data->interface_type_num == NOX)
 					{
+						//status_node
 						if(!strcmp(req_value, "status"))
 						{
-							//status_node
 						}
 						else if(!strcmp(req_value, "status_byte"))
 						{
