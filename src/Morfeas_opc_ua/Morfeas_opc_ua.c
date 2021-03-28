@@ -414,13 +414,13 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 					case NOX:
 							switch(Node_data->rxNum_teleType_or_value)
 							{
-								case NOx_val: req_value = "NOx_value"; break;
-								case O2_val: req_value = "O2_value"; break;
+								case NOx_val: req_value = "NOx"; break;
+								case O2_val: req_value = "O2"; break;
 								default: return UA_STATUSCODE_GOOD;
 							}
-							sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.%s", Node_data->CAN_IF_name,
-																			   Node_data->channel,
-																			   req_value);
+							sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.%s_value", Node_data->CAN_IF_name,
+																			   		 Node_data->channel,
+																			   		 req_value);
 						break;
 					default: return UA_STATUSCODE_GOOD;
 				}
@@ -483,10 +483,9 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 {
 	GSList *List_Links_Node;
 	struct Link_entry *Node_data;
-	UA_Variant status_node;
 	UA_NodeId src_NodeId;
 	UA_String t_str;
-	char *ISO_Channel, *req_value, src_NodeId_str[200];
+	char *ISO_Channel, *req_value, *NOx_or_O2, src_NodeId_str[200];
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
@@ -532,26 +531,23 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 																		  req_value);
 						break;
 					case NOX:
-							sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.status", Node_data->CAN_IF_name,
-																				   Node_data->channel);
+							switch(Node_data->rxNum_teleType_or_value)
+							{
+								case NOx_val: NOx_or_O2 = "NOx"; break;
+								case O2_val: NOx_or_O2 = "O2"; break;
+								default: return UA_STATUSCODE_GOOD;
+							}
+							sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.%s_%s", Node_data->CAN_IF_name,
+																				  Node_data->channel,
+																				  NOx_or_O2,
+																				  req_value);
 						break;
 					default: return UA_STATUSCODE_GOOD;
 				}
 				//Check if the source node exist
 				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 				{
-					if(Node_data->interface_type_num == NOX)
-					{
-						//status_node
-						if(!strcmp(req_value, "status"))
-						{
-						}
-						else if(!strcmp(req_value, "status_byte"))
-						{
-						}
-					}
-					else
-						UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
+					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write it to dataValue
 					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 				}
 				else

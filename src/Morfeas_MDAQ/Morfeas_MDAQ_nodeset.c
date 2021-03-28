@@ -152,7 +152,7 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 					for(unsigned char j=0; j<3; j++)
 					{
 						sprintf(Node_ID_child_str, "%s.CH%hhu.Val%hhu", Node_ID_str, i+1, j+1);
-						status = ((IPC_msg_dec->MDAQ_data.meas[i].warnings)&1<<j)?CH_is_Out_of_range:Okay;
+						status = ((IPC_msg_dec->MDAQ_data.meas[i].warnings)&1<<j)?Out_of_range:Okay;
 						sprintf(Node_ID_child_child_str, "%s.status_byte", Node_ID_child_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_child_child_str), &status, UA_TYPES_BYTE);
 						sprintf(Node_ID_child_child_str, "%s.status", Node_ID_child_str);

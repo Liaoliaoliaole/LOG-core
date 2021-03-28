@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
-//Local function that adding the new_MTI_config method to the Morfeas OPC_UA nodeset
+//Local function that adding methods to Morfeas OPC_UA nodeset
 void Morfeas_add_new_NOX_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_NOX_heater_ctrl(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_NOX_global_heater_ctrl(UA_Server *server_ptr, char *Parent_id, char *Node_id);
@@ -72,7 +72,7 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 	UA_NodeId NodeId;
 	UA_DateTime last_seen;
 	unsigned char value;
-	char label_str[30], parent_Node_ID_str[60], Node_ID_str[90];
+	char label_str[30], parent_Node_ID_str[60], Node_ID_str[90], *status_str = "";
 
 	//Msg type from SDAQ_handler
 	switch(type)
@@ -88,10 +88,24 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 						sprintf(Node_ID_str, "%s.last_seen", parent_Node_ID_str);
 						last_seen = UA_DateTime_fromUnixTime(IPC_msg_dec->NOX_data.NOXs_data.last_seen);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &last_seen, UA_TYPES_DATETIME);
+						//Decode and load value, status and status_byte for NOx
 						sprintf(Node_ID_str, "%s.NOx_value", parent_Node_ID_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_data.NOXs_data.NOx_value), UA_TYPES_FLOAT);
+						sprintf(Node_ID_str, "%s.NOx_status_byte", parent_Node_ID_str);
+						// value =
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &value, UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.NOx_status", parent_Node_ID_str);
+						// status_str =
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
+						//Decode and load value, status and status_byte for O2
 						sprintf(Node_ID_str, "%s.O2_value", parent_Node_ID_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_data.NOXs_data.O2_value), UA_TYPES_FLOAT);
+						sprintf(Node_ID_str, "%s.O2_status_byte", parent_Node_ID_str);
+						// value =
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &value, UA_TYPES_BYTE);
+						sprintf(Node_ID_str, "%s.O2_status", parent_Node_ID_str);
+						// status_str =
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
 						//Decode and load to variables of UniNOx sensor's status object
 						sprintf(parent_Node_ID_str, "%s.sensors.addr_%d.status", IPC_msg_dec->NOX_data.Dev_or_Bus_name, IPC_msg_dec->NOX_data.sensor_addr);
 						sprintf(Node_ID_str, "%s.meas_state", parent_Node_ID_str);
@@ -162,8 +176,16 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "Last seen", UA_TYPES_DATETIME);
 							sprintf(Node_ID_str, "%s.NOx_value", parent_Node_ID_str);
 							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "NOx value (ppm)", UA_TYPES_FLOAT);
+							sprintf(Node_ID_str, "%s.NOx_status_byte", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "NOx status value", UA_TYPES_BYTE);
+							sprintf(Node_ID_str, "%s.NOx_status", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "NOx status", UA_TYPES_STRING);
 							sprintf(Node_ID_str, "%s.O2_value", parent_Node_ID_str);
 							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "O2 value (%)", UA_TYPES_FLOAT);
+							sprintf(Node_ID_str, "%s.O2_status_byte", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "O2 status value", UA_TYPES_BYTE);
+							sprintf(Node_ID_str, "%s.O2_status", parent_Node_ID_str);
+							Morfeas_opc_ua_add_variable_node(server, parent_Node_ID_str, Node_ID_str, "O2 status", UA_TYPES_STRING);
 							sprintf(Node_ID_str, "%s.heaters_ctrl()", parent_Node_ID_str);
 							Morfeas_add_NOX_heater_ctrl(server, parent_Node_ID_str, Node_ID_str);
 							//Populate objects and variables for UniNOx sensor's status
@@ -377,7 +399,7 @@ UA_StatusCode Morfeas_add_NOX_heater_ctrl_method_callback(UA_Server *server,
 		return UA_STATUSCODE_BADOUTOFMEMORY;
 	if(!strstr(NOx_addr_str, "addr_"))
 		return UA_STATUSCODE_BADOUTOFMEMORY;
-	sscanf(NOx_addr_str, "addr_%hhu", &NOx_addr); 
+	sscanf(NOx_addr_str, "addr_%hhu", &NOx_addr);
 	//Construct contents for DBus method call (as JSON object)
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "NOx_address", NOx_addr);
