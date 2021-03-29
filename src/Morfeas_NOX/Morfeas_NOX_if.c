@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.8" /*Release Version of Morfeas_NOX_if software*/
+#define VERSION "1.0" /*Release Version of Morfeas_NOX_if software*/
 #define MAX_CANBus_FPS 1700.7 //Maximum amount of frames per sec for 250Kbaud
 #define Configs_dir "/var/tmp/Morfeas_NOX_Configurations/" //Directory with NOX_handler's Configuration file
 

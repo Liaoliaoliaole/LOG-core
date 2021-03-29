@@ -46,10 +46,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include NOX data type header
 #include "Morfeas_NOX/NOX_Types.h"
 
-enum Tele_status_enum{
+enum status_byte_enum{
 	Okay = 0,
 	Tele_channel_noSensor,
-	Tele_channel_Error,
+	Tele_channel_Error=8,
+	UniNOx_notMeas,
+	UniNOx_notInTemp,
+	NOX_notValid,
+	O2_notValid,
+	Connection_timed_out = 110,
 	Disconnected = 127,
 	OFF_line = -1
 };
@@ -368,7 +373,7 @@ struct Link_entry{
 	unsigned char interface_type_num;
 	unsigned int identifier;
 	char *CAN_IF_name;//Used with NOX and CPAD handlers.
-	unsigned char channel;
+	unsigned char channel; //Address on NOX
 	unsigned char rxNum_teleType_or_value;
 	unsigned char tele_ID;
 };

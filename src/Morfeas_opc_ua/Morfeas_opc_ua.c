@@ -627,6 +627,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		{
 			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "onCAN", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.addr",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Address", UA_TYPES_BYTE);
 		}
 		else
 		{
@@ -674,6 +676,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		{
 			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), List_Links_Node_data->CAN_IF_name, UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.addr",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->channel), UA_TYPES_BYTE);
 		}
 		else
 		{
