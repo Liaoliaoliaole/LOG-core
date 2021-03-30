@@ -179,7 +179,8 @@ void * NOX_DBus_listener(void *varg_pt)//Thread function.
 										pthread_mutex_lock(&NOX_access);
 											stats->auto_switch_off_value = auto_pw_off_val->valueint;
 											if(stats->auto_switch_off_value != auto_pw_off_val->valueint)
-												Logger("Overflow at auto_switch_off_value (%d != %d)!!!\n", stats->auto_switch_off_value, auto_pw_off_val->valueint);
+												Logger("Overflow at auto_switch_off_value (%d != %d)!!!\n", stats->auto_switch_off_value, 
+																											auto_pw_off_val->valueint);
 											if(NOX_handler_config_file(stats, "w"))
 												Logger("Error at write of configuration file!!!\n");
 										pthread_mutex_unlock(&NOX_access);

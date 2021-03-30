@@ -769,6 +769,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", now_time);
+	cJSON_AddNumberToObject(root, "ws_port", stats->ws_port);
 	cJSON_AddItemToObject(root, "CANBus_interface", cJSON_CreateString(stats->CAN_IF_name));
 	//Add electrics to LogStat JSON, if port SCA is calibrated
 	if(stats->Morfeas_RPi_Hat_last_cal)

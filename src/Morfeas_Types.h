@@ -283,6 +283,7 @@ struct Morfeas_NOX_if_stats{
 	char *CAN_IF_name;
 	unsigned char port;
 	float Bus_util;
+	unsigned short ws_port;
 	//Electrics and last calibration date for Morfeas_Rpi_hat
 	unsigned int Morfeas_RPi_Hat_last_cal;
 	float Bus_voltage;

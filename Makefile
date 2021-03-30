@@ -106,6 +106,7 @@ Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
 
 Morfeas_NOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					 $(WORK_dir)/Morfeas_NOX_if.o \
+					 $(WORK_dir)/Morfeas_NOX_ws.o \
 					 $(WORK_dir)/Morfeas_NOX_DBus.o \
 					 $(WORK_dir)/Morfeas_JSON.o \
 					 $(WORK_dir)/Morfeas_RPi_Hat.o \
@@ -211,6 +212,9 @@ $(WORK_dir)/NOX_func.o: $(SRC_dir)/Morfeas_NOX/NOX_func.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_NOX_nodeset.o: $(SRC_dir)/Morfeas_NOX/Morfeas_NOX_nodeset.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_NOX_ws.o: $(SRC_dir)/Morfeas_NOX/Morfeas_NOX_ws.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 #Supplementary dependencies
