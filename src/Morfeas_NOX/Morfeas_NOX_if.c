@@ -443,9 +443,10 @@ int main(int argc, char *argv[])
 		}
 	}
 	Logger("Morfeas_NOX_if (%s) Exiting...\n",stats.CAN_IF_name);
+	pthread_join(DBus_listener_Thread_id, NULL);//Wait DBus_listener thread to end.
+	pthread_detach(DBus_listener_Thread_id);//Deallocate DBus_listener thread's memory.
+	NOx_heater(CAN_socket_num, 0);//Stop any Measurement.
 	close(CAN_socket_num);//Close CAN_socket
-	pthread_join(DBus_listener_Thread_id, NULL);// wait DBus_listener thread to end
-	pthread_detach(DBus_listener_Thread_id);//deallocate DBus_listener thread's memory
 	//Remove handler from Morfeas_OPC_UA Server
 	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, UNREG);
 	Logger("Morfeas_NOX_if (%s) Removed from OPC-UA\n", stats.CAN_IF_name);
