@@ -591,7 +591,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	{
 		Morfeas_opc_ua_add_object_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
 									//---Variables with update from Morfeas_ifs---//
-		//Status
+		//Status related
 		sprintf(tmp_str,"%s.status",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Status", UA_TYPES_STRING, Status_update_value);
 		sprintf(tmp_str,"%s.status_byte",ISO_channel_name);
@@ -617,6 +617,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			Morfeas_opc_ua_add_variable_node_with_callback_onRead(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING, Dev_update_value);
 		}
 		//Regular variables
+		sprintf(tmp_str,"%s.if_type",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Interface type", UA_TYPES_STRING);
 		sprintf(tmp_str,"%s.desc",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Description", UA_TYPES_STRING);
 		sprintf(tmp_str,"%s.min",ISO_channel_name);
@@ -699,6 +701,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		}
 	}
 	//Update values of regular variables with data from Configuration XML
+	sprintf(tmp_str,"%s.if_type",ISO_channel_name);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "INTERFACE_TYPE"), UA_TYPES_STRING);
 	sprintf(tmp_str,"%s.desc",ISO_channel_name);
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), XML_node_get_content(node, "DESCRIPTION"), UA_TYPES_STRING);
 	sprintf(tmp_str,"%s.min",ISO_channel_name);

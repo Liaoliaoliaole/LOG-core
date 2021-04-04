@@ -248,39 +248,39 @@ void * Morfeas_thread(void *varg_pt)
 		{
 			sprintf(Logger_name,"%s_%s.log",Morfeas_SDAQ_if, XML_node_get_content(t_arg->component, "CANBUS_IF"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_SDAQ_if,
-												XML_node_get_content(t_arg->component, "CANBUS_IF"),
-												t_arg->logstat_path);
-		}
-		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
-		{
-			sprintf(Logger_name,"%s_%s.log",Morfeas_MDAQ_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
-			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_MDAQ_if,
-												XML_node_get_content(t_arg->component, "IPv4_ADDR"),
-												XML_node_get_content(t_arg->component, "DEV_NAME"),
-												t_arg->logstat_path);
-		}
-		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
-		{
-			sprintf(Logger_name,"%s_%s.log",Morfeas_IOBOX_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
-			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_IOBOX_if,
-												     XML_node_get_content(t_arg->component, "IPv4_ADDR"),
-													 XML_node_get_content(t_arg->component, "DEV_NAME"),
-												     t_arg->logstat_path);
-		}
-		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
-		{
-			sprintf(Logger_name,"%s_%s.log",Morfeas_MTI_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
-			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_MTI_if,
-												XML_node_get_content(t_arg->component, "IPv4_ADDR"),
-												XML_node_get_content(t_arg->component, "DEV_NAME"),
-												t_arg->logstat_path);
+													 XML_node_get_content(t_arg->component, "CANBUS_IF"),
+													 t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "NOX_HANDLER"))
 		{
 			sprintf(Logger_name,"%s_%s.log",Morfeas_NOX_if, XML_node_get_content(t_arg->component, "CANBUS_IF"));
 			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_NOX_if,
-												XML_node_get_content(t_arg->component, "CANBUS_IF"),
-												t_arg->logstat_path);
+													 XML_node_get_content(t_arg->component, "CANBUS_IF"),
+													 t_arg->logstat_path);
+		}
+		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
+		{
+			sprintf(Logger_name,"%s_%s.log",Morfeas_MDAQ_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_MDAQ_if,
+														XML_node_get_content(t_arg->component, "IPv4_ADDR"),
+														XML_node_get_content(t_arg->component, "DEV_NAME"),
+														t_arg->logstat_path);
+		}
+		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
+		{
+			sprintf(Logger_name,"%s_%s.log",Morfeas_IOBOX_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_IOBOX_if,
+												     	XML_node_get_content(t_arg->component, "IPv4_ADDR"),
+														 XML_node_get_content(t_arg->component, "DEV_NAME"),
+												     	t_arg->logstat_path);
+		}
+		else if(!strcmp((char *)(t_arg->component->name), "MTI_HANDLER"))
+		{
+			sprintf(Logger_name,"%s_%s.log",Morfeas_MTI_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_MTI_if,
+														XML_node_get_content(t_arg->component, "IPv4_ADDR"),
+														XML_node_get_content(t_arg->component, "DEV_NAME"),
+														t_arg->logstat_path);
 		}
 		else
 		{
