@@ -575,7 +575,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 {
 	char tmp_str[50], *ISO_channel_name, *unit_str, *cal_date_str, *cal_period_str;
 	float t_min_max;
-	unsigned int if_type;
+	int if_type;
 	unsigned char cal_period;
 	struct Link_entry *List_Links_Node_data;
 	GSList *List_Links_Node;
