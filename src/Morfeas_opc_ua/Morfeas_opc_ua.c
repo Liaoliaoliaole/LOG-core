@@ -586,7 +586,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 
 	if(!(ISO_channel_name = XML_node_get_content(node, "ISO_CHANNEL")))
 		return;
-	if_type = if_type_str_2_num(XML_node_get_content(node, "INTERFACE_TYPE"));
+	if((if_type = if_type_str_2_num(XML_node_get_content(node, "INTERFACE_TYPE")))<0)
+		return;
 	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, ISO_channel_name), &out))
 	{
 		Morfeas_opc_ua_add_object_node(server_ptr, "ISO_Channels", ISO_channel_name, ISO_channel_name);
