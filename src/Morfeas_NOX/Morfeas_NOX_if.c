@@ -179,8 +179,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"No logstat_path argument. Running without logstat\n");
 	else
 	{
-		dir = opendir(logstat_path);
-		if (dir)
+		if ((dir = opendir(logstat_path)))
 			closedir(dir);
 		else
 		{
