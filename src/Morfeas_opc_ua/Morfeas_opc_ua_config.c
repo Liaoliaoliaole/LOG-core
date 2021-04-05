@@ -58,7 +58,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 	config->buildInfo.productUri = UA_STRING_ALLOC(buff);
     config->applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
     config->buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
-    config->buildInfo.productName = UA_STRING_ALLOC("Morfeas-OPC_UA Server (Based on Open62541)");
+    config->buildInfo.productName = UA_STRING_ALLOC("Morfeas OPC-UA Server (Based on Open62541)");
 	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", !app_name?"Morfeas default application":app_name);
 	config->buildInfo.softwareVersion = UA_STRING_ALLOC(version);
 	config->maxSessions = 5;
