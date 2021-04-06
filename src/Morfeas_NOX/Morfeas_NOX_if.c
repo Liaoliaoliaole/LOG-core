@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	opterr = 1;
-	while((c = getopt (argc, argv, "hvb:")) != -1)
+	while((c = getopt(argc, argv, "hvb:")) != -1)
 	{
 		switch(c)
 		{
