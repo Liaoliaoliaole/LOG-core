@@ -45,6 +45,8 @@ For compilation of this project the following dependencies required.
 * [GCC](https://gcc.gnu.org/) - The GNU Compilers Collection.
 * [GNU Make](https://www.gnu.org/software/make/) - GNU make utility.
 * [CMake](https://cmake.org/) - Cross-platform family of open source tools for package build.
+* [OpenSSL](https://www.openssl.org/) - A full-featured toolkit for TLS and SSL protocols.
+* [GnuTLS](https://gnutls.org/) - A secure communications library for SSL, TLS and DTLS protocols.
 * [zlib](https://www.zlib.net/zlib_how.html) - A free software library used for data compression.
 * [NCURSES](https://www.gnu.org/software/ncurses/ncurses.html) - A free (libre) software emulation library of curses.
 * [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
@@ -53,7 +55,7 @@ For compilation of this project the following dependencies required.
 * [libusb](https://libusb.info/) - An ANSI C library that provides generic access to USB devices.
 * [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 * [Libsocketcan](https://directory.fsf.org/wiki/Libsocketcan) - Library to control some basic functions in SocketCAN from userspace.
-* [Libwebsockets](https://libwebsockets.org/) - An ANSI C library for implementing modern network protocols.
+<!--* [Libwebsockets](https://libwebsockets.org/) - An ANSI C library for implementing modern network protocols.-->
 * [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace.
 * [libdbus](https://www.freedesktop.org/wiki/Software/dbus/#index1h1) - The library of the D-Bus.
 
