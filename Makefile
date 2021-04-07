@@ -31,9 +31,9 @@ LIBs=open62541 \
 	 libgtop-2.0 \
 	 glib-2.0 \
 	 libsocketcan \
-	 libwebsockets \
+	 nopoll \
 	 libmodbus \
-	 dbus-1 #\ libusb
+	 dbus-1 #\ libwebsockets \ libusb
 
 HEADERS = $(SRC_dir)/IPC/*.h \
 		  $(SRC_dir)/Morfeas_opc_ua/*.h \

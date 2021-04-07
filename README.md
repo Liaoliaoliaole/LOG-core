@@ -79,6 +79,7 @@ $ # Get Source of the submodules
 $ git submodule update --init --recursive --remote --merge
 ```
 ### Compilation and installation of the submodules
+
 #### cJSON
 ```
 $ cd src/cJSON
@@ -87,6 +88,13 @@ $ cmake -D BUILD_SHARED_LIBS=ON ..
 $ make -j$(nproc)
 $ sudo make install
 $ sudo ldconfig
+```
+#### noPoll
+```
+$ cd src/noPoll
+$ ./autogen.sh
+$ make -j$(nproc)
+$ sudo make install
 ```
 #### open62541
 ```
