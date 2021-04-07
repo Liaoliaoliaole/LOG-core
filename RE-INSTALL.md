@@ -18,6 +18,15 @@ $ make -j$(nproc)
 $ sudo make install
 $ cd ../../..
 ```
+#### noPoll
+```
+$ cd src/noPoll
+$ make clean
+$ ./configure
+$ make -j$(nproc)
+$ sudo make install
+$ cd ../..
+```
 #### open62541
 ```
 $ cd src/open62541/build

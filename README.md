@@ -95,8 +95,9 @@ $ cd src/noPoll
 $ ./autogen.sh
 $ make -j$(nproc)
 $ sudo make install
+$ sudo ldconfig
 ```
-#### open62541
+#### Open62541
 ```
 $ cd src/open62541
 $ mkdir build && cd build
