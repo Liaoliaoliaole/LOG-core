@@ -55,9 +55,9 @@ For compilation of this project the following dependencies required.
 * [libusb](https://libusb.info/) - An ANSI C library that provides generic access to USB devices.
 * [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 * [Libsocketcan](https://directory.fsf.org/wiki/Libsocketcan) - Library to control some basic functions in SocketCAN from userspace.
-<!--* [Libwebsockets](https://libwebsockets.org/) - An ANSI C library for implementing modern network protocols.-->
 * [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace.
 * [libdbus](https://www.freedesktop.org/wiki/Software/dbus/#index1h1) - The library of the D-Bus.
+<!--* [Libwebsockets](https://libwebsockets.org/) - An ANSI C library for implementing modern network protocols.-->
 
 ##### Optionally
 * [CAN-Utils](https://elinux.org/Can-utils) - CANBus utilities.
