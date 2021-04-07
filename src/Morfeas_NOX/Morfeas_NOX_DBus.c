@@ -50,9 +50,8 @@ void Log_DBus_error(char *str);
 int DBus_reply_msg(DBusConnection *conn, DBusMessage *msg, char *reply_str);
 int DBus_reply_msg_with_error(DBusConnection *conn, DBusMessage *msg, char *reply_str);
 
-
-//D-Bus listener function
-void * NOX_DBus_listener(void *varg_pt)//Thread function.
+//D-Bus listener Thread function
+void * NOX_DBus_listener(void *varg_pt)
 {
 	//Decoded variables from passer
 	struct Morfeas_NOX_if_stats *stats = ((struct NOX_DBus_thread_arguments_passer *)varg_pt)->stats;
@@ -66,7 +65,7 @@ void * NOX_DBus_listener(void *varg_pt)//Thread function.
 	DBusMessage *msg;
 	DBusMessageIter call_args;
 
-	if(!NOX_handler_run)//Immediately exit if called with MTI handler under termination
+	if(!NOX_handler_run)//Immediately exit if called with MTI handler is terminating
 		return NULL;
 
 	dbus_error_init (&dbus_error);
@@ -84,7 +83,7 @@ void * NOX_DBus_listener(void *varg_pt)//Thread function.
 		exit(EXIT_FAILURE);
 	}
 	sprintf(dbus_server_name_if, "%s%s", MORFEAS_DBUS_NAME_PROTO, stats->CAN_IF_name);
-	Logger("Thread's DBus_Name:\"%s\"\n", dbus_server_name_if);
+	Logger("DBus_Name:\"%s\"\n", dbus_server_name_if);
 
     ret = dbus_bus_request_name(conn, dbus_server_name_if, DBUS_NAME_FLAG_DO_NOT_QUEUE, &dbus_error);
     if(dbus_error_is_set (&dbus_error))
@@ -104,7 +103,7 @@ void * NOX_DBus_listener(void *varg_pt)//Thread function.
 		exit(EXIT_FAILURE);
 	}
 	sprintf(dbus_server_name_if, "%s%s", IF_NAME_PROTO, stats->CAN_IF_name);
-	Logger("Interface:\"%s\"\n", dbus_server_name_if);
+	Logger("I/O at DBus_interface:\"%s\"\n", dbus_server_name_if);
 
 	while(NOX_handler_run)
 	{

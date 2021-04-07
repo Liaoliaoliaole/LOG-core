@@ -75,6 +75,11 @@ int NOX_handler_config_file(struct Morfeas_NOX_if_stats *stats, const char *mode
 //--- D-Bus Listener function ---//
 void * NOX_DBus_listener(void *varg_pt);//Thread function.
 
+//--- WebSocket related functions ---//
+void * Morfeas_NOX_ws_server(void *varg_pt);
+void Morfeas_NOX_ws_server_stop();
+void Morfeas_NOX_ws_server_send_meas();
+
 /*UniNOx functions*/
 int NOx_heater(int socket_fd, unsigned char start_code);
 unsigned char NOx_error_dec(unsigned char error_code);
@@ -109,7 +114,7 @@ int main(int argc, char *argv[])
 	//Stats of Morfeas_NOX_IF
 	struct Morfeas_NOX_if_stats stats = {.auto_switch_off_value = -1};
 	//Variables for threads
-	pthread_t DBus_listener_Thread_id;
+	pthread_t DBus_listener_Thread_id, ws_server_Thread_id;
 	struct NOX_DBus_thread_arguments_passer passer = {&startcode, &stats};
 
 	if(argc == 1)
@@ -267,9 +272,10 @@ int main(int argc, char *argv[])
 	IPC_Handler_reg_op(stats.FIFO_fd, NOX, stats.CAN_IF_name, REG);
 	Logger("Morfeas_NOX_if (%s) Registered on OPC-UA\n",stats.CAN_IF_name);
 
-	//Start D-Bus listener function in a thread
+	//Start D-Bus listener and ws_server functions in separate threads
 	pthread_create(&DBus_listener_Thread_id, NULL, NOX_DBus_listener, &passer);
-
+	pthread_create(&ws_server_Thread_id, NULL, Morfeas_NOX_ws_server, &passer);
+	
 	//-----Actions on the bus-----//
 	NOx_id_dec = (NOx_can_id *)&(frame_rx.can_id);
 	sprintf(IPC_msg.NOX_BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);//Load BUSName to IPC_msg
@@ -362,6 +368,7 @@ int main(int argc, char *argv[])
 					stats.NOx_statistics[sensor_index].O2_value_max = NAN;
 					stats.NOx_statistics[sensor_index].O2_value_sample_cnt = 0;
 				}
+				//Morfeas_NOX_ws_server_send_meas();
 				if(stats.dev_msg_cnt[sensor_index] >= 2)//Send Status and measurements of current UniNOx sensors to Morfeas_opc_ua via IPC, Approx every 100ms.
 				{
 					stats.dev_msg_cnt[sensor_index] = 0;
@@ -442,6 +449,9 @@ int main(int argc, char *argv[])
 		}
 	}
 	Logger("Morfeas_NOX_if (%s) Exiting...\n",stats.CAN_IF_name);
+	Morfeas_NOX_ws_server_stop();
+	pthread_join(ws_server_Thread_id, NULL);//Wait ws_server thread to end.
+	pthread_detach(ws_server_Thread_id);//Deallocate ws_server thread's memory.
 	pthread_join(DBus_listener_Thread_id, NULL);//Wait DBus_listener thread to end.
 	pthread_detach(DBus_listener_Thread_id);//Deallocate DBus_listener thread's memory.
 	NOx_heater(CAN_socket_num, 0);//Stop any Measurement.

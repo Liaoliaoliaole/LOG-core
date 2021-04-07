@@ -67,8 +67,8 @@ For compilation of this project the following dependencies required.
 The source of the Morfeas-core project have the following submodules:
 * [SDAQ_worker](https://gitlab.com/fantomsam/sdaq-worker) - A libre (free) utilities suite for SDAQ devices.
 * [cJSON](https://github.com/DaveGamble/cJSON) - An Ultralightweight open source JSON parser for ANSI C.
-* [noPoll](http://www.aspl.es/nopoll/) - An open source ANSI C implementation of WebSocket(RFC 6455).
-* [open62541](https://open62541.org/) - An open source C (C99) implementation of OPC-UA(IEC 62541).
+* [noPoll](http://www.aspl.es/nopoll/) - An open source ANSI C implementation of WebSocket (RFC 6455).
+* [open62541](https://open62541.org/) - An open source C (C99) implementation of OPC-UA (IEC 62541).
 
 ### Get the Source
 ```
