@@ -77,8 +77,7 @@ void * NOX_DBus_listener(void *varg_pt);//Thread function.
 
 //--- WebSocket related functions ---//
 void * Morfeas_NOX_ws_server(void *varg_pt);
-void Morfeas_NOX_ws_server_stop();
-void Morfeas_NOX_ws_server_send_meas();
+void Morfeas_NOX_ws_server_send_meas(struct UniNOx_sensor *NOXs_data);
 
 /*UniNOx functions*/
 int NOx_heater(int socket_fd, unsigned char start_code);
@@ -368,7 +367,6 @@ int main(int argc, char *argv[])
 					stats.NOx_statistics[sensor_index].O2_value_max = NAN;
 					stats.NOx_statistics[sensor_index].O2_value_sample_cnt = 0;
 				}
-				//Morfeas_NOX_ws_server_send_meas();
 				if(stats.dev_msg_cnt[sensor_index] >= 2)//Send Status and measurements of current UniNOx sensors to Morfeas_opc_ua via IPC, Approx every 100ms.
 				{
 					stats.dev_msg_cnt[sensor_index] = 0;
@@ -378,6 +376,7 @@ int main(int argc, char *argv[])
 						IPC_msg.NOX_data.sensor_addr = sensor_index;
 						memcpy(&(IPC_msg.NOX_data.NOXs_data), &(stats.NOXs_data[sensor_index]), sizeof(struct UniNOx_sensor));
 						IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
+						//Morfeas_NOX_ws_server_send_meas(stats.NOXs_data);
 					pthread_mutex_unlock(&NOX_access);
 				}
 				if((t_now = time(NULL)) - t_bfr)//Approx every second
@@ -445,11 +444,11 @@ int main(int argc, char *argv[])
 				IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 				//Write Stats to Logstat JSON file
 				logstat_NOX(logstat_path, &stats);
+				Morfeas_NOX_ws_server_send_meas(stats.NOXs_data);
 			pthread_mutex_unlock(&NOX_access);
 		}
 	}
 	Logger("Morfeas_NOX_if (%s) Exiting...\n",stats.CAN_IF_name);
-	Morfeas_NOX_ws_server_stop();
 	pthread_join(ws_server_Thread_id, NULL);//Wait ws_server thread to end.
 	pthread_detach(ws_server_Thread_id);//Deallocate ws_server thread's memory.
 	pthread_join(DBus_listener_Thread_id, NULL);//Wait DBus_listener thread to end.

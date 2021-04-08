@@ -21,11 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
-
 #include <arpa/inet.h>
 
 #include <modbus.h>
-
 //Header for cJSON
 #include <cjson/cJSON.h>
 //Include Functions implementation header
