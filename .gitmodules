@@ -8,7 +8,7 @@
 	path = src/open62541
 	url = https://github.com/open62541/open62541.git
 	ignore = dirty
-
 [submodule "src/noPoll"]
 	path = src/noPoll
 	url = https://github.com/ASPLes/nopoll.git
+	ignore = dirty

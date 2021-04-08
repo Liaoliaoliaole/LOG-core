@@ -49,10 +49,10 @@ extern pthread_mutex_t NOX_access;
 //Global static variables
 static volatile unsigned char amount_of_clients;
 static noPollCtx *master_ctx = NULL;
+static noPollConn *WS_serv = NULL;
 
 //Callback function
 static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data);
-static void Morfeas_NOX_ws_server_on_close(noPollCtx * ctx, noPollConn * conn, noPollPtr user_data);
 static void Morfeas_NOX_ws_server_on_msg(noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr  user_data);
 
 static nopoll_bool WS_NOX_sensors_data_send(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data);
@@ -63,7 +63,6 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 	struct Morfeas_NOX_if_stats *stats;
 	int port;
 	char p_buff[10];
-	noPollConn *WS_serv = NULL;
 
 	if(master_ctx || !varg_pt)//Immediately return if master_ctx is set or if varg_pt is NULL.
 		return NULL;
@@ -95,7 +94,9 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 	//Server's main loop
 	while(NOX_handler_run)
 	{
-		nopoll_loop_wait(master_ctx, 5000);//Process WebSocket events
+		nopoll_loop_wait(master_ctx, 100);//Process WebSocket events
+		if(nopoll_ctx_foreach_conn(master_ctx, WS_NOX_sensors_data_send, &(WS_NOX_sensors_data.WS_send_frame)))
+			Logger("nopoll_ctx_foreach_conn() Failed!!!\n");
 	}
 	nopoll_conn_close(WS_serv);
 	Logger("Listener: finishing references: %d\n", nopoll_ctx_ref_count(master_ctx));
@@ -108,10 +109,15 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 
 void Morfeas_NOX_ws_server_send_meas(struct UniNOx_sensor *NOXs_data)
 {
-	if(!NOXs_data || !master_ctx)
+	if(!NOXs_data)
 		return;
-	Logger("nopoll_ctx_foreach_conn()\n");
-	nopoll_ctx_foreach_conn(master_ctx, WS_NOX_sensors_data_send, &(WS_NOX_sensors_data.WS_send_frame));
+}
+
+static void Morfeas_NOX_ws_server_conn_on_close(noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	amount_of_clients--;
+	Logger("Connection close from %s\n", nopoll_conn_host(conn));
+	return;
 }
 
 static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
@@ -121,17 +127,10 @@ static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *con
 		Logger("Max amount of Clients is reached!!!\n");
 		return nopoll_false;
 	}
-	nopoll_conn_set_on_close(conn, Morfeas_NOX_ws_server_on_close, NULL);
+	nopoll_conn_set_on_close(conn, Morfeas_NOX_ws_server_conn_on_close, NULL);
 	Logger("New Connection from %s\n", nopoll_conn_host(conn));
 	amount_of_clients++;
 	return nopoll_true;
-}
-
-static void Morfeas_NOX_ws_server_on_close(noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
-{
-	amount_of_clients--;
-	Logger("Connection close from %s\n", nopoll_conn_host(conn));
-	return;
 }
 
 static void Morfeas_NOX_ws_server_on_msg(noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr  user_data)
@@ -144,8 +143,12 @@ static void Morfeas_NOX_ws_server_on_msg(noPollCtx * ctx, noPollConn * conn, noP
 
 static nopoll_bool WS_NOX_sensors_data_send(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
 {
-	struct WS_send_frame_struct *WS_send_frame = (struct WS_send_frame_struct*)user_data;
-	Logger("call\n");
-	nopoll_conn_send_text(conn, "Message TX", 10);
-	return nopoll_true;
+	//struct WS_send_frame_struct *WS_send_frame = (struct WS_send_frame_struct*)user_data;
+	if((conn != WS_serv) && nopoll_conn_is_ready(conn))
+	{
+		nopoll_conn_send_text(conn, "Message TX", 10);
+		Logger("call\n");
+		return nopoll_true;
+	}
+	return nopoll_false;
 }
