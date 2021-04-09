@@ -157,6 +157,7 @@ void * NOX_DBus_listener(void *varg_pt)
 													case 1: startcode->fields.meas_high_addr = NOx_heater_val->valueint; break;
 													case -1: startcode->as_byte = NOx_heater_val->valueint ? NOx_all_heaters_on : 0; break;
 												}
+												stats->auto_switch_off_cnt = 0;
 											pthread_mutex_unlock(&NOX_access);
 											DBus_reply_msg(conn, msg, "NOX_heater(): Success");
 										}

@@ -367,6 +367,7 @@ int main(int argc, char *argv[])
 					stats.NOx_statistics[sensor_index].O2_value_max = NAN;
 					stats.NOx_statistics[sensor_index].O2_value_sample_cnt = 0;
 				}
+				Morfeas_NOX_ws_server_send_meas(stats.NOXs_data);
 				if(stats.dev_msg_cnt[sensor_index] >= 2)//Send Status and measurements of current UniNOx sensors to Morfeas_opc_ua via IPC, Approx every 100ms.
 				{
 					stats.dev_msg_cnt[sensor_index] = 0;
@@ -376,7 +377,6 @@ int main(int argc, char *argv[])
 						IPC_msg.NOX_data.sensor_addr = sensor_index;
 						memcpy(&(IPC_msg.NOX_data.NOXs_data), &(stats.NOXs_data[sensor_index]), sizeof(struct UniNOx_sensor));
 						IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
-						//Morfeas_NOX_ws_server_send_meas(stats.NOXs_data);
 					pthread_mutex_unlock(&NOX_access);
 				}
 				if((t_now = time(NULL)) - t_bfr)//Approx every second
@@ -444,7 +444,6 @@ int main(int argc, char *argv[])
 				IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 				//Write Stats to Logstat JSON file
 				logstat_NOX(logstat_path, &stats);
-				Morfeas_NOX_ws_server_send_meas(stats.NOXs_data);
 			pthread_mutex_unlock(&NOX_access);
 		}
 	}
