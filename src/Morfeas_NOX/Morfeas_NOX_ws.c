@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define PORT_init 8081
 #define PORT_pool_size 4
-#define MAX_AMOUNT_OF_CLIENTS 4
+#define MAX_AMOUNT_OF_CLIENTS 10
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,14 +56,14 @@ void Morfeas_NOX_ws_server_send_meas(struct UniNOx_sensor *NOXs_data)
 {
 	int i;
 	struct timespec now;
-	
+
 	if(!NOXs_data)
 		return;
 	clock_gettime(CLOCK_REALTIME, &now);
 	pthread_mutex_lock(&WS_NOX_sensors_data_access);
 		WS_NOX_sensors_data.timestamp = now.tv_sec;
-		WS_NOX_sensors_data.timestamp *= 1000;//Convert to milliseconds
-		WS_NOX_sensors_data.timestamp += now.tv_nsec/1000000;
+		WS_NOX_sensors_data.timestamp *= 1000;//Convert to milliseconds.
+		WS_NOX_sensors_data.timestamp += now.tv_nsec/1000000;//Convert to milliseconds and add.
 		for(i=0; i<2; i++)
 		{
 			WS_NOX_sensors_data.NOx_val[i] = NOXs_data[i].NOx_value;
@@ -123,22 +123,23 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 static void _Morfeas_NOX_ws_server_conn_on_close(noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
 	amount_of_clients--;
-	Logger("Connection close from %s with ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
+	Logger("Connection with ID:%d\n close", nopoll_conn_get_id(conn));
 	return;
 }
 
 static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
 {
-	const char Max_client_reached_error_str[] = "Max amount of Clients is reached!!!";
-	if(amount_of_clients>=MAX_AMOUNT_OF_CLIENTS)
+	const char *msg_protocols = nopoll_conn_get_accepted_protocol(conn);
+
+	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS && msg_protocols && strstr(msg_protocols, "Morfeas_NOX_WS_if"))
 	{
-		Logger("%s\n",Max_client_reached_error_str);
-		return nopoll_false;
+		nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
+		Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
+		amount_of_clients++;
+		return nopoll_true;
 	}
-	nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
-	Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
-	amount_of_clients++;
-	return nopoll_true;
+	Logger("Max amount of Clients reached!!!\n");
+	return nopoll_false;
 }
 
 static void Morfeas_NOX_ws_server_on_msg(noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr  user_data)
