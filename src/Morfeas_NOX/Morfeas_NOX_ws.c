@@ -129,8 +129,10 @@ static void _Morfeas_NOX_ws_server_conn_on_close(noPollCtx * ctx, noPollConn * c
 
 static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
 {
-	const char *conn_protocols = nopoll_conn_get_requested_protocol(conn);
-	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS && conn_protocols && strstr(conn_protocols, "Morfeas_NOX_WS_if"))
+	const char *conn_protocols;
+	if(!(conn_protocols = nopoll_conn_get_requested_protocol(conn)))
+		return nopoll_false;
+	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS && strstr(conn_protocols, "Morfeas_NOX_WS_if"))
 	{
 		nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
 		Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
