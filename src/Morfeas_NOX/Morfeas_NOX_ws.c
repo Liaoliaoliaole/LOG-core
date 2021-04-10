@@ -49,7 +49,7 @@ static pthread_mutex_t WS_NOX_sensors_data_access = PTHREAD_MUTEX_INITIALIZER;
 
 //Callback function
 static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data);
-static void Morfeas_NOX_ws_server_on_msg(noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr  user_data);
+static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPollMsg *msg, noPollPtr user_data);
 
 //Shared function, Importing meas from NOXs_data to WS_NOX_sensors_data.
 void Morfeas_NOX_ws_server_send_meas(struct UniNOx_sensor *NOXs_data)
@@ -120,7 +120,7 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 	return NULL;
 }
 
-static void _Morfeas_NOX_ws_server_conn_on_close(noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+static void _Morfeas_NOX_ws_server_conn_on_close(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
 {
 	amount_of_clients--;
 	Logger("Connection with ID:%d\n close", nopoll_conn_get_id(conn));
@@ -132,7 +132,7 @@ static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *con
 	const char *conn_protocols;
 	if(!(conn_protocols = nopoll_conn_get_requested_protocol(conn)))
 		return nopoll_false;
-	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS && strstr(conn_protocols, "Morfeas_NOX_WS_if"))
+	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS && !strcmp(conn_protocols, "Morfeas_NOX_WS_if"))
 	{
 		nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
 		Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
@@ -143,14 +143,16 @@ static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *con
 	return nopoll_false;
 }
 
-static void Morfeas_NOX_ws_server_on_msg(noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr  user_data)
+static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPollMsg *msg, noPollPtr user_data)
 {
-	const char *msg_cont = (const char *) nopoll_msg_get_payload(msg);
+	const char *msg_cont = (const char *) nopoll_msg_get_payload(msg), close_resp[]="Unknown Request";
 	if(msg_cont && !strcmp(msg_cont, "getMeas"))
 	{
 		pthread_mutex_lock(&WS_NOX_sensors_data_access);
 			nopoll_conn_send_binary(conn, (char *)&WS_NOX_sensors_data, sizeof(WS_NOX_sensors_data));
 		pthread_mutex_unlock(&WS_NOX_sensors_data_access);
 	}
+	else
+		nopoll_conn_close_ext(conn, 1011, close_resp, strlen(close_resp));
 	return;
 }
