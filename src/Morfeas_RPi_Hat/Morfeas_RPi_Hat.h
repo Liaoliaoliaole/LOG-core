@@ -24,8 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MAX9611_default_volt_meas_scaler 0.014
 #define MAX9611_default_current_meas_scaler 0.001222 //for 22 mohm shunt
 
-#pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
-
 extern int Morfeas_hat_error_num;
 
 enum Morfeas_hat_error_enum{
@@ -49,6 +47,7 @@ enum Morfeas_hat_error_enum{
 	Checksum_error
 };
 
+#pragma pack(push, 1)//use pragma pack() to pack the following structs to 1 byte size (aka no zero padding)
 //Struct for EEPROM(24AA08) data
 struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config{
 	struct last_port_calibration_date{
@@ -70,7 +69,6 @@ struct Morfeas_RPi_Hat_Port_meas{
 	unsigned short set_val;
 	short temperature;
 };
-
 //Structs for MAX9611 Control registers
 struct MAX9611_config_1{
 	unsigned mux : 3;
@@ -78,7 +76,6 @@ struct MAX9611_config_1{
 	unsigned LP : 1;
 	unsigned mode : 3;
 };
-
 struct MAX9611_config_2{
 	unsigned _NC : 4;
 	unsigned DTIM : 1;
