@@ -94,11 +94,11 @@ char* Morfeas_hat_error();
 int get_port_num(char * CAN_if_name);
 	//---- LEDs related ----//
 //Init Morfeas_RPi_Hat LEDs, return 1 if sysfs files exist, 0 otherwise.
-int led_init();
+int LEDs_init();
 //Write value to Morfeas_RPi_Hat LED, return 0 if write was success, -1 otherwise.
-int GPIOWrite(int LED_name, int value);
+int LED_write(int LED_name, int value);
 //Read value of Morfeas_RPi_Hat LED by name, return value of the LED, or -1 if read failed.
-int GPIORead(int LED_name);
+int LED_read(int LED_name);
 
 //---- I2C device related ----//
 /* All I2C related functions Return:

@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, quit_signal_handler);
 	Logger("Morfeas_SDAQ_if (%s) Program Started\n",stats.CAN_IF_name);
 	//Initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
-	if(!(flags.led_existent = led_init(stats.CAN_IF_name)))
+	if(!(flags.led_existent = LEDs_init(stats.CAN_IF_name)))
 		Logger(Morfeas_hat_error());
 	//Get SDAQ_NET Port config
 	stats.port = get_port_num(stats.CAN_IF_name);
@@ -536,28 +536,28 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 	{
 		if(stats->Bus_util>95.0)
 		{
-			GPIOWrite(BLUE_LED, 1);
+			LED_write(BLUE_LED, 1);
 			if(!leds_status.Bus_util)
 				Logger("Bus Utilization is in High Level(>95%%) !!!!\n");
 			leds_status.Bus_util = 1;
 		}
 		else if(stats->Bus_util<=80.0 && leds_status.Bus_util)
 		{
-			GPIOWrite(BLUE_LED, 0);
+			LED_write(BLUE_LED, 0);
 			leds_status.Bus_util = 0;
 			Logger("Bus Utilization restore to Normal Level(<80%%)!!!!\n");
 		}
 
 		if(stats->detected_SDAQs>=60)
 		{
-			GPIOWrite(RED_LED, 1);
+			LED_write(RED_LED, 1);
 			leds_status.Max_dev_num = 1;
 		}
 		else
 		{
 			if(leds_status.Max_dev_num)
 			{
-				GPIOWrite(RED_LED, 0);
+				LED_write(RED_LED, 0);
 				leds_status.Max_dev_num = 0;
 				Logger("Amount of SDAQs restored to Normal (<60)!!!!\n");
 			}
