@@ -151,6 +151,7 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	//Add BUS_util, Amount of Detected_SDAQs, and SDAQs Data
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
+	cJSON_AddNumberToObject(root, "Incomplete_SDAQs", stats->incomplete_SDAQs);
 	if(stats->detected_SDAQs)
 	{
 		cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());

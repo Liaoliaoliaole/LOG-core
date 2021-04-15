@@ -18,10 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define LogBooks_dir "/var/tmp/Morfeas_LogBooks/"
 #define SYNC_INTERVAL 10//seconds
-#define LIFE_TIME 15 // Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
+#define LIFE_TIME 30// Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
+#define dev_info_failed_RXs 2//Maximum amount of allowed failed receptions before re-query.
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
-#define Ready_to_reg_mask 0x85//Mask for SDAQ state: standby, no error and normal mode
-#define SDAQ_ERROR_mask (1<<3)//Mask for SDAQ Error bit check
+#define Ready_to_reg_mask 0x85 //Mask for SDAQ state: standby, no error and normal mode
+#define SDAQ_ERROR_mask (1<<3) //Mask for SDAQ Error bit check
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -371,24 +372,31 @@ int main(int argc, char *argv[])
 																									  status_dec->dev_sn,
 																									  SDAQ_data->SDAQ_address);
 								SDAQ_data->reg_status = Registered;
-								SDAQ_data->query_dev_info_failure_cnt = 0;
+								SDAQ_data->failed_reg_RX_CNT = 0;
+								QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
 							}
 							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Check reg_status of current SDAQ.
-							{	//Request Dev_info after initial registration or after multiple failed info/dates receptions.
-								if((SDAQ_data->reg_status == Registered && !SDAQ_data->query_dev_info_failure_cnt) ||
-									SDAQ_data->query_dev_info_failure_cnt == (unsigned)-1)
+							{	//Repeat request of Dev_info after from multiple failed info/dates receptions.
+								if(SDAQ_data->reg_status == Registered && SDAQ_data->failed_reg_RX_CNT >= dev_info_failed_RXs)
+								{
+									Logger("Resend QueryDeviceInfo() for Dev:%hhu\n", SDAQ_data->SDAQ_address);
 									QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
-								else if(SDAQ_data->reg_status == Pending_input_mode) // Check if device pending "input mode" value
-									QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
-								SDAQ_data->query_dev_info_failure_cnt++;
+									SDAQ_data->failed_reg_RX_CNT = 0;
+								}
+								else
+									SDAQ_data->failed_reg_RX_CNT++;
+								if(SDAQ_data->reg_status == Pending_input_mode) // Check if device pending "input mode" value
+									SDAQ_data->reg_status = Ready;
+									//QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
 							}
-							else if(SDAQ_data->reg_status == Ready && !incomplete_SDAQs(&stats))//Check if all SDAQs are fully registered, and if yes put current SDAQ to measure mode.
+							else if(SDAQ_data->reg_status == Ready)//Check if SDAQ is fully registered, and if yes put it measure mode.
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 						}
 						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
 							Logger("SDAQ (%s) with S/N: %010u -> Address: %02hhu Report ERROR!!!\n", dev_type_str[status_dec->dev_type],
 																									 status_dec->dev_sn,
 																									 SDAQ_data->SDAQ_address);
+						stats.incomplete_SDAQs = incomplete_SDAQs(&stats);
 						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, SDAQ_data->reg_status, stats.detected_SDAQs);
 					}
 					else

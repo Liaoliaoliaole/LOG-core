@@ -319,6 +319,7 @@ struct Morfeas_SDAQ_if_stats{
 	float Bus_amperage;
 	float Shunt_temp;
 	unsigned char detected_SDAQs;// Amount of online SDAQ.
+	unsigned char incomplete_SDAQs;// Amount of incomplete SDAQ.
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
 };
@@ -340,8 +341,8 @@ struct SDAQ_info_entry{
 	GSList *SDAQ_Channels_acc_meas;
 	struct Channel_curr_meas *SDAQ_Channels_curr_meas;
 	time_t last_seen;
+	unsigned failed_reg_RX_CNT;
 	unsigned reg_status:3;
-	unsigned query_dev_info_failure_cnt:2;
 };
 // Data of a SDAQ_cal_dates node
 struct Channel_date_entry{
