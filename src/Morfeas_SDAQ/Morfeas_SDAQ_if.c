@@ -324,7 +324,9 @@ int main(int argc, char *argv[])
 	setitimer(ITIMER_REAL, &timer, NULL);
 
 	//-----Actions on the bus-----//
-	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//point ID decoder to ID field from frame_rx
+	memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name, stats.CAN_IF_name,'\0', Dev_or_Bus_name_str_size);//Init Bus_name field of IPC_msg.
+	IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
+	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//Point ID decoder to ID field from frame_rx
 	Stop(CAN_socket_num, Broadcast);//Stop any measuring activity on the bus
 	while(flags.run)//FSM of Morfeas_SDAQ_if
 	{
@@ -334,6 +336,8 @@ int main(int argc, char *argv[])
 			switch(sdaq_id_dec->payload_type)
 			{
 				case Measurement_value:
+					if(frame_rx.can_dlc != sizeof(sdaq_meas))
+						break;
 					if((SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 					{
 						time(&(SDAQ_data->last_seen));//Update last seen time
@@ -345,8 +349,6 @@ int main(int argc, char *argv[])
 							if(sdaq_id_dec->channel_num == SDAQ_data->SDAQ_info.num_of_ch)
 							{	//Send measurement through IPC
 								IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
-								memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name,stats.CAN_IF_name,'\0',Dev_or_Bus_name_str_size);
-								IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 								IPC_msg.SDAQ_meas.SDAQ_serial_number = SDAQ_data->SDAQ_status.dev_sn;
 								IPC_msg.SDAQ_meas.Amount_of_channels = SDAQ_data->SDAQ_info.num_of_ch;
 								IPC_msg.SDAQ_meas.Last_Timestamp = meas_dec->timestamp;
@@ -362,6 +364,8 @@ int main(int argc, char *argv[])
 					update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
 					break;
 				case Device_status:
+					if(frame_rx.can_dlc != sizeof(sdaq_status))
+						break;
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
 						if(!(status_dec->status & Ready_to_reg_mask))
@@ -372,24 +376,24 @@ int main(int argc, char *argv[])
 																									  status_dec->dev_sn,
 																									  SDAQ_data->SDAQ_address);
 								SDAQ_data->reg_status = Registered;
-								SDAQ_data->failed_reg_RX_CNT = 0;
-								QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
+								SDAQ_data->failed_reg_RX_CNT = -1;
 							}
 							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Check reg_status of current SDAQ.
-							{	//Repeat request of Dev_info after from multiple failed info/dates receptions.
+							{
 								if(SDAQ_data->reg_status == Registered && SDAQ_data->failed_reg_RX_CNT >= dev_info_failed_RXs)
 								{
-									Logger("Resend QueryDeviceInfo() for Dev:%hhu\n", SDAQ_data->SDAQ_address);
 									QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
+									SDAQ_data->failed_reg_RX_CNT = 0;
+								}
+								else if(SDAQ_data->reg_status == Pending_input_mode && SDAQ_data->failed_reg_RX_CNT >= dev_info_failed_RXs)
+								{
+									QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
 									SDAQ_data->failed_reg_RX_CNT = 0;
 								}
 								else
 									SDAQ_data->failed_reg_RX_CNT++;
-								if(SDAQ_data->reg_status == Pending_input_mode) // Check if device pending "input mode" value
-									SDAQ_data->reg_status = Ready;
-									//QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
-							}
-							else if(SDAQ_data->reg_status == Ready)//Check if SDAQ is fully registered, and if yes put it measure mode.
+							}//Check if all SDAQ is registered, and if yes put the current one in measure mode
+							else if(SDAQ_data->reg_status == Ready && !stats.incomplete_SDAQs)
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 						}
 						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
@@ -403,12 +407,18 @@ int main(int argc, char *argv[])
 						Logger("Maximum amount of addresses is reached!!!!\n");
 					break;
 				case Device_info:
+					if(frame_rx.can_dlc != sizeof(sdaq_info))
+						break;
 					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
 					break;
 				case System_variable:
+					if(frame_rx.can_dlc != sizeof(sdaq_sysvar))
+						break;
 					update_input_mode(sdaq_id_dec->device_addr, sysvar_dec, &stats);
 					break;
 				case Calibration_Date:
+					if(frame_rx.can_dlc != sizeof(sdaq_calibration_date))
+						break;
 					add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats);
 					break;
 			}
@@ -1000,7 +1010,10 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)
 			{
 				if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type] && sdaq_node->reg_status < Pending_input_mode)
+				{
 					sdaq_node->reg_status = Pending_input_mode;
+					sdaq_node->failed_reg_RX_CNT = -1;
+				}
 				else if(sdaq_node->reg_status < Ready)
 					sdaq_node->reg_status = Ready;
 				return EXIT_SUCCESS;
