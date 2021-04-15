@@ -407,19 +407,16 @@ int main(int argc, char *argv[])
 						Logger("Maximum amount of addresses is reached!!!!\n");
 					break;
 				case Device_info:
-					if(frame_rx.can_dlc != sizeof(sdaq_info))
-						break;
-					update_info(sdaq_id_dec->device_addr, info_dec, &stats);
+					if(frame_rx.can_dlc == sizeof(sdaq_info))
+						update_info(sdaq_id_dec->device_addr, info_dec, &stats);
 					break;
 				case System_variable:
-					if(frame_rx.can_dlc != sizeof(sdaq_sysvar))
-						break;
-					update_input_mode(sdaq_id_dec->device_addr, sysvar_dec, &stats);
+					if(frame_rx.can_dlc == sizeof(sdaq_sysvar))
+						update_input_mode(sdaq_id_dec->device_addr, sysvar_dec, &stats);
 					break;
 				case Calibration_Date:
-					if(frame_rx.can_dlc != sizeof(sdaq_calibration_date))
-						break;
-					add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats);
+					if(frame_rx.can_dlc == sizeof(sdaq_calibration_date))
+						add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats);
 					break;
 			}
 			msg_cnt++;//increase message counter
