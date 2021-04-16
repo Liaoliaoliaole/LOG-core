@@ -377,10 +377,10 @@ int main(int argc, char *argv[])
 																									  status_dec->dev_sn,
 																									  SDAQ_data->SDAQ_address);
 								SDAQ_data->reg_status = Registered;
-								if(stats.in_start)
+								if(stats.is_meas_started)
 								{
-									Stop(CAN_socket_num, Broadcast);//Stop any measuring activity on the bus
-									stats.in_start = 0;
+									Stop(CAN_socket_num, Broadcast);
+									stats.is_meas_started = 0;
 									SDAQ_data->failed_reg_RX_CNT = -1;
 								}
 								else
@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
 							else if(SDAQ_data->reg_status == Ready && !(stats.incomplete_SDAQs = incomplete_SDAQs(&stats)))
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
-								stats.in_start = 1;
+								stats.is_meas_started = 1;
 							}
 						}
 						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
@@ -951,7 +951,7 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 					if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
 					{
 						Start(CAN_socket_num, sdaq_node->SDAQ_address);
-						stats->in_start = 1;
+						stats->is_meas_started = 1;
 					}
 				}
 				//Send SDAQ's input mode through IPC
@@ -1039,7 +1039,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 					if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
 					{
 						Start(CAN_socket_num, sdaq_node->SDAQ_address);
-						stats->in_start = 1;
+						stats->is_meas_started = 1;
 					}
 				}
 				return EXIT_SUCCESS;
