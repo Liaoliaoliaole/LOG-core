@@ -378,6 +378,8 @@ int main(int argc, char *argv[])
 																									  SDAQ_data->SDAQ_address);
 								SDAQ_data->reg_status = Registered;
 								SDAQ_data->failed_reg_RX_CNT = -1;
+								if(stats.in_start)
+									Stop(CAN_socket_num, Broadcast);//Stop any measuring activity on the bus
 							}
 							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Check reg_status of current SDAQ.
 							{
@@ -395,7 +397,10 @@ int main(int argc, char *argv[])
 									SDAQ_data->failed_reg_RX_CNT++;
 							}//Check if all SDAQ is registered, and if yes put the current one in measure mode
 							else if(SDAQ_data->reg_status == Ready && !stats.incomplete_SDAQs)
+							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
+								stats.in_start = 1;
+							}
 						}
 						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
 							Logger("SDAQ (%s) with S/N: %010u -> Address: %02hhu Report ERROR!!!\n", dev_type_str[status_dec->dev_type],
