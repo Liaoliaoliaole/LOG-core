@@ -946,7 +946,14 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 			{
 				sdaq_node->inp_mode = sysvar_dec->var_val.as_uint32;
 				if(sdaq_node->reg_status < Ready)
+				{
 					sdaq_node->reg_status = Ready;
+					if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
+					{
+						Start(CAN_socket_num, sdaq_node->SDAQ_address);
+						stats->in_start = 1;
+					}
+				}
 				//Send SDAQ's input mode through IPC
 				IPC_msg.SDAQ_inpMode.IPC_msg_type = IPC_SDAQ_inpMode;
 				sprintf(IPC_msg.SDAQ_inpMode.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
@@ -1027,7 +1034,14 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 					QuerySystemVariables(CAN_socket_num, sdaq_node->SDAQ_address);
 				}
 				else if(sdaq_node->reg_status < Ready)
+				{
 					sdaq_node->reg_status = Ready;
+					if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
+					{
+						Start(CAN_socket_num, sdaq_node->SDAQ_address);
+						stats->in_start = 1;
+					}
+				}
 				return EXIT_SUCCESS;
 			}
 		}
