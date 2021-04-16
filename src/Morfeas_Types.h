@@ -345,12 +345,12 @@ struct SDAQ_info_entry{
 	unsigned failed_reg_RX_CNT;
 	unsigned reg_status:3;
 };
-// Data of a SDAQ_cal_dates node
+// Data of a SDAQ_Channels_cal_dates node
 struct Channel_date_entry{
 	unsigned char Channel;
 	sdaq_calibration_date CH_date;
 };
-// Data of a SDAQ_average_meas node
+// Data of a SDAQ_Channels_acc_meas node
 struct Channel_acc_meas_entry{
 	unsigned char Channel;
 	unsigned char status;

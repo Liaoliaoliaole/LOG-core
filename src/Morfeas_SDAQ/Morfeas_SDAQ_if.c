@@ -272,9 +272,9 @@ int main(int argc, char *argv[])
 			if(!read_port_config(&port_meas_config, stats.port, i2c_bus_num))
 			{
 				flags.port_meas_exist = 1;
-				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month,
-															  port_meas_config.last_cal_date.day,
-															  port_meas_config.last_cal_date.year+12000);
+				Logger("SDAQnet Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month,
+															   port_meas_config.last_cal_date.day,
+															   port_meas_config.last_cal_date.year+12000);
 				//Convert date from port_meas_config to struct tm Morfeas_RPi_Hat_last_cal
 				Morfeas_RPi_Hat_last_cal.tm_mon = port_meas_config.last_cal_date.month - 1;
 				Morfeas_RPi_Hat_last_cal.tm_mday = port_meas_config.last_cal_date.day;
@@ -944,7 +944,16 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 			time(&(sdaq_node->last_seen));
 			if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type])//Check if selected dev_type of sdaq_node have available input mode.
 			{
+				//Send SDAQ's input mode through IPC
+				IPC_msg.SDAQ_inpMode.IPC_msg_type = IPC_SDAQ_inpMode;
+				sprintf(IPC_msg.SDAQ_inpMode.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
+				IPC_msg.SDAQ_inpMode.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
+				IPC_msg.SDAQ_inpMode.Dev_type = sdaq_node->SDAQ_info.dev_type;
+				IPC_msg.SDAQ_inpMode.Input_mode = sysvar_dec->var_val.as_uint32;
+				IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
+				//Set or Update sdaq_node's inp_mode.
 				sdaq_node->inp_mode = sysvar_dec->var_val.as_uint32;
+				//Check reg_status, and start meas if needed.
 				if(sdaq_node->reg_status < Ready)
 				{
 					sdaq_node->reg_status = Ready;
@@ -954,13 +963,6 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 						stats->is_meas_started = 1;
 					}
 				}
-				//Send SDAQ's input mode through IPC
-				IPC_msg.SDAQ_inpMode.IPC_msg_type = IPC_SDAQ_inpMode;
-				sprintf(IPC_msg.SDAQ_inpMode.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
-				IPC_msg.SDAQ_inpMode.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
-				IPC_msg.SDAQ_inpMode.Dev_type = sdaq_node->SDAQ_info.dev_type;
-				IPC_msg.SDAQ_inpMode.Input_mode = sysvar_dec->var_val.as_uint32;
-				IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
 			}
 			else
 				return EXIT_SUCCESS;
@@ -1024,26 +1026,37 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			IPC_msg.SDAQ_cal_date.channel = channel;
 			memcpy(&(IPC_msg.SDAQ_cal_date.SDAQ_cal_date), date_dec, sizeof(sdaq_calibration_date));
 			IPC_msg_TX(stats->FIFO_fd, &IPC_msg);
-			//if this is the last calibration date message, mark entry as "info complete"
+			//Check, if this cal_date message is for the last channel.
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)
-			{
-				if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type] && sdaq_node->reg_status < Pending_input_mode)
-				{
-					sdaq_node->reg_status = Pending_input_mode;
-					sdaq_node->failed_reg_RX_CNT = 0;
-					QuerySystemVariables(CAN_socket_num, sdaq_node->SDAQ_address);
-				}
-				else if(sdaq_node->reg_status < Ready)
-				{
-					sdaq_node->reg_status = Ready;
-					if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
+			{	//Check if all channels have cal_dates.
+				if(g_slist_length(sdaq_node->SDAQ_Channels_cal_dates) == sdaq_node->SDAQ_info.num_of_ch)
+				{	
+					if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type] && sdaq_node->reg_status < Pending_input_mode)
 					{
-						Start(CAN_socket_num, sdaq_node->SDAQ_address);
-						stats->is_meas_started = 1;
+						sdaq_node->reg_status = Pending_input_mode;
+						sdaq_node->failed_reg_RX_CNT = 0;
+						QuerySystemVariables(CAN_socket_num, sdaq_node->SDAQ_address);
 					}
+					else if(sdaq_node->reg_status < Ready)
+					{
+						sdaq_node->reg_status = Ready;
+						if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
+						{
+							Start(CAN_socket_num, sdaq_node->SDAQ_address);
+							stats->is_meas_started = 1;
+						}
+					}
+					return EXIT_SUCCESS;
 				}
-				return EXIT_SUCCESS;
+				else
+				{
+					//Logger("Unordered calibration dates reception, QueryDeviceInfo for SDAQ:%d will be repeated!!!\n",sdaq_node->SDAQ_address);
+					sdaq_node->reg_status = Registered;
+					sdaq_node->failed_reg_RX_CNT = -1;
+					return EXIT_FAILURE;
+				}
 			}
+			return EXIT_SUCCESS;
 		}
 		else
 			return EXIT_FAILURE;
@@ -1271,9 +1284,9 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 				if((now - sdaq_node->last_seen) > LIFE_TIME)
 				{
 					stats->detected_SDAQs--;
-					Logger("SDAQ with type %s, S/N:%u and address:%hhu left from the BUS\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
-																							 sdaq_node->SDAQ_status.dev_sn,
-																					 		 sdaq_node->SDAQ_address);
+					Logger("%s:%hhu (S/N:%u) removed from BUS\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
+																  sdaq_node->SDAQ_address,
+																  sdaq_node->SDAQ_status.dev_sn);
 					//Send info of the removed SDAQ through IPC
 					IPC_msg.SDAQ_clean.IPC_msg_type = IPC_SDAQ_clean_up;
 					sprintf(IPC_msg.SDAQ_clean.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
