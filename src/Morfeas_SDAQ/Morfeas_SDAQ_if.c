@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
 					{
 						if(!(status_dec->status & Ready_to_reg_mask))
 						{
-							if(SDAQ_data->reg_status == Unregistered)
+							if(!SDAQ_data->reg_status)//Check if current SDAQ isn't registered.
 							{
 								Logger("Register new SDAQ (%s) with S/N: %010u -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
 																									  status_dec->dev_sn,
@@ -389,17 +389,21 @@ int main(int argc, char *argv[])
 									SDAQ_data->failed_reg_RX_CNT = 0;
 								}
 							}
-							else if(SDAQ_data->reg_status >= Registered && SDAQ_data->reg_status < Ready)//Check reg_status of current SDAQ.
+							else if(SDAQ_INFO_PENDING(SDAQ_data->reg_status))//Check if current SDAQ's reg_status isn't "Ready".
 							{
-								if(SDAQ_data->reg_status == Registered && SDAQ_data->failed_reg_RX_CNT >= dev_info_failed_RXs)
+								if(SDAQ_data->failed_reg_RX_CNT >= dev_info_failed_RXs)
 								{
 									SDAQ_data->failed_reg_RX_CNT = 0;
-									QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
-								}
-								else if(SDAQ_data->reg_status == Pending_input_mode && SDAQ_data->failed_reg_RX_CNT >= dev_info_failed_RXs)
-								{
-									SDAQ_data->failed_reg_RX_CNT = 0;
-									QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
+									switch(SDAQ_data->reg_status)
+									{
+										case Registered:
+										case Pending_Calibration_data:
+											QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
+											break;
+										case Pending_input_mode:
+											QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
+											break;
+									}
 								}
 								else
 									SDAQ_data->failed_reg_RX_CNT++;
@@ -1030,7 +1034,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)
 			{	//Check if all channels have cal_dates.
 				if(g_slist_length(sdaq_node->SDAQ_Channels_cal_dates) == sdaq_node->SDAQ_info.num_of_ch)
-				{	
+				{
 					if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type] && sdaq_node->reg_status < Pending_input_mode)
 					{
 						sdaq_node->reg_status = Pending_input_mode;
