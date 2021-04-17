@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define LogBooks_dir "/var/tmp/Morfeas_LogBooks/"
 #define SYNC_INTERVAL 10//seconds
 #define LIFE_TIME 15// Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
-#define dev_info_failed_RXs 2//Maximum amount of allowed failed receptions before re-query.
+#define DEV_INFO_FAILED_RXs 2//Maximum amount of allowed failed receptions before re-query.
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 #define Ready_to_reg_mask 0x85 //Mask for SDAQ state: standby, no error and normal mode
 #define SDAQ_ERROR_mask (1<<3) //Mask for SDAQ Error bit check
@@ -389,9 +389,9 @@ int main(int argc, char *argv[])
 									SDAQ_data->failed_reg_RX_CNT = 0;
 								}
 							}
-							else if(SDAQ_INFO_PENDING(SDAQ_data->reg_status))//Check if current SDAQ's reg_status isn't "Ready".
+							else if(SDAQ_INFO_PENDING(SDAQ_data->reg_status))//Check if current SDAQ's reporting with reg_status not be "Ready".
 							{
-								if(SDAQ_data->failed_reg_RX_CNT >= dev_info_failed_RXs)
+								if(SDAQ_data->failed_reg_RX_CNT >= DEV_INFO_FAILED_RXs)
 								{
 									SDAQ_data->failed_reg_RX_CNT = 0;
 									switch(SDAQ_data->reg_status)
@@ -468,7 +468,6 @@ int main(int argc, char *argv[])
 				IPC_msg.SDAQ_BUS_info.Electrics = 0;
 			//transfer bus utilization to opc_ua
 			IPC_msg.SDAQ_BUS_info.IPC_msg_type = IPC_SDAQ_CAN_BUS_info;
-			sprintf(IPC_msg.SDAQ_BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);
 			IPC_msg.SDAQ_BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 			//Write Stats to Logstat JSON file
@@ -597,8 +596,7 @@ void led_stat(struct Morfeas_SDAQ_if_stats *stats)
 		}
 	}
 }
-
-/*Lists related function implementation*/
+	/*Lists related function implementation*/
 //SDAQ_info_entry allocator
 struct SDAQ_info_entry* new_SDAQ_info_entry()
 {
@@ -838,7 +836,7 @@ short time_diff_cal(unsigned short dev_time, unsigned short ref_time)
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
 	IPC_message IPC_msg = {0};
-	GSList *list_node = NULL;
+	GSList *list_node;
 	struct SDAQ_info_entry *sdaq_node;
 	if (stats->list_SDAQs)
 	{
@@ -896,7 +894,7 @@ gint SDAQ_Channels_acc_meas_entry_cmp (gconstpointer a, gconstpointer b)
 int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
 	IPC_message IPC_msg = {0};
-	GSList *list_node = NULL;
+	GSList *list_node;
 	struct SDAQ_info_entry *sdaq_node;
 	if(stats->list_SDAQs)
 	{
@@ -934,7 +932,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
 	IPC_message IPC_msg = {0};
-	GSList *list_node = NULL;
+	GSList *list_node;
 	struct SDAQ_info_entry *sdaq_node;
 
 	if(sysvar_dec->type)//Return if SDAQ's sysvar msg have types >0.
@@ -990,7 +988,7 @@ struct SDAQ_info_entry * find_SDAQ(unsigned char address, struct Morfeas_SDAQ_if
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats)
 {
 	IPC_message IPC_msg = {0};
-	GSList *list_node = NULL, *date_list_node = NULL;
+	GSList *list_node, *date_list_node;
 	struct SDAQ_info_entry *sdaq_node;
 	struct Channel_date_entry *sdaq_Channels_cal_dates_node;
 	if (stats->list_SDAQs)
@@ -999,14 +997,29 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
+			time(&(sdaq_node->last_seen));
 			date_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_cal_dates, &channel, SDAQ_Channels_cal_dates_entry_find_channel);
-			if(date_list_node)//channel is already in to the SDAQ_Channels_cal_dates list: Update CH_date.
+			if(date_list_node)//Channel is already in to SDAQ_Channels_cal_dates list: Update CH_date.
 			{
 				sdaq_Channels_cal_dates_node = date_list_node->data;
 				memcpy(&(sdaq_Channels_cal_dates_node->CH_date), date_dec, sizeof(sdaq_calibration_date));
 			}
-			else//Channel is not in the list
+			else//Channel is not in SDAQ_Channels_cal_dates list: Check order and Create CH_date entry.
 			{
+				/*
+				//Check order.
+				date_list_node = g_slist_last(sdaq_node->SDAQ_Channels_cal_dates);
+				if(date_list_node)
+				{
+					sdaq_Channels_cal_dates_node = date_list_node->data;
+					if(channel != sdaq_Channels_cal_dates_node->Channel+1)
+					{
+						sdaq_node->failed_reg_RX_CNT = -1;
+						return EXIT_FAILURE;
+					}
+				}
+				*/
+				//Create a new CH_date entry and Load date_dec to it.
 				sdaq_Channels_cal_dates_node = new_SDAQ_Channel_date_entry();
 				if(sdaq_Channels_cal_dates_node)
 				{
@@ -1022,8 +1035,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 					exit(EXIT_FAILURE);
 				}
 			}
-			time(&(sdaq_node->last_seen));
-			//Send calibration data via IPC
+			//Send calibration data via IPC.
 			IPC_msg.SDAQ_cal_date.IPC_msg_type = IPC_SDAQ_cal_date;
 			sprintf(IPC_msg.SDAQ_cal_date.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
 			IPC_msg.SDAQ_cal_date.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
@@ -1034,16 +1046,17 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			if(channel == sdaq_node->SDAQ_info.num_of_ch)
 			{	//Check if all channels have cal_dates.
 				if(g_slist_length(sdaq_node->SDAQ_Channels_cal_dates) == sdaq_node->SDAQ_info.num_of_ch)
-				{
+				{	//Check if current SDAQ have support "input modes".
 					if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type] && sdaq_node->reg_status < Pending_input_mode)
 					{
 						sdaq_node->reg_status = Pending_input_mode;
 						sdaq_node->failed_reg_RX_CNT = 0;
 						QuerySystemVariables(CAN_socket_num, sdaq_node->SDAQ_address);
 					}
-					else if(sdaq_node->reg_status < Ready)
+					else if(sdaq_node->reg_status < Ready)//Otherwise mark SDAQ's reg_status as "Ready".
 					{
 						sdaq_node->reg_status = Ready;
+						//If they are not other incomplete SDAQs, set current to measeure.
 						if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
 						{
 							Start(CAN_socket_num, sdaq_node->SDAQ_address);
@@ -1052,11 +1065,11 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 					}
 					return EXIT_SUCCESS;
 				}
-				else
+				else//Otherwise repeat QueryDeviceInfo().
 				{
 					//Logger("Unordered calibration dates reception, QueryDeviceInfo for SDAQ:%d will be repeated!!!\n",sdaq_node->SDAQ_address);
-					sdaq_node->reg_status = Registered;
-					sdaq_node->failed_reg_RX_CNT = -1;
+					sdaq_node->failed_reg_RX_CNT = 0;
+					QuerySystemVariables(CAN_socket_num, sdaq_node->SDAQ_address);
 					return EXIT_FAILURE;
 				}
 			}
@@ -1070,7 +1083,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 /*Function that add current meas to channel's accumulator of a SDAQ's channel. Used in FSM*/
 int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry *sdaq_node)
 {
-	GSList *acc_meas_list_node = NULL;
+	GSList *acc_meas_list_node;
 	struct Channel_acc_meas_entry *sdaq_Channels_acc_meas_node;
 
 	acc_meas_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_acc_meas, &channel, SDAQ_Channels_acc_meas_entry_find_channel);
@@ -1124,7 +1137,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	unsigned char address_test;
 	struct SDAQ_info_entry *list_SDAQ_node_data;
 	struct LogBook_entry *LogBook_node_data;
-	GSList *check_is_in_list_SDAQ = NULL, *check_is_in_LogBook =NULL;
+	GSList *check_is_in_list_SDAQ, *check_is_in_LogBook =NULL;
 
 	check_is_in_LogBook = g_slist_find_custom(stats->LogBook, &(status_dec->dev_sn), LogBook_entry_find_serial_number);
 	check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
@@ -1274,7 +1287,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 {
 	IPC_message IPC_msg = {0};
 	struct SDAQ_info_entry *sdaq_node;
-	GSList *check_node = NULL;
+	GSList *check_node;
 	time_t now=time(NULL);
 	if(stats->list_SDAQs)//check if list_SDAQs have elements
 	{
