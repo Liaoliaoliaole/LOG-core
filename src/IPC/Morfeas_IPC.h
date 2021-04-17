@@ -163,7 +163,7 @@ typedef struct SDAQ_measure_msg_struct{
 	unsigned int SDAQ_serial_number;
 	unsigned char Amount_of_channels;
 	unsigned short Last_Timestamp;
-	struct Channel_curr_meas SDAQ_channel_meas[SDAQ_MAX_AMOUNT_OF_CHANNELS-1];
+	struct Channel_curr_meas SDAQ_channel_meas[SDAQ_MAX_AMOUNT_OF_CHANNELS];
 }SDAQ_meas_msg;
 
 	//------ IO-BOX related ------//

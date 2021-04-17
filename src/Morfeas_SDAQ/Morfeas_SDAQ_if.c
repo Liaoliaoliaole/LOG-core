@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
 						{
 							time(&(SDAQ_data->last_seen));//Update last seen time
 							if(logstat_path)//Add current measurements to Average Accumulator
-								acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//add meas to acc
+								acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//Add meas to acc
 							if(SDAQ_data->SDAQ_Channels_curr_meas && sdaq_id_dec->channel_num <= SDAQ_data->SDAQ_info.num_of_ch)
 							{	//Load meas to Current meas buffer
 								memcpy(&(SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1]), meas_dec, sizeof(struct Channel_curr_meas));
@@ -389,7 +389,7 @@ int main(int argc, char *argv[])
 									SDAQ_data->failed_reg_RX_CNT = 0;
 								}
 							}
-							else if(SDAQ_INFO_PENDING(SDAQ_data->reg_status))//Check if current SDAQ's reporting with reg_status not be "Ready".
+							else if(SDAQ_INFO_PENDING_CHECK(SDAQ_data->reg_status))//Check if current SDAQ's send status and reg_status isn't "Ready".
 							{
 								if(SDAQ_data->failed_reg_RX_CNT >= DEV_INFO_FAILED_RXs)
 								{
@@ -1004,21 +1004,8 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 				sdaq_Channels_cal_dates_node = date_list_node->data;
 				memcpy(&(sdaq_Channels_cal_dates_node->CH_date), date_dec, sizeof(sdaq_calibration_date));
 			}
-			else//Channel is not in SDAQ_Channels_cal_dates list: Check order and Create CH_date entry.
+			else//Channel is not in SDAQ_Channels_cal_dates list: Create CH_date entry.
 			{
-				/*
-				//Check order.
-				date_list_node = g_slist_last(sdaq_node->SDAQ_Channels_cal_dates);
-				if(date_list_node)
-				{
-					sdaq_Channels_cal_dates_node = date_list_node->data;
-					if(channel != sdaq_Channels_cal_dates_node->Channel+1)
-					{
-						sdaq_node->failed_reg_RX_CNT = -1;
-						return EXIT_FAILURE;
-					}
-				}
-				*/
 				//Create a new CH_date entry and Load date_dec to it.
 				sdaq_Channels_cal_dates_node = new_SDAQ_Channel_date_entry();
 				if(sdaq_Channels_cal_dates_node)
