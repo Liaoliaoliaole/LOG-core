@@ -398,7 +398,7 @@ int main(int argc, char *argv[])
 								}
 								else
 								{
-									if(SDAQ_data->failed_reg_RX_CNT >= DEV_INFO_FAILED_RXs)
+									if(SDAQ_data->failed_reg_RX_CNT > DEV_INFO_FAILED_RXs)
 									{
 										SDAQ_data->failed_reg_RX_CNT = 0;
 										switch(SDAQ_data->reg_status)
