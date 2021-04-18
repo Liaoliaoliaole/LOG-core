@@ -391,22 +391,30 @@ int main(int argc, char *argv[])
 							}
 							else if(SDAQ_INFO_PENDING_CHECK(SDAQ_data->reg_status))//Check if current SDAQ's send status and reg_status isn't "Ready".
 							{
-								if(SDAQ_data->failed_reg_RX_CNT >= DEV_INFO_FAILED_RXs)
+								if(stats.is_meas_started)
 								{
-									SDAQ_data->failed_reg_RX_CNT = 0;
-									switch(SDAQ_data->reg_status)
-									{
-										case Registered:
-										case Pending_Calibration_data:
-											QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
-											break;
-										case Pending_input_mode:
-											QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
-											break;
-									}
+									Stop(CAN_socket_num, Broadcast);
+									stats.is_meas_started = 0;
 								}
 								else
-									SDAQ_data->failed_reg_RX_CNT++;
+								{
+									if(SDAQ_data->failed_reg_RX_CNT >= DEV_INFO_FAILED_RXs)
+									{
+										SDAQ_data->failed_reg_RX_CNT = 0;
+										switch(SDAQ_data->reg_status)
+										{
+											case Registered:
+											case Pending_Calibration_data:
+												QueryDeviceInfo(CAN_socket_num, SDAQ_data->SDAQ_address);
+												break;
+											case Pending_input_mode:
+												QuerySystemVariables(CAN_socket_num, SDAQ_data->SDAQ_address);
+												break;
+										}
+									}
+									else
+										SDAQ_data->failed_reg_RX_CNT++;
+								}
 							}//Check if all SDAQ is registered, and if yes put the current one in measure mode
 							else if(SDAQ_data->reg_status == Ready && !(stats.incomplete_SDAQs = incomplete_SDAQs(&stats)))
 							{
