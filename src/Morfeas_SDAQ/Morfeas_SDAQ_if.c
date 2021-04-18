@@ -395,7 +395,6 @@ int main(int argc, char *argv[])
 								{
 									Stop(CAN_socket_num, Broadcast);
 									stats.is_meas_started = 0;
-									SDAQ_data->failed_reg_RX_CNT = 0;
 								}
 								else
 								{
