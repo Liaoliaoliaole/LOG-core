@@ -362,7 +362,8 @@ int main(int argc, char *argv[])
 					}
 					break;
 				case Sync_Info:
-					update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
+					if(frame_rx.can_dlc == sizeof(sdaq_sync_debug_data))
+						update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
 					break;
 				case Device_status:
 					if(frame_rx.can_dlc != sizeof(sdaq_status))
@@ -904,6 +905,9 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 	IPC_message IPC_msg = {0};
 	GSList *list_node;
 	struct SDAQ_info_entry *sdaq_node;
+
+	if(!info_dec->num_of_ch || info_dec->num_of_ch > SDAQ_MAX_AMOUNT_OF_CHANNELS)
+		return EXIT_FAILURE;
 	if(stats->list_SDAQs)
 	{
 		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
@@ -999,13 +1003,16 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 	GSList *list_node, *date_list_node;
 	struct SDAQ_info_entry *sdaq_node;
 	struct Channel_date_entry *sdaq_Channels_cal_dates_node;
-	if (stats->list_SDAQs)
+
+	if(stats->list_SDAQs)
 	{
 		list_node = g_slist_find_custom(stats->list_SDAQs, &address, SDAQ_info_entry_find_address);
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
 			time(&(sdaq_node->last_seen));
+			if(sdaq_node->reg_status < Pending_Calibration_data)//Check, if "cal_date" msg comes before "Dev_info".
+				return EXIT_FAILURE;
 			date_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_cal_dates, &channel, SDAQ_Channels_cal_dates_entry_find_channel);
 			if(date_list_node)//Channel is already in to SDAQ_Channels_cal_dates list: Update CH_date.
 			{
