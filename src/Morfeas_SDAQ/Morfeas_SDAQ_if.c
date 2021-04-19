@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define LogBooks_dir "/var/tmp/Morfeas_LogBooks/"
 #define SYNC_INTERVAL 10//seconds
-#define LIFE_TIME 15// Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
+#define LIFE_TIME 30// Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
 #define DEV_INFO_FAILED_RXs 2//Maximum amount of allowed failed receptions before re-query.
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 #define Ready_to_reg_mask 0x85 //Mask for SDAQ state: standby, no error and normal mode
@@ -226,15 +226,15 @@ int main(int argc, char *argv[])
 	//load filter's can_id member
 	sdaq_id_dec = (sdaq_can_id *)&RX_filter.can_id;//Set encoder to filter.can_id
 	memset(sdaq_id_dec, 0, sizeof(sdaq_can_id));
-	sdaq_id_dec->flags = 4;//set the EFF
-	sdaq_id_dec->protocol_id = PROTOCOL_ID; // Received Messages with protocol_id == PROTOCOL_ID
-	sdaq_id_dec->payload_type = 0x80; //  Received Messages with payload_type & 0x80 == TRUE, aka Master <- SDAQ.
+	sdaq_id_dec->flags = 4;//set the EFF, Received only messages with extended ID (29bit).
+	sdaq_id_dec->protocol_id = PROTOCOL_ID;//Received Messages with protocol_id == PROTOCOL_ID
+	sdaq_id_dec->payload_type = 0x80;//Received Messages with payload_type & 0x80 == TRUE, aka Master <- SDAQ.
 	//load filter's can_mask member
 	sdaq_id_dec = (sdaq_can_id *)&RX_filter.can_mask; //Set encoder to filter.can_mask
 	memset(sdaq_id_dec, 0, sizeof(sdaq_can_id));
-	sdaq_id_dec->flags = 4;//Received only messages with extended ID (29bit)
-	sdaq_id_dec->protocol_id = -1; // Protocol_id field marked for examination
-	sdaq_id_dec->payload_type = 0x80; // + The most significant bit of Payload_type field marked for examination.
+	sdaq_id_dec->flags = 4;//Flags field marked for examination.
+	sdaq_id_dec->protocol_id = -1;//Protocol_id field marked for examination.
+	sdaq_id_dec->payload_type = 0x80;//+ The most significant bit of Payload_type field marked for examination.
 	setsockopt(CAN_socket_num, SOL_CAN_RAW, CAN_RAW_FILTER, &RX_filter, sizeof(RX_filter));
 
 	// Add timeout option to the CAN Socket
@@ -399,7 +399,7 @@ int main(int argc, char *argv[])
 								}
 								else
 								{
-									if(SDAQ_data->failed_reg_RX_CNT > DEV_INFO_FAILED_RXs)
+									if(SDAQ_data->failed_reg_RX_CNT >= DEV_INFO_FAILED_RXs)
 									{
 										SDAQ_data->failed_reg_RX_CNT = 0;
 										switch(SDAQ_data->reg_status)
