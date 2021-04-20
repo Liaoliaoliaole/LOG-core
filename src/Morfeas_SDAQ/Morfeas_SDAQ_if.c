@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define DEV_INFO_FAILED_RXs 2//Maximum amount of allowed failed receptions before re-query.
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 #define Ready_to_reg_mask 0x85 //Mask for SDAQ state: standby, no error and normal mode
-#define SDAQ_ERROR_mask (1<<3) //Mask for SDAQ Error bit check
+#define SDAQ_ERROR_mask (1<<2) //Mask for SDAQ Error bit check
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +57,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_Logger.h"
 #include "../Morfeas_RPi_Hat/Morfeas_RPi_Hat.h"
 
+//Global variables
 static volatile struct Morfeas_SDAQ_if_flags{
 	unsigned run : 1;
 	unsigned led_existent :1;
@@ -64,10 +65,10 @@ static volatile struct Morfeas_SDAQ_if_flags{
 	unsigned Clean_flag :1;
 	unsigned bus_info :1;
 }flags = {.run=1,0};
-
-//Global variables
+static unsigned char *is_meas_started;
 static struct timespec tstart;
 static int CAN_socket_num;
+
 
 /* Local function (declaration)
  * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success. Except of other notice
@@ -323,7 +324,8 @@ int main(int argc, char *argv[])
 	//Start timer
 	setitimer(ITIMER_REAL, &timer, NULL);
 
-	//-----Actions on the bus-----//
+	//-----Init Actions-----//
+	is_meas_started = &(stats.is_meas_started);
 	memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name, stats.CAN_IF_name,'\0', Dev_or_Bus_name_str_size);//Init Bus_name field of IPC_msg.
 	IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//Point ID decoder to ID field from frame_rx
@@ -362,8 +364,7 @@ int main(int argc, char *argv[])
 					}
 					break;
 				case Sync_Info:
-					if(frame_rx.can_dlc == sizeof(sdaq_sync_debug_data))
-						update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
+					update_Timediff(sdaq_id_dec->device_addr, ts_dec, &stats);
 					break;
 				case Device_status:
 					if(frame_rx.can_dlc != sizeof(sdaq_status))
@@ -452,6 +453,8 @@ int main(int argc, char *argv[])
 		{
 			clean_up_list_SDAQs(&stats);
 			flags.Clean_flag = 0;
+			if(!stats.detected_SDAQs)
+				stats.is_meas_started = 0;
 		}
 		if(flags.bus_info)
 		{
@@ -539,8 +542,8 @@ inline void CAN_if_timer_handler (int signum)
 			cleanup_trig_cnt=20/SYNC_INTERVAL;//approximately every 20 sec
 		}
 		cleanup_trig_cnt--;
-		//Send Synchronization with time_seed to all SDAQs
-		Sync(CAN_socket_num, time_seed);
+		if(*is_meas_started)
+			Sync(CAN_socket_num, time_seed);//Send Synchronization with time_seed to all SDAQs
 		timer_ring_cnt = SYNC_INTERVAL;//reset timer_ring_cnt
 	}
 	flags.bus_info = 1;
@@ -906,7 +909,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 	GSList *list_node;
 	struct SDAQ_info_entry *sdaq_node;
 
-	if(!info_dec->num_of_ch || info_dec->num_of_ch > SDAQ_MAX_AMOUNT_OF_CHANNELS)
+	if(!info_dec->num_of_ch || !info_dec->sample_rate || !info_dec->max_cal_point)
 		return EXIT_FAILURE;
 	if(stats->list_SDAQs)
 	{
@@ -918,7 +921,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			time(&(sdaq_node->last_seen));
 			if(sdaq_node->reg_status < Pending_Calibration_data)
 				sdaq_node->reg_status = Pending_Calibration_data;
-			//(Release and ) Allocate memory for the Channels_current_meas
+			//Release and Allocate memory for the Channels_current_meas
 			if(sdaq_node->SDAQ_Channels_curr_meas)
 				free(sdaq_node->SDAQ_Channels_curr_meas);
 			if(!(sdaq_node->SDAQ_Channels_curr_meas = calloc(info_dec->num_of_ch, sizeof(struct Channel_curr_meas))))
@@ -969,14 +972,7 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 				sdaq_node->inp_mode = sysvar_dec->var_val.as_uint32;
 				//Check reg_status, and start meas if needed.
 				if(sdaq_node->reg_status < Ready)
-				{
 					sdaq_node->reg_status = Ready;
-					if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
-					{
-						Start(CAN_socket_num, sdaq_node->SDAQ_address);
-						stats->is_meas_started = 1;
-					}
-				}
 			}
 			else
 				return EXIT_SUCCESS;
@@ -1056,15 +1052,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 						QuerySystemVariables(CAN_socket_num, sdaq_node->SDAQ_address);
 					}
 					else if(sdaq_node->reg_status < Ready)//Otherwise mark SDAQ's reg_status as "Ready".
-					{
 						sdaq_node->reg_status = Ready;
-						//If they are not other incomplete SDAQs, set current to measeure.
-						if(!(stats->incomplete_SDAQs = incomplete_SDAQs(stats)))
-						{
-							Start(CAN_socket_num, sdaq_node->SDAQ_address);
-							stats->is_meas_started = 1;
-						}
-					}
 					return EXIT_SUCCESS;
 				}
 				else//Otherwise repeat QueryDeviceInfo().
@@ -1167,8 +1155,8 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				time(&(list_SDAQ_node_data->last_seen));
 				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
 				stats->detected_SDAQs++;
-				//Configure SDAQ with Address from LogBook
-				SetDeviceAddress(socket_fd, status_dec->dev_sn, LogBook_node_data->SDAQ_address);
+				if(sdaq_id_dec->device_addr != LogBook_node_data->SDAQ_address)//Check and configure SDAQ with Address from LogBook
+					SetDeviceAddress(socket_fd, status_dec->dev_sn, LogBook_node_data->SDAQ_address);
 				return list_SDAQ_node_data;
 			}
 			else
@@ -1177,7 +1165,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				exit(EXIT_FAILURE);
 			}
 		}
-		else //Address from recorded on LogBook is currently used
+		else//Address from recorded on LogBook is currently used
 		{
 			//Try to find an available address
 			for(address_test=1;address_test<Parking_address;address_test++)
@@ -1256,7 +1244,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
 			return 0;
 		}
-		else //register the pre-address SDAQ as it is
+		else //register the pre-address SDAQ.
 		{
 			list_SDAQ_node_data = new_SDAQ_info_entry();
 			LogBook_node_data = new_LogBook_entry();
@@ -1272,7 +1260,6 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				LogBook_node_data->SDAQ_sn = status_dec->dev_sn;
 				stats->LogBook = g_slist_append(stats->LogBook, LogBook_node_data);
 				LogBook_file(stats, "a");
-				SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
 				stats->detected_SDAQs++;
 				return list_SDAQ_node_data;
 			}
