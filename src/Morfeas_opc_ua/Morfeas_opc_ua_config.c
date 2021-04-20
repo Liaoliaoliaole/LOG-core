@@ -62,6 +62,8 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", !app_name?"Morfeas default application":app_name);
 	config->buildInfo.softwareVersion = UA_STRING_ALLOC(version);
 	config->maxSessions = 5;
+	config->publishingIntervalLimits.min = 100;
+	config->samplingIntervalLimits.min = 100;
     retval = UA_ServerConfig_addNetworkLayerTCP(config, 4840, 0, 0);
     if(retval != UA_STATUSCODE_GOOD)
 	{
