@@ -372,8 +372,8 @@ int main(int argc, char *argv[])
 					if((SDAQ_data = add_or_refresh_SDAQ_to_lists(CAN_socket_num, sdaq_id_dec, status_dec, &stats)))
 					{
 						if(!(status_dec->status & Ready_to_reg_mask))
-						{
-							if(!SDAQ_data->reg_status)//Check if current SDAQ isn't registered.
+						{	//Check if current SDAQ is not registered.
+							if(!SDAQ_data->reg_status)
 							{
 								Logger("Register new SDAQ (%s) with S/N: %010u -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
 																									  status_dec->dev_sn,
@@ -447,7 +447,7 @@ int main(int argc, char *argv[])
 						add_update_channel_date(sdaq_id_dec->device_addr, sdaq_id_dec->channel_num, date_dec, &stats);
 					break;
 			}
-			msg_cnt++;//increase message counter
+			msg_cnt++;//Increase message counter
 		}
 		if(flags.Clean_flag)
 		{
@@ -457,8 +457,7 @@ int main(int argc, char *argv[])
 				stats.is_meas_started = 0;
 		}
 		if(flags.bus_info)
-		{
-			//Calculate CANBus utilization
+		{	//Calculate CANBus utilization
 			stats.Bus_util = roundf(10000.0*(msg_cnt/MAX_CANBus_FPS))/100.0;
 			msg_cnt = 0;
 			flags.bus_info = 0;
@@ -478,7 +477,7 @@ int main(int argc, char *argv[])
 			}
 			else
 				IPC_msg.SDAQ_BUS_info.Electrics = 0;
-			//transfer bus utilization to opc_ua
+			//Transfer bus utilization to opc_ua
 			IPC_msg.SDAQ_BUS_info.IPC_msg_type = IPC_SDAQ_CAN_BUS_info;
 			IPC_msg.SDAQ_BUS_info.BUS_utilization = stats.Bus_util;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
@@ -488,10 +487,10 @@ int main(int argc, char *argv[])
 		led_stat(&stats);
 	}
 	Logger("Morfeas_SDAQ_if (%s) Exiting...\n",stats.CAN_IF_name);
-	// save LogBook list to a file before destroy it
+	//Save LogBook list to a file before destroy it
 	Logger("Save LogBook list to LogBook file\n");
 	LogBook_file(&stats,"w");
-	//free all lists
+	//Free all lists
 	Logger("Free allocated memory...\n");
 	g_slist_free_full(stats.list_SDAQs, free_SDAQ_info_entry);
 	g_slist_free_full(stats.LogBook, free_LogBook_entry);
@@ -536,15 +535,14 @@ inline void CAN_if_timer_handler (int signum)
 		}
 		//Check if is time for Clean up
 		if(!cleanup_trig_cnt)
-		{
-			// Clean up cycle trig
-			flags.Clean_flag=1;//trig a clean up of list_SDAQ.
-			cleanup_trig_cnt=20/SYNC_INTERVAL;//approximately every 20 sec
+		{	//Clean up cycle trig
+			flags.Clean_flag=1;//Trig a clean up of list_SDAQ.
+			cleanup_trig_cnt=20/SYNC_INTERVAL;//Approximately every 20 sec
 		}
 		cleanup_trig_cnt--;
 		if(*is_meas_started)
 			Sync(CAN_socket_num, time_seed);//Send Synchronization with time_seed to all SDAQs
-		timer_ring_cnt = SYNC_INTERVAL;//reset timer_ring_cnt
+		timer_ring_cnt = SYNC_INTERVAL;//Reset timer_ring_cnt
 	}
 	flags.bus_info = 1;
 	return;
@@ -634,17 +632,17 @@ struct LogBook_entry* new_LogBook_entry()
     return new_node;
 }
 
-//free a node from list SDAQ_Channels_cal_dates
+//Free a node from list SDAQ_Channels_cal_dates
 void free_channel_cal_dates_entry(gpointer node)
 {
 	g_slice_free(struct Channel_date_entry, node);
 }
-//free a node from list SDAQ_Channels_acc_meas
+//Free a node from list SDAQ_Channels_acc_meas
 void free_channel_acc_meas_entry(gpointer node)
 {
 	g_slice_free(struct Channel_acc_meas_entry, node);
 }
-//free a node from list SDAQ_info
+//Free a node from list SDAQ_info
 void free_SDAQ_info_entry(gpointer node)
 {
 	struct SDAQ_info_entry *node_dec = node;
@@ -659,7 +657,7 @@ void free_SDAQ_info_entry(gpointer node)
 	}
 	g_slice_free(struct SDAQ_info_entry, node);
 }
-//free a node from List LogBook
+//Free a node from List LogBook
 void free_LogBook_entry(gpointer node)
 {
 	g_slice_free(struct LogBook_entry, node);
@@ -767,13 +765,12 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 			return EXIT_FAILURE;
 	}
 	else if(!strcmp(mode, "w"))
-	{
-		if(LogBook_node)//check if list LogBook have elements
+	{	//Check if list LogBook have elements
+		if(LogBook_node)
 		{
 			fp=fopen(stats->LogBook_file_path,mode);
 			if(fp)
-			{
-				//Store all the nodes of list LogBook in file
+			{	//Store all the nodes of list LogBook in file
 				while(LogBook_node)
 				{
 					node_data = LogBook_node->data;
@@ -783,7 +780,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 						fwrite (node_data, 1, sizeof(struct LogBook_entry), fp);
 						fwrite (&checksum, 1, sizeof(checksum), fp);
 					}
-					LogBook_node = LogBook_node -> next;//next node
+					LogBook_node = LogBook_node -> next;//Next node
 				}
 				fclose(fp);
 			}
@@ -795,11 +792,11 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 		}
 	}
 	else if(!strcmp(mode, "a"))
-	{
-		if(stats->list_SDAQs)//check if list_SDAQs have elements
+	{	//Check if list_SDAQs have elements
+		if(stats->list_SDAQs)
 		{
-			while(LogBook_node->next)//find last node
-				LogBook_node = LogBook_node->next;//next node
+			while(LogBook_node->next)//Find last node
+				LogBook_node = LogBook_node->next;//Next node
 			fp=fopen(stats->LogBook_file_path,mode);
 			if(fp)
 			{
@@ -963,8 +960,7 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 			sdaq_node = list_node->data;
 			time(&(sdaq_node->last_seen));
 			if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type])//Check if selected dev_type of sdaq_node have available input mode.
-			{
-				//Send SDAQ's input mode through IPC
+			{	//Send SDAQ's input mode through IPC
 				IPC_msg.SDAQ_inpMode.IPC_msg_type = IPC_SDAQ_inpMode;
 				sprintf(IPC_msg.SDAQ_inpMode.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
 				IPC_msg.SDAQ_inpMode.SDAQ_serial_number = sdaq_node->SDAQ_status.dev_sn;
@@ -1023,7 +1019,6 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 			}
 			else//Channel is not in SDAQ_Channels_cal_dates list: Create CH_date entry.
 			{
-				//Create a new CH_date entry and Load date_dec to it.
 				sdaq_Channels_cal_dates_node = new_SDAQ_Channel_date_entry();
 				if(sdaq_Channels_cal_dates_node)
 				{
@@ -1141,9 +1136,9 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	if(check_is_in_list_SDAQ)//SDAQ is in list_SDAQ
 	{
 		list_SDAQ_node_data = check_is_in_list_SDAQ->data;
-		time(&(list_SDAQ_node_data->last_seen));//update last_seen for the SDAQ entry
-		memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status)); //update SDAQ's status value
-		if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//if TRUE, set back to the node_data->SDAQ_address
+		time(&(list_SDAQ_node_data->last_seen));//Update last_seen for the SDAQ entry
+		memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status)); //Update SDAQ's status value
+		if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//If TRUE, set back to the node_data->SDAQ_address
 			SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
 		return list_SDAQ_node_data;
 	}
@@ -1179,8 +1174,7 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				{
 					list_SDAQ_node_data = new_SDAQ_info_entry();
 					if(list_SDAQ_node_data)
-					{
-						//Load SDAQ data on new list_SDAQ entry
+					{	//Load SDAQ data on new list_SDAQ entry
 						list_SDAQ_node_data->SDAQ_address = address_test;
 						memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
 						time(&(list_SDAQ_node_data->last_seen));
@@ -1199,15 +1193,15 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 					}
 				}
 			}
-			//if not any address available set SDAQ to park
+			//If not any address available set SDAQ to park
 			if(sdaq_id_dec->device_addr != Parking_address)
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
 			return NULL;
 		}
 	}
-	else //completely unknown SDAQ
+	else //Completely unknown SDAQ
 	{
-		//check if the current address of the SDAQ is not conflict with any other in list_SDAQ, if not use it as it's pre addressed
+		//Check if the current address of the SDAQ is not conflict with any other in list_SDAQ, if not use it as it's pre addressed
 		address_test = sdaq_id_dec->device_addr;
 		if(g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address) || address_test==Parking_address)
 		{
@@ -1242,12 +1236,12 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 					}
 				}
 			}
-			//if not any address available set SDAQ to park
+			//If not any address available set SDAQ to park
 			if(sdaq_id_dec->device_addr != Parking_address)
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
 			return NULL;
 		}
-		else //register the pre-address SDAQ.
+		else //Register the pre-address SDAQ.
 		{
 			list_SDAQ_node_data = new_SDAQ_info_entry();
 			LogBook_node_data = new_LogBook_entry();
@@ -1282,9 +1276,8 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 	GSList *check_node;
 	time_t now=time(NULL);
 	if(stats->list_SDAQs)//Check if list_SDAQs have elements
-	{
+	{	//Check for dead SDAQs
 		check_node = stats->list_SDAQs;
-		//Check for dead SDAQs
 		while(check_node)
 		{
 			if(check_node->data)
