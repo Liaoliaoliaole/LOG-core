@@ -171,6 +171,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s for interface \"%s\" Already Running!!!\n", argv[0], argv[optind]);
 		exit(EXIT_SUCCESS);
 	}
+
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
 	if (dir)
