@@ -165,13 +165,12 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
-	//Check if program already runs on same bus.
+	//Check if program already runs on same CAN-if.
 	if(check_already_run_with_same_arg(argv[0], argv[optind]))
 	{
 		fprintf(stderr, "%s for interface \"%s\" Already Running!!!\n", argv[0], argv[optind]);
 		exit(EXIT_SUCCESS);
 	}
-
 	//Check the existence of the LogBooks directory
 	dir = opendir(LogBooks_dir);
 	if (dir)
