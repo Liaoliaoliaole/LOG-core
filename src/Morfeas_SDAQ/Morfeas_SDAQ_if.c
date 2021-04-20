@@ -109,8 +109,7 @@ void free_LogBook_entry(gpointer node);//used with g_slist_free_full to free the
 
 int main(int argc, char *argv[])
 {
-	//Directory pointer variables
-	DIR *dir;
+	DIR *dir;//Directory pointer variables
 	//Operational variables
 	int c;
 	char *logstat_path;
