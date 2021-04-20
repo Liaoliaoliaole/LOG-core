@@ -70,10 +70,10 @@ int logstat_sys(char *logstat_path, void *stats_arg)
 
 	root = cJSON_CreateObject();
 	cJSON_AddNumberToObject(root, "logstat_build_date_UNIX", time(NULL));
-	cJSON_AddNumberToObject(root, "CPU_temp", roundf(100.0 * sys_stats->CPU_temp)/100.0);
-	cJSON_AddNumberToObject(root, "CPU_Util", roundf(100.0 * sys_stats->CPU_Util)/100.0);
-	cJSON_AddNumberToObject(root, "RAM_Util", roundf(100.0 * sys_stats->RAM_Util)/100.0);
-	cJSON_AddNumberToObject(root, "Disk_Util", roundf(100.0 * sys_stats->Disk_Util)/100.0);
+	cJSON_AddNumberToObject(root, "CPU_temp", sys_stats->CPU_temp);
+	cJSON_AddNumberToObject(root, "CPU_Util", sys_stats->CPU_Util);
+	cJSON_AddNumberToObject(root, "RAM_Util", sys_stats->RAM_Util);
+	cJSON_AddNumberToObject(root, "Disk_Util", sys_stats->Disk_Util);
 	cJSON_AddNumberToObject(root, "Up_time", sys_stats->Up_time);
 
 	//JSON_str = cJSON_Print(root);
@@ -220,23 +220,19 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 		//-- Add Unit of Channel --//
 		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->unit_code]));
 		//-- Add Averaged measurement of Channel --//
-		if(!(node_dec->status & (1<<No_sensor)))
+		if(node_dec->status & (1<<No_sensor))//Check if No_Sensor bit is set
 		{
-			node_dec->meas_acc/=(float)node_dec->cnt;
-			cJSON_AddNumberToObject(node_data, "Meas_avg", roundf(1000.0 * node_dec->meas_acc)/1000.0);
-			node_dec->meas_acc = 0;
-			cJSON_AddNumberToObject(node_data, "Meas_max", roundf(1000.0 * node_dec->meas_max)/1000.0);
-			node_dec->meas_max = 0;
-			cJSON_AddNumberToObject(node_data, "Meas_min", roundf(1000.0 * node_dec->meas_min)/1000.0);
-			node_dec->meas_min = 0;
-			node_dec->cnt = 0;
+			node_dec->meas_acc = NAN;
+			node_dec->meas_max = NAN;
+			node_dec->meas_min = NAN;
 		}
 		else
-		{
-			cJSON_AddNumberToObject(node_data, "Meas_avg", NAN);
-			cJSON_AddNumberToObject(node_data, "Meas_max", NAN);
-			cJSON_AddNumberToObject(node_data, "Meas_min", NAN);
-		}
+			node_dec->meas_acc /= (float)node_dec->cnt;
+		cJSON_AddNumberToObject(node_data, "Meas_avg", node_dec->meas_acc);
+		cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
+		cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
+		node_dec->meas_acc = 0;
+		node_dec->cnt = 0;
 		cJSON_AddItemToObject(array, "Measurement_data", node_data);
 	}
 }
@@ -336,15 +332,15 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));
 		//Add Wireless_Inductive_Power_Supply data
 		cJSON_AddItemToObject(root, "Power_Supply",pow_supp_data = cJSON_CreateObject());
-		cJSON_AddNumberToObject(pow_supp_data, "Vin", roundf(100.0 * stats->Supply_Vin/stats->counter)/100.0);
+		cJSON_AddNumberToObject(pow_supp_data, "Vin", stats->Supply_Vin/stats->counter);
 		stats->Supply_Vin = 0;
 		for(int i=0; i<4; i++)
 		{
 			sprintf(str_buff, "CH%1u_Vout", i+1);
-			cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Vout/stats->counter)/100.0);
+			cJSON_AddNumberToObject(pow_supp_data, str_buff, stats->Supply_meas[i].Vout/stats->counter);
 			stats->Supply_meas[i].Vout = 0;
 			sprintf(str_buff, "CH%1u_Iout", i+1);
-			cJSON_AddNumberToObject(pow_supp_data, str_buff, roundf(100.0 * stats->Supply_meas[i].Iout/stats->counter)/100.0);
+			cJSON_AddNumberToObject(pow_supp_data, str_buff, stats->Supply_meas[i].Iout/stats->counter);
 			stats->Supply_meas[i].Iout = 0;
 		}
 		//Add RX_Data
@@ -361,7 +357,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 					value = stats->RX[i].CH_value[j]/stats->counter;
 					stats->RX[i].CH_value[j] = 0;
 					if(value<1500.0)
-						cJSON_AddNumberToObject(RX_json, str_buff, roundf(100.0 * value)/100.0);
+						cJSON_AddNumberToObject(RX_json, str_buff, value);
 					else
 						cJSON_AddItemToObject(RX_json, str_buff, cJSON_CreateString("No sensor"));
 
@@ -448,8 +444,8 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	{
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString("Okay"));
 		//Add MDAQ Board data
-		cJSON_AddNumberToObject(root, "Index", roundf(stats->meas_index));
-		cJSON_AddNumberToObject(root, "Board_temp", roundf(100.0 * stats->board_temp/stats->counter)/100.0);
+		cJSON_AddNumberToObject(root, "Index", stats->meas_index);
+		cJSON_AddNumberToObject(root, "Board_temp", (stats->board_temp/stats->counter));
 		stats->board_temp = 0;
 		//Add array with channels measurements on JSON
 		cJSON_AddItemToObject(root, "MDAQ_Channels",Channels_array = cJSON_CreateArray());
@@ -463,7 +459,7 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 				cJSON_AddNumberToObject(Channel, "Channel", i+1);
 				sprintf(str_buff, "Value%1hhu", j+1);
 				if(!((stats->meas[i].warnings>>j)&1))
-					cJSON_AddNumberToObject(values, str_buff, roundf(100.0 * stats->meas[i].value[j]/stats->counter)/100.0);
+					cJSON_AddNumberToObject(values, str_buff, (stats->meas[i].value[j]/stats->counter));
 				else
 					cJSON_AddNumberToObject(values, str_buff, NAN);
 				stats->meas[i].value[j] = 0;
@@ -539,14 +535,14 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 		cJSON_AddNumberToObject(MTI_status, "Radio_CH", stats->MTI_Radio_config.RF_channel);
 		cJSON_AddItemToObject(MTI_status, "Modem_data_rate", cJSON_CreateString(MTI_Data_rate_str[stats->MTI_Radio_config.Data_rate]));
 		cJSON_AddItemToObject(MTI_status, "Tele_Device_type", cJSON_CreateString(MTI_Tele_dev_type_str[stats->MTI_Radio_config.Tele_dev_type]));
-		cJSON_AddNumberToObject(MTI_status, "MTI_batt_volt", roundf(100.0*stats->MTI_status.MTI_batt_volt)/100.0);
-		cJSON_AddNumberToObject(MTI_status, "MTI_batt_capacity", roundf(100.0*stats->MTI_status.MTI_batt_capacity)/100.0);
+		cJSON_AddNumberToObject(MTI_status, "MTI_batt_volt", stats->MTI_status.MTI_batt_volt);
+		cJSON_AddNumberToObject(MTI_status, "MTI_batt_capacity", stats->MTI_status.MTI_batt_capacity);
 		cJSON_AddItemToObject(MTI_status, "MTI_charge_status", cJSON_CreateString(MTI_charger_state_str[stats->MTI_status.MTI_charge_status]));
-		cJSON_AddNumberToObject(MTI_status, "MTI_CPU_temp", roundf(10.0*stats->MTI_status.MTI_CPU_temp)/10.0);
-		cJSON_AddNumberToObject(MTI_status, "PWM_gen_out_freq", roundf(1000.0*stats->MTI_status.PWM_gen_out_freq)/1000.0);
+		cJSON_AddNumberToObject(MTI_status, "MTI_CPU_temp", stats->MTI_status.MTI_CPU_temp);
+		cJSON_AddNumberToObject(MTI_status, "PWM_gen_out_freq", stats->MTI_status.PWM_gen_out_freq);
 		cJSON_AddItemToObject(MTI_status, "PWM_CHs_outDuty", PWM_outDuty_CHs = cJSON_CreateArray());
 		for(i=0; i<4; i++)
-			cJSON_AddItemToArray(PWM_outDuty_CHs, cJSON_CreateNumber(roundf(10.0*stats->MTI_status.PWM_outDuty_CHs[i])/10.0));
+			cJSON_AddItemToArray(PWM_outDuty_CHs, cJSON_CreateNumber(stats->MTI_status.PWM_outDuty_CHs[i]));
 		//Add button states on MTI_status
 		cJSON_AddItemToObject(MTI_status, "MTI_buttons_state", MTI_button_state = cJSON_CreateObject());
 		cJSON_AddItemToObject(MTI_button_state, "PB1", cJSON_CreateBool(stats->MTI_status.buttons_state.pb1));
@@ -643,8 +639,8 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 					cJSON_AddItemToObject(RMSW_t, "Dev_type", cJSON_CreateString(MTI_RM_dev_type_str[stats->Tele_data.as_RMSWs.det_devs_data[i].dev_type]));
 					cJSON_AddNumberToObject(RMSW_t, "Dev_ID", stats->Tele_data.as_RMSWs.det_devs_data[i].dev_id);
 					cJSON_AddNumberToObject(RMSW_t, "Time_from_last_msg", stats->Tele_data.as_RMSWs.det_devs_data[i].time_from_last_mesg);
-					cJSON_AddNumberToObject(RMSW_t, "Dev_temp", roundf(10.0*stats->Tele_data.as_RMSWs.det_devs_data[i].dev_temp)/10.0);
-					cJSON_AddNumberToObject(RMSW_t, "Supply_volt", roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].input_voltage)/100.0);
+					cJSON_AddNumberToObject(RMSW_t, "Dev_temp", stats->Tele_data.as_RMSWs.det_devs_data[i].dev_temp);
+					cJSON_AddNumberToObject(RMSW_t, "Supply_volt", stats->Tele_data.as_RMSWs.det_devs_data[i].input_voltage);
 					switch(stats->Tele_data.as_RMSWs.det_devs_data[i].dev_type)
 					{
 						case MUX:
@@ -661,7 +657,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							//Add measurements
 							CHs = cJSON_CreateArray();
 							for(int j=0; j<4; j++)
-								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]));
 							cJSON_AddItemToObject(RMSW_t, "CHs_meas", CHs);
 							//Add control status
 							REFs = cJSON_CreateObject();
@@ -678,7 +674,7 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							for(int j=0; j<4; j++)
 							{
 								if(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]<NO_SENSOR_VALUE)
-									cJSON_AddItemToArray(CHs, cJSON_CreateNumber(roundf(100.0*stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j])/100.0));
+									cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]));
 								else
 									cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
 							}

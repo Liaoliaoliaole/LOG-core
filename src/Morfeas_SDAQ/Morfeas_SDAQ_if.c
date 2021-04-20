@@ -1083,7 +1083,7 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 	struct Channel_acc_meas_entry *sdaq_Channels_acc_meas_node;
 
 	acc_meas_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_acc_meas, &channel, SDAQ_Channels_acc_meas_entry_find_channel);
-	if(acc_meas_list_node)//channel is already in to the SDAQ_Channels_acc_meas list: add meas to acc.
+	if(acc_meas_list_node)//Channel is already in to the SDAQ_Channels_acc_meas list: Add meas to acc.
 	{
 		sdaq_Channels_acc_meas_node = acc_meas_list_node->data;
 		sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
@@ -1096,7 +1096,7 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 		sdaq_Channels_acc_meas_node->cnt++;
 		return EXIT_SUCCESS;
 	}
-	else//Channel is not in the list
+	else//Channel is not in the list: Create entry and add meas.
 	{
 		sdaq_Channels_acc_meas_node = new_SDAQ_Channel_acc_meas_entry();
 		if(sdaq_Channels_acc_meas_node)
@@ -1125,6 +1125,7 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 			exit(EXIT_FAILURE);
 		}
 	}
+	return EXIT_FAILURE;
 }
 
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM
