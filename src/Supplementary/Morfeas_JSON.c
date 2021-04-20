@@ -220,7 +220,7 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 		//-- Add Unit of Channel --//
 		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->unit_code]));
 		//-- Add Averaged measurement of Channel --//
-		if(node_dec->status & (1<<No_sensor))//Check if No_Sensor bit is set
+		if((node_dec->status & (1<<No_sensor)) || !node_dec->cnt)//Check if No_Sensor bit is set
 		{
 			node_dec->meas_acc = NAN;
 			node_dec->meas_max = NAN;
