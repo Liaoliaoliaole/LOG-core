@@ -339,6 +339,11 @@ int main(int argc, char *argv[])
 				case Measurement_value:
 					if(frame_rx.can_dlc == sizeof(sdaq_meas))
 					{
+						if(!stats.is_meas_started)//Check if SDAQ remain in meas after of a Stop.
+						{
+							Stop(CAN_socket_num, sdaq_id_dec->device_addr);
+							break;
+						}
 						if((SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 						{
 							time(&(SDAQ_data->last_seen));//Update last seen time
