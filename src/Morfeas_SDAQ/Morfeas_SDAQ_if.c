@@ -466,7 +466,7 @@ int main(int argc, char *argv[])
 			if(!can_get_link_stats(stats.CAN_IF_name, &link_stats) && link_stats.rx_packets)
 				stats.Bus_error_rate = ((float)link_stats.rx_errors/link_stats.rx_packets)*100.0;
 			//Calculate CANBus utilization
-			stats.Bus_util = roundf(10000.0*(msg_cnt/MAX_CANBus_FPS))/100.0;
+			stats.Bus_util = 100.0*msg_cnt/MAX_CANBus_FPS;
 			msg_cnt = 0;
 			flags.bus_info = 0;
 			//Get Electrics for BUS port
@@ -474,9 +474,9 @@ int main(int argc, char *argv[])
 			{
 				if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
 				{
-					stats.Bus_voltage = roundf(100.0 * (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler)/100.0;
-					stats.Bus_amperage = roundf(1000.0 * (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler)/1000.0;
-					stats.Shunt_temp = roundf(10.0 * port_meas.temperature * MAX9611_temp_scaler)/10.0;
+					stats.Bus_voltage = (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler;
+					stats.Bus_amperage = (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler;
+					stats.Shunt_temp = port_meas.temperature * MAX9611_temp_scaler;
 				}
 				IPC_msg.SDAQ_BUS_info.Electrics = -1;
 				IPC_msg.SDAQ_BUS_info.voltage = stats.Bus_voltage;

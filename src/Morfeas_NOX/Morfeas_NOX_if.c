@@ -412,8 +412,7 @@ int main(int argc, char *argv[])
 				if(!can_get_link_stats(stats.CAN_IF_name, &link_stats) && link_stats.rx_packets)
 					stats.Bus_error_rate = ((float)link_stats.rx_errors/link_stats.rx_packets)*100.0;
 				//Calculate CANBus utilization
-				stats.Bus_util = (100*msg_cnt)/MAX_CANBus_FPS;
-				stats.Bus_util = roundf(100.0*stats.Bus_util)/100.0;
+				stats.Bus_util = 100.0*msg_cnt/MAX_CANBus_FPS;
 				msg_cnt = 0;
 				if(flags.port_meas_exist)
 				{
