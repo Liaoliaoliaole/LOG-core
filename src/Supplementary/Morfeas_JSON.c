@@ -798,7 +798,6 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			if(stats->NOx_statistics[i].NOx_value_sample_cnt)
 			{
 				value = stats->NOx_statistics[i].NOx_value_acc/stats->NOx_statistics[i].NOx_value_sample_cnt;
-				value = roundf(1000.0 * value)/1000.0;
 				stats->NOx_statistics[i].NOx_value_acc = 0;
 				stats->NOx_statistics[i].NOx_value_sample_cnt = 0;
 			}
@@ -812,7 +811,6 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			if(stats->NOx_statistics[i].O2_value_sample_cnt)
 			{
 				value = stats->NOx_statistics[i].O2_value_acc/stats->NOx_statistics[i].O2_value_sample_cnt;
-				value = roundf(1000.0 * value)/1000.0;
 				stats->NOx_statistics[i].O2_value_acc = 0;
 				stats->NOx_statistics[i].O2_value_sample_cnt = 0;
 			}
