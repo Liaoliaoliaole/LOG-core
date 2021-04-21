@@ -32,6 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/if_link.h>
 
 #include <libsocketcan.h>
 
@@ -107,6 +108,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_can addr = {0};
 	struct can_frame frame_rx;
 	struct can_filter RX_filter;
+	struct rtnl_link_stats64 link_stats = {0};
 	NOx_can_id *NOx_id_dec;
 	NOx_RX_frame *NOx_data = (NOx_RX_frame *)&(frame_rx.data);
 	NOX_start_code startcode = {0};
@@ -274,7 +276,7 @@ int main(int argc, char *argv[])
 	//Start D-Bus listener and ws_server functions in separate threads
 	pthread_create(&DBus_listener_Thread_id, NULL, NOX_DBus_listener, &passer);
 	pthread_create(&ws_server_Thread_id, NULL, Morfeas_NOX_ws_server, &passer);
-	
+
 	//-----Actions on the bus-----//
 	NOx_id_dec = (NOx_can_id *)&(frame_rx.can_id);
 	sprintf(IPC_msg.NOX_BUS_info.Dev_or_Bus_name,"%s",stats.CAN_IF_name);//Load BUSName to IPC_msg
@@ -406,6 +408,9 @@ int main(int argc, char *argv[])
 		{
 			flags.export_logstat = 0;
 			pthread_mutex_lock(&NOX_access);
+				//Attempt to get if stats.
+				if(!can_get_link_stats(stats.CAN_IF_name, &link_stats) && link_stats.rx_packets)
+					stats.Bus_error_rate = ((float)link_stats.rx_errors/link_stats.rx_packets)*100.0;
 				//Calculate CANBus utilization
 				stats.Bus_util = (100*msg_cnt)/MAX_CANBus_FPS;
 				stats.Bus_util = roundf(100.0*stats.Bus_util)/100.0;

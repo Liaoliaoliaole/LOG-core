@@ -150,6 +150,7 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	}
 	//Add BUS_util, Amount of Detected_SDAQs, and SDAQs Data
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
+	cJSON_AddNumberToObject(root, "BUS_Error_rate", stats->Bus_error_rate);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
 	cJSON_AddNumberToObject(root, "Incomplete_SDAQs", stats->incomplete_SDAQs);
 	if(stats->detected_SDAQs)
@@ -226,7 +227,7 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 			node_dec->meas_max = NAN;
 			node_dec->meas_min = NAN;
 		}
-		else
+		else if(node_dec->cnt)
 			node_dec->meas_acc /= (float)node_dec->cnt;
 		cJSON_AddNumberToObject(node_data, "Meas_avg", node_dec->meas_acc);
 		cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
@@ -775,8 +776,9 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 		cJSON_AddNumberToObject(electrics, "BUS_amperage", stats->Bus_amperage);
 		cJSON_AddNumberToObject(electrics, "BUS_Shunt_Res_temp", stats->Shunt_temp);
 	}
-	//Add BUS_util to JSON root
+	//Add BUS_util and Bus_error_rate to JSON root
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
+	cJSON_AddNumberToObject(root, "BUS_Error_rate", stats->Bus_error_rate);
 	//Add auto power off value and counter
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_value", stats->auto_switch_off_value);
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_cnt", stats->auto_switch_off_cnt);

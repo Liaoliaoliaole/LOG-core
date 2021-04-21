@@ -38,6 +38,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/if_link.h>
+
+#include <libsocketcan.h>
 
 #include <sys/socket.h>
 #include <net/if.h>
@@ -129,6 +132,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_can addr = {0};
 	struct can_frame frame_rx;
 	struct can_filter RX_filter;
+	struct rtnl_link_stats64 link_stats = {0};
 	sdaq_can_id *sdaq_id_dec;
 	sdaq_status *status_dec = (sdaq_status *)frame_rx.data;
 	sdaq_info *info_dec = (sdaq_info *)frame_rx.data;
@@ -458,7 +462,10 @@ int main(int argc, char *argv[])
 				stats.is_meas_started = 0;
 		}
 		if(flags.bus_info)
-		{	//Calculate CANBus utilization
+		{	//Attempt to get if stats.
+			if(!can_get_link_stats(stats.CAN_IF_name, &link_stats) && link_stats.rx_packets)
+				stats.Bus_error_rate = ((float)link_stats.rx_errors/link_stats.rx_packets)*100.0;
+			//Calculate CANBus utilization
 			stats.Bus_util = roundf(10000.0*(msg_cnt/MAX_CANBus_FPS))/100.0;
 			msg_cnt = 0;
 			flags.bus_info = 0;
