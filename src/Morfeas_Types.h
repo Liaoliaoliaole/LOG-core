@@ -322,7 +322,6 @@ struct Morfeas_SDAQ_if_stats{
 	float Shunt_temp;
 	unsigned char detected_SDAQs;// Amount of online SDAQ.
 	unsigned char incomplete_SDAQs;// Amount of incomplete SDAQ.
-	unsigned char is_meas_started;
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
 };

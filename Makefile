@@ -16,8 +16,8 @@
 # along with this program; If not, see <https://www.gnu.org/licenses/>.       #
 ###############################################################################
 
-GCC_opt=gcc -O3 -s #-g3
-CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall # -Werror
+GCC_opt= gcc -O3 -s# -g3
+CFLAGS= -std=c99 -DUA_ARCHITECTURE_POSIX -Wall# -Werror
 LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs $(LIBs))
 BUILD_dir=build
 WORK_dir=work

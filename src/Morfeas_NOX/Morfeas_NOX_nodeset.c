@@ -39,6 +39,8 @@ void NOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "Dev_on_BUS", UA_TYPES_BYTE);
 		sprintf(Node_ID_str, "%s.BUS_util", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "BUS_Util (%)", UA_TYPES_FLOAT);
+		sprintf(Node_ID_str, "%s.BUS_err", Dev_or_Bus_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "BUS_Error (%)", UA_TYPES_FLOAT);
 		sprintf(Node_ID_str, "%s.BUS_name", Dev_or_Bus_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, Dev_or_Bus_name, Node_ID_str, "CANBus", UA_TYPES_STRING);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_ID_str), Dev_or_Bus_name, UA_TYPES_STRING);
@@ -174,6 +176,8 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				sprintf(Node_ID_str, "%s.BUS_util", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_BUS_info.BUS_utilization), UA_TYPES_FLOAT);
+				sprintf(Node_ID_str, "%s.BUS_err", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name);
+				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_BUS_info.Bus_error_rate), UA_TYPES_FLOAT);
 				sprintf(Node_ID_str, "%s.amount", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_BUS_info.Dev_on_bus), UA_TYPES_BYTE);
 				sprintf(Node_ID_str, "%s.auto_switch_off_value", IPC_msg_dec->NOX_BUS_info.Dev_or_Bus_name);

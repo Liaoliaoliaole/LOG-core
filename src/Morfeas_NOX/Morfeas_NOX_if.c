@@ -432,6 +432,7 @@ int main(int argc, char *argv[])
 				//Transfer BUS utilization and SDAQnet port measurements to opc_ua
 				IPC_msg.NOX_BUS_info.IPC_msg_type = IPC_NOX_CAN_BUS_info;
 				IPC_msg.NOX_BUS_info.BUS_utilization = stats.Bus_util;
+				IPC_msg.NOX_BUS_info.Bus_error_rate = stats.Bus_error_rate;
 				IPC_msg.NOX_BUS_info.auto_switch_off_value = stats.auto_switch_off_value;
 				IPC_msg.NOX_BUS_info.auto_switch_off_cnt = stats.auto_switch_off_cnt;
 				IPC_msg.NOX_BUS_info.Dev_on_bus = 0;

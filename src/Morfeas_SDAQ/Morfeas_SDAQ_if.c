@@ -67,8 +67,8 @@ static volatile struct Morfeas_SDAQ_if_flags{
 	unsigned port_meas_exist :1;
 	unsigned Clean_flag :1;
 	unsigned bus_info :1;
+	unsigned is_meas_started :1;
 }flags = {.run=1,0};
-static unsigned char *is_meas_started;
 static struct timespec tstart;
 static int CAN_socket_num;
 
@@ -301,8 +301,8 @@ int main(int argc, char *argv[])
 		stats.Shunt_temp = NAN;
 	}
 	//Load the LogBook file to LogBook List
-	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n",stats.CAN_IF_name);
-	sprintf(stats.LogBook_file_path,"%sMorfeas_SDAQ_if_%s_LogBook",LogBooks_dir,stats.CAN_IF_name);
+	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n", stats.CAN_IF_name);
+	sprintf(stats.LogBook_file_path, "%sMorfeas_SDAQ_if_%s_LogBook", LogBooks_dir, stats.CAN_IF_name);
 	RX_bytes = LogBook_file(&stats, "r");
 	if(RX_bytes>0)
 		Logger("IO Error on LogBook File!!!\n");
@@ -311,11 +311,11 @@ int main(int argc, char *argv[])
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Register handler to Morfeas_OPC-UA Server
-	Logger("Morfeas_SDAQ_if (%s) Send Registration message to OPC-UA via IPC....\n",stats.CAN_IF_name);
+	Logger("Morfeas_SDAQ_if (%s) Send Registration message to OPC-UA via IPC....\n", stats.CAN_IF_name);
 	//Open FIFO for Write
 	stats.FIFO_fd = open(Data_FIFO, O_WRONLY);
 	IPC_Handler_reg_op(stats.FIFO_fd, SDAQ, stats.CAN_IF_name, 0);
-	Logger("Morfeas_SDAQ_if (%s) Registered on OPC-UA\n",stats.CAN_IF_name);
+	Logger("Morfeas_SDAQ_if (%s) Registered on OPC-UA\n", stats.CAN_IF_name);
 	//Initialize Sync timer expired time
 	memset (&timer, 0, sizeof(struct itimerval));
 	timer.it_interval.tv_sec = 1;
@@ -328,7 +328,6 @@ int main(int argc, char *argv[])
 	setitimer(ITIMER_REAL, &timer, NULL);
 
 	//-----Init Actions-----//
-	is_meas_started = &(stats.is_meas_started);
 	memccpy(IPC_msg.SDAQ_meas.Dev_or_Bus_name, stats.CAN_IF_name,'\0', Dev_or_Bus_name_str_size);//Init Bus_name field of IPC_msg.
 	IPC_msg.SDAQ_meas.Dev_or_Bus_name[Dev_or_Bus_name_str_size-1] = '\0';
 	sdaq_id_dec = (sdaq_can_id *)&(frame_rx.can_id);//Point ID decoder to ID field from frame_rx
@@ -343,7 +342,7 @@ int main(int argc, char *argv[])
 				case Measurement_value:
 					if(frame_rx.can_dlc == sizeof(sdaq_meas))
 					{
-						if(!stats.is_meas_started)//Check if SDAQ remain in meas after of a Stop.
+						if(!flags.is_meas_started)//Check if SDAQ remain in meas after of a Stop.
 							Stop(CAN_socket_num, sdaq_id_dec->device_addr);
 						else if((SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 						{
@@ -384,10 +383,10 @@ int main(int argc, char *argv[])
 																									  status_dec->dev_sn,
 																									  SDAQ_data->SDAQ_address);
 								SDAQ_data->reg_status = Registered;
-								if(stats.is_meas_started)
+								if(flags.is_meas_started)
 								{
 									Stop(CAN_socket_num, Broadcast);
-									stats.is_meas_started = 0;
+									flags.is_meas_started = 0;
 									SDAQ_data->failed_reg_RX_CNT = -1;
 								}
 								else
@@ -398,10 +397,10 @@ int main(int argc, char *argv[])
 							}
 							else if(SDAQ_INFO_PENDING_CHECK(SDAQ_data->reg_status))//Check if current SDAQ's send status and reg_status isn't "Ready".
 							{
-								if(stats.is_meas_started)
+								if(flags.is_meas_started)
 								{
 									Stop(CAN_socket_num, Broadcast);
-									stats.is_meas_started = 0;
+									flags.is_meas_started = 0;
 								}
 								else
 								{
@@ -426,7 +425,7 @@ int main(int argc, char *argv[])
 							else if(SDAQ_data->reg_status == Ready && !(stats.incomplete_SDAQs = incomplete_SDAQs(&stats)))
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
-								stats.is_meas_started = 1;
+								flags.is_meas_started = 1;
 							}
 						}
 						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
@@ -459,7 +458,7 @@ int main(int argc, char *argv[])
 			clean_up_list_SDAQs(&stats);
 			flags.Clean_flag = 0;
 			if(!stats.detected_SDAQs)
-				stats.is_meas_started = 0;
+				flags.is_meas_started = 0;
 		}
 		if(flags.bus_info)
 		{	//Attempt to get if stats.
@@ -488,6 +487,7 @@ int main(int argc, char *argv[])
 			//Transfer bus utilization to opc_ua
 			IPC_msg.SDAQ_BUS_info.IPC_msg_type = IPC_SDAQ_CAN_BUS_info;
 			IPC_msg.SDAQ_BUS_info.BUS_utilization = stats.Bus_util;
+			IPC_msg.SDAQ_BUS_info.Bus_error_rate = stats.Bus_error_rate;
 			IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 			//Write Stats to Logstat JSON file
 			logstat_SDAQ(logstat_path, &stats);
@@ -548,7 +548,7 @@ inline void CAN_if_timer_handler (int signum)
 			cleanup_trig_cnt=20/SYNC_INTERVAL;//Approximately every 20 sec
 		}
 		cleanup_trig_cnt--;
-		if(*is_meas_started)
+		if(flags.is_meas_started)
 			Sync(CAN_socket_num, time_seed);//Send Synchronization with time_seed to all SDAQs
 		timer_ring_cnt = SYNC_INTERVAL;//Reset timer_ring_cnt
 	}
@@ -739,7 +739,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 			g_slist_free_full(stats->LogBook, free_LogBook_entry);
 			stats->LogBook = NULL;
 		}
-		fp=fopen(stats->LogBook_file_path,mode);
+		fp=fopen(stats->LogBook_file_path, mode);
 		if(fp)
 		{
 			do{
@@ -776,7 +776,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 	{	//Check if list LogBook have elements
 		if(LogBook_node)
 		{
-			fp=fopen(stats->LogBook_file_path,mode);
+			fp=fopen(stats->LogBook_file_path, mode);
 			if(fp)
 			{	//Store all the nodes of list LogBook in file
 				while(LogBook_node)
@@ -805,7 +805,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 		{
 			while(LogBook_node->next)//Find last node
 				LogBook_node = LogBook_node->next;//Next node
-			fp=fopen(stats->LogBook_file_path,mode);
+			fp=fopen(stats->LogBook_file_path, mode);
 			if(fp)
 			{
 				node_data = LogBook_node->data;
