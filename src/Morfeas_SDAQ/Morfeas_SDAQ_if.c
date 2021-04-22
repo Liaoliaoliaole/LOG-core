@@ -1294,7 +1294,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 				if((now - sdaq_node->last_seen) > LIFE_TIME)
 				{
 					stats->detected_SDAQs--;
-					Logger("%s:%hhu (S/N:%u) removed from BUS\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
+					Logger("%s:%hhu (S/N:%u) removed from Device list\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
 																  sdaq_node->SDAQ_address,
 																  sdaq_node->SDAQ_status.dev_sn);
 					//Send info of the removed SDAQ through IPC
