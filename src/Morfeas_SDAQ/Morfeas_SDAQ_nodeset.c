@@ -56,6 +56,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 	UA_DateTime cal_time;
 	UA_DateTimeStruct calibration_date = {0};
 	char Anchor[30], Node_ID_str[60], meas_status_str[60];
+	const char *unit_str_ptr;
 	unsigned char Channel;
 
 	//Msg type from SDAQ_handler
@@ -67,8 +68,11 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				{
 					sprintf(Anchor, "SDAQ.%d.CH%hhu", IPC_msg_dec->SDAQ_meas.SDAQ_serial_number, Channel+1);
 					sprintf(Node_ID_str, "%s.unit", Anchor);
+					unit_str_ptr = unit_str[IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].unit];
+					if(!unit_str_ptr)
+						unit_str_ptr = "Unclassified";
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
-													   unit_str[IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].unit],
+													   unit_str_ptr,
 													   UA_TYPES_STRING);
 					sprintf(Node_ID_str, "%s.timestamp", Anchor);
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),

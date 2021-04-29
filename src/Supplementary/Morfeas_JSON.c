@@ -205,9 +205,11 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 
 void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass)
 {
+	const char *unit_str_ptr;
 	struct Channel_acc_meas_entry *node_dec = node;
 	cJSON *array = arg_pass;
 	cJSON *node_data, *channel_status;
+
 	if(node)
 	{
 		node_data = cJSON_CreateObject();
@@ -219,20 +221,25 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 		cJSON_AddItemToObject(channel_status, "No_Sensor", cJSON_CreateBool(node_dec->status & (1<<No_sensor)));
 		cJSON_AddItemToObject(channel_status, "Over_Range", cJSON_CreateBool(node_dec->status & (1<<Over_range)));
 		//-- Add Unit of Channel --//
-		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->unit_code]));
+		unit_str_ptr = unit_str[node_dec->unit_code];
+		if(!unit_str_ptr)
+			unit_str_ptr = "Unclassified";
+		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str_ptr));
 		//-- Add Averaged measurement of Channel --//
-		if((node_dec->status & (1<<No_sensor)) || !node_dec->cnt)//Check if No_Sensor bit is set
+		if((node_dec->status & (1<<No_sensor)))//Check if No_Sensor bit is set
 		{
 			node_dec->meas_acc = NAN;
 			node_dec->meas_max = NAN;
 			node_dec->meas_min = NAN;
 		}
 		else if(node_dec->cnt)
-			node_dec->meas_acc /= (float)node_dec->cnt;
+			node_dec->meas_acc /= node_dec->cnt;
 		cJSON_AddNumberToObject(node_data, "Meas_avg", node_dec->meas_acc);
 		cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
 		cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
 		node_dec->meas_acc = 0;
+		node_dec->meas_max = 0;
+		node_dec->meas_min = 0;
 		node_dec->cnt = 0;
 		cJSON_AddItemToObject(array, "Measurement_data", node_data);
 	}
