@@ -118,8 +118,7 @@ int main(int argc, char *argv[])
     signal(SIGTERM, stopHandler);
 
 	//Write to Log a welcome message
-	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-	"\t------ Morfeas OPC-UA Server Started ------");
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "\t------ Morfeas OPC-UA Server Started ------");
 	//Setup config for Morfeas_OPC_UA Server
 	if((retval = Morfeas_OPC_UA_config(&conf, app_name, VERSION)))
 	{

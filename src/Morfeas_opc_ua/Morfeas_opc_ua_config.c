@@ -54,7 +54,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 	UA_clear(&(config->buildInfo.softwareVersion), &UA_TYPES[UA_TYPES_STRING]);
 	//--Load Application's Configuration Contents--//
 	gethostname(hostname, sizeof(hostname));
-	sprintf(buff,"http://%s",hostname);
+	sprintf(buff,"http://%s", hostname);
 	config->buildInfo.productUri = UA_STRING_ALLOC(buff);
     config->applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
     config->buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
