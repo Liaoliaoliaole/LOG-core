@@ -1091,10 +1091,12 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 		sdaq_Channels_acc_meas_node = acc_meas_list_node->data;
 		sdaq_Channels_acc_meas_node->unit_code = meas_dec->unit;
 		sdaq_Channels_acc_meas_node->status = meas_dec->status;
+		if(!sdaq_Channels_acc_meas_node->cnt)
+			sdaq_Channels_acc_meas_node->meas_acc = 0;
 		sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
-		if(meas_dec->meas > sdaq_Channels_acc_meas_node->meas_max || !sdaq_Channels_acc_meas_node->meas_max)
+		if(meas_dec->meas > sdaq_Channels_acc_meas_node->meas_max || !sdaq_Channels_acc_meas_node->cnt)
 			sdaq_Channels_acc_meas_node->meas_max = meas_dec->meas;
-		if(meas_dec->meas < sdaq_Channels_acc_meas_node->meas_min || !sdaq_Channels_acc_meas_node->meas_min)
+		if(meas_dec->meas < sdaq_Channels_acc_meas_node->meas_min || !sdaq_Channels_acc_meas_node->cnt)
 			sdaq_Channels_acc_meas_node->meas_min = meas_dec->meas;
 		sdaq_Channels_acc_meas_node->cnt++;
 		return EXIT_SUCCESS;
@@ -1110,6 +1112,8 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 			if(!(meas_dec->status & (1<<No_sensor)))
 			{
 				sdaq_Channels_acc_meas_node->meas_acc += meas_dec->meas;
+				sdaq_Channels_acc_meas_node->meas_max = meas_dec->meas;
+				sdaq_Channels_acc_meas_node->meas_min = meas_dec->meas;
 				sdaq_Channels_acc_meas_node->cnt++;
 			}
 			else
