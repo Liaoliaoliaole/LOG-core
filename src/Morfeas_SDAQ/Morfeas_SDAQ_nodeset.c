@@ -274,7 +274,7 @@ char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int seri
 	//Return NULL, because the SDAQ is not registered.
 	if(UA_Server_readValue(server_ptr,  UA_NODEID_STRING(1, Node_id_str), &res_Value))
 		return NULL;
-	if(res_Value.type->typeIndex == UA_DATATYPEKIND_STRING)
+	if(res_Value.type->typeKind == UA_DATATYPEKIND_STRING)
 	{
 		Value = res_Value.data;
 		UA_str_on_bus = UA_String_fromChars(on_Bus);
