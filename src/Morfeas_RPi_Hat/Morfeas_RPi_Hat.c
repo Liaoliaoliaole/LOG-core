@@ -206,10 +206,10 @@ int I2C_write_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned 
 	}
 	data_w_reg[0] = reg;
 	memcpy(data_w_reg+1, data, len);
-	write_bytes = write(i2c_fd, data_w_reg, len);
+	write_bytes = write(i2c_fd, data_w_reg, len+1);
 	free(data_w_reg);
 	close(i2c_fd);
-	return write_bytes == len ? 0 : -1;
+	return write_bytes == len+1 ? 0 : -1;
 }
 */
 //Function that read a block "data" from an I2C device with address "dev_addr" on I2C bus "i2c_dev_num". Return: 0 on success, -1 on failure.
