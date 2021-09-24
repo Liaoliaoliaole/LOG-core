@@ -80,7 +80,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
     }
 
     // Initialize the Access Control plugin
-    retval = UA_AccessControl_default(config, true,
+    retval = UA_AccessControl_default(config, true, NULL,
                 &config->securityPolicies[config->securityPoliciesSize-1].policyUri,
                 usernamePasswordsSize, usernamePasswords);
     if(retval != UA_STATUSCODE_GOOD)
