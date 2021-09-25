@@ -576,9 +576,10 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	float t_min_max;
 	int if_type;
 	unsigned char cal_period;
+	time_t time_UNIX;
 	struct Link_entry *List_Links_Node_data;
 	GSList *List_Links_Node;
-	UA_DateTimeStruct opcua_datetime_struct;
+	UA_DateTimeStruct opcua_cal_date_struct;
 	UA_DateTime opcua_datetime;
 	UA_NodeId out;
 	UA_NodeId_init(&out);
@@ -625,6 +626,16 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
+		if(XML_node_get_content(node, "BUILD_DATE"))
+		{
+			sprintf(tmp_str,"%s.build_date",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Building Date", UA_TYPES_DATETIME);
+		}
+		if(XML_node_get_content(node, "MOD_DATE"))
+		{
+			sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Last Modification Date", UA_TYPES_DATETIME);
+		}
 		if(if_type == NOX)
 		{
 			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
@@ -652,16 +663,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			{
 				sprintf(tmp_str,"%s.period",ISO_channel_name);
 				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
-			}
-			if(XML_node_get_content(node, "BUILD_DATE"))
-			{
-				sprintf(tmp_str,"%s.build_date",ISO_channel_name);
-				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Building Date", UA_TYPES_BYTE);
-			}
-			if(XML_node_get_content(node, "MOD_DATE"))
-			{
-				sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
-				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Last Modification Date", UA_TYPES_BYTE);
 			}
 			//Special Device related variables
 			switch(if_type)
@@ -721,6 +722,28 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
+	if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
+	{
+		if(sscanf(build_date_str, "%lu", &time_UNIX) == 1)
+		{
+			opcua_datetime = UA_DateTime_fromUnixTime(time_UNIX);
+			sprintf(tmp_str,"%s.build_date",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
+		}
+		else
+			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Building Date \"%s\" on line %d is invalid !!!", build_date_str, node->line);
+	}
+	if((mod_date_str = XML_node_get_content(node, "MOD_DATE")))
+	{
+		if(sscanf(mod_date_str, "%lu", &time_UNIX) == 1)
+		{
+			opcua_datetime = UA_DateTime_fromUnixTime(time_UNIX);
+			sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
+		}
+		else
+			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Modification Date \"%s\" on line %d is invalid !!!", mod_date_str, node->line);
+	}
 	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 	{
 		if((unit_str = XML_node_get_content(node, "UNIT")))
@@ -730,10 +753,10 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		}
 		if((cal_date_str = XML_node_get_content(node, "CAL_DATE")))
 		{
-			memset(&opcua_datetime_struct, 0, sizeof(struct UA_DateTimeStruct));
-			if(sscanf(cal_date_str, "%4hu/%2hu/%2hu", &(opcua_datetime_struct.year), &(opcua_datetime_struct.month), &(opcua_datetime_struct.day)) == 3)
+			memset(&opcua_cal_date_struct, 0, sizeof(struct UA_DateTimeStruct));
+			if(sscanf(cal_date_str, "%4hu/%2hu/%2hu", &(opcua_cal_date_struct.year), &(opcua_cal_date_struct.month), &(opcua_cal_date_struct.day)) == 3)
 			{
-				opcua_datetime = UA_DateTime_fromStruct(opcua_datetime_struct);
+				opcua_datetime = UA_DateTime_fromStruct(opcua_cal_date_struct);
 				sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
 				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
 			}
@@ -745,30 +768,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			cal_period = atoi(cal_period_str);
 			sprintf(tmp_str,"%s.period",ISO_channel_name);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_period, UA_TYPES_BYTE);
-		}
-		if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
-		{
-			memset(&opcua_datetime_struct, 0, sizeof(struct UA_DateTimeStruct));
-			if(sscanf(cal_date_str, "%4hu/%2hu/%2hu", &(opcua_datetime_struct.year), &(opcua_datetime_struct.month), &(opcua_datetime_struct.day)) == 3)
-			{
-				opcua_datetime = UA_DateTime_fromStruct(opcua_datetime_struct);
-				sprintf(tmp_str,"%s.build_date",ISO_channel_name);
-				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
-			}
-			else
-				UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Building Date \"%s\" on line %d is invalid !!!", cal_date_str, node->line);
-		}
-		if((mod_date_str = XML_node_get_content(node, "MOD_DATE")))
-		{
-			memset(&opcua_datetime_struct, 0, sizeof(struct UA_DateTimeStruct));
-			if(sscanf(cal_date_str, "%4hu/%2hu/%2hu", &(opcua_datetime_struct.year), &(opcua_datetime_struct.month), &(opcua_datetime_struct.day)) == 3)
-			{
-				opcua_datetime = UA_DateTime_fromStruct(opcua_datetime_struct);
-				sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
-				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
-			}
-			else
-				UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Modification Date \"%s\" on line %d is invalid !!!", cal_date_str, node->line);
 		}
 	}
 }
