@@ -74,7 +74,6 @@ int main(int argc, char *argv[])
 {
 	char *app_name=NULL, *ns_config=NULL;
 	//Open62541 OPC-UA variables
-	UA_ServerConfig conf = {0};
 	UA_StatusCode retval;
 	UA_UInt16 timeout;
 	//variables for threads
@@ -119,14 +118,19 @@ int main(int argc, char *argv[])
 
 	//Write to Log a welcome message
 	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "\t------ Morfeas OPC-UA Server Started ------");
+	//Init OPC_UA Server
+	if(!(server = UA_Server_new()))
+	{
+		UA_LOG_INFO(UA_Log_Stdout, UA_LOGLEVEL_ERROR, "UA_Server_new() Failed!!!!");
+		return EXIT_FAILURE;
+	}
 	//Setup config for Morfeas_OPC_UA Server
-	if((retval = Morfeas_OPC_UA_config(&conf, app_name, VERSION)))
+	if((retval = Morfeas_OPC_UA_config(UA_Server_getConfig(server), app_name, VERSION)))
 	{
 		UA_LOG_INFO(UA_Log_Stdout, UA_LOGLEVEL_ERROR, "Morfeas_OPC_UA_config() Failed!!!!");
 		goto Exit;
 	}
-	//Init OPC_UA Server
-	server = UA_Server_newWithConfig(&conf);
+
 	//Add Morfeas application base node set to server
 	Morfeas_opc_ua_root_nodeset_Define(server);
 
@@ -153,8 +157,8 @@ int main(int argc, char *argv[])
 		pthread_join(Threads_ids[i], NULL);// wait for thread to finish
 		pthread_detach(Threads_ids[i]);
 	}
-    UA_Server_delete(server);
 Exit:
+	UA_Server_delete(server);
 	unlink("/tmp/.Morfeas_FIFO");
 	delete_logstat_sys(logstat_path);//remove logstat_sys
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
