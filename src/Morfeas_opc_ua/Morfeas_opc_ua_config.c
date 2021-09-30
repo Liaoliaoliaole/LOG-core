@@ -34,9 +34,9 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 	char buff[512], hostname[256];
-    if(!config)
+    
+	if(!config)
 		return UA_STATUSCODE_BADINVALIDARGUMENT;
-
     retval = UA_ServerConfig_setBasics(config);
     if(retval != UA_STATUSCODE_GOOD)
     {
