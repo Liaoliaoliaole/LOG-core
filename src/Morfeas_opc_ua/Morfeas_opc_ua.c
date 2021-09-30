@@ -18,8 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define n_threads 2
 #define CPU_temp_sysfs_file "/sys/class/thermal/thermal_zone0/temp"
 
-#define MIN_SAMPLING_INTERVAL 100.0 //100ms
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -793,7 +791,7 @@ void Morfeas_opc_ua_add_variable_node(UA_Server *server_ptr, char *Parent_id, ch
 	vAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
 	vAttr.accessLevel = UA_ACCESSLEVELMASK_READ;
 	vAttr.dataType = UA_TYPES[_UA_Type].typeId;
-	vAttr.minimumSamplingInterval = MIN_SAMPLING_INTERVAL;
+	vAttr.minimumSamplingInterval = UA_Server_getConfig(server_ptr)->samplingIntervalLimits.min;
 	UA_Server_addVariableNode(server_ptr,
 							  UA_NODEID_STRING(1, Node_id),
 							  UA_NODEID_STRING(1, Parent_id),
@@ -809,7 +807,7 @@ void Morfeas_opc_ua_add_variable_node_with_callback_onRead(UA_Server *server_ptr
 	vAttr.displayName = UA_LOCALIZEDTEXT("en-US", node_name);
 	vAttr.accessLevel = UA_ACCESSLEVELMASK_READ;
 	vAttr.dataType = UA_TYPES[_UA_Type].typeId;
-	vAttr.minimumSamplingInterval = MIN_SAMPLING_INTERVAL;
+	vAttr.minimumSamplingInterval = UA_Server_getConfig(server_ptr)->samplingIntervalLimits.min;
 	UA_DataSource DataSource = {0};
 	DataSource.read = call_func;
 	UA_Server_addDataSourceVariableNode(server_ptr,
