@@ -148,6 +148,6 @@ Guide link [here](./RE-INSTALL.md)
 * **Sam Harry Tzavaras** - *Initial work*
 
 ## License
-The source code of the SDAQ_worker project is licensed under GPLv3 or later - see the [License](LICENSE) file for details.
+The source code of the project is licensed under GPLv3 or later - see the [License](LICENSE) file for details.
 
 
