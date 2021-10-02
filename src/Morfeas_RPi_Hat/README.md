@@ -15,6 +15,7 @@ For compilation of this project the following dependencies are required.
 * [GLib](https://wiki.gnome.org/Projects/GLib) - GNOME core application building blocks libraries.
 * [LibGTop](https://developer.gnome.org/libgtop/stable/) - A library to get system specific data.
 * [libi2c](https://packages.debian.org/jessie/libi2c-dev) - A library that provide I2C functionality to Userspace
+* [libmodbus](https://www.libmodbus.org/) - A free software library for communication via ModBus protocol.
 
 ##### Optionally
 * [I2C-tools](https://packages.debian.org/jessie/i2c-tools) - Heterogeneous set of I2C tools for Linux kernel
@@ -65,7 +66,7 @@ COMMANDS:
 	save p# = Save Port's configuration to EEPROM
 ```
 
-## Documentation 
+## Documentation
 The documentation is located under the [Docs](./Docs) directory.
 
 ## Authors
