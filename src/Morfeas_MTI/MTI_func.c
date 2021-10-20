@@ -171,7 +171,7 @@ int get_MTI_Tele_data(modbus_t *ctx, struct Morfeas_MTI_if_stats *stats)
 			break;
 		case RMSW_MUX:
 			//Loop that Getting The Remote controlling devices data, and store them to the cur_MTI_Tele_data struct.
-			for(i=0, remain_words = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/sizeof(short); remain_words>0; remain_words -= MTI_MODBUS_MAX_READ_REGISTERS, i++)
+			for(i=0, remain_words = sizeof(cur_MTI_Tele_data.as_MUXs_RMSWs)/(sizeof(short)); remain_words>0; remain_words -= MTI_MODBUS_MAX_READ_REGISTERS, i++)
 			{
 				if(modbus_read_input_registers(ctx, i*MTI_MODBUS_MAX_READ_REGISTERS + MTI_RMSWs_DATA_OFFSET,
 											  (remain_words>MTI_MODBUS_MAX_READ_REGISTERS?MTI_MODBUS_MAX_READ_REGISTERS:remain_words),
