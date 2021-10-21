@@ -60,6 +60,7 @@ void IPC_Channels_reg(int FIFO_fd, struct Morfeas_IOBOX_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
+	clock_t t0, t1, t_wait; //Time measure variables.
 	//MODBus related variables
 	modbus_t *ctx;
 	int rc, RX_mem;
@@ -182,6 +183,7 @@ int main(int argc, char *argv[])
 	inet_pton(AF_INET, stats.IOBOX_IPv4_addr, &(IPC_msg.IOBOX_data.IOBOX_IPv4));
 	while(handler_run)
 	{
+		t0 = clock();
 		rc = modbus_read_registers(ctx, IOBOX_start_reg, IOBOX_imp_reg, IOBOX_regs);
 		if (rc <= 0)
 		{
@@ -259,7 +261,9 @@ int main(int argc, char *argv[])
 				stats.counter = 0;
 			}
 		}
-		usleep(100000);
+		t1 = clock();
+		if((t_wait = 100000-(t1-t0))>0)
+			usleep(t_wait);
 	}
 Exit:
 	//Close MODBus connection and De-allocate memory

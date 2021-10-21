@@ -61,6 +61,7 @@ void IPC_Channels_reg(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats);
 
 int main(int argc, char *argv[])
 {
+	clock_t t0, t1, t_wait; //Time measure variables.
 	//MODBus related variables
 	modbus_t *ctx;
 	int rc, offset;
@@ -184,6 +185,7 @@ int main(int argc, char *argv[])
 	inet_pton(AF_INET, stats.MDAQ_IPv4_addr, &(IPC_msg.MDAQ_data.MDAQ_IPv4));
 	while(handler_run)
 	{
+		t0 = clock();
 		rc = modbus_read_input_registers(ctx, MDAQ_start_reg, MDAQ_imp_reg, MDAQ_regs);
 		if (rc <= 0)
 		{
@@ -250,7 +252,9 @@ int main(int argc, char *argv[])
 				stats.counter++;
 			}
 		}
-		usleep(100000);
+		t1 = clock();
+		if((t_wait = 100000-(t1-t0))>0)
+			usleep(t_wait);
 	}
 Exit:
 	//Close MODBus connection and De-allocate memory
