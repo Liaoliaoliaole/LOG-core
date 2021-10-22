@@ -269,7 +269,7 @@ Exit:
 	//Close MODBus connection and De-allocate memory
 	modbus_close(ctx);
 	modbus_free(ctx);
-	//Remove Registeration handler to Morfeas_OPC_UA Server
+	//Remove registered handler from Morfeas_OPC_UA Server
 	IPC_Handler_reg_op(FIFO_fd, IOBOX, stats.dev_name, UNREG);
 	Logger("Morfeas_IOBOX_if (%s) Removed from OPC-UA\n",stats.dev_name);
 	close(FIFO_fd);
