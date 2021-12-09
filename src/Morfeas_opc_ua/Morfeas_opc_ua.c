@@ -161,6 +161,9 @@ Exit:
 	UA_Server_delete(server);
 	unlink("/tmp/.Morfeas_FIFO");
 	delete_logstat_sys(logstat_path);//remove logstat_sys
+	UA_LOG_INFO(UA_Log_Stdout, 
+				UA_LOGCATEGORY_USERLAND, 
+				"\t------ Morfeas OPC-UA Server Terminated ------");//Write to Log a goodbuy message
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -188,12 +191,14 @@ void print_usage(char *prog_name)
 //Nodeset config XML reader, Thread Function
 void * Nodeset_XML_reader(void *varg_pt)
 {
+	UA_DateTime now_date;
 	GSList *t_list_ptr;
 	struct Link_entry *list_data;
 	xmlDoc *doc;//XML tree pointer
 	xmlNode *xml_node, *root_element; //XML root Node
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
+	
 	if(!ns_config || access(ns_config, R_OK | F_OK ))
 	{
 		UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
@@ -235,6 +240,8 @@ void * Nodeset_XML_reader(void *varg_pt)
 									for(xml_node = root_element->children; xml_node; xml_node = xml_node->next)
 										Morfeas_OPC_UA_add_update_ISO_Channel_node(server, xml_node);
 								}
+								now_date = UA_DateTime_now();
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"last_update_date"), &now_date, UA_TYPES_DATETIME);
 							pthread_mutex_unlock(&OPC_UA_NODESET_access);
 						}
 						else
@@ -841,7 +848,9 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
     unsigned char i=0;
 	char handler_name_str[20];
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-    //Root of the object "ISO_Channels"
+    UA_DateTime now_date = UA_DateTime_now();
+	
+	//Root of the object "ISO_Channels"
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ISO Channels");
     UA_Server_addObjectNode(server_ptr,
     						UA_NODEID_STRING(1, "ISO_Channels"),
@@ -883,7 +892,22 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 	};
 	//loop that adding CPU_Temp, UpTime and CPU, RAM and Disk utilization properties;
 	for(int i=0; i<5; i++)
-		Morfeas_opc_ua_add_variable_node(server_ptr, "Health_status", health_status_str[1][i], health_status_str[0][i], !i?UA_TYPES_UINT32:UA_TYPES_FLOAT);
+		Morfeas_opc_ua_add_variable_node(server_ptr, 
+										 "Health_status", 
+										 health_status_str[1][i], 
+										 health_status_str[0][i], 
+										 !i?UA_TYPES_UINT32:UA_TYPES_FLOAT);
+	Morfeas_opc_ua_add_variable_node(server_ptr,
+									 "Health_status", 
+									 "last_update_date", 
+									 "Last update date", 
+									 UA_TYPES_DATETIME);
+	Morfeas_opc_ua_add_variable_node(server_ptr,
+									 "Health_status", 
+									 "Start_date", 
+									 "Start date", 
+									 UA_TYPES_DATETIME);
+	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"Start_date"), &now_date, UA_TYPES_DATETIME);
 }
 
 void Rpi_health_update(void)
