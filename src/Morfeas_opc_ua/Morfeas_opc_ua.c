@@ -941,7 +941,7 @@ void Rpi_health_update(void)
 	{
 		fscanf(CPU_temp_fp, "%s", cpu_temp_str);
 		fclose(CPU_temp_fp);
-		sys_stats.CPU_temp = 32 + (atof(cpu_temp_str) / 1E3)*9.0/5.0;
+		sys_stats.CPU_temp = 32+(atof(cpu_temp_str)/1E3)*9/5;
 	}
 	else
 		sys_stats.CPU_temp = NAN;
