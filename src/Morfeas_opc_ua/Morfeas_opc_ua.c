@@ -241,7 +241,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 										Morfeas_OPC_UA_add_update_ISO_Channel_node(server, xml_node);
 								}
 								now_date = UA_DateTime_now();
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"last_update_date"), &now_date, UA_TYPES_DATETIME);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"last_update"), &now_date, UA_TYPES_DATETIME);
 							pthread_mutex_unlock(&OPC_UA_NODESET_access);
 						}
 						else
@@ -899,15 +899,15 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 										 !i?UA_TYPES_UINT32:UA_TYPES_FLOAT);
 	Morfeas_opc_ua_add_variable_node(server_ptr,
 									 "Health_status", 
-									 "last_update_date", 
-									 "Last update date", 
+									 "last_update", 
+									 "Morfeas OPC-UA last update", 
 									 UA_TYPES_DATETIME);
 	Morfeas_opc_ua_add_variable_node(server_ptr,
 									 "Health_status", 
-									 "Start_date", 
-									 "Start date", 
+									 "boot_date", 
+									 "Morfeas OPC-UA boot date", 
 									 UA_TYPES_DATETIME);
-	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"Start_date"), &now_date, UA_TYPES_DATETIME);
+	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"boot_date"), &now_date, UA_TYPES_DATETIME);
 }
 
 void Rpi_health_update(void)
