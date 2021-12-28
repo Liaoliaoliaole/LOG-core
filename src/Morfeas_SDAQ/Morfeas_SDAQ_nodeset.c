@@ -45,7 +45,7 @@ void SDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 			sprintf(Child_Node_ID_str, "%s.amps", Dev_or_Bus_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Amperage (A)", UA_TYPES_FLOAT);
 			sprintf(Child_Node_ID_str, "%s.shunt", Dev_or_Bus_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Shunt Temp (°C)", UA_TYPES_FLOAT);
+			Morfeas_opc_ua_add_variable_node(server_ptr, Node_id_str, Child_Node_ID_str, "Shunt Temp (°F)", UA_TYPES_FLOAT);
 		}
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }

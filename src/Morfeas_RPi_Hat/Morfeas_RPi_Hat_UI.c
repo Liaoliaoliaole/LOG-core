@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 					mvwprintw(stats.Port_csa[i],2,2, "Last_Cal = %s", last_calibration_print(stats.Ports_config[i].last_cal_date));
 					mvwprintw(stats.Port_csa[i],3,2, "Voltage = %5.2fV ", (stats.Ports_meas[i].port_voltage - stats.Ports_config[i].volt_meas_offset) * stats.Ports_config[i].volt_meas_scaler);
 					mvwprintw(stats.Port_csa[i],4,2, "Current = %5.3fA ", (stats.Ports_meas[i].port_current - stats.Ports_config[i].curr_meas_offset) * stats.Ports_config[i].curr_meas_scaler);
-					mvwprintw(stats.Port_csa[i],5,2, "Shunt_Temp = %4.1f°C ", stats.Ports_meas[i].temperature * MAX9611_temp_scaler);
+					mvwprintw(stats.Port_csa[i],5,2, "Shunt_Temp = %3.0f°F ", 32.0 + stats.Ports_meas[i].temperature * MAX9611_temp_scaler * 9.0/5.0);
 					if(stats.unsaved_fl[i])
 						mvwprintw(stats.Port_csa[i],6,2, "\tUn-Saved");
 					else
