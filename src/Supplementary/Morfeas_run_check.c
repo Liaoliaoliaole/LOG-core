@@ -102,5 +102,5 @@ unsigned char Checksum(void *data, size_t data_size)
 int is_valid_IPv4(const char* ipv4_str)
 {
 	unsigned char buf[sizeof(struct in6_addr)];
-    return inet_pton(AF_INET, ipv4_str, buf);
+    return inet_pton(AF_INET, ipv4_str, buf)>0;
 }
