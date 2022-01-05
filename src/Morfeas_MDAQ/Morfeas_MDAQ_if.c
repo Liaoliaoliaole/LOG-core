@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 	MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 	//Print Connection success message
 	Logger("Connected to MDAQ %s(%s)\n", stats.MDAQ_IPv4_addr, stats.dev_name);
-		//--- main application loop ---//
+		//--- Main Application Loop ---//
 	//Register channels on Morfeas_opc_ua via IPC
 	IPC_Channels_reg(FIFO_fd, &stats);
 	//Load dev name and IPv4 address to IPC_msg
@@ -191,9 +191,9 @@ int main(int argc, char *argv[])
 		{
 			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror((stats.error = errno)));//load errno to stats and report to Logger
 			MDAQ_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
-			while(modbus_connect(ctx) && handler_run)//Attempt to reconnection
+			while(modbus_connect(ctx) && handler_run)//Attempt to reconnect
 			{
-				logstat_MDAQ(path_to_logstat_dir, &stats);//report error on logstat
+				logstat_MDAQ(path_to_logstat_dir, &stats);//Report error on logstat.
 				sleep(1);
 			}
 			if(handler_run)
@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 					IPC_msg.MDAQ_data.meas[i].value[j] = *((float*)(MDAQ_regs+offset));
 					offset+=2;
 				}
-				IPC_msg.MDAQ_data.meas[i].warnings =  (unsigned char)*((float*)(MDAQ_regs+offset));
+				IPC_msg.MDAQ_data.meas[i].warnings = (unsigned char)*((float*)(MDAQ_regs+offset));
 				offset+=2;
 			}
 			//Send measurements to Morfeas_opc_ua
@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
 					stats.meas[i].warnings = IPC_msg.MDAQ_data.meas[i].warnings;
 					for(int j=0; j<4; j++)
 					{
-						//check is value is valid before add to the accumulator
+						//Check if value is valid before add it to the accumulator.
 						if(!((stats.meas[i].warnings>>j)&1))
 							stats.meas[i].value[j] += IPC_msg.MDAQ_data.meas[i].value[j];
 						else
@@ -270,7 +270,7 @@ Exit:
 	return EXIT_SUCCESS;
 }
 
-//print the Usage manual
+//Print the Usage manual
 void print_usage(char *prog_name)
 {
 	const char preamp[] = {
@@ -290,7 +290,7 @@ void print_usage(char *prog_name)
 	return;
 }
 
-// MDAQ_status function. Send Status of MDAQ to Morfeas_opc_ua via IPC
+//MDAQ_status function. Send Status of MDAQ to Morfeas_opc_ua via IPC
 void MDAQ_status_to_IPC(int FIFO_fd, struct Morfeas_MDAQ_if_stats *stats)
 {
 	//Variables for IPC
