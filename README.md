@@ -1,4 +1,4 @@
-<div align="center"> <img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo.png" width="150"> </div>
+<div align="center"> <img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo.png" width="100"> </div>
 
 # Morfeas-Core
 This repository related to Morfeas core where is a sub-project of the Morfeas Project.
