@@ -1,8 +1,6 @@
 <div align="center"> <img src="./Docs/Morfeas_project_Documentation/ArtWork/Morfeas_logo.png" width="150"> </div>
 
 # Morfeas-Core
-
-## Preamp
 This repository related to Morfeas core where is a sub-project of the Morfeas Project.
 
 ### The name "Morfeas"
