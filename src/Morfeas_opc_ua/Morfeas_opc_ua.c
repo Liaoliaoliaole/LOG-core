@@ -915,7 +915,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 	Morfeas_opc_ua_add_variable_node(server_ptr,
 									 "Health_status", 
 									 "RAM_size", 
-									 "RAM_Size (GbB)", 
+									 "RAM_Size (GiB)", 
 									 UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"RAM_size"), &mem_total_GbB, UA_TYPES_FLOAT);
 }
