@@ -849,7 +849,11 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 	char handler_name_str[20];
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
     UA_DateTime now_date = UA_DateTime_now();
+	glibtop_mem buff_ram;
+	float mem_total_GbB;
 	
+	glibtop_get_mem (&buff_ram);//Get RAM stats.
+	mem_total_GbB = buff_ram.total/powf(2, 30);
 	//Root of the object "ISO_Channels"
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ISO Channels");
     UA_Server_addObjectNode(server_ptr,
@@ -908,6 +912,12 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 									 "Morfeas OPC-UA boot date", 
 									 UA_TYPES_DATETIME);
 	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"boot_date"), &now_date, UA_TYPES_DATETIME);
+	Morfeas_opc_ua_add_variable_node(server_ptr,
+									 "Health_status", 
+									 "RAM_size", 
+									 "RAM_Size (GbB)", 
+									 UA_TYPES_FLOAT);
+	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"RAM_size"), &mem_total_GbB, UA_TYPES_FLOAT);
 }
 
 void Rpi_health_update(void)
