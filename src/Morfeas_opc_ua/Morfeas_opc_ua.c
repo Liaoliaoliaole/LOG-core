@@ -118,6 +118,8 @@ int main(int argc, char *argv[])
 
 	//Write to Log a welcome message
 	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "\t------ Morfeas OPC-UA Server Started ------");
+	//Write to Log a current version of the libopen62541
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "libopen62541 version: %s", UA_OPEN62541_VERSION);
 	//Init OPC_UA Server
 	if(!(server = UA_Server_new()))
 	{
