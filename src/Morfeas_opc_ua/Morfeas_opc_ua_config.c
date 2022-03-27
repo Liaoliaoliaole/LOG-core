@@ -34,7 +34,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 	char buff[512], hostname[256];
-    
+
 	if(!config)
 		return UA_STATUSCODE_BADINVALIDARGUMENT;
     retval = UA_ServerConfig_setBasics(config);
@@ -54,13 +54,14 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 	UA_clear(&(config->buildInfo.softwareVersion), &UA_TYPES[UA_TYPES_STRING]);
 	//--Load Application's Configuration Contents--//
 	gethostname(hostname, sizeof(hostname));
-	sprintf(buff,"http://%s", hostname);
+	snprintf(buff, sizeof(buff), "http://%s", hostname);
 	config->buildInfo.productUri = UA_STRING_ALLOC(buff);
     config->applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
     config->buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
     config->buildInfo.productName = UA_STRING_ALLOC("Morfeas OPC-UA Server (Based on Open62541)");
 	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", !app_name?"Morfeas default application":app_name);
-	config->buildInfo.softwareVersion = UA_STRING_ALLOC(version);
+	snprintf(buff, sizeof(buff), "Morfeas_opc_ua: v%s, libopen62541: %s", version, UA_OPEN62541_VERSION);
+	config->buildInfo.softwareVersion = UA_STRING_ALLOC(buff);
 	config->maxSessions = 5;
 	config->publishingIntervalLimits.min = 100;
 	config->samplingIntervalLimits.min = 100;
