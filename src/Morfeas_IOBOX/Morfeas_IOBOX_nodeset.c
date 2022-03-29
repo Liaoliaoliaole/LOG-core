@@ -65,9 +65,11 @@ void IOBOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
+	UA_Variant dataValue;
 	char IOBOX_IPv4_addr_str[20], Node_name[30], status_byte = Okay;
 	char Node_ID_str[60], Node_ID_child_str[80], Node_ID_child_child_str[100], val_Node_ID_str[160];
 	float nan = NAN; unsigned char negative_one = -1;
+
 	//Msg type from IOBOX_handler
 	switch(type)
 	{
@@ -81,6 +83,17 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						break;
 					default:
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), modbus_strerror(IPC_msg_dec->IOBOX_report.status), UA_TYPES_STRING);
+						//Check "IP_addr" node and if is empty update it.
+						sprintf(Node_ID_str, "%s.IP_addr", IPC_msg_dec->IOBOX_report.Dev_or_Bus_name);
+						if(!UA_Server_readValue(server, UA_NODEID_STRING(1,Node_ID_str), &dataValue))
+						{
+							if(UA_Variant_isEmpty(&dataValue))//Update IPv4 variable
+							{
+								inet_ntop(AF_INET, &(IPC_msg_dec->IOBOX_report.IOBOX_IPv4), IOBOX_IPv4_addr_str, sizeof(IOBOX_IPv4_addr_str));
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), IOBOX_IPv4_addr_str, UA_TYPES_STRING);
+							}
+							UA_clear(&dataValue, &UA_TYPES[UA_TYPES_VARIANT]);
+						}
 						//Check if node for object Receivers exist
 						sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_report.Dev_or_Bus_name);
 						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
@@ -114,10 +127,17 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 				sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 				if(UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 				{
-					//Update IPv4 variable
-					inet_ntop(AF_INET, &(IPC_msg_dec->IOBOX_data.IOBOX_IPv4), IOBOX_IPv4_addr_str, sizeof(IOBOX_IPv4_addr_str));
+					//Check "IP_addr" node and if is empty update it.
 					sprintf(Node_ID_str, "%s.IP_addr", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), IOBOX_IPv4_addr_str, UA_TYPES_STRING);
+					if(!UA_Server_readValue(server, UA_NODEID_STRING(1,Node_ID_str), &dataValue))
+					{
+						if(UA_Variant_isEmpty(&dataValue))//Update IPv4 variable
+						{
+							inet_ntop(AF_INET, &(IPC_msg_dec->IOBOX_data.IOBOX_IPv4), IOBOX_IPv4_addr_str, sizeof(IOBOX_IPv4_addr_str));
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), IOBOX_IPv4_addr_str, UA_TYPES_STRING);
+						}
+						UA_clear(&dataValue, &UA_TYPES[UA_TYPES_VARIANT]);
+					}
 					//Add Object for Receivers
 					sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 					Morfeas_opc_ua_add_object_node(server, IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, Node_ID_str, "Receivers");

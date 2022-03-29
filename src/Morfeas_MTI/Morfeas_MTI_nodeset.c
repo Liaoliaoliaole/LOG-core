@@ -58,11 +58,13 @@ void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
+	UA_Variant dataValue;
 	char Node_ID_str[100], Node_ID_parent_str[60];
 	char *status_str = NULL, name_buff[20], anchor[50];
 	unsigned char i, j = 1, lim = 0, status_value;
 	float meas, ref;
 	int cnt;
+
 	//Msg type from MTI_handler
 	switch(type)
 	{
@@ -76,6 +78,17 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						break;
 					default:
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), modbus_strerror(IPC_msg_dec->MTI_report.status), UA_TYPES_STRING);
+						//Check "IP_addr" node and if is empty update it.
+						sprintf(Node_ID_str, "%s.IP_addr", IPC_msg_dec->MTI_report.Dev_or_Bus_name);
+						if(!UA_Server_readValue(server, UA_NODEID_STRING(1,Node_ID_str), &dataValue))
+						{
+							if(UA_Variant_isEmpty(&dataValue))//Update IPv4 variable
+							{
+								inet_ntop(AF_INET, &(IPC_msg_dec->MTI_report.MTI_IPv4), name_buff, sizeof(name_buff));
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), name_buff, UA_TYPES_STRING);
+							}
+							UA_clear(&dataValue, &UA_TYPES[UA_TYPES_VARIANT]);
+						}
 						if(IPC_msg_dec->MTI_report.Tele_dev_type>=Dev_type_min && IPC_msg_dec->MTI_report.Tele_dev_type<=Dev_type_max)
 						{
 							meas = NAN;
@@ -131,9 +144,16 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 		case IPC_MTI_tree_reg:
 			sprintf(Node_ID_str, "%s.IP_addr", IPC_msg_dec->MTI_tree_reg.Dev_or_Bus_name);
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
-				//Update IPv4 variable
-				inet_ntop(AF_INET, &(IPC_msg_dec->MTI_tree_reg.MTI_IPv4), name_buff, sizeof(name_buff));
-				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), name_buff, UA_TYPES_STRING);
+				//Check "IP_addr" node and if is empty update it.
+				if(!UA_Server_readValue(server, UA_NODEID_STRING(1,Node_ID_str), &dataValue))
+				{
+					if(UA_Variant_isEmpty(&dataValue))//Update IPv4 variable
+					{
+						inet_ntop(AF_INET, &(IPC_msg_dec->MTI_tree_reg.MTI_IPv4), name_buff, sizeof(name_buff));
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), name_buff, UA_TYPES_STRING);
+					}
+					UA_clear(&dataValue, &UA_TYPES[UA_TYPES_VARIANT]);
+				}
 				//Add Object for MTI Health data
 				sprintf(Node_ID_parent_str, "%s.health", IPC_msg_dec->MTI_tree_reg.Dev_or_Bus_name);
 				Morfeas_opc_ua_add_object_node(server, IPC_msg_dec->MTI_tree_reg.Dev_or_Bus_name, Node_ID_parent_str, "MTI Health");

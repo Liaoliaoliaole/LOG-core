@@ -57,9 +57,11 @@ void MDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
+	UA_Variant dataValue;
 	char MDAQ_IPv4_addr_str[20], Node_name[100], status;
 	char Node_ID_str[50], Node_ID_child_str[80], Node_ID_child_child_str[100];
 	float meas = NAN; unsigned char negative_one = -1;
+
 	//Msg type from MDAQ_handler
 	switch(type)
 	{
@@ -73,6 +75,17 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 						break;
 					default:
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), modbus_strerror(IPC_msg_dec->MDAQ_report.status), UA_TYPES_STRING);
+						//Check "IP_addr" node and if is empty update it.
+						sprintf(Node_ID_str, "%s.IP_addr", IPC_msg_dec->MDAQ_report.Dev_or_Bus_name);
+						if(!UA_Server_readValue(server, UA_NODEID_STRING(1,Node_ID_str), &dataValue))
+						{
+							if(UA_Variant_isEmpty(&dataValue))//Update IPv4 variable
+							{
+								inet_ntop(AF_INET, &(IPC_msg_dec->MDAQ_report.MDAQ_IPv4), MDAQ_IPv4_addr_str, sizeof(MDAQ_IPv4_addr_str));
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), MDAQ_IPv4_addr_str, UA_TYPES_STRING);
+							}
+							UA_clear(&dataValue, &UA_TYPES[UA_TYPES_VARIANT]);
+						}
 						//Check if node for object Channels exist
 						sprintf(Node_ID_str, "%s.Channels", IPC_msg_dec->MDAQ_report.Dev_or_Bus_name);
 						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
@@ -106,10 +119,17 @@ void IPC_msg_from_MDAQ_handler(UA_Server *server, unsigned char type, IPC_messag
 				sprintf(Node_ID_str, "%s.Channels", IPC_msg_dec->MDAQ_data.Dev_or_Bus_name);
 				if(UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 				{
-					//Update IPv4 variable
-					inet_ntop(AF_INET, &(IPC_msg_dec->MDAQ_data.MDAQ_IPv4), MDAQ_IPv4_addr_str, sizeof(MDAQ_IPv4_addr_str));
+					//Check "IP_addr" node and if is empty update it.
 					sprintf(Node_ID_str, "%s.IP_addr", IPC_msg_dec->MDAQ_data.Dev_or_Bus_name);
-					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), MDAQ_IPv4_addr_str, UA_TYPES_STRING);
+					if(!UA_Server_readValue(server, UA_NODEID_STRING(1,Node_ID_str), &dataValue))
+					{
+						if(UA_Variant_isEmpty(&dataValue))//Update IPv4 variable
+						{
+							inet_ntop(AF_INET, &(IPC_msg_dec->MDAQ_data.MDAQ_IPv4), MDAQ_IPv4_addr_str, sizeof(MDAQ_IPv4_addr_str));
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), MDAQ_IPv4_addr_str, UA_TYPES_STRING);
+						}
+						UA_clear(&dataValue, &UA_TYPES[UA_TYPES_VARIANT]);
+					}
 					//Add Object for Channels
 					sprintf(Node_ID_str, "%s.Channels", IPC_msg_dec->MDAQ_data.Dev_or_Bus_name);
 					Morfeas_opc_ua_add_object_node(server, IPC_msg_dec->MDAQ_data.Dev_or_Bus_name, Node_ID_str, "Channels");
