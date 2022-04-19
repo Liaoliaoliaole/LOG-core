@@ -231,7 +231,6 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 			node_dec->meas_acc = NAN;
 			node_dec->meas_max = NAN;
 			node_dec->meas_min = NAN;
-			node_dec->last_meas = NAN;
 		}
 		else if(node_dec->cnt)
 			node_dec->meas_acc /= node_dec->cnt;
