@@ -37,12 +37,14 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 
 	if(!config)
 		return UA_STATUSCODE_BADINVALIDARGUMENT;
-    retval = UA_ServerConfig_setMinimal(config, 4840, NULL);
+
+	retval = UA_ServerConfig_setBasics(config);
     if(retval != UA_STATUSCODE_GOOD)
     {
         UA_ServerConfig_clean(config);
         return retval;
     }
+
 	config->allowEmptyVariables = UA_RULEHANDLING_ACCEPT; //Allow creation of empty variables without logging them.
 	//--Delete default Contents--//
 	UA_clear(&(config->buildInfo.productUri), &UA_TYPES[UA_TYPES_STRING]);
@@ -65,7 +67,8 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 	config->maxSessions = 5;
 	config->publishingIntervalLimits.min = 100;
 	config->samplingIntervalLimits.min = 100;
-    // Allocate the SecurityPolicies
+
+	// Allocate the SecurityPolicies
     retval = UA_ServerConfig_addSecurityPolicyNone(config, NULL);// const UA_ByteString *certificate
     if(retval != UA_STATUSCODE_GOOD)
 	{
@@ -83,7 +86,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
         return retval;
     }
 
-    /* Allocate the endpoint */
+    // Allocate the endpoint
     retval = UA_ServerConfig_addEndpoint(config, UA_SECURITY_POLICY_NONE_URI,
                                          UA_MESSAGESECURITYMODE_NONE);
     if(retval != UA_STATUSCODE_GOOD) {
@@ -91,7 +94,8 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
         return retval;
     }
 
-    return UA_STATUSCODE_GOOD;
+
+	return UA_STATUSCODE_GOOD;
 }
 
 
