@@ -37,7 +37,7 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 
 	if(!config)
 		return UA_STATUSCODE_BADINVALIDARGUMENT;
-    retval = UA_ServerConfig_setBasics(config);
+    retval = UA_ServerConfig_setMinimal(config, 4840, NULL);
     if(retval != UA_STATUSCODE_GOOD)
     {
         UA_ServerConfig_clean(config);
@@ -65,13 +65,6 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
 	config->maxSessions = 5;
 	config->publishingIntervalLimits.min = 100;
 	config->samplingIntervalLimits.min = 100;
-    retval = UA_ServerConfig_addNetworkLayerTCP(config, 4840, 0, 0);
-    if(retval != UA_STATUSCODE_GOOD)
-	{
-        UA_ServerConfig_clean(config);
-        return retval;
-    }
-
     // Allocate the SecurityPolicies
     retval = UA_ServerConfig_addSecurityPolicyNone(config, NULL);// const UA_ByteString *certificate
     if(retval != UA_STATUSCODE_GOOD)
