@@ -78,7 +78,7 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 	cJSON *JSON_args = NULL;
 	//D-Bus related variables
 	char *dbus_server_name_if, *param;
-	int i, err, method_num;
+	int i, err, method_num, libdbus_ver[3];
 	DBusConnection *conn;
 	DBusMessage *msg;
 	DBusMessageIter call_args;
@@ -90,6 +90,10 @@ void * MTI_DBus_listener(void *varg_pt)//Thread function.
 
 	if(!handler_run)//Immediately exit if called with MTI handler under termination
 		return NULL;
+
+	//Get libDBus version
+	dbus_get_version(&libdbus_ver[0], &libdbus_ver[1], &libdbus_ver[2]);
+	Logger("libDBus Version: %d.%d.%d\n", libdbus_ver[0], libdbus_ver[1], libdbus_ver[2]);
 
 	//Load local PWM_gen_config and cnt_scalers from user_config
 	memcpy(local_PWM_gens_config, stats->user_config.gen_config, sizeof(local_PWM_gens_config));

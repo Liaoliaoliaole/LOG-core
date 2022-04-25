@@ -60,7 +60,7 @@ void * NOX_DBus_listener(void *varg_pt)
 	cJSON *JSON_args = NULL, *NOx_addr, *NOx_heater_val, *auto_pw_off_val;
 	//D-Bus related variables
 	char *dbus_server_name_if, *param;
-	int ret, method_num;
+	int ret, method_num, libdbus_ver[3];
 	DBusConnection *conn;
 	DBusMessage *msg;
 	DBusMessageIter call_args;
@@ -69,6 +69,11 @@ void * NOX_DBus_listener(void *varg_pt)
 		return NULL;
 
 	dbus_error_init (&dbus_error);
+
+	//Get libDBus version
+	dbus_get_version(&libdbus_ver[0], &libdbus_ver[1], &libdbus_ver[2]);
+	Logger("libDBus Version: %d.%d.%d\n", libdbus_ver[0], libdbus_ver[1], libdbus_ver[2]);
+
 	Logger("Thread for D-Bus listener Started\n");
 	//Connects to a bus daemon and registers with it.
 	if(!(conn=dbus_bus_get(DBUS_BUS_SYSTEM, &dbus_error)))
@@ -179,7 +184,7 @@ void * NOX_DBus_listener(void *varg_pt)
 										pthread_mutex_lock(&NOX_access);
 											stats->auto_switch_off_value = auto_pw_off_val->valueint;
 											if(stats->auto_switch_off_value != auto_pw_off_val->valueint)
-												Logger("Overflow at auto_switch_off_value (%d != %d)!!!\n", stats->auto_switch_off_value, 
+												Logger("Overflow at auto_switch_off_value (%d != %d)!!!\n", stats->auto_switch_off_value,
 																											auto_pw_off_val->valueint);
 											if(NOX_handler_config_file(stats, "w"))
 												Logger("Error at write of configuration file!!!\n");
