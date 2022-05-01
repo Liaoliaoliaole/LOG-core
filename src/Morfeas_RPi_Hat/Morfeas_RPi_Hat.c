@@ -141,12 +141,12 @@ int LED_write(int LED_name, int value)
 	int fd;
 	snprintf(path, 30, "/sys/class/gpio/gpio%d/value", LED_name);
 	fd = open(path, O_WRONLY);
-	if (-1 == fd)
+	if(-1 == fd)
 	{
 		Morfeas_hat_error_num = GPIO_write_file_error;
 		return -1;
 	}
-	if (1 != write(fd, &s_values_str[!value ? 0 : 1], 1))
+	if(1 != write(fd, &s_values_str[!value ? 0 : 1], 1))
 	{
 		Morfeas_hat_error_num = GPIO_write_error;
 		return -1;
@@ -162,12 +162,12 @@ int LED_read(int LED_name)
 	int fd;
 	snprintf(path, 30, "/sys/class/gpio/gpio%d/value", LED_name);
 	fd = open(path, O_WRONLY);
-	if (-1 == fd)
+	if(-1 == fd)
 	{
 		Morfeas_hat_error_num = GPIO_read_file_error;
 		return -1;
 	}
-	if (read(fd, &read_val, 1) != 1)
+	if(read(fd, &read_val, 1) != 1)
 	{
 		Morfeas_hat_error_num = GPIO_read_error;
 		return -1;
@@ -188,12 +188,12 @@ int I2C_write_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned 
 	//Open I2C-bus
 	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
 	i2c_fd = open(filename, O_RDWR);
-	if (i2c_fd < 0)
+	if(i2c_fd < 0)
 	{
 	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return -1;
 	}
-	if (ioctl(i2c_fd, I2C_SLAVE, dev_addr) < 0)
+	if(ioctl(i2c_fd, I2C_SLAVE, dev_addr) < 0)
 	{
 	  Morfeas_hat_error_num = ioctl_error;
 	  close(i2c_fd);
@@ -221,7 +221,7 @@ int I2C_read_block(unsigned char i2c_dev_num, unsigned char dev_addr, unsigned c
 	//Open I2C-bus
 	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
 	i2c_fd = open(filename, O_RDWR);
-	if (i2c_fd < 0)
+	if(i2c_fd < 0)
 	{
 	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return -1;
@@ -272,12 +272,12 @@ int MAX9611_init(unsigned char port, unsigned char i2c_dev_num)
 	//Open I2C-bus
 	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
 	i2c_fd = open(filename, O_RDWR);
-	if (i2c_fd < 0)
+	if(i2c_fd < 0)
 	{
 	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return EXIT_FAILURE;
 	}
-	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
+	if(ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
 	{
 	  Morfeas_hat_error_num = ioctl_error;
 	  close(i2c_fd);
@@ -402,13 +402,13 @@ int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config,
 	//Open I2C-bus
 	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
 	i2c_fd = open(filename, O_RDWR);
-	if (i2c_fd < 0)
+	if(i2c_fd < 0)
 	{
 	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return 3;
 	}
 	//Set addr as I2C_SLAVE address
-	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
+	if(ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
 	{
 	  Morfeas_hat_error_num = ioctl_error;
 	  close(i2c_fd);
@@ -504,13 +504,13 @@ int erase_EEPROM(unsigned char port, unsigned char i2c_dev_num)
 	//Open I2C-bus
 	sprintf(filename, "/dev/i2c-%u", i2c_dev_num);
 	i2c_fd = open(filename, O_RDWR);
-	if (i2c_fd < 0)
+	if(i2c_fd < 0)
 	{
 	  Morfeas_hat_error_num = i2c_bus_open_error;
 	  return 3;
 	}
 	//Set addr as I2C_SLAVE address
-	if (ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
+	if(ioctl(i2c_fd, I2C_SLAVE, addr) < 0)
 	{
 	  Morfeas_hat_error_num = ioctl_error;
 	  close(i2c_fd);
