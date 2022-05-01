@@ -420,7 +420,7 @@ int main(int argc, char *argv[])
 					{
 						stats.Bus_voltage = (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler;
 						stats.Bus_amperage = (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler;
-						stats.Shunt_temp = 32.0 + port_meas.temperature * MAX9611_temp_scaler * 9.0/5.0;
+						stats.Shunt_temp = 32.0 + port_meas.temperature * MAX9611_temp_scaler;
 					}
 					IPC_msg.NOX_BUS_info.Electrics = -1;
 					IPC_msg.NOX_BUS_info.voltage = stats.Bus_voltage;

@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define BLUE_LED 13
 
 #define I2C_BUS_NUM 1
-#define MAX9611_temp_scaler 0.48
+#define MAX9611_temp_scaler 0.864 //0.48 * 9/5
 #define MAX9611_comp_scaler 0.268
 #define MAX9611_default_volt_meas_scaler 0.014
 #define MAX9611_default_current_meas_scaler 0.001222 //for 22 mohm shunt
