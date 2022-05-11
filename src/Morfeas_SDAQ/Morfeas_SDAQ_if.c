@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define LogBooks_dir "/var/tmp/Morfeas_LogBooks/"
 #define SYNC_INTERVAL 10//seconds
-#define LIFE_TIME 30// Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
+#define LIFE_TIME 50// Value In seconds, define the time that a SDAQ_info_entry node defined as off-line and removed from the list
 #define DEV_INFO_FAILED_RXs 2//Maximum amount of allowed failed receptions before re-query.
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 #define Ready_to_reg_mask 0x85 //Mask for SDAQ state: standby, no error and normal mode
@@ -379,9 +379,10 @@ int main(int argc, char *argv[])
 						{	//Check if current SDAQ is not registered.
 							if(!SDAQ_data->reg_status)
 							{
-								Logger("Register new SDAQ (%s) with S/N: %010u -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
-																									  status_dec->dev_sn,
-																									  SDAQ_data->SDAQ_address);
+								Logger("Register new SDAQ (%s) with S/N: %010u(0x%08x) -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
+																											  status_dec->dev_sn,
+																											  status_dec->dev_sn,
+																											  SDAQ_data->SDAQ_address);
 								SDAQ_data->reg_status = Registered;
 								if(flags.is_meas_started)
 								{
@@ -426,17 +427,20 @@ int main(int argc, char *argv[])
 							{
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 								flags.is_meas_started = 1;
+								Logger("Start %s -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
+																		SDAQ_data->SDAQ_address);
 							}
 						}
 						else if(status_dec->status & SDAQ_ERROR_mask)//Error flag in status is set.
-							Logger("SDAQ (%s) with S/N: %010u -> Address: %02hhu Report ERROR!!!\n", dev_type_str[status_dec->dev_type],
-																									 status_dec->dev_sn,
-																									 SDAQ_data->SDAQ_address);
+							Logger("SDAQ (%s) with S/N: %010u(0x%08x) -> Address: %02hhu Report ERROR!!!\n", dev_type_str[status_dec->dev_type],
+																											 status_dec->dev_sn,
+																											 status_dec->dev_sn,
+																											 SDAQ_data->SDAQ_address);
 						stats.incomplete_SDAQs = incomplete_SDAQs(&stats);
 						IPC_SDAQ_reg_update(stats.FIFO_fd, stats.CAN_IF_name, SDAQ_data->SDAQ_address, status_dec, SDAQ_data->reg_status, stats.detected_SDAQs);
 					}
 					else
-						Logger("Maximum amount of addresses is reached!!!!\n");
+						Logger("Maximum amount of addresses reached!!!!\n");
 					break;
 				case Device_info:
 					if(frame_rx.can_dlc == sizeof(sdaq_info))
@@ -1299,8 +1303,8 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 				{
 					stats->detected_SDAQs--;
 					Logger("%s:%hhu (S/N:%u) removed from Device list\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
-																  sdaq_node->SDAQ_address,
-																  sdaq_node->SDAQ_status.dev_sn);
+																		  sdaq_node->SDAQ_address,
+																		  sdaq_node->SDAQ_status.dev_sn);
 					//Send info of the removed SDAQ through IPC
 					IPC_msg.SDAQ_clean.IPC_msg_type = IPC_SDAQ_clean_up;
 					sprintf(IPC_msg.SDAQ_clean.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
