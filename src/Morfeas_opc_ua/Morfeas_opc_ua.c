@@ -920,10 +920,18 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
 									 "RAM_Size (GiB)", 
 									 UA_TYPES_FLOAT);
 	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"RAM_size"), &mem_total_GbB, UA_TYPES_FLOAT);
+	Morfeas_opc_ua_add_variable_node(server_ptr,
+									 "Health_status", 
+									 "Morfeas_HBc", 
+									 "Morfeas Heart Beat Counter", 
+									 UA_TYPES_BYTE);
+	i=0;
+	Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"Morfeas_HBc"), &i, UA_TYPES_BYTE);
 }
 
 void Rpi_health_update(void)
 {
+	static unsigned char HBc=0;
 	FILE *CPU_temp_fp;
 	char cpu_temp_str[20];
 	struct system_stats sys_stats = {0};
@@ -957,6 +965,7 @@ void Rpi_health_update(void)
 	}
 	else
 		sys_stats.CPU_temp = NAN;
+	HBc = HBc<100? HBc+1 : 0;//Increase Heart Beat counter.
 	//Update health_values to OPC_UA mem space
 	pthread_mutex_lock(&OPC_UA_NODESET_access);
 		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Up_time"),&(sys_stats.Up_time),UA_TYPES_UINT32);
@@ -964,6 +973,7 @@ void Rpi_health_update(void)
 		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"RAM_Util"),&(sys_stats.RAM_Util),UA_TYPES_FLOAT);
 		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"CPU_temp"),&(sys_stats.CPU_temp),UA_TYPES_FLOAT);
 		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Disk_Util"),&(sys_stats.Disk_Util),UA_TYPES_FLOAT);
+		Update_NodeValue_by_nodeID(server,UA_NODEID_STRING(1,"Morfeas_HBc"),&HBc,UA_TYPES_BYTE);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 	logstat_sys(logstat_path, &sys_stats);
 }
