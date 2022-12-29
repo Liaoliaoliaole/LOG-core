@@ -585,15 +585,8 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50],
-		 *ISO_channel_name,
-		 *limit_high,
-		 *limit_low,
-		 *unit_str,
-		 *cal_date_str,
-		 *cal_period_str,
-		 *build_date_str,
-		 *mod_date_str;
+	char tmp_str[50], *ISO_channel_name, *unit_str, *limit_high, *limit_low,
+					  *cal_date_str, *cal_period_str, *build_date_str,*mod_date_str;
 	float t_min_max;
 	int if_type;
 	unsigned char cal_period;
@@ -647,19 +640,19 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
-		if((limit_high = XML_node_get_content(node, "LIMIT_HIGH")) && (limit_low = XML_node_get_content(node, "LIMIT_LOW")))
+		if(XML_node_get_content(node, "LIMIT_HIGH") && XML_node_get_content(node, "LIMIT_LOW"))
 		{
 			sprintf(tmp_str,"%s.limit_high",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Limit High", UA_TYPES_FLOAT);
 			sprintf(tmp_str,"%s.limit_low",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Limit Low", UA_TYPES_FLOAT);
 		}
-		if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
+		if(XML_node_get_content(node, "BUILD_DATE"))
 		{
 			sprintf(tmp_str,"%s.build_date",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Building Date", UA_TYPES_DATETIME);
 		}
-		if((mod_date_str = XML_node_get_content(node, "MOD_DATE")))
+		if(XML_node_get_content(node, "MOD_DATE"))
 		{
 			sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Last Modification Date", UA_TYPES_DATETIME);
@@ -680,17 +673,14 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		}
 		if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 		{
-			if((unit_str = XML_node_get_content(node, "UNIT")))
-			{
-				sprintf(tmp_str,"%s.unit",ISO_channel_name);
-				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
-			}
-			if((cal_date_str = XML_node_get_content(node, "CAL_DATE")))
+			sprintf(tmp_str,"%s.unit",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
+			if(XML_node_get_content(node, "CAL_DATE"))
 			{
 				sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
 				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
 			}
-			if((cal_period_str = XML_node_get_content(node, "CAL_PERIOD")))
+			if(XML_node_get_content(node, "CAL_PERIOD"))
 			{
 				sprintf(tmp_str,"%s.period",ISO_channel_name);
 				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
@@ -753,7 +743,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
-	if(limit_high && limit_low)
+	if((limit_high = XML_node_get_content(node, "LIMIT_HIGH")) && (limit_low = XML_node_get_content(node, "LIMIT_LOW")))
 	{
 		sprintf(tmp_str,"%s.limit_high",ISO_channel_name);
 		t_min_max = atof(limit_high);
@@ -762,7 +752,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		t_min_max = atof(limit_low);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
 	}
-	if(build_date_str)
+	if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
 	{
 		if(sscanf(build_date_str, "%lu", &time_UNIX) == 1)
 		{
@@ -773,7 +763,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		else
 			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Building Date \"%s\" on line %d is invalid !!!", build_date_str, node->line);
 	}
-	if(mod_date_str)
+	if((mod_date_str = XML_node_get_content(node, "MOD_DATE")))
 	{
 		if(sscanf(mod_date_str, "%lu", &time_UNIX) == 1)
 		{
@@ -786,12 +776,12 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	}
 	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 	{
-		if(unit_str)
+		if((unit_str = XML_node_get_content(node, "UNIT")))
 		{
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), unit_str, UA_TYPES_STRING);
 		}
-		if(cal_date_str)
+		if((cal_date_str = XML_node_get_content(node, "CAL_DATE")))
 		{
 			memset(&opcua_cal_date_struct, 0, sizeof(struct UA_DateTimeStruct));
 			if(sscanf(cal_date_str, "%4hu/%2hu/%2hu", &(opcua_cal_date_struct.year), &(opcua_cal_date_struct.month), &(opcua_cal_date_struct.day)) == 3)
@@ -803,7 +793,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			else
 				UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Calibration Date \"%s\" on line %d is invalid !!!", cal_date_str, node->line);
 		}
-		if(cal_period_str)
+		if((cal_period_str = XML_node_get_content(node, "CAL_PERIOD")))
 		{
 			cal_period = atoi(cal_period_str);
 			sprintf(tmp_str,"%s.period",ISO_channel_name);
