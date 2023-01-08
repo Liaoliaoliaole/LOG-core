@@ -24,6 +24,9 @@ WORK_dir=work
 SRC_dir=src
 CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src/*.h
 CANif_DEP_SRC_dir = ./src/sdaq-worker/src
+D_opt = -D RELEASE_HASH='"$(shell git log -1 --format=%h)"' \
+		-D RELEASE_DATE=$(shell git log -1 --format=%ct) \
+        -D COMPILE_DATE=$(shell date +%s)
 LIBs=open62541 \
 	 libcjson \
 	 ncurses \
@@ -47,7 +50,8 @@ Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_XML.o \
 					  $(WORK_dir)/MTI_func.o \
 					  $(WORK_dir)/NOX_func.o \
-					  $(WORK_dir)/Morfeas_IPC.o
+					  $(WORK_dir)/Morfeas_IPC.o \
+					  $(WORK_dir)/Morfeas_info.o
 
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_opc_ua.o \
@@ -63,7 +67,8 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_MTI_nodeset.o \
 					  $(WORK_dir)/Morfeas_NOX_nodeset.o \
 					  $(WORK_dir)/Morfeas_XML.o \
-					  $(WORK_dir)/Morfeas_JSON.o
+					  $(WORK_dir)/Morfeas_JSON.o \
+					  $(WORK_dir)/Morfeas_info.o
 
 Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_SDAQ_if.o \
@@ -74,6 +79,7 @@ Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/NOX_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
 					  $(WORK_dir)/Morfeas_Logger.o \
+					  $(WORK_dir)/Morfeas_info.o \
 					  $(CANif_DEP_HEADERS_dir)
 
 Morfeas_MDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
@@ -83,7 +89,8 @@ Morfeas_MDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/MTI_func.o \
 					  $(WORK_dir)/NOX_func.o \
 					  $(WORK_dir)/Morfeas_IPC.o \
-					  $(WORK_dir)/Morfeas_Logger.o
+					  $(WORK_dir)/Morfeas_Logger.o \
+					  $(WORK_dir)/Morfeas_info.o
 
 Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/Morfeas_IOBOX_if.o \
@@ -92,7 +99,8 @@ Morfeas_IOBOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					   $(WORK_dir)/MTI_func.o \
 					   $(WORK_dir)/NOX_func.o \
 					   $(WORK_dir)/Morfeas_IPC.o \
-					   $(WORK_dir)/Morfeas_Logger.o
+					   $(WORK_dir)/Morfeas_Logger.o \
+					   $(WORK_dir)/Morfeas_info.o
 
 Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_run_check.o \
@@ -102,7 +110,8 @@ Morfeas_MTI_if_DEP = $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/SDAQ_drv.o \
 					 $(WORK_dir)/NOX_func.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
-					 $(WORK_dir)/Morfeas_Logger.o
+					 $(WORK_dir)/Morfeas_Logger.o \
+					 $(WORK_dir)/Morfeas_info.o
 
 Morfeas_NOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					 $(WORK_dir)/Morfeas_NOX_if.o \
@@ -115,6 +124,7 @@ Morfeas_NOX_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					 $(WORK_dir)/NOX_func.o \
 					 $(WORK_dir)/MTI_func.o \
 					 $(WORK_dir)/Morfeas_IPC.o \
+					 $(WORK_dir)/Morfeas_info.o
 
 all: $(BUILD_dir)/Morfeas_daemon \
 	 $(BUILD_dir)/Morfeas_opc_ua \
@@ -232,6 +242,9 @@ $(WORK_dir)/Morfeas_XML.o: $(SRC_dir)/Supplementary/Morfeas_XML.c
 
 $(WORK_dir)/Morfeas_run_check.o: $(SRC_dir)/Supplementary/Morfeas_run_check.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_info.o: $(SRC_dir)/Supplementary/Morfeas_info.c
+	$(GCC_opt) $(D_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 tree:
 	mkdir -p $(BUILD_dir) $(WORK_dir)

@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
 				print_usage(argv[0]);
 				exit(EXIT_SUCCESS);
 			case 'v'://Version
-				printf(VERSION"\n");
+				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(), Morfeas_get_release_date(), Morfeas_get_compile_date());
 				exit(EXIT_SUCCESS);
 			case 'b':
 				i2c_bus_num=atoi(optarg);
@@ -262,6 +262,8 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, quit_signal_handler);
 	signal(SIGPIPE, quit_signal_handler);
 	Logger("Morfeas_SDAQ_if (%s) Program Started\n",stats.CAN_IF_name);
+	Logger("Release: %s (%s)\n", Morfeas_get_curr_git_hash(), Morfeas_get_release_date());
+	Logger("Version: "VERSION", Compiled Date: %s\n", Morfeas_get_compile_date());
 	//Initialize the indication LEDs of the Morfeas-proto (sysfs implementation)
 	if(!(flags.led_existent = LEDs_init(stats.CAN_IF_name)))
 		Logger(Morfeas_hat_error());

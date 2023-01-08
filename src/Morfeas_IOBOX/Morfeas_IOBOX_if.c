@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 				print_usage(argv[0]);
 				exit(EXIT_SUCCESS);
 			case 'V'://Version
-				printf(VERSION"\n");
+				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(), Morfeas_get_release_date(), Morfeas_get_compile_date());
 				exit(EXIT_SUCCESS);
 			case '?':
 				print_usage(argv[0]);
@@ -136,6 +136,8 @@ int main(int argc, char *argv[])
 
 	//Print welcome message
 	Logger("---- Morfeas_IOBOX_if Started ----\n");
+	Logger("Release: %s (%s)\n", Morfeas_get_curr_git_hash(), Morfeas_get_release_date());
+	Logger("Version: "VERSION", Compiled Date: %s\n", Morfeas_get_compile_date());
 	Logger("libMODBus Version: %s\n",LIBMODBUS_VERSION_STRING);
 	if(!path_to_logstat_dir)
 		Logger("Argument for path to logstat directory Missing, %s will run in Compatible mode !!!\n",argv[0]);

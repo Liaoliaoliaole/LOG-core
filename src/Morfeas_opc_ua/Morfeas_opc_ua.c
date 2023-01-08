@@ -40,8 +40,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Supplementary/Morfeas_run_check.h"
 #include "../Supplementary/Morfeas_JSON.h"
-#include "Morfeas_handlers_nodeset.h" //<-#include "Morfeas_Types.h"
+#include "Morfeas_handlers_nodeset.h" // <-- #include "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_XML.h"
+#include "../Supplementary/Morfeas_Logger.h"
 
 //print the Usage manual
 void print_usage(char *prog_name);
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
 				print_usage(argv[0]);
 				exit(EXIT_SUCCESS);
 			case 'V'://Version
-				printf(VERSION"\n");
+				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(), Morfeas_get_release_date(), Morfeas_get_compile_date());
 				exit(EXIT_SUCCESS);
 			case 'c'://nodeset config XML file
 				ns_config = optarg;
@@ -118,7 +119,11 @@ int main(int argc, char *argv[])
 
 	//Write to Log a welcome message
 	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "\t------ Morfeas OPC-UA Server Started ------");
-	//Write to Log a current version of the libopen62541
+	//Write to Log the current release date
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Current release: %s (%s)", Morfeas_get_curr_git_hash(), Morfeas_get_release_date());
+	//Write to Log the current compiled date
+	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Compile date: %s", Morfeas_get_compile_date());
+	//Write to Log the current version of the libopen62541
 	UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "libopen62541 version: %s", UA_OPEN62541_VERSION);
 	//Init OPC_UA Server
 	if(!(server = UA_Server_new()))

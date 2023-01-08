@@ -1,5 +1,5 @@
 /*
-File "Morfeas_JSON.c" part of Morfeas project, contains implementation of "Morfeas_JSON.h".
+File: Morfeas_JSON.c part of Morfeas project, contains implementation of "Morfeas_JSON.h".
 Copyright (C) 12019-12021  Sam harry Tzavaras
 
 This program is free software: you can redistribute it and/or modify
@@ -197,7 +197,7 @@ void extract_list_SDAQ_Channels_cal_dates(gpointer node, gpointer arg_pass)
 		cJSON_AddNumberToObject(node_data, "Calibration_period", node_dec->CH_date.period);
 		cJSON_AddNumberToObject(node_data, "Amount_of_points", node_dec->CH_date.amount_of_points);
 		cJSON_AddItemToObject(node_data, "Unit", cJSON_CreateString(unit_str[node_dec->CH_date.cal_units]));
-		cJSON_AddItemToObject(node_data, "Is_calibrated", cJSON_CreateBool(node_dec->CH_date.cal_units >= Unit_code_base_region_size && 
+		cJSON_AddItemToObject(node_data, "Is_calibrated", cJSON_CreateBool(node_dec->CH_date.cal_units >= Unit_code_base_region_size &&
 																		   node_dec->CH_date.amount_of_points));
 		cJSON_AddNumberToObject(node_data, "Unit_code", node_dec->CH_date.cal_units);
 		cJSON_AddItemToArray(array, node_data);

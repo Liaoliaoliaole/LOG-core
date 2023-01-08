@@ -18,3 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void Logger(const char *fmt, ...);
 
+//Functions related to git logs info and compilation date. Implementation at Morfeas_info.c
+char* Morfeas_get_release_date(void);
+char* Morfeas_get_compile_date(void);
+char* Morfeas_get_curr_git_hash(void);
