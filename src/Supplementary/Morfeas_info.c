@@ -14,12 +14,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#define BUFFER_SIZE 20
+
+#include <stdio.h>
 #include <time.h>
 
 char* Morfeas_get_release_date(void)
 {
 #ifdef RELEASE_DATE
-	static char buf[20];
+	static char buf[BUFFER_SIZE];
 	time_t release_date = RELEASE_DATE;
 	strftime(buf, sizeof(buf), "%x - %I:%M%p", localtime(&release_date));
 	return buf;
@@ -29,7 +32,7 @@ char* Morfeas_get_release_date(void)
 char* Morfeas_get_compile_date(void)
 {
 #ifdef COMPILE_DATE
-	static char buf[20];
+	static char buf[BUFFER_SIZE];
 	time_t compile_date = COMPILE_DATE;
 	strftime(buf, sizeof(buf), "%x - %I:%M%p", localtime(&compile_date));
 	return buf;
