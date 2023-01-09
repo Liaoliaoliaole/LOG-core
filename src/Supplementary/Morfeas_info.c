@@ -16,11 +16,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include <time.h>
 
-static char buf[20];
-
 char* Morfeas_get_release_date(void)
 {
 #ifdef RELEASE_DATE
+	static char buf[20];
 	time_t release_date = RELEASE_DATE;
 	strftime(buf, sizeof(buf), "%x - %I:%M%p", localtime(&release_date));
 	return buf;
@@ -30,6 +29,7 @@ char* Morfeas_get_release_date(void)
 char* Morfeas_get_compile_date(void)
 {
 #ifdef COMPILE_DATE
+	static char buf[20];
 	time_t compile_date = COMPILE_DATE;
 	strftime(buf, sizeof(buf), "%x - %I:%M%p", localtime(&compile_date));
 	return buf;
