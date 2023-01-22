@@ -67,7 +67,7 @@ static char *logstat_path = NULL;
 static void stopHandler(int sign)
 {
     if(sign==SIGINT)
-		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
+		UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "Received Ctrl-c");
 	running = false;
 }
 
