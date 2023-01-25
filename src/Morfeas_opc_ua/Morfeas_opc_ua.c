@@ -590,8 +590,8 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *node)
 {
-	char tmp_str[50], *ISO_channel_name, *unit_str, *limit_high, *limit_low,
-					  *cal_date_str, *cal_period_str, *build_date_str,*mod_date_str;
+	char tmp_str[50], *ISO_channel_name, *unit_str, *alarm_str, *cal_date_str,
+		 *cal_period_str, *build_date_str,*mod_date_str;
 	float t_min_max;
 	int if_type;
 	unsigned char cal_period;
@@ -645,12 +645,25 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
-		if(XML_node_get_content(node, "LIMIT_HIGH") && XML_node_get_content(node, "LIMIT_LOW"))
+		if(XML_node_get_content(node, "ALARM_HIGH_VAL"))
 		{
-			sprintf(tmp_str,"%s.limit_high",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Limit High", UA_TYPES_FLOAT);
-			sprintf(tmp_str,"%s.limit_low",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Limit Low", UA_TYPES_FLOAT);
+			sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", UA_TYPES_FLOAT);
+		}
+		if(XML_node_get_content(node, "ALARM_LOW_VAL"))
+		{
+			sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", UA_TYPES_FLOAT);
+		}
+		if(XML_node_get_content(node, "ALARM_HIGH"))
+		{
+			sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", UA_TYPES_STRING);
+		}
+		if(XML_node_get_content(node, "ALARM_LOW"))
+		{
+			sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", UA_TYPES_STRING);
 		}
 		if(XML_node_get_content(node, "BUILD_DATE"))
 		{
@@ -748,14 +761,27 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
-	if((limit_high = XML_node_get_content(node, "LIMIT_HIGH")) && (limit_low = XML_node_get_content(node, "LIMIT_LOW")))
+	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")))
 	{
-		sprintf(tmp_str,"%s.limit_high",ISO_channel_name);
-		t_min_max = atof(limit_high);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
-		sprintf(tmp_str,"%s.limit_low",ISO_channel_name);
-		t_min_max = atof(limit_low);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
+		sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
+		t_min_max = atof(alarm_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &t_min_max, UA_TYPES_FLOAT);
+	}
+	if((alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")))
+	{
+		sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
+		t_min_max = atof(alarm_str);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &t_min_max, UA_TYPES_FLOAT);
+	}
+	if((alarm_str = XML_node_get_content(node, "ALARM_LOW")))
+	{
+		sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), alarm_str, UA_TYPES_STRING);
+	}
+	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH")))
+	{
+		sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), alarm_str, UA_TYPES_STRING);
 	}
 	if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
 	{
