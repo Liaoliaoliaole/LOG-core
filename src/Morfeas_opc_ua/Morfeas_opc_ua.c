@@ -645,36 +645,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
-		if(XML_node_get_content(node, "ALARM_HIGH_VAL"))
-		{
-			sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", UA_TYPES_FLOAT);
-		}
-		if(XML_node_get_content(node, "ALARM_LOW_VAL"))
-		{
-			sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", UA_TYPES_FLOAT);
-		}
-		if(XML_node_get_content(node, "ALARM_HIGH"))
-		{
-			sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", UA_TYPES_STRING);
-		}
-		if(XML_node_get_content(node, "ALARM_LOW"))
-		{
-			sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", UA_TYPES_STRING);
-		}
-		if(XML_node_get_content(node, "BUILD_DATE"))
-		{
-			sprintf(tmp_str,"%s.build_date",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Building Date", UA_TYPES_DATETIME);
-		}
-		if(XML_node_get_content(node, "MOD_DATE"))
-		{
-			sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Last Modification Date", UA_TYPES_DATETIME);
-		}
 		if(if_type == NOX)
 		{
 			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
@@ -761,50 +731,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
-	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")))
-	{
-		sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
-		t_min_max = atof(alarm_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &t_min_max, UA_TYPES_FLOAT);
-	}
-	if((alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")))
-	{
-		sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
-		t_min_max = atof(alarm_str);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &t_min_max, UA_TYPES_FLOAT);
-	}
-	if((alarm_str = XML_node_get_content(node, "ALARM_LOW")))
-	{
-		sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), alarm_str, UA_TYPES_STRING);
-	}
-	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH")))
-	{
-		sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
-		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), alarm_str, UA_TYPES_STRING);
-	}
-	if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
-	{
-		if(sscanf(build_date_str, "%lu", &time_UNIX) == 1)
-		{
-			opcua_datetime = UA_DateTime_fromUnixTime(time_UNIX);
-			sprintf(tmp_str,"%s.build_date",ISO_channel_name);
-			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
-		}
-		else
-			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Building Date \"%s\" on line %d is invalid !!!", build_date_str, node->line);
-	}
-	if((mod_date_str = XML_node_get_content(node, "MOD_DATE")))
-	{
-		if(sscanf(mod_date_str, "%lu", &time_UNIX) == 1)
-		{
-			opcua_datetime = UA_DateTime_fromUnixTime(time_UNIX);
-			sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
-			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
-		}
-		else
-			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Modification Date \"%s\" on line %d is invalid !!!", mod_date_str, node->line);
-	}
 	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 	{
 		if((unit_str = XML_node_get_content(node, "UNIT")))
@@ -831,6 +757,63 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_period, UA_TYPES_BYTE);
 		}
 	}
+	//Add and/or Update extra variables that added in runtime.
+	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")))
+	{
+		sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
+		t_min_max = atof(alarm_str);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", &t_min_max, UA_TYPES_FLOAT);
+	}
+	if((alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")))
+	{
+		sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
+		t_min_max = atof(alarm_str);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", &t_min_max, UA_TYPES_FLOAT);
+	}
+	if((alarm_str = XML_node_get_content(node, "ALARM_LOW")))
+	{
+		sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", alarm_str, UA_TYPES_STRING);
+	}
+	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH")))
+	{
+		sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", alarm_str, UA_TYPES_STRING);
+	}
+	if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
+	{
+		if(sscanf(build_date_str, "%lu", &time_UNIX) == 1)
+		{
+			opcua_datetime = UA_DateTime_fromUnixTime(time_UNIX);
+			sprintf(tmp_str,"%s.build_date",ISO_channel_name);
+			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Building Date", &opcua_datetime, UA_TYPES_DATETIME);
+		}
+		else
+			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Building Date \"%s\" on line %d is invalid !!!", build_date_str, node->line);
+	}
+	if((mod_date_str = XML_node_get_content(node, "MOD_DATE")))
+	{
+		if(sscanf(mod_date_str, "%lu", &time_UNIX) == 1)
+		{
+			opcua_datetime = UA_DateTime_fromUnixTime(time_UNIX);
+			sprintf(tmp_str,"%s.mod_date",ISO_channel_name);
+			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Last Modification Date", &opcua_datetime, UA_TYPES_DATETIME);
+		}
+		else
+			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Modification Date \"%s\" on line %d is invalid !!!", mod_date_str, node->line);
+	}
+}
+
+void Morfeas_opc_ua_add_and_update_variable_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name, const void *value, int _UA_Type)
+{
+	UA_NodeId out;
+	UA_NodeId_init(&out);
+
+	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1,Node_id), &out))
+		Morfeas_opc_ua_add_variable_node(server_ptr, Parent_id, Node_id, node_name, _UA_Type);
+	else
+		UA_clear(&out, &UA_TYPES[UA_TYPES_NODEID]);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,Node_id), value, _UA_Type);
 }
 
 void Morfeas_opc_ua_add_object_node(UA_Server *server_ptr, char *Parent_id, char *Node_id, char *node_name)
@@ -880,7 +863,7 @@ void Morfeas_opc_ua_add_variable_node_with_callback_onRead(UA_Server *server_ptr
 									    vAttr, DataSource, NULL, NULL);
 }
 
-inline void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, const void *value, int _UA_Type)
+void Update_NodeValue_by_nodeID(UA_Server *server_ptr, UA_NodeId Node_to_update, const void *value, int _UA_Type)
 {
 	UA_Variant temp_value;
 	if(_UA_Type!=UA_TYPES_STRING)
