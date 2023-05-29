@@ -602,7 +602,7 @@ void user_com(unsigned int argc, char **argv, struct app_data *arg)
 							wprintw(arg->UI_term, " Curr_meas=%.3fA", (arg->Ports_meas[port].port_current - arg->Ports_config[port].curr_meas_offset) * arg->Ports_config[port].curr_meas_scaler);
 							wprintw(arg->UI_term, " CSA_out=%.2fV", (arg->Ports_meas[port].output - arg->Ports_config[port].volt_meas_offset) * arg->Ports_config[port].volt_meas_scaler);
 							wprintw(arg->UI_term, " Comp_ref=%.2fmV", arg->Ports_meas[port].set_val * MAX9611_comp_scaler);
-							wprintw(arg->UI_term, " Die_temp=%.1f°C", arg->Ports_meas[port].temperature * MAX9611_temp_scaler);
+							wprintw(arg->UI_term, " Die_temp=%.1f°F", 32.0 + arg->Ports_meas[port].temperature * MAX9611_temp_scaler);
 							return;
 						}
 						break;
