@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 	{
 		t0 = clock();
 		rc = modbus_read_input_registers(ctx, IOBOX_start_reg, IOBOX_Max_reg_read, IOBOX_regs);
-		if (rc <= 0)
+		if(rc <= 0)
 		{
 			Logger("Error (%d) on MODBus Register read: %s\n", errno, modbus_strerror((stats.error = errno)));//load errno to stats and report to Logger
 			IOBOX_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
@@ -204,11 +204,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		else
-		{
-			//Attempt to read extra RX Channels
-			modbus_read_input_registers(ctx, IOBOX_Max_reg_read, IOBOX_imp_reg-IOBOX_Max_reg_read, IOBOX_regs+IOBOX_Max_reg_read);
-
-			// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
+		{	// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
 			//Load Data for "Wireless Inductive Power Supply"
 			IPC_msg.IOBOX_data.Supply_Vin = IOBOX_regs[0]/100.0;
 			for(int i=0, j=1; i<IOBOX_Amount_of_STD_RXs; i++)
@@ -217,6 +213,9 @@ int main(int argc, char *argv[])
 				IPC_msg.IOBOX_data.Supply_meas[i].Iout = IOBOX_regs[j++]/100.0;
 				j++;
 			}
+			//Check if IOBOX is 6CH and no inductive supply and attempt to read extra RX Channels.
+			if(!IPC_msg.IOBOX_data.Supply_Vin)
+				modbus_read_input_registers(ctx, IOBOX_Max_reg_read, IOBOX_imp_reg-IOBOX_Max_reg_read, IOBOX_regs+IOBOX_Max_reg_read);
 			//Load Data for RXs
 			RX_mem = IOBOX_RXs_mem_offset;
 			for(int i=0; i<IOBOX_Amount_of_All_RXs; i++)
