@@ -99,7 +99,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 						{
 							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
-							for(unsigned char i=1; i<=IOBOX_Amount_of_RXs; i++)
+							for(unsigned char i=1; i<=IOBOX_Amount_of_All_RXs; i++)
 							{
 								//Change Value and status of Channels to error code
 								for(unsigned char j=1; j<=IOBOX_Amount_of_channels; j++)
@@ -141,7 +141,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					//Add Object for Receivers
 					sprintf(Node_ID_str, "%s.RXs", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 					Morfeas_opc_ua_add_object_node(server, IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, Node_ID_str, "Receivers");
-					for(unsigned char i=1; i<=IOBOX_Amount_of_RXs; i++)
+					for(unsigned char i=1; i<=IOBOX_Amount_of_All_RXs; i++)
 					{
 						sprintf(Node_ID_child_str, "%s.RX%hhu", Node_ID_str, i);
 						sprintf(Node_name, "RX%1hhu", i);
@@ -180,7 +180,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 				//Load power supply measurements to OPC-UA variables
 				sprintf(Node_ID_str, "%s.Ind_link.Vin", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name);
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_Vin), UA_TYPES_FLOAT);
-				for(unsigned char i=0; i<IOBOX_Amount_of_RXs; i++)
+				for(unsigned char i=0; i<IOBOX_Amount_of_STD_RXs; i++)
 				{
 					sprintf(Node_ID_str, "%s.Ind_link.CH%1hhu.Vout", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Vout), UA_TYPES_FLOAT);
@@ -188,7 +188,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->IOBOX_data.Supply_meas[i].Iout), UA_TYPES_FLOAT);
 				}
 				//Load values to variables
-				for(unsigned char i=0; i<IOBOX_Amount_of_RXs; i++)
+				for(unsigned char i=0; i<IOBOX_Amount_of_All_RXs; i++)
 				{
 					//Variables for receiver
 					sprintf(Node_ID_str, "%s.RXs.RX%hhu", IPC_msg_dec->IOBOX_data.Dev_or_Bus_name, i+1);

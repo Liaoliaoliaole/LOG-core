@@ -342,7 +342,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 		cJSON_AddItemToObject(root, "Power_Supply",pow_supp_data = cJSON_CreateObject());
 		cJSON_AddNumberToObject(pow_supp_data, "Vin", stats->Supply_Vin/stats->counter);
 		stats->Supply_Vin = 0;
-		for(int i=0; i<4; i++)
+		for(int i=0; i<IOBOX_Amount_of_STD_RXs; i++)
 		{
 			sprintf(str_buff, "CH%1u_Vout", i+1);
 			cJSON_AddNumberToObject(pow_supp_data, str_buff, stats->Supply_meas[i].Vout/stats->counter);
@@ -352,13 +352,13 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 			stats->Supply_meas[i].Iout = 0;
 		}
 		//Add RX_Data
-		for(int i=0; i<4; i++)
+		for(int i=0; i<IOBOX_Amount_of_All_RXs; i++)
 		{
 			sprintf(str_buff, "RX%1u", i+1);
 			if(stats->RX[i].status && stats->RX[i].success)
 			{
 				cJSON_AddItemToObject(root, str_buff, RX_json = cJSON_CreateObject());
-				for(int j=0; j<16; j++)
+				for(int j=0; j<IOBOX_Amount_of_channels; j++)
 				{
 
 					sprintf(str_buff, "CH%1u", j+1);

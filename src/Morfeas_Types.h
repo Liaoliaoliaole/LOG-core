@@ -20,9 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define default_slave_address 10
 
 //Defs for IOBOX_handler
+#define IOBOX_Max_reg_read 124
 #define IOBOX_start_reg 0
-#define IOBOX_imp_reg 125
-#define IOBOX_Amount_of_RXs 4
+#define IOBOX_imp_reg 176
+#define IOBOX_Amount_of_STD_RXs 4
+#define IOBOX_Amount_of_Extra_RXs 2
+#define IOBOX_Amount_of_All_RXs (IOBOX_Amount_of_STD_RXs + IOBOX_Amount_of_Extra_RXs)
 #define IOBOX_Amount_of_channels 16
 #define IOBOX_RXs_mem_offset 25
 #define IOBOX_Index_reg_pos 20
@@ -84,8 +87,8 @@ struct Morfeas_IOBOX_if_stats{
 	char *dev_name;
 	int error;
 	float Supply_Vin;
-	struct IOBOX_Power_Supply Supply_meas[IOBOX_Amount_of_RXs];
-	struct IOBOX_RXs RX[IOBOX_Amount_of_RXs];
+	struct IOBOX_Power_Supply Supply_meas[IOBOX_Amount_of_STD_RXs];
+	struct IOBOX_RXs RX[IOBOX_Amount_of_All_RXs];
 	unsigned int counter;
 };
 

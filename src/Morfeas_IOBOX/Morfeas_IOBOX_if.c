@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	//Variables for IPC
 	IPC_message IPC_msg = {0};
 	struct Morfeas_IOBOX_if_stats stats = {0};
-	unsigned short IOBOX_regs[IOBOX_imp_reg], old_indexes[IOBOX_Amount_of_RXs] = {0};
+	unsigned short IOBOX_regs[IOBOX_imp_reg], old_indexes[IOBOX_Amount_of_All_RXs] = {0};
 	//FIFO file descriptor
 	int FIFO_fd;
 	//Check for call without arguments
@@ -186,14 +186,14 @@ int main(int argc, char *argv[])
 	while(handler_run)
 	{
 		t0 = clock();
-		rc = modbus_read_registers(ctx, IOBOX_start_reg, IOBOX_imp_reg, IOBOX_regs);
+		rc = modbus_read_input_registers(ctx, IOBOX_start_reg, IOBOX_Max_reg_read, IOBOX_regs);
 		if (rc <= 0)
 		{
-			Logger("Error (%d) on MODBus Register read: %s\n",errno, modbus_strerror((stats.error = errno)));//load errno to stats and report to Logger
+			Logger("Error (%d) on MODBus Register read: %s\n", errno, modbus_strerror((stats.error = errno)));//load errno to stats and report to Logger
 			IOBOX_status_to_IPC(FIFO_fd, &stats);//send status report to Morfeas_opc_ua via IPC
 			while(modbus_connect(ctx) && handler_run)//Attempt to reconnection
 			{
-				logstat_IOBOX(path_to_logstat_dir, &stats);//report error on logstat
+				logstat_IOBOX(path_to_logstat_dir, &stats);//Report error on logstat
 				sleep(1);
 			}
 			if(handler_run)
@@ -205,10 +205,13 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
+			//Attempt to read extra RX Channels
+			modbus_read_input_registers(ctx, IOBOX_Max_reg_read, IOBOX_imp_reg-IOBOX_Max_reg_read, IOBOX_regs+IOBOX_Max_reg_read);
+
 			// --- Scale measurements and send them to Morfeas_opc_ua via IPC --- //
 			//Load Data for "Wireless Inductive Power Supply"
 			IPC_msg.IOBOX_data.Supply_Vin = IOBOX_regs[0]/100.0;
-			for(int i=0, j=1; i<IOBOX_Amount_of_RXs; i++)
+			for(int i=0, j=1; i<IOBOX_Amount_of_STD_RXs; i++)
 			{
 				IPC_msg.IOBOX_data.Supply_meas[i].Vout = IOBOX_regs[j++]/100.0;
 				IPC_msg.IOBOX_data.Supply_meas[i].Iout = IOBOX_regs[j++]/100.0;
@@ -216,7 +219,7 @@ int main(int argc, char *argv[])
 			}
 			//Load Data for RXs
 			RX_mem = IOBOX_RXs_mem_offset;
-			for(int i=0; i<IOBOX_Amount_of_RXs; i++)
+			for(int i=0; i<IOBOX_Amount_of_All_RXs; i++)
 			{
 				if(old_indexes[i]!=IOBOX_regs[IOBOX_Index_reg_pos+RX_mem])//Check if message in valid, by compering Message index with the old
 				{
@@ -234,22 +237,23 @@ int main(int argc, char *argv[])
 				old_indexes[i] = IOBOX_regs[IOBOX_Index_reg_pos+RX_mem];
 				RX_mem += IOBOX_RXs_mem_offset;
 			}
+
 			//Send measurements
 			IPC_msg_TX(FIFO_fd, &IPC_msg);
 
 				//--- Accumulate values for averaging ---//
 			//Load Wireless Inductive Power Supply data to stats
 			stats.Supply_Vin += IPC_msg.IOBOX_data.Supply_Vin;
-			for(int i=0; i<4; i++)
+			for(int i=0; i<IOBOX_Amount_of_STD_RXs; i++)
 			{
 				stats.Supply_meas[i].Vout += IPC_msg.IOBOX_data.Supply_meas[i].Vout;
 				stats.Supply_meas[i].Iout += IPC_msg.IOBOX_data.Supply_meas[i].Iout;
 			}
 			//Load RXs Data to stats
 			RX_mem = IOBOX_RXs_mem_offset;
-			for(int i=0; i<4; i++)
+			for(int i=0; i<IOBOX_Amount_of_All_RXs; i++)
 			{
-				for(int j=0; j<16; j++)
+				for(int j=0; j<IOBOX_Amount_of_channels; j++)
 					stats.RX[i].CH_value[j] += IPC_msg.IOBOX_data.RX[i].CH_value[j];
 				stats.RX[i].index = IPC_msg.IOBOX_data.RX[i].index;
 				stats.RX[i].status = IPC_msg.IOBOX_data.RX[i].status;
