@@ -36,8 +36,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MDAQ_start_reg 100
 #define MDAQ_imp_reg 90
 
-//Defs for MTI_handler*/
+//Defs for MTI_handler
 #define MAX_RMSW_DEVs 32
+
+//Defs for MDAQ_handler
+#define MDAQ_Amount_of_Channels 8
 
 #include <gmodule.h>
 #include <glib.h>

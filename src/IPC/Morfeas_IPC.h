@@ -173,8 +173,8 @@ typedef struct IOBOX_data_msg_struct{
 	char Dev_or_Bus_name[Dev_or_Bus_name_str_size];
 	unsigned int IOBOX_IPv4;
 	float Supply_Vin;
-	struct IOBOX_Power_Supply Supply_meas[4];
-	struct IOBOX_RXs RX[4];
+	struct IOBOX_Power_Supply Supply_meas[IOBOX_Amount_of_STD_RXs];
+	struct IOBOX_RXs RX[IOBOX_Amount_of_All_RXs];
 }IOBOX_data_msg;
 
 typedef struct IOBOX_channels_reg_msg_struct{
@@ -197,7 +197,7 @@ typedef struct MDAQ_data_msg_struct{
 	unsigned int MDAQ_IPv4;
 	unsigned int meas_index;
 	float board_temp;
-	struct MDAQ_Channel meas[8];
+	struct MDAQ_Channel meas[MDAQ_Amount_of_Channels];
 }MDAQ_data_msg;
 
 typedef struct MDAQ_channels_reg_msg_struct{
