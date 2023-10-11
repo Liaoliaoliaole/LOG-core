@@ -235,6 +235,7 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 		}
 		else if(node_dec->cnt)
 			node_dec->meas_acc /= node_dec->cnt;
+		cJSON_AddNumberToObject(node_data, "CNT", node_dec->cnt);
 		cJSON_AddNumberToObject(node_data, "Meas_avg", node_dec->meas_acc);
 		cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
 		cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
