@@ -49,6 +49,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_run_check.h"
 #include "Morfeas_RPi_Hat.h"
 
+//Functions related to git logs info and compilation date. Implementation at Morfeas_info.c
+char* Morfeas_get_release_date(void);
+char* Morfeas_get_compile_date(void);
+char* Morfeas_get_curr_git_hash(void);
+
 //Structs def
 struct app_data{
 	unsigned char det_ports;
@@ -107,7 +112,9 @@ int main(int argc, char *argv[])
 				print_usage(argv[0]);
 				exit(EXIT_SUCCESS);
 			case 'v'://Version
-				printf(VERSION"\n");
+				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(),
+																			   Morfeas_get_release_date(),
+																			   Morfeas_get_compile_date());
 				exit(EXIT_SUCCESS);
 			case 'b':
 				stats.i2c_bus=atoi(optarg);

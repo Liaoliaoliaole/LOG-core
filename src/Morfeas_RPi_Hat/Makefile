@@ -4,9 +4,14 @@ LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs ncurses libg
 BUILD_dir=build
 WORK_dir=work
 
+D_opt = -D RELEASE_HASH='"$(shell git log -1 --format=%h)"' \
+		-D RELEASE_DATE=$(shell git log -1 --format=%ct) \
+        -D COMPILE_DATE=$(shell date +%s)
+
 Morfeas_RPi_hat_DEP = $(WORK_dir)/Morfeas_RPi_Hat_UI.o \
 					  $(WORK_dir)/Morfeas_RPi_Hat.o \
-					  $(WORK_dir)/Morfeas_run_check.o
+					  $(WORK_dir)/Morfeas_run_check.o \
+					  $(WORK_dir)/Morfeas_info.o
 
 all: $(BUILD_dir)/Morfeas_RPi_Hat
 
@@ -23,6 +28,9 @@ $(WORK_dir)/Morfeas_RPi_Hat.o: Morfeas_RPi_Hat.c
 
 $(WORK_dir)/Morfeas_run_check.o: ../Supplementary/Morfeas_run_check.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_info.o: ../Supplementary/Morfeas_info.c
+	$(GCC_opt) $(D_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 tree:
 	mkdir -p $(BUILD_dir) $(WORK_dir)
