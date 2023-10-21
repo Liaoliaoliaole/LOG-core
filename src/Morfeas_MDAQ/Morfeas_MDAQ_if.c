@@ -82,15 +82,17 @@ int main(int argc, char *argv[])
 
 	//Get options
 	int c;
-	while ((c = getopt (argc, argv, "hV")) != -1)
+	while ((c = getopt (argc, argv, "hv")) != -1)
 	{
 		switch (c)
 		{
 			case 'h'://help
 				print_usage(argv[0]);
 				exit(EXIT_SUCCESS);
-			case 'V'://Version
-				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(), Morfeas_get_release_date(), Morfeas_get_compile_date());
+			case 'v'://Version
+				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(),
+																			   Morfeas_get_release_date(),
+																			   Morfeas_get_compile_date());
 				exit(EXIT_SUCCESS);
 			case '?':
 				print_usage(argv[0]);
@@ -286,7 +288,7 @@ void print_usage(char *prog_name)
 		"\t    IPv4: The IPv4 address of MDAQ\n\n"
 		"Options:\n"
 		"           -h : Print help.\n"
-		"           -V : Version.\n"
+		"           -v : Version.\n"
 	};
 	printf("%s\nUsage: %s IPv4 Dev_name [/path/to/logstat/directory] [Options]\n\n%s",preamp, prog_name, manual);
 	return;

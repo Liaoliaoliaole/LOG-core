@@ -124,15 +124,17 @@ int main(int argc, char *argv[])
 	}
 	//Get options
 	int c;
-	while ((c = getopt (argc, argv, "hVp:a:")) != -1)
+	while ((c = getopt (argc, argv, "hvp:a:")) != -1)
 	{
 		switch (c)
 		{
 			case 'h'://help
 				print_usage(argv[0]);
 				exit(EXIT_SUCCESS);
-			case 'V'://Version
-				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(), Morfeas_get_release_date(), Morfeas_get_compile_date());
+			case 'v'://Version
+				printf("Release: %s (%s)\nCompile Date: %s\nVer: "VERSION"\n", Morfeas_get_curr_git_hash(),
+																			   Morfeas_get_release_date(),
+																			   Morfeas_get_compile_date());
 				exit(EXIT_SUCCESS);
 			case 'p':
 				if(!(tcp_port = atoi(optarg)))
@@ -395,7 +397,7 @@ void print_usage(char *prog_name)
 		"\t    IPv4: The IPv4 address of MTI\n\n"
 		"Options:\n"
 		"           -h : Print help.\n"
-		"           -V : Version.\n"
+		"           -v : Version.\n"
 		"           -p : TCP port(default:502)\n"
 		"           -a : Modbus Slave address(default:10)\n"
 	};
