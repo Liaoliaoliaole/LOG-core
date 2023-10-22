@@ -319,6 +319,7 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 {
 	int ret_val, addr, i, port_meas_size;// Address for MAX9611 connected to port
 	unsigned short *meas_dec = (unsigned short *)meas;
+
 	switch(port)
 	{
 		case 0: addr=0x70; break;
@@ -327,12 +328,14 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 		case 3: addr=0x7f; break;
 		default: Morfeas_hat_error_num = unknown_slave; return -1;
 	}
-	ret_val = I2C_read_block(i2c_dev_num, addr, 0, meas, sizeof(struct Morfeas_RPi_Hat_Port_meas));
-	port_meas_size = sizeof(struct Morfeas_RPi_Hat_Port_meas)/sizeof(unsigned short);
-	for(i=0; i<port_meas_size; i++)
+	if(!(ret_val = I2C_read_block(i2c_dev_num, addr, 0, meas, sizeof(struct Morfeas_RPi_Hat_Port_meas))))
 	{
-		*(meas_dec+i) = htons(*(meas_dec+i));
-		*(meas_dec+i) >>= i<port_meas_size-1 ? 4 : 7;//Shift right 4 for all meas except temp that shift right 7. From MAX9611 datasheet
+		port_meas_size = sizeof(struct Morfeas_RPi_Hat_Port_meas)/sizeof(unsigned short);
+		for(i=0; i<port_meas_size; i++)
+		{
+			*(meas_dec+i) = htons(*(meas_dec+i));
+			*(meas_dec+i) >>= i<port_meas_size-1 ? 4 : 7;//Shift right 4 for all meas except temp that shift right 7. From MAX9611 datasheet
+		}
 	}
 	return ret_val;
 }
