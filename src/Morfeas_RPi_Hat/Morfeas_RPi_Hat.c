@@ -332,7 +332,7 @@ int get_port_meas(struct Morfeas_RPi_Hat_Port_meas *meas, unsigned char port, un
 	for(i=0; i<port_meas_size; i++)
 	{
 		*(meas_dec+i) = htons(*(meas_dec+i));
-			*(meas_dec+i) >>= i<port_meas_size-1 ? 4 : 7;//Shift right 4 for all meas except temp that shift right 7. From MAX9611 datasheet
+		*(meas_dec+i) >>= i<port_meas_size-1 ? 4 : 7;//Shift right 4 for all meas except temp that shift right 7. From MAX9611 datasheet
 	}
 	return ret_val;
 }
