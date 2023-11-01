@@ -79,6 +79,7 @@ typedef struct NOX_TX_frame_struct{
 
 struct Morfeas_NOX_if_flags{
 	unsigned port_meas_exist : 1;
+	unsigned port_meas_isCal : 1;
 	unsigned export_logstat : 1;
 };
 

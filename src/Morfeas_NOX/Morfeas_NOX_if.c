@@ -237,10 +237,11 @@ int main(int argc, char *argv[])
 		//Init SDAQ_NET Port's CSA
 		if(!MAX9611_init(stats.port, i2c_bus_num))
 		{
+			flags.port_meas_exist = 1;
 			//Read Port's CSA Configuration from EEPROM
 			if(!read_port_config(&port_meas_config, stats.port, i2c_bus_num))
 			{
-				flags.port_meas_exist = 1;
+				flags.port_meas_isCal = 1;
 				Logger("Port's Last Calibration: %u/%u/%u\n", port_meas_config.last_cal_date.month,
 															  port_meas_config.last_cal_date.day,
 															  port_meas_config.last_cal_date.year+12000);
@@ -422,8 +423,16 @@ int main(int argc, char *argv[])
 				{
 					if(!get_port_meas(&port_meas, stats.port, i2c_bus_num))
 					{
-						stats.Bus_voltage = (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler;
-						stats.Bus_amperage = (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler;
+						if(flags.port_meas_isCal)
+						{
+							stats.Bus_voltage = (port_meas.port_voltage - port_meas_config.volt_meas_offset) * port_meas_config.volt_meas_scaler;
+							stats.Bus_amperage = (port_meas.port_current - port_meas_config.curr_meas_offset) * port_meas_config.curr_meas_scaler;
+						}
+						else
+						{
+							stats.Bus_voltage = port_meas.port_voltage * MAX9611_default_volt_meas_scaler;
+							stats.Bus_amperage = port_meas.port_current * MAX9611_default_current_meas_scaler;
+						}
 						stats.Shunt_temp = 32.0 + port_meas.temperature * MAX9611_temp_scaler;
 					}
 					IPC_msg.NOX_BUS_info.Electrics = -1;
