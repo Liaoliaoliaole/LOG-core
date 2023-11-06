@@ -372,7 +372,7 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 		return 2;
 	}
 	//Calculate and compare Checksum
-	if(Checksum(&config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)))
+	if(config_read.checksum ^ Checksum(&config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)-1))
 	{
 		Morfeas_hat_error_num = Checksum_error;
 		return 1;
