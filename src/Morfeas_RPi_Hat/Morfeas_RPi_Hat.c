@@ -345,7 +345,7 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 	struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config config_read;
 	unsigned int blank_check=0;
 	int addr;// Address for 24AA08 EEPROM
-	unsigned char checksum;
+
 	switch(port)
 	{
 		case 0: addr=0x50; break;
@@ -372,8 +372,7 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 		return 2;
 	}
 	//Calculate and compare Checksum
-	checksum = Checksum(&config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)-1);
-	if(config_read.checksum ^ checksum)
+	if(Checksum(&config_read, sizeof(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config)))
 	{
 		Morfeas_hat_error_num = Checksum_error;
 		return 1;
