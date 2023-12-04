@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-#define VERSION "0.9" /*Release Version of Morfeas_daemon*/
+#define VERSION "0.91" /*Release Version of Morfeas_daemon*/
 #define max_num_of_threads 16
 #define max_lines_on_Logger 128
 
@@ -224,8 +224,11 @@ void print_usage(char *prog_name)
 void * Morfeas_thread(void *varg_pt)
 {
 	FILE *cmd_fd;
-	char out_str[256] = {0}, system_call_str[512] = {0}, Logger_name[128] = {0}, *loggers_path;
+	char out_str[256] = {0}, system_call_str[512] = {0}, Logger_name[128] = {0}, i2cbus_num_arg[50] = {0},
+		 *loggers_path, *i2cbus_num_str;
+	int i2cbus_num;
 	thread_arg *t_arg = varg_pt;
+
 	pthread_mutex_lock(&thread_make_lock);//Lock threading making
 		loggers_path = calloc(strlen(t_arg->loggers_path)+2, sizeof(*loggers_path));
 		if(!loggers_path)
@@ -246,17 +249,23 @@ void * Morfeas_thread(void *varg_pt)
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "SDAQ_HANDLER"))
 		{
+			if((i2cbus_num_str=XML_node_get_content(t_arg->component, "I2CBUS_NUM"))&&(i2cbus_num=atoi(i2cbus_num_str)))
+				sprintf(i2cbus_num_arg, "-b %u", i2cbus_num);
 			sprintf(Logger_name,"%s_%s.log",Morfeas_SDAQ_if, XML_node_get_content(t_arg->component, "CANBUS_IF"));
-			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_SDAQ_if,
-													 XML_node_get_content(t_arg->component, "CANBUS_IF"),
-													 t_arg->logstat_path);
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_SDAQ_if,
+													    i2cbus_num_arg,
+													    XML_node_get_content(t_arg->component, "CANBUS_IF"),
+													    t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "NOX_HANDLER"))
 		{
+			if((i2cbus_num_str=XML_node_get_content(t_arg->component, "I2CBUS_NUM"))&&(i2cbus_num=atoi(i2cbus_num_str)))
+				sprintf(i2cbus_num_arg, "-b %u", i2cbus_num);
 			sprintf(Logger_name,"%s_%s.log",Morfeas_NOX_if, XML_node_get_content(t_arg->component, "CANBUS_IF"));
-			sprintf(system_call_str,"%s %s %s 2>&1", Morfeas_NOX_if,
-													 XML_node_get_content(t_arg->component, "CANBUS_IF"),
-													 t_arg->logstat_path);
+			sprintf(system_call_str,"%s %s %s %s 2>&1", Morfeas_NOX_if,
+													 	i2cbus_num_arg,
+														XML_node_get_content(t_arg->component, "CANBUS_IF"),
+														t_arg->logstat_path);
 		}
 		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
 		{
