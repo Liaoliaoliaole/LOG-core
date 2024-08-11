@@ -123,7 +123,7 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 static void _Morfeas_NOX_ws_server_conn_on_close(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
 {
 	amount_of_clients--;
-	Logger("Connection with ID:%d\n close", nopoll_conn_get_id(conn));
+	Logger("Close connection with ID:%d\n", nopoll_conn_get_id(conn));
 	return;
 }
 
@@ -132,14 +132,18 @@ static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *con
 	const char *conn_protocols;
 	if(!(conn_protocols = nopoll_conn_get_requested_protocol(conn)))
 		return nopoll_false;
-	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS && !strcmp(conn_protocols, "Morfeas_NOX_WS_if"))
+	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS)
 	{
-		nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
-		Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
-		amount_of_clients++;
-		return nopoll_true;
+		if(!strcmp(conn_protocols, "Morfeas_NOX_WS_if"))
+		{
+			nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
+			Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
+			amount_of_clients++;
+			return nopoll_true;
+		}
 	}
-	Logger("Max amount of Clients reached!!!\n");
+	else
+		Logger("Max amount of Clients reached!!!\n");
 	return nopoll_false;
 }
 
