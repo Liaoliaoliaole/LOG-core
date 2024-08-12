@@ -86,7 +86,7 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 	stats = ((struct NOX_DBus_thread_arguments_passer *)varg_pt)->stats;//Decoded variables from passer
 	master_ctx = nopoll_ctx_new();
 	amount_of_clients = 0;
-	//nopoll_log_enable(master_ctx, nopoll_true);
+	//nopoll_log_enable(master_ctx, nopoll_true); nopoll_log_color_enable(master_ctx, true);
 	for(port = PORT_init; port<(PORT_init+PORT_pool_size); port++)
 	{
 		sprintf(p_buff, "%hu", port);
@@ -150,6 +150,7 @@ static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *con
 static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPollMsg *msg, noPollPtr user_data)
 {
 	const char *msg_cont = (const char *) nopoll_msg_get_payload(msg), close_resp[]="Unknown Request";
+
 	if(msg_cont && !strcmp(msg_cont, "getMeas"))
 	{
 		pthread_mutex_lock(&WS_NOX_sensors_data_access);
