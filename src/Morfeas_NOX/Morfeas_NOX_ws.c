@@ -116,7 +116,6 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 	//Clean up
 	nopoll_ctx_unref(master_ctx);
 	nopoll_cleanup_library();
-	master_ctx = NULL;
 	return NULL;
 }
 
@@ -151,7 +150,7 @@ static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPol
 {
 	const char *msg_cont = (const char *) nopoll_msg_get_payload(msg), close_resp[]="Unknown Request";
 
-	if(msg_cont && !strcmp(msg_cont, "getMeas"))
+	if(msg_cont && !strcmp(msg_cont, "getMeasRAW"))
 	{
 		pthread_mutex_lock(&WS_NOX_sensors_data_access);
 			nopoll_conn_send_binary(conn, (char *)&WS_NOX_sensors_data, sizeof(WS_NOX_sensors_data));
