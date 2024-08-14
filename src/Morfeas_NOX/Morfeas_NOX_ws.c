@@ -140,11 +140,11 @@ static nopoll_bool Morfeas_NOX_ws_server_on_ready(noPollCtx *ctx, noPollConn *co
 		nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
 		Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
 		amount_of_clients++;
+		nopoll_loop_stop(ctx);
 		return nopoll_true;
 	}
 	else
 		Logger("Max amount of Clients reached!!!\n");
-	nopoll_loop_stop(ctx);
 	return nopoll_false;
 }
 
