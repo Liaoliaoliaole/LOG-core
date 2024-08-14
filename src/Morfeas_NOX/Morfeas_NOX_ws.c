@@ -154,7 +154,7 @@ static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPol
 	cJSON *root, *meas_tbl, *meas_JSON;
 
 	char JSON_str[256];
-	const char *msg_cont;
+	const char *msg_cont, close_resp[]="Unknown Request";
 
 	if(nopoll_msg_is_final(msg))
 	{
@@ -185,7 +185,8 @@ static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPol
 			nopoll_conn_send_text(conn, JSON_str, -1);
 		}
 		else
-			nopoll_conn_send_binary(conn, msg_cont, nopoll_msg_get_payload_size(msg));
+			nopoll_conn_close_ext(conn, 1011, close_resp, strlen(close_resp));
+			//nopoll_conn_send_binary(conn, msg_cont, nopoll_msg_get_payload_size(msg));
 	}
 	return;
 }
