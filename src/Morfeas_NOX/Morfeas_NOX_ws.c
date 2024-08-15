@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define PORT_init 8081
 #define PORT_pool_size 4
-#define MAX_AMOUNT_OF_CLIENTS 10
+#define MAX_AMOUNT_OF_CLIENTS 8
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,11 +46,15 @@ struct WS_send_frame_struct{
 extern volatile unsigned char NOX_handler_run;
 extern pthread_mutex_t NOX_access;
 
+//Global static constants
+static const char Morfeas_NOX_ws_server_accepted_protocol[] = "Morfeas_NOX_WS_if";
+
 //Global static variables
 static volatile unsigned char amount_of_clients;
 static pthread_mutex_t WS_NOX_sensors_data_access = PTHREAD_MUTEX_INITIALIZER;
 
 //Callback function
+static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data);
 static nopoll_bool Morfeas_NOX_ws_server_on_ready(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data);
 static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPollMsg *msg, noPollPtr user_data);
 
@@ -110,14 +114,16 @@ void * Morfeas_NOX_ws_server(void *varg_pt)
 	pthread_mutex_unlock(&NOX_access);
 
 	Logger("WebSocket server started and listening@%s on ref:%d\n", nopoll_conn_port(WS_serv), nopoll_conn_ref_count(WS_serv));
-	//Set Accepted protocol
-	nopoll_conn_set_accepted_protocol(WS_serv, "Morfeas_NOX_WS_if");
 	//Set Callback functions
+	nopoll_ctx_set_on_open(master_ctx, Morfeas_NOX_ws_server_on_open, NULL);
 	nopoll_ctx_set_on_ready(master_ctx, Morfeas_NOX_ws_server_on_ready, NULL);
 	nopoll_ctx_set_on_msg(master_ctx, Morfeas_NOX_ws_server_on_msg, NULL);
 	//Server's main loop
 	while(NOX_handler_run)
+	{
 		nopoll_loop_wait(master_ctx, 100000);//Process WebSocket events
+		//Logger("amount_of_clients=%d\n", amount_of_clients);
+	}
 	nopoll_conn_close(WS_serv);
 	Logger("Listener: finishing references: %d\n", nopoll_ctx_ref_count(master_ctx));
 	//Clean up
@@ -133,19 +139,31 @@ static void _Morfeas_NOX_ws_server_conn_on_close(noPollCtx *ctx, noPollConn *con
 	return;
 }
 
-static nopoll_bool Morfeas_NOX_ws_server_on_ready(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
+static nopoll_bool Morfeas_NOX_ws_server_on_open(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
 {
-	if(amount_of_clients<MAX_AMOUNT_OF_CLIENTS)
+	if(amount_of_clients>=MAX_AMOUNT_OF_CLIENTS)
 	{
-		nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
-		Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
-		amount_of_clients++;
-		nopoll_loop_stop(ctx);
-		return nopoll_true;
+		Logger("Max amount of Clients reached!!!\n");
+		return nopoll_false;
+	}
+	//Set and check requested protocol.
+	nopoll_conn_set_accepted_protocol(conn, Morfeas_NOX_ws_server_accepted_protocol);
+	if(!nopoll_cmp(nopoll_conn_get_requested_protocol(conn), nopoll_conn_get_accepted_protocol(conn)))
+	{
+		Logger("New connection from %s rejected due to invalid protocol!!!\n", nopoll_conn_host(conn));
+		return nopoll_false;
 	}
 	else
-		Logger("Max amount of Clients reached!!!\n");
-	return nopoll_false;
+		Logger("New Connection request from %s get ID:%d\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
+	return nopoll_true;
+}
+
+static nopoll_bool Morfeas_NOX_ws_server_on_ready(noPollCtx *ctx, noPollConn *conn, noPollPtr user_data)
+{
+	nopoll_conn_set_on_close(conn, _Morfeas_NOX_ws_server_conn_on_close, NULL);
+	Logger("Connection from %s with ID:%d is ready\n", nopoll_conn_host(conn), nopoll_conn_get_id(conn));
+	amount_of_clients++;
+	return nopoll_true;
 }
 
 static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPollMsg *msg, noPollPtr user_data)
@@ -168,17 +186,17 @@ static void Morfeas_NOX_ws_server_on_msg(noPollCtx *ctx, noPollConn *conn, noPol
 		else if(nopoll_cmp(msg_cont, "getMeasJSON"))
 		{
 			root = cJSON_CreateObject();
-			cJSON_AddNumberToObject(root, "Samples_Date_UNIX", time(NULL));
 			meas_tbl = cJSON_CreateArray();
-			for(unsigned char i=0; i<2; i++)
-			{
-				meas_JSON = cJSON_CreateObject();
-				pthread_mutex_lock(&WS_NOX_sensors_data_access);
+			pthread_mutex_lock(&WS_NOX_sensors_data_access);
+				cJSON_AddNumberToObject(root, "Samples_timestamp", WS_NOX_sensors_data.timestamp);
+				for(unsigned char i=0; i<2; i++)
+				{
+					meas_JSON = cJSON_CreateObject();
 					cJSON_AddNumberToObject(meas_JSON, "NOx_val", WS_NOX_sensors_data.NOx_val[i]);
 					cJSON_AddNumberToObject(meas_JSON, "O2_val", WS_NOX_sensors_data.O2_val[i]);
-				pthread_mutex_unlock(&WS_NOX_sensors_data_access);
-				cJSON_AddItemToArray(meas_tbl, meas_JSON);
-			}
+					cJSON_AddItemToArray(meas_tbl, meas_JSON);
+				}
+			pthread_mutex_unlock(&WS_NOX_sensors_data_access);
 			cJSON_AddItemToObject(root, "meas", meas_tbl);
 			cJSON_PrintPreallocated(root, JSON_str, sizeof(JSON_str), 0);
 			cJSON_Delete(root);
