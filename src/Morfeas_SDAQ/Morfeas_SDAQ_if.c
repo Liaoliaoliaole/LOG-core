@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <time.h>
 #include <math.h>
 #include <ctype.h>
@@ -465,7 +466,8 @@ int main(int argc, char *argv[])
 		}
 		if(flags.Clean_flag)
 		{
-			clean_up_list_SDAQs(&stats);
+			if(stats.detected_SDAQs)
+				clean_up_list_SDAQs(&stats);
 			flags.Clean_flag = 0;
 			if(!stats.detected_SDAQs)
 				flags.is_meas_started = 0;
@@ -1305,6 +1307,8 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 	struct SDAQ_info_entry *sdaq_node;
 	GSList *check_node;
 	time_t now=time(NULL);
+	bool SDAQs_to_be_removed=false;
+
 	if(stats->list_SDAQs)//Check if list_SDAQs have elements
 	{	//Check for dead SDAQs
 		check_node = stats->list_SDAQs;
@@ -1328,12 +1332,14 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 					//SDAQ free allocated memory operation
 					free_SDAQ_info_entry(check_node->data);
 					check_node->data = NULL;
+					SDAQs_to_be_removed = true;
 				}
 			}
 			check_node = check_node -> next;//next node
 		}
 		//Delete empty nodes from the list
-		stats->list_SDAQs = g_slist_remove_all(stats->list_SDAQs, NULL);
+		if(SDAQs_to_be_removed)
+			stats->list_SDAQs = g_slist_remove_all(stats->list_SDAQs, NULL);
 	}
 	else
 		return EXIT_FAILURE;
