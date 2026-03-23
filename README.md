@@ -69,83 +69,76 @@ The source of the Morfeas-core project have the following submodules:
 * [open62541](https://open62541.org/) - An open source C (C99) implementation of OPC-UA (IEC 62541).
 
 ### Get the Source
-```
-$ # Clone the project's source code
-$ git clone https://gitlab.com/fantomsam/morfeas_project.git Morfeas_core
-$ cd Morfeas_core
-$ # Get Source of the submodules
-$ git submodule update --init --recursive --remote --merge
-```
-### Compilation and installation of the submodules
+```bash
+# Clone LOG-core
+git clone <your_repo_url> Morfeas_core
+cd Morfeas_core
 
-#### cJSON
+# Pull submodules exactly as pinned by this repo
+git submodule sync --recursive
+git submodule update --init --recursive
 ```
-$ cd src/cJSON
-$ mkdir build && cd build
-$ cmake -D BUILD_SHARED_LIBS=ON ..
-$ make -j$(nproc)
-$ sudo make install
-$ sudo ldconfig
-```
-#### noPoll
-```
-$ cd src/noPoll
-$ ./autogen.sh
-$ make -j$(nproc)
-$ sudo make install
-$ sudo ldconfig
-```
-#### Open62541
-```
-$ cd src/open62541
-$ mkdir build && cd build
-$ cmake -D BUILD_SHARED_LIBS=ON ..
-$ make -j$(nproc)
-$ sudo make install
-$ sudo ldconfig
-```
-#### SDAQ_worker
-```
-$ cd src/sdaq_worker
-$ make tree
-$ make -j$(nproc)
-$ sudo make install
-```
-### Compilation of the Morfeas-core Project
-```
-$ make tree
-$ make -j$(nproc)
-```
-The executable binaries located under the **./build** directory.
 
-### Installation of the Morfeas-core Project
+## Pinned Dependency Baseline (validated)
+Pinned submodule commits used by current Bookworm build flow:
+
+- `src/cJSON`: `c859b25da02955fef659d658b8f324b5cde87be3`
+- `src/noPoll`: `ce4da1a102be8a19269813d97562582e7ce94bcc`
+- `src/open62541`: `f63e2a819aff6e468242dc2e54ccbd5b75d63654`
+- `src/sdaq-worker`: `ccc690c57e4171762c42a7e6412b7d92ea5e789f`
+
+Note: `nopoll` upstream `pkg-config` version string can still show `0.4.8.b456` even when pinned to commit `ce4da1a...`.
+
+## Build and Rebuild
+Use the provided scripts instead of manual per-library build commands.
+
+### Full rebuild (dependencies + core)
+Use when dependency pins changed or first setup on a new machine.
+
+```bash
+cd Morfeas_core
+./build_core_full.sh
+sudo systemctl restart Morfeas_system.service
 ```
-$ sudo make install
+
+### Code-only rebuild (core only)
+Use when only LOG-core source code changed and dependency pins did not change.
+
+```bash
+cd Morfeas_core
+./build_core_code_only.sh
 ```
-### Configuration for the Morfeas_daemon, D-Bus and Systemd service
+
+### Quick runtime checks
+```bash
+systemctl is-active Morfeas_system.service
+ps -ef | egrep 'Morfeas_daemon|Morfeas_opc_ua|Morfeas_SDAQ_if' | grep -v egrep
+pkg-config --modversion open62541 libcjson nopoll
+ldd /usr/local/bin/Morfeas_opc_ua | egrep 'open62541|cjson|nopoll|icu|ssl'
 ```
-$ #--- Optionaly copy the configuration directory to your home ---
-$ cp -r configuration ~/
-$ #Make the nececery modifications on the Morfeas_daemon configuration (.xml) file
-$ vim (~/)configuration/Morfeas_config.xml
-$ #Make the nececery modifications on the Unit file of the Morfeas_daemon service
-$ sudo systemctl edit Morfeas_system.service --full
-$ #Also modify the configuration file of the Morfeas_daemon service
-$ sudo vim /etc/systemd/system/Morfeas_system.service.d/Morfeas_system.conf
-$ #Modify the D-Bus configuration for the Morfeas system
-$ sudo vim /etc/dbus-1/system.d/Morfeas_system.conf
-$ #Start the systemd service daemon
-$ sudo systemctl start Morfeas_system.service
-$ #--- Optionaly If you want to start the daemon on boot ---
-$ sudo systemctl enable Morfeas_system.service
+
+### Configuration for Morfeas_daemon, D-Bus and Systemd service
+```bash
+# Optional: copy the configuration directory
+cp -r configuration ~/
+
+# Edit runtime configuration
+vim ~/configuration/Morfeas_config.xml
+
+# Adjust service unit/override if needed
+sudo systemctl edit Morfeas_system.service --full
+sudo vim /etc/systemd/system/Morfeas_system.service.d/Morfeas_system.conf
+
+# Adjust D-Bus policy if needed
+sudo vim /etc/dbus-1/system.d/Morfeas_system.conf
+
+# Start/enable service
+sudo systemctl start Morfeas_system.service
+sudo systemctl enable Morfeas_system.service
 ```
+
 ### Re-Compilation of the source
 Guide link [here](./RE-INSTALL.md)
 
-## Authors
-* **Sam Harry Tzavaras** - *Initial work*
-
 ## License
 The source code of the project is licensed under GPLv3 or later - see the [License](LICENSE) file for details.
-
-
