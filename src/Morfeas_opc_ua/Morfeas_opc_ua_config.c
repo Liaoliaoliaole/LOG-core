@@ -30,49 +30,92 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 static const size_t usernamePasswordsSize = 1;
 static UA_UsernamePasswordLogin usernamePasswords[] = {{UA_STRING_STATIC("Morfeas"), UA_STRING_STATIC("Morfeas_pass")}};
 
+/*
+ * open62541 API compatibility:
+ * - some builds expose UA_ServerConfig_clear()
+ * - some builds expose UA_ServerConfig_clean()
+ */
+#if defined(__GNUC__)
+extern void UA_ServerConfig_clear(UA_ServerConfig *config) __attribute__((weak));
+extern void UA_ServerConfig_clean(UA_ServerConfig *config) __attribute__((weak));
+#else
+extern void UA_ServerConfig_clear(UA_ServerConfig *config);
+extern void UA_ServerConfig_clean(UA_ServerConfig *config);
+#endif
+
+static void Morfeas_ServerConfig_cleanup(UA_ServerConfig *config)
+{
+    if(config == NULL)
+        return;
+
+#if defined(__GNUC__)
+    if(UA_ServerConfig_clear != NULL)
+    {
+        UA_ServerConfig_clear(config);
+        return;
+    }
+
+    if(UA_ServerConfig_clean != NULL)
+    {
+        UA_ServerConfig_clean(config);
+        return;
+    }
+#else
+    UA_ServerConfig_clear(config);
+#endif
+}
+
 UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version)
 {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
-	char buff[512], hostname[256];
+    char buff[512], hostname[256];
 
-	if(!config)
-		return UA_STATUSCODE_BADINVALIDARGUMENT;
+    if(config == NULL)
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
 
-	retval = UA_ServerConfig_setBasics(config);
-    if(retval != UA_STATUSCODE_GOOD)
+    retval = UA_ServerConfig_setBasics(config);
+    if(retval == UA_STATUSCODE_GOOD)
     {
-        UA_ServerConfig_clear(config);
+        /* continue */
+    }
+    else
+    {
+        Morfeas_ServerConfig_cleanup(config);
         return retval;
     }
 
-	config->allowEmptyVariables = UA_RULEHANDLING_ACCEPT; //Allow creation of empty variables without logging them.
-	//--Delete default Contents--//
-	UA_clear(&(config->buildInfo.productUri), &UA_TYPES[UA_TYPES_STRING]);
-	UA_clear(&(config->applicationDescription.applicationUri), &UA_TYPES[UA_TYPES_STRING]);
-	UA_clear(&(config->buildInfo.manufacturerName), &UA_TYPES[UA_TYPES_STRING]);
-	UA_clear(&(config->buildInfo.productName), &UA_TYPES[UA_TYPES_STRING]);
-	UA_clear(&(config->applicationDescription.applicationName.locale), &UA_TYPES[UA_TYPES_STRING]);
-	UA_clear(&(config->applicationDescription.applicationName.text), &UA_TYPES[UA_TYPES_STRING]);
-	UA_clear(&(config->buildInfo.softwareVersion), &UA_TYPES[UA_TYPES_STRING]);
-	//--Load Application's Configuration Contents--//
-	gethostname(hostname, sizeof(hostname));
-	snprintf(buff, sizeof(buff), "http://%s", hostname);
-	config->buildInfo.productUri = UA_STRING_ALLOC(buff);
+    config->allowEmptyVariables = UA_RULEHANDLING_ACCEPT; //Allow creation of empty variables without logging them.
+    //--Delete default Contents--//
+    UA_clear(&(config->buildInfo.productUri), &UA_TYPES[UA_TYPES_STRING]);
+    UA_clear(&(config->applicationDescription.applicationUri), &UA_TYPES[UA_TYPES_STRING]);
+    UA_clear(&(config->buildInfo.manufacturerName), &UA_TYPES[UA_TYPES_STRING]);
+    UA_clear(&(config->buildInfo.productName), &UA_TYPES[UA_TYPES_STRING]);
+    UA_clear(&(config->applicationDescription.applicationName.locale), &UA_TYPES[UA_TYPES_STRING]);
+    UA_clear(&(config->applicationDescription.applicationName.text), &UA_TYPES[UA_TYPES_STRING]);
+    UA_clear(&(config->buildInfo.softwareVersion), &UA_TYPES[UA_TYPES_STRING]);
+    //--Load Application's Configuration Contents--//
+    gethostname(hostname, sizeof(hostname));
+    snprintf(buff, sizeof(buff), "http://%s", hostname);
+    config->buildInfo.productUri = UA_STRING_ALLOC(buff);
     config->applicationDescription.applicationUri = UA_STRING_ALLOC("urn:Morfeas.open62541.server.application");
     config->buildInfo.manufacturerName = UA_STRING_ALLOC("Sam-Harry-Tzavaras");
     config->buildInfo.productName = UA_STRING_ALLOC("Morfeas OPC-UA Server (Based on Open62541)");
-	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", !app_name?"Morfeas default application":app_name);
-	snprintf(buff, sizeof(buff), "Morfeas_opc_ua: v%s, libopen62541: %s", version, UA_OPEN62541_VERSION);
-	config->buildInfo.softwareVersion = UA_STRING_ALLOC(buff);
-	config->maxSessions = 5;
-	config->publishingIntervalLimits.min = 100;
-	config->samplingIntervalLimits.min = 100;
+    config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en", app_name == NULL ? "Morfeas default application" : app_name);
+    snprintf(buff, sizeof(buff), "Morfeas_opc_ua: v%s, libopen62541: %s", version, UA_OPEN62541_VERSION);
+    config->buildInfo.softwareVersion = UA_STRING_ALLOC(buff);
+    config->maxSessions = 5;
+    config->publishingIntervalLimits.min = 100;
+    config->samplingIntervalLimits.min = 100;
 
-	// Allocate the SecurityPolicies
+    // Allocate the SecurityPolicies
     retval = UA_ServerConfig_addSecurityPolicyNone(config, NULL);// const UA_ByteString *certificate
-    if(retval != UA_STATUSCODE_GOOD)
-	{
-        UA_ServerConfig_clear(config);
+    if(retval == UA_STATUSCODE_GOOD)
+    {
+        /* continue */
+    }
+    else
+    {
+        Morfeas_ServerConfig_cleanup(config);
         return retval;
     }
 
@@ -80,22 +123,28 @@ UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_nam
     retval = UA_AccessControl_default(config, true, //NULL,
                 &config->securityPolicies[config->securityPoliciesSize-1].policyUri,
                 usernamePasswordsSize, usernamePasswords);
-    if(retval != UA_STATUSCODE_GOOD)
-	{
-        UA_ServerConfig_clear(config);
+    if(retval == UA_STATUSCODE_GOOD)
+    {
+        /* continue */
+    }
+    else
+    {
+        Morfeas_ServerConfig_cleanup(config);
         return retval;
     }
 
     // Allocate the endpoint
     retval = UA_ServerConfig_addEndpoint(config, UA_SECURITY_POLICY_NONE_URI,
                                          UA_MESSAGESECURITYMODE_NONE);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clear(config);
+    if(retval == UA_STATUSCODE_GOOD)
+    {
+        /* continue */
+    }
+    else
+    {
+        Morfeas_ServerConfig_cleanup(config);
         return retval;
     }
 
-
-	return UA_STATUSCODE_GOOD;
+    return UA_STATUSCODE_GOOD;
 }
-
-
