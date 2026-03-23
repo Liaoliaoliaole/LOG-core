@@ -14,13 +14,33 @@ if [ -z "$PYTHON3_BIN" ]; then
   exit 1
 fi
 
+if command -v dpkg-architecture >/dev/null 2>&1; then
+  HOST_MULTIARCH="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+else
+  HOST_MULTIARCH="$(gcc -dumpmachine)"
+fi
+
+INSTALL_PREFIX="/usr/local"
+INSTALL_LIBDIR="${INSTALL_PREFIX}/lib/${HOST_MULTIARCH}"
+
+export PKG_CONFIG_PATH="${INSTALL_LIBDIR}/pkgconfig:${INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+
+echo "#Using install prefix: ${INSTALL_PREFIX}"
+echo "#Using multiarch libdir: ${INSTALL_LIBDIR}"
+
 # Build cJSON
 #-------------
 echo "#Build cJSON libs."
 cd src/cJSON
+rm -rf build
 mkdir -p build
 cd build
-cmake -D BUILD_SHARED_LIBS=ON ..
+cmake \
+  -D BUILD_SHARED_LIBS=ON \
+  -D CMAKE_BUILD_TYPE=Release \
+  -D CMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
+  -D CMAKE_INSTALL_LIBDIR="lib/${HOST_MULTIARCH}" \
+  ..
 make -j"$(nproc)"
 sudo make install
 sudo ldconfig
@@ -31,7 +51,11 @@ echo "#Build cJSON libs succeeded."
 #-------------
 echo "#Build noPoll libs."
 cd src/noPoll
+if [ -f Makefile ]; then
+  make distclean >/dev/null 2>&1 || true
+fi
 ./autogen.sh
+./configure --prefix="${INSTALL_PREFIX}" --libdir="${INSTALL_LIBDIR}"
 make -j"$(nproc)"
 sudo make install
 sudo ldconfig
@@ -45,7 +69,13 @@ cd src/open62541
 rm -rf build
 mkdir -p build
 cd build
-cmake -D BUILD_SHARED_LIBS=ON -D Python3_EXECUTABLE="$PYTHON3_BIN" ..
+cmake \
+  -D BUILD_SHARED_LIBS=ON \
+  -D CMAKE_BUILD_TYPE=Release \
+  -D CMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
+  -D CMAKE_INSTALL_LIBDIR="lib/${HOST_MULTIARCH}" \
+  -D Python3_EXECUTABLE="${PYTHON3_BIN}" \
+  ..
 make -j"$(nproc)"
 sudo make install
 sudo ldconfig
@@ -63,9 +93,18 @@ cd "$ROOT_DIR"
 echo "#Build sdaq-worker libs succeeded."
 
 # Build LOG core
-#--------------
+#---------------
 echo "#Build LOG core."
+make clean >/dev/null 2>&1 || true
 make tree
 make -j"$(nproc)"
 sudo make install
 sudo ldconfig
+
+echo "#Post-build pkg-config versions"
+pkg-config --modversion open62541 libcjson nopoll || true
+
+echo "#Post-build pkg-config pc dirs"
+pkg-config --variable=pcfiledir open62541 || true
+pkg-config --variable=pcfiledir libcjson || true
+pkg-config --variable=pcfiledir nopoll || true
