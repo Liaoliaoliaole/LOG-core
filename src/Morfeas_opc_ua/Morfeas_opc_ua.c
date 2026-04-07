@@ -450,6 +450,13 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 					dataValue->hasValue = true;
 				}
+				else if(!strcmp(req_value, "meas")
+					&& (Node_data->interface_type_num == SDAQ || Node_data->interface_type_num == IOBOX))
+				{
+					const float offline_meas = MORFEAS_MEAS_ERROR_OFFLINE;
+					UA_Variant_setScalarCopy(&(dataValue->value), &offline_meas, &UA_TYPES[UA_TYPES_FLOAT]);
+					dataValue->hasValue = true;
+				}
 			}
 			else
 				dataValue->hasValue = false;

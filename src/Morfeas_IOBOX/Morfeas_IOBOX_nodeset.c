@@ -66,9 +66,10 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 {
 	UA_NodeId NodeId;
 	UA_Variant dataValue;
-	char IOBOX_IPv4_addr_str[20], Node_name[30], status_byte = Okay;
+	char IOBOX_IPv4_addr_str[20], Node_name[30];
 	char Node_ID_str[60], Node_ID_child_str[80], Node_ID_child_child_str[100], val_Node_ID_str[160];
-	float nan = NAN; unsigned char negative_one = -1;
+	float error_code = MORFEAS_MEAS_ERROR_OFFLINE;
+	unsigned char negative_one = -1;
 
 	//Msg type from IOBOX_handler
 	switch(type)
@@ -107,7 +108,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 									//Add variables for channels: meas, status, status_value (Linkable)
 									sprintf(Node_name, "IOBOX.%u.RX%hhu.CH%hhu", IPC_msg_dec->IOBOX_report.IOBOX_IPv4, i, j);
 									sprintf(val_Node_ID_str, "%s.meas", Node_name);
-									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &error_code, UA_TYPES_FLOAT);
 									sprintf(val_Node_ID_str, "%s.status", Node_name);
 									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "OFF-Line", UA_TYPES_STRING);
 									sprintf(val_Node_ID_str, "%s.status_byte", Node_name);
@@ -204,6 +205,8 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					sprintf(Node_name, "IOBOX.%u", IPC_msg_dec->IOBOX_data.IOBOX_IPv4);
 					for(unsigned char j=0; j<IOBOX_Amount_of_channels; j++)
 					{
+						float meas_error = MORFEAS_MEAS_ERROR_OFFLINE;
+						unsigned char ch_status_byte = Okay;
 						sprintf(Node_ID_str, "%s.RX%hhu.CH%hhu", Node_name, i+1, j+1);
 						sprintf(val_Node_ID_str, "%s.meas", Node_ID_str);
 						//Check if RX status to check if telemetry is active
@@ -211,10 +214,11 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						{
 							if(IPC_msg_dec->IOBOX_data.RX[i].CH_value[j] >= NO_SENSOR_VALUE)//Check for No sensor
 							{
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &nan, UA_TYPES_FLOAT);
+								meas_error = MORFEAS_MEAS_ERROR_NO_SENSOR;
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &meas_error, UA_TYPES_FLOAT);
 								sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "No sensor", UA_TYPES_STRING);
-								status_byte = Tele_channel_noSensor;
+								ch_status_byte = Tele_channel_noSensor;
 							}
 							else //Sensor okay, update value
 							{
@@ -226,12 +230,14 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 						}//Check success for messages in receivers buffer, if is zero report "Disconnected"
 						else if(!IPC_msg_dec->IOBOX_data.RX[i].success)
 						{
+							meas_error = MORFEAS_MEAS_ERROR_OFFLINE;
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &meas_error, UA_TYPES_FLOAT);
 							sprintf(val_Node_ID_str, "%s.status", Node_ID_str);
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "Disconnected", UA_TYPES_STRING);
-							status_byte = Disconnected;
+							ch_status_byte = Disconnected;
 						}
 						sprintf(val_Node_ID_str, "%s.status_byte", Node_ID_str);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &status_byte, UA_TYPES_BYTE);
+						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &ch_status_byte, UA_TYPES_BYTE);
 					}
 				}
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);

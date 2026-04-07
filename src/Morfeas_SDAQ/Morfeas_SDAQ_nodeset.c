@@ -91,7 +91,11 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 													   UA_TYPES_BYTE);
 					sprintf(Node_ID_str, "%s.meas", Anchor);
 					if(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].status&(1<<No_sensor))
-						IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas = NAN;
+						IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas = MORFEAS_MEAS_ERROR_NO_SENSOR;
+					else if(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].status
+							&& !(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].status&(1<<Out_of_range))
+							&& !(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].status&(1<<Over_range)))
+						IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas = MORFEAS_MEAS_ERROR_UNCLASSIFIED;
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 													   &(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas),
 													   UA_TYPES_FLOAT);

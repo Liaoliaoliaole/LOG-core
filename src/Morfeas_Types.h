@@ -67,6 +67,11 @@ enum status_byte_enum{
 	OFF_line = -1
 };
 
+#define MORFEAS_MEAS_ERROR_OFFLINE (-901.0f)
+#define MORFEAS_MEAS_ERROR_NO_SENSOR (-902.0f)
+#define MORFEAS_MEAS_ERROR_STALL (-903.0f)
+#define MORFEAS_MEAS_ERROR_UNCLASSIFIED (-904.0f)
+
 //Array with strings of the Supported Interface_names.
 extern const char *Morfeas_IPC_handler_type_name[];
 //Arrays with MTI related strings
@@ -353,6 +358,7 @@ struct Channel_curr_meas{
 	float meas;
 	unsigned char unit;
 	unsigned char status;
+	unsigned short timestamp;
 };
 // Data of a list_SDAQs node, used in Morfeas_SDAQ_if
 struct SDAQ_info_entry{
@@ -365,6 +371,10 @@ struct SDAQ_info_entry{
 	GSList *SDAQ_Channels_cal_dates;
 	GSList *SDAQ_Channels_acc_meas;
 	struct Channel_curr_meas *SDAQ_Channels_curr_meas;
+	unsigned short *SDAQ_Channels_last_timestamp;
+	unsigned char *SDAQ_Channels_timestamp_initialized;
+	unsigned char *SDAQ_Channels_stall_cycles;
+	unsigned char *SDAQ_Channels_cycle_seen;
 	time_t last_seen;
 	unsigned failed_reg_RX_CNT;
 	unsigned reg_status:3;

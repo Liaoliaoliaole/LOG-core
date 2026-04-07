@@ -119,6 +119,8 @@ int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function for construction of message for registration or update of a SDAQ
 int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char reg_status, unsigned char amount);
+static int sdaq_status_is_unclassified(unsigned char status);
+static void sdaq_prepare_cycle_measurements(struct SDAQ_info_entry *sdaq_node, SDAQ_meas_msg *ipc_meas);
 
 	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
@@ -387,6 +389,9 @@ int main(int argc, char *argv[])
 							if(SDAQ_data->SDAQ_Channels_curr_meas && sdaq_id_dec->channel_num <= SDAQ_data->SDAQ_info.num_of_ch)
 							{	//Load meas to Current meas buffer
 								memcpy(&(SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1]), meas_dec, sizeof(struct Channel_curr_meas));
+								SDAQ_data->SDAQ_Channels_curr_meas[sdaq_id_dec->channel_num-1].timestamp = meas_dec->timestamp;
+								if(SDAQ_data->SDAQ_Channels_cycle_seen)
+									SDAQ_data->SDAQ_Channels_cycle_seen[sdaq_id_dec->channel_num-1] = 1;
 								if(sdaq_id_dec->channel_num == SDAQ_data->SDAQ_info.num_of_ch)
 								{	//Send measurement through IPC
 									IPC_msg.SDAQ_meas.IPC_msg_type = IPC_SDAQ_meas;
@@ -396,6 +401,7 @@ int main(int argc, char *argv[])
 									memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas),
 											 SDAQ_data->SDAQ_Channels_curr_meas,
 											 sizeof(struct Channel_curr_meas)*SDAQ_data->SDAQ_info.num_of_ch);
+									sdaq_prepare_cycle_measurements(SDAQ_data, &(IPC_msg.SDAQ_meas));
 									IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 								}
 							}
@@ -688,6 +694,61 @@ struct LogBook_entry* new_LogBook_entry()
     return new_node;
 }
 
+static int sdaq_status_is_unclassified(unsigned char status)
+{
+	return status
+		&& !(status & (1<<No_sensor))
+		&& !(status & (1<<Out_of_range))
+		&& !(status & (1<<Over_range));
+}
+
+static void sdaq_prepare_cycle_measurements(struct SDAQ_info_entry *sdaq_node, SDAQ_meas_msg *ipc_meas)
+{
+	unsigned char ch;
+	if(!sdaq_node || !ipc_meas || !sdaq_node->SDAQ_Channels_last_timestamp
+		|| !sdaq_node->SDAQ_Channels_timestamp_initialized
+		|| !sdaq_node->SDAQ_Channels_stall_cycles
+		|| !sdaq_node->SDAQ_Channels_cycle_seen)
+		return;
+
+	for(ch = 0; ch < ipc_meas->Amount_of_channels && ch < SDAQ_MAX_AMOUNT_OF_CHANNELS; ch++)
+	{
+		struct Channel_curr_meas *meas = &(ipc_meas->SDAQ_channel_meas[ch]);
+		unsigned short cur_ts = meas->timestamp;
+		unsigned char status = meas->status;
+
+		if((status & (1<<No_sensor)) || (status & (1<<Out_of_range))
+			|| (status & (1<<Over_range)) || sdaq_status_is_unclassified(status))
+		{
+			sdaq_node->SDAQ_Channels_stall_cycles[ch] = 0;
+		}
+		else if(sdaq_node->SDAQ_Channels_timestamp_initialized[ch])
+		{
+			if(cur_ts == sdaq_node->SDAQ_Channels_last_timestamp[ch])
+			{
+				if(sdaq_node->SDAQ_Channels_stall_cycles[ch] < 0xFF)
+					sdaq_node->SDAQ_Channels_stall_cycles[ch]++;
+			}
+			else
+			{
+				sdaq_node->SDAQ_Channels_last_timestamp[ch] = cur_ts;
+				sdaq_node->SDAQ_Channels_stall_cycles[ch] = 0;
+			}
+		}
+		else if(sdaq_node->SDAQ_Channels_cycle_seen[ch])
+		{
+			sdaq_node->SDAQ_Channels_last_timestamp[ch] = cur_ts;
+			sdaq_node->SDAQ_Channels_timestamp_initialized[ch] = 1;
+			sdaq_node->SDAQ_Channels_stall_cycles[ch] = 0;
+		}
+
+		if(sdaq_node->SDAQ_Channels_stall_cycles[ch] >= 2)
+			meas->meas = MORFEAS_MEAS_ERROR_STALL;
+
+		sdaq_node->SDAQ_Channels_cycle_seen[ch] = 0;
+	}
+}
+
 //Free a node from list SDAQ_Channels_cal_dates
 void free_channel_cal_dates_entry(gpointer node)
 {
@@ -710,6 +771,26 @@ void free_SDAQ_info_entry(gpointer node)
 	{
 		free(node_dec->SDAQ_Channels_curr_meas);
 		node_dec->SDAQ_Channels_curr_meas = NULL;
+	}
+	if(node_dec->SDAQ_Channels_last_timestamp)
+	{
+		free(node_dec->SDAQ_Channels_last_timestamp);
+		node_dec->SDAQ_Channels_last_timestamp = NULL;
+	}
+	if(node_dec->SDAQ_Channels_timestamp_initialized)
+	{
+		free(node_dec->SDAQ_Channels_timestamp_initialized);
+		node_dec->SDAQ_Channels_timestamp_initialized = NULL;
+	}
+	if(node_dec->SDAQ_Channels_stall_cycles)
+	{
+		free(node_dec->SDAQ_Channels_stall_cycles);
+		node_dec->SDAQ_Channels_stall_cycles = NULL;
+	}
+	if(node_dec->SDAQ_Channels_cycle_seen)
+	{
+		free(node_dec->SDAQ_Channels_cycle_seen);
+		node_dec->SDAQ_Channels_cycle_seen = NULL;
 	}
 	g_slice_free(struct SDAQ_info_entry, node);
 }
@@ -1168,7 +1249,23 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 			//Release and Allocate memory for the Channels_current_meas
 			if(sdaq_node->SDAQ_Channels_curr_meas)
 				free(sdaq_node->SDAQ_Channels_curr_meas);
+			if(sdaq_node->SDAQ_Channels_last_timestamp)
+				free(sdaq_node->SDAQ_Channels_last_timestamp);
+			if(sdaq_node->SDAQ_Channels_timestamp_initialized)
+				free(sdaq_node->SDAQ_Channels_timestamp_initialized);
+			if(sdaq_node->SDAQ_Channels_stall_cycles)
+				free(sdaq_node->SDAQ_Channels_stall_cycles);
+			if(sdaq_node->SDAQ_Channels_cycle_seen)
+				free(sdaq_node->SDAQ_Channels_cycle_seen);
 			if(!(sdaq_node->SDAQ_Channels_curr_meas = calloc(info_dec->num_of_ch, sizeof(struct Channel_curr_meas))))
+			{
+				fprintf(stderr,"Memory error!!!\n");
+				exit(EXIT_FAILURE);
+			}
+			if(!(sdaq_node->SDAQ_Channels_last_timestamp = calloc(info_dec->num_of_ch, sizeof(unsigned short)))
+				|| !(sdaq_node->SDAQ_Channels_timestamp_initialized = calloc(info_dec->num_of_ch, sizeof(unsigned char)))
+				|| !(sdaq_node->SDAQ_Channels_stall_cycles = calloc(info_dec->num_of_ch, sizeof(unsigned char)))
+				|| !(sdaq_node->SDAQ_Channels_cycle_seen = calloc(info_dec->num_of_ch, sizeof(unsigned char))))
 			{
 				fprintf(stderr,"Memory error!!!\n");
 				exit(EXIT_FAILURE);
