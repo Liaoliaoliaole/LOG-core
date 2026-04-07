@@ -42,6 +42,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Defs for MDAQ_handler
 #define MDAQ_Amount_of_Channels 8
 
+#include <stdint.h>
+
 #include <gmodule.h>
 #include <glib.h>
 
@@ -314,6 +316,20 @@ struct Morfeas_NOX_if_stats{
 
 /*Structs for SDAQ_handler*/
 //Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
+#define SDAQ_address_owner_slots 64
+
+enum SDAQ_address_owner_state{
+	SDAQ_owner_none = 0,
+	SDAQ_owner_online,
+	SDAQ_owner_cached
+};
+
+struct SDAQ_address_owner{
+	unsigned int SDAQ_sn;
+	uint64_t valid_until;
+	unsigned char state;
+};
+
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
 	int FIFO_fd;
@@ -330,6 +346,7 @@ struct Morfeas_SDAQ_if_stats{
 	unsigned char incomplete_SDAQs;// Amount of incomplete SDAQ.
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
+	struct SDAQ_address_owner address_owners[SDAQ_address_owner_slots];
 };
 // Data of a current_measurements node
 struct Channel_curr_meas{
@@ -372,6 +389,7 @@ struct Channel_acc_meas_entry{
 struct LogBook_entry{
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
+	uint64_t valid_until;
 }__attribute__((packed, aligned(1)));
 // struct of LogBook entry and it's Checksum, used in Morfeas_SDAQ_if
 struct LogBook{

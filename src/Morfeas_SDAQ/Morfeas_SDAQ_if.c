@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MAX_CANBus_FPS 3401.4 //Maximum amount of frames per sec for 500Kbaud
 #define Ready_to_reg_mask 0x85 //Mask for SDAQ state: standby, no error and normal mode
 #define SDAQ_ERROR_mask (1<<2) //Mask for SDAQ Error bit check
+#define SDAQ_address_cache_TTL_sec (14ULL*24ULL*60ULL*60ULL)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,6 +54,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <limits.h>
 
 //Include Functions implementation header
 #include "../Supplementary/Morfeas_run_check.h"
@@ -73,6 +75,16 @@ static volatile struct Morfeas_SDAQ_if_flags{
 }flags = {.run=1,0};
 static struct timespec tstart;
 static int CAN_socket_num;
+
+struct Legacy_LogBook_entry{
+	unsigned int SDAQ_sn;
+	unsigned char SDAQ_address;
+}__attribute__((packed, aligned(1)));
+
+struct Legacy_LogBook{
+	struct Legacy_LogBook_entry payload;
+	unsigned char checksum;
+}__attribute__((packed, aligned(1)));
 
 
 /* Local function (declaration)
@@ -111,6 +123,22 @@ int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address
 	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
 void free_LogBook_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list LogBook
+gint SDAQ_info_entry_find_address (gconstpointer node, gconstpointer arg);
+gint SDAQ_info_entry_find_serial_number (gconstpointer node, gconstpointer arg);
+gint LogBook_entry_find_serial_number (gconstpointer node, gconstpointer arg);
+gint LogBook_entry_find_address (gconstpointer node, gconstpointer arg);
+uint64_t cache_valid_until_from(time_t now);
+void clear_address_owner_table(struct Morfeas_SDAQ_if_stats *stats);
+void set_address_owner(struct Morfeas_SDAQ_if_stats *stats, unsigned char address, unsigned int sn, unsigned char state, uint64_t valid_until);
+void clear_address_owner_by_sn(struct Morfeas_SDAQ_if_stats *stats, unsigned int sn);
+bool address_is_available(struct Morfeas_SDAQ_if_stats *stats, unsigned char address, unsigned int sn);
+unsigned char find_first_available_address(struct Morfeas_SDAQ_if_stats *stats);
+struct LogBook_entry *cache_find_by_sn(struct Morfeas_SDAQ_if_stats *stats, unsigned int sn);
+struct LogBook_entry *cache_find_by_address(struct Morfeas_SDAQ_if_stats *stats, unsigned char address);
+void cache_upsert_entry(struct Morfeas_SDAQ_if_stats *stats, unsigned int sn, unsigned char address, uint64_t valid_until);
+bool cache_remove_expired_entries(struct Morfeas_SDAQ_if_stats *stats, time_t now);
+void rebuild_address_owner_table_from_cache(struct Morfeas_SDAQ_if_stats *stats, time_t now);
+bool cache_entry_is_valid(const struct LogBook_entry *entry, time_t now);
 
 int main(int argc, char *argv[])
 {
@@ -691,6 +719,151 @@ void free_LogBook_entry(gpointer node)
 	g_slice_free(struct LogBook_entry, node);
 }
 
+uint64_t cache_valid_until_from(time_t now)
+{
+	return (uint64_t)now + SDAQ_address_cache_TTL_sec;
+}
+
+bool cache_entry_is_valid(const struct LogBook_entry *entry, time_t now)
+{
+	return entry && entry->valid_until > (uint64_t)now;
+}
+
+void clear_address_owner_table(struct Morfeas_SDAQ_if_stats *stats)
+{
+	memset(stats->address_owners, 0, sizeof(stats->address_owners));
+}
+
+void clear_address_owner_by_sn(struct Morfeas_SDAQ_if_stats *stats, unsigned int sn)
+{
+	unsigned char address;
+	for(address=1; address<Parking_address && address<SDAQ_address_owner_slots; address++)
+	{
+		if(stats->address_owners[address].state && stats->address_owners[address].SDAQ_sn == sn)
+			memset(&(stats->address_owners[address]), 0, sizeof(stats->address_owners[address]));
+	}
+}
+
+void set_address_owner(struct Morfeas_SDAQ_if_stats *stats, unsigned char address, unsigned int sn, unsigned char state, uint64_t valid_until)
+{
+	if(!address || address >= Parking_address || address >= SDAQ_address_owner_slots)
+		return;
+	clear_address_owner_by_sn(stats, sn);
+	stats->address_owners[address].SDAQ_sn = sn;
+	stats->address_owners[address].state = state;
+	stats->address_owners[address].valid_until = valid_until;
+}
+
+bool address_is_available(struct Morfeas_SDAQ_if_stats *stats, unsigned char address, unsigned int sn)
+{
+	if(!address || address >= Parking_address || address >= SDAQ_address_owner_slots)
+		return false;
+	return !(stats->address_owners[address].state) || stats->address_owners[address].SDAQ_sn == sn;
+}
+
+unsigned char find_first_available_address(struct Morfeas_SDAQ_if_stats *stats)
+{
+	unsigned char address;
+	for(address=1; address<Parking_address && address<SDAQ_address_owner_slots; address++)
+		if(!(stats->address_owners[address].state))
+			return address;
+	return 0;
+}
+
+struct LogBook_entry *cache_find_by_sn(struct Morfeas_SDAQ_if_stats *stats, unsigned int sn)
+{
+	GSList *node = g_slist_find_custom(stats->LogBook, &sn, LogBook_entry_find_serial_number);
+	return node ? node->data : NULL;
+}
+
+struct LogBook_entry *cache_find_by_address(struct Morfeas_SDAQ_if_stats *stats, unsigned char address)
+{
+	GSList *node = g_slist_find_custom(stats->LogBook, &address, LogBook_entry_find_address);
+	return node ? node->data : NULL;
+}
+
+void cache_upsert_entry(struct Morfeas_SDAQ_if_stats *stats, unsigned int sn, unsigned char address, uint64_t valid_until)
+{
+	GSList *node = stats->LogBook, *next;
+	struct LogBook_entry *entry = NULL;
+
+	while(node)
+	{
+		struct LogBook_entry *iter_entry = node->data;
+		next = node->next;
+		if(iter_entry)
+		{
+			if(iter_entry->SDAQ_sn == sn)
+			{
+				if(!entry)
+					entry = iter_entry;
+				else
+				{
+					free_LogBook_entry(iter_entry);
+					stats->LogBook = g_slist_delete_link(stats->LogBook, node);
+				}
+			}
+			else if(iter_entry->SDAQ_address == address)
+			{
+				free_LogBook_entry(iter_entry);
+				stats->LogBook = g_slist_delete_link(stats->LogBook, node);
+			}
+		}
+		node = next;
+	}
+
+	if(!entry)
+	{
+		entry = new_LogBook_entry();
+		if(!entry)
+		{
+			fprintf(stderr,"Memory Error!!!\n");
+			exit(EXIT_FAILURE);
+		}
+		stats->LogBook = g_slist_append(stats->LogBook, entry);
+	}
+
+	entry->SDAQ_sn = sn;
+	entry->SDAQ_address = address;
+	entry->valid_until = valid_until;
+}
+
+bool cache_remove_expired_entries(struct Morfeas_SDAQ_if_stats *stats, time_t now)
+{
+	GSList *node = stats->LogBook, *next;
+	bool changed = false;
+
+	while(node)
+	{
+		struct LogBook_entry *entry = node->data;
+		next = node->next;
+		if(entry && !cache_entry_is_valid(entry, now))
+		{
+			if(entry->SDAQ_address < SDAQ_address_owner_slots
+			   && stats->address_owners[entry->SDAQ_address].state == SDAQ_owner_cached
+			   && stats->address_owners[entry->SDAQ_address].SDAQ_sn == entry->SDAQ_sn)
+				memset(&(stats->address_owners[entry->SDAQ_address]), 0, sizeof(stats->address_owners[entry->SDAQ_address]));
+			free_LogBook_entry(entry);
+			stats->LogBook = g_slist_delete_link(stats->LogBook, node);
+			changed = true;
+		}
+		node = next;
+	}
+	return changed;
+}
+
+void rebuild_address_owner_table_from_cache(struct Morfeas_SDAQ_if_stats *stats, time_t now)
+{
+	GSList *node;
+	clear_address_owner_table(stats);
+	for(node = stats->LogBook; node; node = node->next)
+	{
+		struct LogBook_entry *entry = node->data;
+		if(entry && cache_entry_is_valid(entry, now) && entry->SDAQ_address < SDAQ_address_owner_slots)
+			set_address_owner(stats, entry->SDAQ_address, entry->SDAQ_sn, SDAQ_owner_cached, entry->valid_until);
+	}
+}
+
 /*
 	Comparing function used in g_slist_find_custom, comp arg address to node's Address.
 */
@@ -727,7 +900,7 @@ gint LogBook_entry_find_serial_number (gconstpointer node, gconstpointer arg)
 gint LogBook_entry_find_address (gconstpointer node, gconstpointer arg)
 {
 	const unsigned char *arg_t = arg;
-	struct SDAQ_info_entry *node_dec = (struct SDAQ_info_entry *) node;
+	struct LogBook_entry *node_dec = (struct LogBook_entry *) node;
 	return node_dec->SDAQ_address == *arg_t ? 0 : 1;
 }
 
@@ -736,10 +909,18 @@ gint LogBook_entry_find_address (gconstpointer node, gconstpointer arg)
 */
 gint SDAQ_info_entry_cmp (gconstpointer a, gconstpointer b)
 {
-	if(((struct SDAQ_info_entry *)a)->SDAQ_address != ((struct SDAQ_info_entry *)b)->SDAQ_address)
-		return (((struct SDAQ_info_entry *)a)->SDAQ_address <= ((struct SDAQ_info_entry *)b)->SDAQ_address) ?  0 : 1;
-	else
-		return (((struct SDAQ_info_entry *)a)->SDAQ_status.dev_sn <= ((struct SDAQ_info_entry *)b)->SDAQ_status.dev_sn) ?  0 : 1;
+	const struct SDAQ_info_entry *node_a = a;
+	const struct SDAQ_info_entry *node_b = b;
+
+	if(node_a->SDAQ_address < node_b->SDAQ_address)
+		return -1;
+	if(node_a->SDAQ_address > node_b->SDAQ_address)
+		return 1;
+	if(node_a->SDAQ_status.dev_sn < node_b->SDAQ_status.dev_sn)
+		return -1;
+	if(node_a->SDAQ_status.dev_sn > node_b->SDAQ_status.dev_sn)
+		return 1;
+	return 0;
 }
 
 //Logbook read and write from file;
@@ -748,103 +929,138 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 	FILE *fp;
 	GSList *LogBook_node = stats->LogBook;
 	struct LogBook_entry *node_data;
-	struct LogBook data;
-	size_t read_bytes;
 	unsigned char checksum;
+	time_t now = time(NULL);
 
 	if(!strcmp(mode, "r"))
 	{
+		long file_size;
+		bool use_legacy_format = false, rewrite_needed = false;
+
 		if(stats->LogBook)
 		{
 			g_slist_free_full(stats->LogBook, free_LogBook_entry);
 			stats->LogBook = NULL;
 		}
-		fp=fopen(stats->LogBook_file_path, mode);
-		if(fp)
+		clear_address_owner_table(stats);
+		fp=fopen(stats->LogBook_file_path, "rb");
+		if(!fp)
+			return EXIT_FAILURE;
+
+		if(fseek(fp, 0, SEEK_END))
 		{
-			do{
-				read_bytes = fread(&data, 1, sizeof(data), fp);
-				if(read_bytes == sizeof(struct LogBook))
-				{
-					checksum = Checksum(&(data.payload), sizeof(data.payload));
-					if(!(data.checksum ^ checksum))
-					{
-						if(!(node_data = new_LogBook_entry()))
-						{
-							fprintf(stderr,"Memory Error!!!\n");
-							exit(EXIT_FAILURE);
-						}
-						memcpy(node_data, &(data.payload), sizeof(data.payload));
-						stats->LogBook = g_slist_append(stats->LogBook, node_data);
-					}
-					else
-					{
-						g_slist_free_full(stats->LogBook, free_LogBook_entry);
-						stats->LogBook = NULL;
-						if((fp = freopen(stats->LogBook_file_path, "w", fp)))
-							fclose(fp);
-						return -1;
-					}
-				}
-			}while(read_bytes == sizeof(struct LogBook));
 			fclose(fp);
+			return EXIT_FAILURE;
+		}
+		file_size = ftell(fp);
+		if(file_size < 0)
+		{
+			fclose(fp);
+			return EXIT_FAILURE;
+		}
+		rewind(fp);
+		if(!file_size)
+		{
+			fclose(fp);
+			return EXIT_SUCCESS;
+		}
+
+		if(file_size % (long)sizeof(struct LogBook) == 0)
+			use_legacy_format = false;
+		else if(file_size % (long)sizeof(struct Legacy_LogBook) == 0)
+		{
+			use_legacy_format = true;
+			rewrite_needed = true;
 		}
 		else
-			return EXIT_FAILURE;
+		{
+			fclose(fp);
+			if((fp = fopen(stats->LogBook_file_path, "w")))
+				fclose(fp);
+			return -1;
+		}
+
+		if(use_legacy_format)
+		{
+			struct Legacy_LogBook legacy_data;
+			while(fread(&legacy_data, 1, sizeof(legacy_data), fp) == sizeof(legacy_data))
+			{
+				checksum = Checksum(&(legacy_data.payload), sizeof(legacy_data.payload));
+				if(legacy_data.checksum ^ checksum)
+				{
+					fclose(fp);
+					g_slist_free_full(stats->LogBook, free_LogBook_entry);
+					stats->LogBook = NULL;
+					if((fp = fopen(stats->LogBook_file_path, "w")))
+						fclose(fp);
+					return -1;
+				}
+			}
+		}
+		else
+		{
+			struct LogBook data;
+			while(fread(&data, 1, sizeof(data), fp) == sizeof(data))
+			{
+				checksum = Checksum(&(data.payload), sizeof(data.payload));
+				if(data.checksum ^ checksum)
+				{
+					fclose(fp);
+					g_slist_free_full(stats->LogBook, free_LogBook_entry);
+					stats->LogBook = NULL;
+					if((fp = fopen(stats->LogBook_file_path, "w")))
+						fclose(fp);
+					return -1;
+				}
+				if(cache_entry_is_valid(&(data.payload), now))
+					cache_upsert_entry(stats, data.payload.SDAQ_sn, data.payload.SDAQ_address, data.payload.valid_until);
+				else
+					rewrite_needed = true;
+			}
+		}
+		fclose(fp);
+		if(use_legacy_format)
+		{
+			/* Legacy LogBook content is intentionally not migrated.
+			 * The new cache starts empty and is rebuilt only by devices
+			 * that are currently online and successfully register again.
+			 */
+			LogBook_file(stats, "w");
+			return EXIT_SUCCESS;
+		}
+		if(cache_remove_expired_entries(stats, now))
+			rewrite_needed = true;
+		rebuild_address_owner_table_from_cache(stats, now);
+		if(rewrite_needed)
+			LogBook_file(stats, "w");
+		return EXIT_SUCCESS;
 	}
 	else if(!strcmp(mode, "w"))
-	{	//Check if list LogBook have elements
-		if(LogBook_node)
+	{
+		fp=fopen(stats->LogBook_file_path, "w");
+		if(!fp)
 		{
-			fp=fopen(stats->LogBook_file_path, mode);
-			if(fp)
-			{	//Store all the nodes of list LogBook in file
-				while(LogBook_node)
-				{
-					node_data = LogBook_node->data;
-					if(node_data)
-					{
-						checksum = Checksum(node_data, sizeof(struct LogBook_entry));
-						fwrite (node_data, 1, sizeof(struct LogBook_entry), fp);
-						fwrite (&checksum, 1, sizeof(checksum), fp);
-					}
-					LogBook_node = LogBook_node -> next;//Next node
-				}
-				fclose(fp);
-			}
-			else
-			{
-				Logger("Error on LogBook file Write !!!!\n");
-				return EXIT_FAILURE;
-			}
+			Logger("Error on LogBook file Write !!!!\n");
+			return EXIT_FAILURE;
 		}
+		cache_remove_expired_entries(stats, now);
+		while(LogBook_node)
+		{
+			node_data = LogBook_node->data;
+			if(node_data && cache_entry_is_valid(node_data, now))
+			{
+				struct LogBook data = {.payload = *node_data, .checksum = 0};
+				data.checksum = Checksum(&(data.payload), sizeof(data.payload));
+				fwrite(&data, 1, sizeof(data), fp);
+			}
+			LogBook_node = LogBook_node -> next;//Next node
+		}
+		fclose(fp);
+		return EXIT_SUCCESS;
 	}
 	else if(!strcmp(mode, "a"))
-	{	//Check if list_SDAQs have elements
-		if(stats->list_SDAQs)
-		{
-			while(LogBook_node->next)//Find last node
-				LogBook_node = LogBook_node->next;//Next node
-			fp=fopen(stats->LogBook_file_path, mode);
-			if(fp)
-			{
-				node_data = LogBook_node->data;
-				checksum = Checksum(node_data, sizeof(struct LogBook_entry));
-				//Store last node of list LogBook in file
-				fwrite (node_data, 1, sizeof(struct LogBook_entry), fp);
-				fwrite (&checksum, 1, sizeof(checksum), fp);
-				fclose(fp);
-			}
-			else
-			{
-				Logger("Error on LogBook file Appending !!!!\n");
-				return EXIT_FAILURE;
-			}
-		}
-		else
-			return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
+		return LogBook_file(stats, "w");
+	return EXIT_FAILURE;
 }
 //Function that find and return the amount of incomplete (incomplete info and/or dates) nodes.
 int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
@@ -1161,24 +1377,26 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	unsigned char address_test;
 	struct SDAQ_info_entry *list_SDAQ_node_data;
 	struct LogBook_entry *LogBook_node_data;
-	GSList *check_is_in_list_SDAQ, *check_is_in_LogBook;
+	GSList *check_is_in_list_SDAQ;
+	time_t now = time(NULL);
 
-	check_is_in_LogBook = g_slist_find_custom(stats->LogBook, &(status_dec->dev_sn), LogBook_entry_find_serial_number);
+	cache_remove_expired_entries(stats, now);
+	LogBook_node_data = cache_find_by_sn(stats, status_dec->dev_sn);
 	check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
 	if(check_is_in_list_SDAQ)//SDAQ is in list_SDAQ
 	{
 		list_SDAQ_node_data = check_is_in_list_SDAQ->data;
 		time(&(list_SDAQ_node_data->last_seen));//Update last_seen for the SDAQ entry
 		memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status)); //Update SDAQ's status value
+		cache_upsert_entry(stats, status_dec->dev_sn, list_SDAQ_node_data->SDAQ_address, cache_valid_until_from(now));
+		set_address_owner(stats, list_SDAQ_node_data->SDAQ_address, status_dec->dev_sn, SDAQ_owner_online, 0);
 		if(list_SDAQ_node_data->SDAQ_address != sdaq_id_dec->device_addr)//If TRUE, set back to the node_data->SDAQ_address
 			SetDeviceAddress(socket_fd, list_SDAQ_node_data->SDAQ_status.dev_sn, list_SDAQ_node_data->SDAQ_address);
 		return list_SDAQ_node_data;
 	}
-	else if(check_is_in_LogBook)//SDAQ is not in list_SDAQ, but is recorded in LogBook (Old Known entry)
+	else if(LogBook_node_data)//SDAQ is not in list_SDAQ, but is recorded in LogBook (Old Known entry)
 	{
-		LogBook_node_data = check_is_in_LogBook->data;
-		check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(LogBook_node_data->SDAQ_address), SDAQ_info_entry_find_address);
-		if(!check_is_in_list_SDAQ)//If TRUE, make new entry to list_SDAQ with address from LogBook and then configured SDAQ
+		if(address_is_available(stats, LogBook_node_data->SDAQ_address, status_dec->dev_sn))//Prefer cached address when still reserved for same SN or free
 		{	//Make new entry to list_SDAQ with address from LogBook
 			list_SDAQ_node_data = new_SDAQ_info_entry();
 			if(list_SDAQ_node_data)
@@ -1187,6 +1405,9 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
 				time(&(list_SDAQ_node_data->last_seen));
 				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
+				set_address_owner(stats, list_SDAQ_node_data->SDAQ_address, status_dec->dev_sn, SDAQ_owner_online, 0);
+				cache_upsert_entry(stats, status_dec->dev_sn, list_SDAQ_node_data->SDAQ_address, cache_valid_until_from(now));
+				LogBook_file(stats, "w");
 				stats->detected_SDAQs++;
 				if(sdaq_id_dec->device_addr != LogBook_node_data->SDAQ_address)//Check and configure SDAQ with Address from LogBook
 					SetDeviceAddress(socket_fd, status_dec->dev_sn, LogBook_node_data->SDAQ_address);
@@ -1200,29 +1421,26 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 		}
 		else//Address from record on LogBook is currently used
 		{	//Try to find an available address
-			for(address_test=1;address_test<Parking_address;address_test++)
+			if((address_test = find_first_available_address(stats)))
 			{
-				if(!g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address))
+				list_SDAQ_node_data = new_SDAQ_info_entry();
+				if(list_SDAQ_node_data)
 				{
-					list_SDAQ_node_data = new_SDAQ_info_entry();
-					if(list_SDAQ_node_data)
-					{	//Load SDAQ data on new list_SDAQ entry
-						list_SDAQ_node_data->SDAQ_address = address_test;
-						memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
-						time(&(list_SDAQ_node_data->last_seen));
-						stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
-						//Update LogBook with new address
-						LogBook_node_data->SDAQ_address = address_test;
-						SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
-						LogBook_file(stats, "w");
-						stats->detected_SDAQs++;
-						return list_SDAQ_node_data;
-					}
-					else
-					{
-						fprintf(stderr,"Memory error!\n");
-						exit(EXIT_FAILURE);
-					}
+					list_SDAQ_node_data->SDAQ_address = address_test;
+					memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
+					time(&(list_SDAQ_node_data->last_seen));
+					stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
+					cache_upsert_entry(stats, status_dec->dev_sn, address_test, cache_valid_until_from(now));
+					set_address_owner(stats, address_test, status_dec->dev_sn, SDAQ_owner_online, 0);
+					SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
+					LogBook_file(stats, "w");
+					stats->detected_SDAQs++;
+					return list_SDAQ_node_data;
+				}
+				else
+				{
+					fprintf(stderr,"Memory error!\n");
+					exit(EXIT_FAILURE);
 				}
 			}
 			//If not any address available set SDAQ to park
@@ -1233,39 +1451,30 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	}
 	else //Completely unknown SDAQ
 	{
-		//Check if the current address of the SDAQ is not conflict with any other in list_SDAQ, if not use it as it's pre addressed
+		//Check if the current address of the SDAQ is not conflict with any active or cached owner. Use current address only as hint.
 		address_test = sdaq_id_dec->device_addr;
-		if(g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address) || address_test==Parking_address)
+		if(address_test==Parking_address || !address_is_available(stats, address_test, status_dec->dev_sn))
 		{
-			if(g_slist_length(stats->list_SDAQs)<Parking_address)
+			if((address_test = find_first_available_address(stats)))
 			{	//Try to find an available address
-				for(address_test=1;address_test<Parking_address;address_test++)
+				list_SDAQ_node_data = new_SDAQ_info_entry();
+				if(list_SDAQ_node_data)
 				{
-					if(!g_slist_find_custom(stats->list_SDAQs, &address_test, SDAQ_info_entry_find_address))
-					{
-						list_SDAQ_node_data = new_SDAQ_info_entry();
-						LogBook_node_data = new_LogBook_entry();
-						if(list_SDAQ_node_data && LogBook_node_data)
-						{	//Load SDAQ data on new list_SDAQ entry
-							list_SDAQ_node_data->SDAQ_address = address_test;
-							memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
-							time(&(list_SDAQ_node_data->last_seen));
-							stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
-							//Update LogBook with new address
-							LogBook_node_data->SDAQ_address = address_test;
-							LogBook_node_data->SDAQ_sn = status_dec->dev_sn;
-							stats->LogBook = g_slist_append(stats->LogBook, LogBook_node_data);
-							LogBook_file(stats, "a");
-							SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
-							stats->detected_SDAQs++;
-							return list_SDAQ_node_data;
-						}
-						else
-						{
-							fprintf(stderr,"Memory error!\n");
-							exit(EXIT_FAILURE);
-						}
-					}
+					list_SDAQ_node_data->SDAQ_address = address_test;
+					memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
+					time(&(list_SDAQ_node_data->last_seen));
+					stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
+					cache_upsert_entry(stats, status_dec->dev_sn, address_test, cache_valid_until_from(now));
+					set_address_owner(stats, address_test, status_dec->dev_sn, SDAQ_owner_online, 0);
+					LogBook_file(stats, "w");
+					SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
+					stats->detected_SDAQs++;
+					return list_SDAQ_node_data;
+				}
+				else
+				{
+					fprintf(stderr,"Memory error!\n");
+					exit(EXIT_FAILURE);
 				}
 			}
 			//If not any address available set SDAQ to park
@@ -1276,18 +1485,15 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 		else //Register the pre-address SDAQ.
 		{
 			list_SDAQ_node_data = new_SDAQ_info_entry();
-			LogBook_node_data = new_LogBook_entry();
-			if(list_SDAQ_node_data && LogBook_node_data)
+			if(list_SDAQ_node_data)
 			{	//Load SDAQ data on new list_SDAQ entry
 				list_SDAQ_node_data->SDAQ_address = address_test;
 				memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
 				time(&(list_SDAQ_node_data->last_seen));
 				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
-				//Update LogBook with new address
-				LogBook_node_data->SDAQ_address = address_test;
-				LogBook_node_data->SDAQ_sn = status_dec->dev_sn;
-				stats->LogBook = g_slist_append(stats->LogBook, LogBook_node_data);
-				LogBook_file(stats, "a");
+				cache_upsert_entry(stats, status_dec->dev_sn, address_test, cache_valid_until_from(now));
+				set_address_owner(stats, address_test, status_dec->dev_sn, SDAQ_owner_online, 0);
+				LogBook_file(stats, "w");
 				stats->detected_SDAQs++;
 				return list_SDAQ_node_data;
 			}
@@ -1307,7 +1513,10 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 	struct SDAQ_info_entry *sdaq_node;
 	GSList *check_node;
 	time_t now=time(NULL);
-	bool SDAQs_to_be_removed=false;
+	bool SDAQs_to_be_removed=false, cache_changed=false;
+
+	if(cache_remove_expired_entries(stats, now))
+		cache_changed = true;
 
 	if(stats->list_SDAQs)//Check if list_SDAQs have elements
 	{	//Check for dead SDAQs
@@ -1319,10 +1528,13 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 				sdaq_node = check_node->data;
 				if((now - sdaq_node->last_seen) > LIFE_TIME)
 				{
+					uint64_t valid_until = cache_valid_until_from(now);
 					stats->detected_SDAQs--;
 					Logger("%s:%hhu (S/N:%u) removed from Device list\n", dev_type_str[sdaq_node->SDAQ_status.dev_type],
 																		  sdaq_node->SDAQ_address,
 																		  sdaq_node->SDAQ_status.dev_sn);
+					cache_upsert_entry(stats, sdaq_node->SDAQ_status.dev_sn, sdaq_node->SDAQ_address, valid_until);
+					set_address_owner(stats, sdaq_node->SDAQ_address, sdaq_node->SDAQ_status.dev_sn, SDAQ_owner_cached, valid_until);
 					//Send info of the removed SDAQ through IPC
 					IPC_msg.SDAQ_clean.IPC_msg_type = IPC_SDAQ_clean_up;
 					sprintf(IPC_msg.SDAQ_clean.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
@@ -1333,6 +1545,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 					free_SDAQ_info_entry(check_node->data);
 					check_node->data = NULL;
 					SDAQs_to_be_removed = true;
+					cache_changed = true;
 				}
 			}
 			check_node = check_node -> next;//next node
@@ -1341,8 +1554,10 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 		if(SDAQs_to_be_removed)
 			stats->list_SDAQs = g_slist_remove_all(stats->list_SDAQs, NULL);
 	}
-	else
+	else if(!cache_changed)
 		return EXIT_FAILURE;
+	if(cache_changed)
+		LogBook_file(stats, "w");
 	return EXIT_SUCCESS;
 }
 
