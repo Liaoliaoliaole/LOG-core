@@ -86,6 +86,17 @@ struct Legacy_LogBook{
 	unsigned char checksum;
 }__attribute__((packed, aligned(1)));
 
+struct LogBook_disk_entry{
+	unsigned int SDAQ_sn;
+	unsigned char SDAQ_address;
+	uint64_t valid_until;
+}__attribute__((packed, aligned(1)));
+
+struct LogBook_disk{
+	struct LogBook_disk_entry payload;
+	unsigned char checksum;
+}__attribute__((packed, aligned(1)));
+
 
 /* Local function (declaration)
  * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success. Except of other notice
@@ -141,6 +152,8 @@ void cache_upsert_entry(struct Morfeas_SDAQ_if_stats *stats, unsigned int sn, un
 bool cache_remove_expired_entries(struct Morfeas_SDAQ_if_stats *stats, time_t now);
 void rebuild_address_owner_table_from_cache(struct Morfeas_SDAQ_if_stats *stats, time_t now);
 bool cache_entry_is_valid(const struct LogBook_entry *entry, time_t now);
+bool logbook_validate_new_format(FILE *fp, long file_size);
+bool logbook_validate_legacy_format(FILE *fp, long file_size);
 
 int main(int argc, char *argv[])
 {
@@ -810,6 +823,42 @@ bool cache_entry_is_valid(const struct LogBook_entry *entry, time_t now)
 	return entry && entry->valid_until > (uint64_t)now;
 }
 
+bool logbook_validate_new_format(FILE *fp, long file_size)
+{
+	struct LogBook_disk data;
+	unsigned char checksum;
+
+	if(file_size <= 0 || file_size % (long)sizeof(struct LogBook_disk))
+		return false;
+	rewind(fp);
+	while(fread(&data, 1, sizeof(data), fp) == sizeof(data))
+	{
+		checksum = Checksum(&(data.payload), sizeof(data.payload));
+		if(data.checksum ^ checksum)
+			return false;
+	}
+	rewind(fp);
+	return true;
+}
+
+bool logbook_validate_legacy_format(FILE *fp, long file_size)
+{
+	struct Legacy_LogBook legacy_data;
+	unsigned char checksum;
+
+	if(file_size <= 0 || file_size % (long)sizeof(struct Legacy_LogBook))
+		return false;
+	rewind(fp);
+	while(fread(&legacy_data, 1, sizeof(legacy_data), fp) == sizeof(legacy_data))
+	{
+		checksum = Checksum(&(legacy_data.payload), sizeof(legacy_data.payload));
+		if(legacy_data.checksum ^ checksum)
+			return false;
+	}
+	rewind(fp);
+	return true;
+}
+
 void clear_address_owner_table(struct Morfeas_SDAQ_if_stats *stats)
 {
 	memset(stats->address_owners, 0, sizeof(stats->address_owners));
@@ -1016,7 +1065,8 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 	if(!strcmp(mode, "r"))
 	{
 		long file_size;
-		bool use_legacy_format = false, rewrite_needed = false;
+			bool use_legacy_format = false, rewrite_needed = false;
+			bool new_size_match, legacy_size_match, new_valid, legacy_valid;
 
 		if(stats->LogBook)
 		{
@@ -1046,43 +1096,45 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 			return EXIT_SUCCESS;
 		}
 
-		if(file_size % (long)sizeof(struct LogBook) == 0)
-			use_legacy_format = false;
-		else if(file_size % (long)sizeof(struct Legacy_LogBook) == 0)
-		{
-			use_legacy_format = true;
-			rewrite_needed = true;
-		}
-		else
+			new_size_match = !(file_size % (long)sizeof(struct LogBook_disk));
+			legacy_size_match = !(file_size % (long)sizeof(struct Legacy_LogBook));
+		if(!new_size_match && !legacy_size_match)
 		{
 			fclose(fp);
 			if((fp = fopen(stats->LogBook_file_path, "w")))
 				fclose(fp);
 			return -1;
 		}
+		new_valid = new_size_match && logbook_validate_new_format(fp, file_size);
+		legacy_valid = legacy_size_match && logbook_validate_legacy_format(fp, file_size);
+
+		if(!new_valid && !legacy_valid)
+		{
+			fclose(fp);
+			if((fp = fopen(stats->LogBook_file_path, "w")))
+				fclose(fp);
+			return -1;
+		}
+		if(legacy_valid && !new_valid)
+		{
+			use_legacy_format = true;
+			rewrite_needed = true;
+		}
+		else
+			use_legacy_format = false;
 
 		if(use_legacy_format)
 		{
 			struct Legacy_LogBook legacy_data;
-			while(fread(&legacy_data, 1, sizeof(legacy_data), fp) == sizeof(legacy_data))
-			{
-				checksum = Checksum(&(legacy_data.payload), sizeof(legacy_data.payload));
-				if(legacy_data.checksum ^ checksum)
-				{
-					fclose(fp);
-					g_slist_free_full(stats->LogBook, free_LogBook_entry);
-					stats->LogBook = NULL;
-					if((fp = fopen(stats->LogBook_file_path, "w")))
-						fclose(fp);
-					return -1;
-				}
-			}
+			while(fread(&legacy_data, 1, sizeof(legacy_data), fp) == sizeof(legacy_data)) {}
 		}
 		else
 		{
-			struct LogBook data;
+			struct LogBook_disk data;
 			while(fread(&data, 1, sizeof(data), fp) == sizeof(data))
 			{
+				struct LogBook_entry cache_entry;
+				uint64_t valid_until;
 				checksum = Checksum(&(data.payload), sizeof(data.payload));
 				if(data.checksum ^ checksum)
 				{
@@ -1093,8 +1145,13 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 						fclose(fp);
 					return -1;
 				}
-				if(cache_entry_is_valid(&(data.payload), now))
-					cache_upsert_entry(stats, data.payload.SDAQ_sn, data.payload.SDAQ_address, data.payload.valid_until);
+				/* packed disk layout may be unaligned on ARMv7, read with memcpy */
+				memcpy(&valid_until, &(data.payload.valid_until), sizeof(valid_until));
+				cache_entry.SDAQ_sn = data.payload.SDAQ_sn;
+				cache_entry.SDAQ_address = data.payload.SDAQ_address;
+				cache_entry.valid_until = valid_until;
+				if(cache_entry_is_valid(&cache_entry, now))
+					cache_upsert_entry(stats, cache_entry.SDAQ_sn, cache_entry.SDAQ_address, cache_entry.valid_until);
 				else
 					rewrite_needed = true;
 			}
@@ -1106,6 +1163,8 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 			 * The new cache starts empty and is rebuilt only by devices
 			 * that are currently online and successfully register again.
 			 */
+			Logger("Legacy LogBook detected on %s - clearing old history and rebuilding cache from currently online devices\n",
+				   stats->CAN_IF_name);
 			LogBook_file(stats, "w");
 			return EXIT_SUCCESS;
 		}
@@ -1125,15 +1184,18 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 			return EXIT_FAILURE;
 		}
 		cache_remove_expired_entries(stats, now);
-		while(LogBook_node)
-		{
-			node_data = LogBook_node->data;
-			if(node_data && cache_entry_is_valid(node_data, now))
+			while(LogBook_node)
 			{
-				struct LogBook data = {.payload = *node_data, .checksum = 0};
-				data.checksum = Checksum(&(data.payload), sizeof(data.payload));
-				fwrite(&data, 1, sizeof(data), fp);
-			}
+				node_data = LogBook_node->data;
+				if(node_data && cache_entry_is_valid(node_data, now))
+				{
+					struct LogBook_disk data = {0};
+					data.payload.SDAQ_sn = node_data->SDAQ_sn;
+					data.payload.SDAQ_address = node_data->SDAQ_address;
+					memcpy(&(data.payload.valid_until), &(node_data->valid_until), sizeof(node_data->valid_until));
+					data.checksum = Checksum(&(data.payload), sizeof(data.payload));
+					fwrite(&data, 1, sizeof(data), fp);
+				}
 			LogBook_node = LogBook_node -> next;//Next node
 		}
 		fclose(fp);

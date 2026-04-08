@@ -397,15 +397,15 @@ struct Channel_acc_meas_entry{
 };
 // Data entry of a LogBook file, used in Morfeas_SDAQ_if
 struct LogBook_entry{
+	uint64_t valid_until;
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
-	uint64_t valid_until;
-}__attribute__((packed, aligned(1)));
+};
 // struct of LogBook entry and it's Checksum, used in Morfeas_SDAQ_if
 struct LogBook{
 	struct LogBook_entry payload;
 	unsigned char checksum;
-}__attribute__((packed, aligned(1)));
+};
 //Data of the List Links, used in Morfeas_opc_ua
 struct Link_entry{
 	char ISO_channel_name[ISO_channel_name_size];
