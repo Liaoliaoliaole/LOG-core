@@ -106,7 +106,7 @@ Use when only LOG-core source code changed and dependency pins did not change.
 
 ```bash
 cd Morfeas_core
-./build_core_code_only.sh
+./build_core_only.sh
 ```
 
 ### Quick runtime checks
