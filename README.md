@@ -79,8 +79,9 @@ git submodule sync --recursive
 git submodule update --init --recursive
 ```
 
-## Pinned Dependency Baseline (validated)
-Pinned submodule commits used by current Bookworm build flow:
+## Pinned Dependency Baseline
+
+### LOG core v1 (baseline)
 
 - `src/cJSON`: `c859b25da02955fef659d658b8f324b5cde87be3`
 - `src/noPoll`: `ce4da1a102be8a19269813d97562582e7ce94bcc`
@@ -88,6 +89,16 @@ Pinned submodule commits used by current Bookworm build flow:
 - `src/sdaq-worker`: `ccc690c57e4171762c42a7e6412b7d92ea5e789f`
 
 Note: `nopoll` upstream `pkg-config` version string can still show `0.4.8.b456` even when pinned to commit `ce4da1a...`.
+
+### LOG core v2 (validated Bookworm build)
+Submodule commits pinned:
+
+- `src/cJSON`: `12c4bf1986c288950a3d06da757109a6aa1ece38` (v1.7.15-44)
+- `src/noPoll`: `fa8b8c90a69fed63b1f1e4f7e9e95672f34c054f` (0.4.9-2)
+- `src/open62541`: `c1960fa4897d06c5fae8c41823fc446c8bbd6345` (v1.4.10-1104)
+- `src/sdaq-worker`: `ccc690c57e4171762c42a7e6412b7d92ea5e789f` (heads/master — unchanged)
+
+Notable upgrades from v1 → v2: open62541 moved from `f63e2a8` to `c1960fa` (v1.4.10 series), which is why the `UA_ServerConfig_clear` / `UA_ServerConfig_clean` compatibility shim was added. cJSON and noPoll received minor upstream bumps.
 
 ## Build and Rebuild
 Use the provided scripts instead of manual per-library build commands.
@@ -139,6 +150,36 @@ sudo systemctl enable Morfeas_system.service
 
 ### Re-Compilation of the source
 Guide link [here](./RE-INSTALL.md)
+
+---
+
+## What's New in v2
+
+### 1. Dependency
+- open62541 API compatibility: `UA_ServerConfig_clear` vs `UA_ServerConfig_clean` probed at link time via `__attribute__((weak))` — same binary works across open62541 build variants
+
+### 2. SDAQ Address Allocation Redesign
+The old LogBook was append-only and accumulated duplicate entries over time, causing address conflicts. The new design:
+
+- **Deduplicated TTL cache** — 1 record per S/N, 1 record per address; always rewritten atomically
+- **Address reservation** — when a device goes offline, its address slot is reserved for that S/N for **14 days**; the device recovers its original address automatically on return
+- **O(1) conflict check** — `address_owners[64]` in-memory table replaces linear list scans
+- **Auto migration** — legacy file detected by checksum probe and discarded on first boot; no manual steps required
+- Max 62 simultaneous devices; extras go to Parking (addr 63) and retry automatically when a slot frees
+
+### 3. Measurement Error Codes (replacing NaN)
+Invalid measurements now carry typed error codes instead of `NaN`:
+
+| Code | Meaning |
+|------|---------|
+| `-901` | Offline / disconnected |
+| `-902` | No sensor |
+| `-903` | Stall — timestamp not advancing for ≥ 2 cycles |
+| `-904` | Unclassified device error |
+
+`Out of Range` and `Over Range` now preserve the measured value (previously discarded). Error codes propagate through IPC → OPC UA → web backend and display as red integers in Morfeas Web.
+
+---
 
 ## License
 The source code of the project is licensed under GPLv3 or later - see the [License](LICENSE) file for details.
