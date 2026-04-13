@@ -124,6 +124,8 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_calibration_date *date_dec, struct Morfeas_SDAQ_if_stats *stats);
 //Function that add current meas to channel's accumulator of a SDAQ's channel. Used in FSM
 int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry *sdaq_node);
+//Function that stores latest raw meas of a SDAQ channel. Used in FSM
+int acc_raw_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry *sdaq_node);
 //Function that find and return the amount of incomplete (with out all info and dates) nodes.
 int incomplete_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
 //Function for Updating Time_diff (from debugging message) of a SDAQ. Used in FSM, also send IPC msg t opc_ua.
@@ -387,11 +389,22 @@ int main(int argc, char *argv[])
 		RX_bytes=read(CAN_socket_num, &frame_rx, sizeof(frame_rx));
 		if(RX_bytes==sizeof(frame_rx))
 		{
-			switch(sdaq_id_dec->payload_type)
-			{
-				case Measurement_value:
-					if(frame_rx.can_dlc == sizeof(sdaq_meas))
-					{
+				switch(sdaq_id_dec->payload_type)
+				{
+					case Uncalibrated_meas:
+						if(frame_rx.can_dlc == sizeof(sdaq_meas))
+						{
+							if(flags.is_meas_started && (SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
+							{
+								time(&(SDAQ_data->last_seen));
+								if(logstat_path)
+									acc_raw_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);
+							}
+						}
+						break;
+					case Measurement_value:
+						if(frame_rx.can_dlc == sizeof(sdaq_meas))
+						{
 						if(!flags.is_meas_started)//Check if SDAQ remain in meas after of a Stop.
 							Stop(CAN_socket_num, sdaq_id_dec->device_addr);
 						else if((SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
@@ -479,6 +492,7 @@ int main(int argc, char *argv[])
 							}//Check if all SDAQ is registered, and if yes put the current one in measure mode
 							else if(SDAQ_data->reg_status == Ready && !(stats.incomplete_SDAQs = incomplete_SDAQs(&stats)))
 							{
+								Req_Raw_meas(CAN_socket_num, sdaq_id_dec->device_addr, 1);
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 								flags.is_meas_started = 1;
 								Logger("Start %s -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
@@ -698,6 +712,8 @@ struct Channel_date_entry* new_SDAQ_Channel_date_entry()
 struct Channel_acc_meas_entry* new_SDAQ_Channel_acc_meas_entry()
 {
     struct Channel_acc_meas_entry *new_node = g_slice_new0(struct Channel_acc_meas_entry);
+    if(new_node)
+    	new_node->raw_last_meas = NAN;
     return new_node;
 }
 //LogBook_entry allocator
@@ -1528,6 +1544,20 @@ int acc_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry 
 		}
 	}
 	return EXIT_FAILURE;
+}
+
+int acc_raw_meas(unsigned char channel, sdaq_meas *meas_dec, struct SDAQ_info_entry *sdaq_node)
+{
+	GSList *acc_meas_list_node;
+	struct Channel_acc_meas_entry *sdaq_Channels_acc_meas_node;
+
+	acc_meas_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_acc_meas, &channel, SDAQ_Channels_acc_meas_entry_find_channel);
+	if(!acc_meas_list_node)
+		return EXIT_FAILURE;
+
+	sdaq_Channels_acc_meas_node = acc_meas_list_node->data;
+	sdaq_Channels_acc_meas_node->raw_last_meas = meas_dec->meas;
+	return EXIT_SUCCESS;
 }
 
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, called if status message received. Used in FSM

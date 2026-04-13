@@ -390,6 +390,7 @@ struct Channel_acc_meas_entry{
 	unsigned char status;
 	unsigned char unit_code;
 	float last_meas;
+	float raw_last_meas;
 	float meas_acc;
 	float meas_min;
 	float meas_max;

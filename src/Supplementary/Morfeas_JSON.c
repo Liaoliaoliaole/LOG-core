@@ -233,17 +233,23 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 			node_dec->meas_max = NAN;
 			node_dec->meas_min = NAN;
 		}
-		else if(node_dec->cnt)
-			node_dec->meas_acc /= node_dec->cnt;
-		cJSON_AddNumberToObject(node_data, "CNT", node_dec->cnt);
-		cJSON_AddNumberToObject(node_data, "Meas_avg", node_dec->meas_acc);
-		cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
-		cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
-		cJSON_AddNumberToObject(node_data, "Last_Meas", node_dec->last_meas);
-		node_dec->last_meas = node_dec->meas_acc;
-		node_dec->cnt = 0;
-		cJSON_AddItemToObject(array, "Measurement_data", node_data);
-	}
+			else if(node_dec->cnt)
+			{
+				node_dec->meas_acc /= node_dec->cnt;
+			}
+			cJSON_AddNumberToObject(node_data, "CNT", node_dec->cnt);
+			cJSON_AddNumberToObject(node_data, "Meas_avg", node_dec->meas_acc);
+			cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
+			cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
+			cJSON_AddNumberToObject(node_data, "Last_Meas", node_dec->last_meas);
+			if(isfinite(node_dec->raw_last_meas))
+				cJSON_AddNumberToObject(node_data, "Raw_Last_Meas", node_dec->raw_last_meas);
+			else
+				cJSON_AddNullToObject(node_data, "Raw_Last_Meas");
+			node_dec->last_meas = node_dec->meas_acc;
+			node_dec->cnt = 0;
+			cJSON_AddItemToObject(array, "Measurement_data", node_data);
+		}
 }
 
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
