@@ -397,8 +397,10 @@ int main(int argc, char *argv[])
 							if(flags.is_meas_started && (SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 							{
 								time(&(SDAQ_data->last_seen));
-								if(logstat_path)
-									acc_raw_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);
+								if(logstat_path && acc_raw_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data) != EXIT_SUCCESS)
+									Logger("SDAQ raw measurement dropped: channel %02hhu is not in accumulator list for address %02hhu\n",
+										   sdaq_id_dec->channel_num,
+										   SDAQ_data->SDAQ_address);
 							}
 						}
 						break;
@@ -492,7 +494,8 @@ int main(int argc, char *argv[])
 							}//Check if all SDAQ is registered, and if yes put the current one in measure mode
 							else if(SDAQ_data->reg_status == Ready && !(stats.incomplete_SDAQs = incomplete_SDAQs(&stats)))
 							{
-								Req_Raw_meas(CAN_socket_num, sdaq_id_dec->device_addr, 1);
+								if(Req_Raw_meas(CAN_socket_num, sdaq_id_dec->device_addr, 1))
+									Logger("SDAQ raw output request failed -> Address: %02hhu\n", SDAQ_data->SDAQ_address);
 								Start(CAN_socket_num, sdaq_id_dec->device_addr);
 								flags.is_meas_started = 1;
 								Logger("Start %s -> Address: %02hhu\n", dev_type_str[status_dec->dev_type],
