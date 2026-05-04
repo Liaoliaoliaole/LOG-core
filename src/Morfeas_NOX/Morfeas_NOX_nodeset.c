@@ -101,6 +101,16 @@ char* UniNOx_status_str(unsigned char status)
 	}
 }
 
+static float UniNOx_error_value(IPC_message *IPC_msg_dec)
+{
+	if(IPC_msg_dec->NOX_data.NOXs_data.status.heater_mode_state == 3)
+		return NOX_HEATER_OFF;
+	if(IPC_msg_dec->NOX_data.NOXs_data.status.heater_mode_state == 1
+		|| IPC_msg_dec->NOX_data.NOXs_data.status.heater_mode_state == 2)
+		return NOX_HEATING_MODE;
+	return DEVICE_MEAS_ERROR_UNCLASSIFIED;
+}
+
 void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec)
 {
 	UA_NodeId NodeId;
@@ -123,19 +133,31 @@ void IPC_msg_from_NOX_handler(UA_Server *server, unsigned char type, IPC_message
 						last_seen = UA_DateTime_fromUnixTime(IPC_msg_dec->NOX_data.NOXs_data.last_seen);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &last_seen, UA_TYPES_DATETIME);
 						//Decode and load value, status and status_byte for NOx
-						sprintf(Node_ID_str, "%s.NOx_value", parent_Node_ID_str);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_data.NOXs_data.NOx_value), UA_TYPES_FLOAT);
-						sprintf(Node_ID_str, "%s.NOx_status_byte", parent_Node_ID_str);
-						value = UniNOx_status(IPC_msg_dec, NOx_val);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &value, UA_TYPES_BYTE);
+							sprintf(Node_ID_str, "%s.NOx_value", parent_Node_ID_str);
+							value = UniNOx_status(IPC_msg_dec, NOx_val);
+							if(value == Okay)
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_data.NOXs_data.NOx_value), UA_TYPES_FLOAT);
+							else
+							{
+								float meas_error = UniNOx_error_value(IPC_msg_dec);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas_error, UA_TYPES_FLOAT);
+							}
+							sprintf(Node_ID_str, "%s.NOx_status_byte", parent_Node_ID_str);
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &value, UA_TYPES_BYTE);
 						sprintf(Node_ID_str, "%s.NOx_status", parent_Node_ID_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), UniNOx_status_str(value), UA_TYPES_STRING);
 						//Decode and load value, status and status_byte for O2
-						sprintf(Node_ID_str, "%s.O2_value", parent_Node_ID_str);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_data.NOXs_data.O2_value), UA_TYPES_FLOAT);
-						sprintf(Node_ID_str, "%s.O2_status_byte", parent_Node_ID_str);
-						value = UniNOx_status(IPC_msg_dec, O2_val);
-						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &value, UA_TYPES_BYTE);
+							sprintf(Node_ID_str, "%s.O2_value", parent_Node_ID_str);
+							value = UniNOx_status(IPC_msg_dec, O2_val);
+							if(value == Okay)
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &(IPC_msg_dec->NOX_data.NOXs_data.O2_value), UA_TYPES_FLOAT);
+							else
+							{
+								float meas_error = UniNOx_error_value(IPC_msg_dec);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas_error, UA_TYPES_FLOAT);
+							}
+							sprintf(Node_ID_str, "%s.O2_status_byte", parent_Node_ID_str);
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &value, UA_TYPES_BYTE);
 						sprintf(Node_ID_str, "%s.O2_status", parent_Node_ID_str);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), UniNOx_status_str(value), UA_TYPES_STRING);
 						//Decode and load to variables of UniNOx sensor's status object

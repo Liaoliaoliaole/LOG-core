@@ -389,32 +389,43 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								cnt = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CNTs[i-1];
 								break;
 						}
-						if(IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid)
-						{
-							status_value = Okay;
-							status_str = "Okay";
-							if(IPC_msg_dec->MTI_tele_data.Tele_dev_type != Tele_quad)
+							if(IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid)
 							{
-								if(meas >= NO_SENSOR_VALUE)//Check for No sensor value
+								status_value = Okay;
+								status_str = "Okay";
+								if(IPC_msg_dec->MTI_tele_data.Tele_dev_type != Tele_quad)
 								{
-									status_str = "No Sensor";
-									status_value = Tele_channel_noSensor;
-									meas = NAN;
-									ref = NAN;
-								}
-								else if(meas != meas)//Check for Telemetry Error (meas == NAN)
-								{
-									status_str = "Error";
-									status_value = Tele_channel_Error;
-									ref = NAN;
+									if(meas >= NO_SENSOR_VALUE)//Check for No sensor value
+									{
+										status_str = "No Sensor";
+										status_value = Tele_channel_noSensor;
+										meas = DEVICE_MEAS_ERROR_NO_SENSOR;
+										ref = NAN;
+									}
+									else if(meas != meas)//Check for Telemetry Error (meas == NAN)
+									{
+										status_str = "Error";
+										status_value = Tele_channel_Error;
+										meas = DEVICE_MEAS_ERROR_UNCLASSIFIED;
+										ref = NAN;
+									}
 								}
 							}
-						}
-						else
-						{
-							status_value = Disconnected;
-							status_str = "Disconnected";
-						}
+							else
+							{
+								if(IPC_msg_dec->MTI_tele_data.data.as_TC4.RX_Success_ratio)
+								{
+									status_value = Tele_channel_Error;
+									status_str = "Unclassified";
+									meas = DEVICE_MEAS_ERROR_UNCLASSIFIED;
+								}
+								else
+								{
+									status_value = Disconnected;
+									status_str = "Disconnected";
+									meas = DEVICE_MEAS_ERROR_OFFLINE;
+								}
+							}
 						//Update telemetry's Channel specific variables (Linkable)
 						sprintf(Node_ID_str, "%s.CH%u.meas", anchor, i);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
@@ -595,12 +606,12 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							}
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
 							sprintf(anchor, "MTI.%u.ID:%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
-							for(j=1; j<=4; j++)
-							{
-								meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j-1];
-								meas = meas<NO_SENSOR_VALUE ? meas:NAN;
-								status_value = meas!=meas ? Tele_channel_noSensor:Okay;
-								status_str = status_value ? "No Sensor":"Okay";
+								for(j=1; j<=4; j++)
+								{
+									meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j-1];
+									meas = meas<NO_SENSOR_VALUE ? meas:DEVICE_MEAS_ERROR_NO_SENSOR;
+									status_value = meas==DEVICE_MEAS_ERROR_NO_SENSOR ? Tele_channel_noSensor:Okay;
+									status_str = status_value ? "No Sensor":"Okay";
 								sprintf(Node_ID_str, "%s.CH%u.meas", anchor, j);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
 								sprintf(Node_ID_str, "%s.CH%u.status", anchor, j);
