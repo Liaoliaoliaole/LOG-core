@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #define NOx_Bitrate 250000
+#define NOx_Sensor_lifetime_sec 10
 #define NOx_high_addr 0x18F00F52
 #define NOx_low_addr 0x18F00E51
 #define NOx_filter 0x18F00E50

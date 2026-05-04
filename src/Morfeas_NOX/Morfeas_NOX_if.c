@@ -451,7 +451,7 @@ int main(int argc, char *argv[])
 				IPC_msg.NOX_BUS_info.Dev_on_bus = 0;
 				for(int i=0; i<2; i++)
 				{
-					if((time(NULL) - stats.NOXs_data[i].last_seen) < 5)//5 seconds
+					if((time(NULL) - stats.NOXs_data[i].last_seen) <= NOx_Sensor_lifetime_sec)
 					{
 						IPC_msg.NOX_BUS_info.Dev_on_bus++;
 						IPC_msg.NOX_BUS_info.active_devs[i] = -1;

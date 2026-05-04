@@ -793,6 +793,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	//Add BUS_util and Bus_error_rate to JSON root
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
 	cJSON_AddNumberToObject(root, "BUS_Error_rate", stats->Bus_error_rate);
+	cJSON_AddNumberToObject(root, "NOx_sensor_lifetime_sec", NOx_Sensor_lifetime_sec);
 	//Add auto power off value and counter
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_value", stats->auto_switch_off_value);
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_cnt", stats->auto_switch_off_cnt);
@@ -800,7 +801,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "NOx_sensors", NOx_array = cJSON_CreateArray());
 	for(int i=0; i<2; i++)
 	{
-		if((now_time - stats->NOXs_data[i].last_seen) <= 10)
+		if((now_time - stats->NOXs_data[i].last_seen) <= NOx_Sensor_lifetime_sec)
 		{
 			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
 			cJSON_AddNumberToObject(curr_NOx_data, "addr", i);
