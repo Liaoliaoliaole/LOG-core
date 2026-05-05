@@ -375,7 +375,15 @@ int Morfeas_ISO_Channels_request_dec(const UA_NodeId *nodeId, char **ISO_Channel
 	return -1;
 }
 
-//Function used onRead of DataSourceVariables, Channel related
+// DataSource onRead callback for linked ISO channel measurements.
+// Returns the source node value when available. For SDAQ/IOBOX/MTI, a missing
+// source node falls back to MORFEAS_MEAS_ERROR_OFFLINE so downstream consumers
+// always receive a numeric measurement value.
+// NOX is excluded from this fallback: NOX source nodes use device-specific
+// naming (req_value is rewritten to "NOx"/"O2" for NodeID construction), and
+// a missing NOX source can mean several things -- sensor not yet detected,
+// timed out, handler not running -- each handled by NOX nodeset/logstat logic.
+// Applying a generic -901 here would create phantom sensor readings.
 UA_StatusCode CH_update_value(UA_Server *server_ptr,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
@@ -443,7 +451,13 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 						break;
 					default: return UA_STATUSCODE_GOOD;
 				}
-				//check if the source node exist
+				// Check if the source node exists. When a linked numeric
+				// measurement source disappears, OPC-UA still has to return
+				// a float for downstream consumers. This generic fallback is
+				// intentionally limited to measurement values for device
+				// families that use reserved numeric error codes. It does not
+				// change logstat; logstat writers must emit their own core
+				// measurement value when one is available.
 				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
 				{
 					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
@@ -451,7 +465,9 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 					dataValue->hasValue = true;
 				}
 				else if(!strcmp(req_value, "meas")
-					&& (Node_data->interface_type_num == SDAQ || Node_data->interface_type_num == IOBOX))
+						&& (Node_data->interface_type_num == SDAQ ||
+							Node_data->interface_type_num == IOBOX ||
+							Node_data->interface_type_num == MTI))
 				{
 					const float offline_meas = MORFEAS_MEAS_ERROR_OFFLINE;
 					UA_Variant_setScalarCopy(&(dataValue->value), &offline_meas, &UA_TYPES[UA_TYPES_FLOAT]);
@@ -498,6 +514,31 @@ UA_StatusCode Dev_update_value(UA_Server *server_ptr,
 		}
 	}
 	return UA_STATUSCODE_GOOD;
+}
+
+// Used only by Status_update_value() to label missing MTI telemetry sources.
+static int MTI_link_tele_is_disabled(UA_Server *server_ptr, struct Link_entry *Node_data)
+{
+	UA_Variant value;
+	UA_String *tele_type;
+	char Node_ID_str[128];
+	int ret = 0;
+
+	if(!server_ptr || !Node_data || Node_data->interface_type_num != MTI)
+		return 0;
+
+	UA_Variant_init(&value);
+	sprintf(Node_ID_str, "%s.%u.Radio.Tele_dev_type", Morfeas_IPC_handler_type_name[MTI], Node_data->identifier);
+	if(!UA_Server_readValue(server_ptr, UA_NODEID_STRING(1,Node_ID_str), &value) &&
+	   UA_Variant_hasScalarType(&value, &UA_TYPES[UA_TYPES_STRING]) &&
+	   value.data)
+	{
+		tele_type = value.data;
+		ret = tele_type->length == strlen(MTI_Tele_dev_type_str[Disabled]) &&
+		      !memcmp(tele_type->data, MTI_Tele_dev_type_str[Disabled], tele_type->length);
+	}
+	UA_Variant_clear(&value);
+	return ret;
 }
 
 //Function used onRead of DataSourceVariables, ISO_channel Status
@@ -580,14 +621,14 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 				{
 					if(!strcmp(req_value, "status"))
 					{
-						t_str = UA_String_fromChars("OFF-Line");
+						t_str = UA_String_fromChars(MTI_link_tele_is_disabled(server_ptr, Node_data) ? "Disabled" : "OFF-Line");
 						UA_Variant_setScalarCopy(&(dataValue->value), &t_str, &UA_TYPES[UA_TYPES_STRING]);
 						UA_clear(&t_str, &UA_TYPES[UA_TYPES_STRING]);
 					}
 					else if(!strcmp(req_value, "status_byte"))
 					{
-						const unsigned char OFFLine_val = -1;
-						UA_Variant_setScalarCopy(&(dataValue->value), &OFFLine_val, &UA_TYPES[UA_TYPES_BYTE]);
+						const unsigned char fallback_val = MTI_link_tele_is_disabled(server_ptr, Node_data) ? Disconnected : OFF_line;
+						UA_Variant_setScalarCopy(&(dataValue->value), &fallback_val, &UA_TYPES[UA_TYPES_BYTE]);
 					}
 				}
 				dataValue->hasValue = true;

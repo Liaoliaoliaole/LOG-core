@@ -67,6 +67,28 @@ enum status_byte_enum{
 	OFF_line = -1
 };
 
+/*
+ * Reserved measurement values.
+ *
+ * These values are real numeric measurement payloads used when a linked
+ * measurement cannot provide a valid physical value. Core owns the decision to
+ * write them to OPC-UA and logstat. Web clients should only display values that
+ * core already emitted; they should not infer these numbers from status text.
+ *
+ * DEVICE_MEAS_ERROR_OFFLINE:
+ *   Source/device/channel is unavailable. Status text should explain whether
+ *   the context is OFF-Line, Disconnected, or another unavailable source.
+ * DEVICE_MEAS_ERROR_NO_SENSOR:
+ *   The device explicitly reports no sensor on that measurement channel.
+ * SDAQ_MEAS_ERROR_STALL:
+ *   SDAQ channel is present, but fresh samples are not arriving.
+ * DEVICE_MEAS_ERROR_UNCLASSIFIED:
+ *   Device/channel reports an invalid condition without a more specific code.
+ *
+ * NOX_HEATING_MODE and NOX_HEATER_OFF intentionally reuse the existing numeric
+ * slots for legacy-compatible measurement consumers; the status text carries
+ * the NOX-specific meaning.
+ */
 #define MORFEAS_MEAS_ERROR_OFFLINE (-901.0f)
 #define MORFEAS_MEAS_ERROR_NO_SENSOR (-902.0f)
 #define MORFEAS_MEAS_ERROR_STALL (-903.0f)

@@ -91,7 +91,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						}
 						if(IPC_msg_dec->MTI_report.Tele_dev_type>=Dev_type_min && IPC_msg_dec->MTI_report.Tele_dev_type<=Dev_type_max)
 						{
-							meas = NAN;
+							meas = DEVICE_MEAS_ERROR_OFFLINE;
 							ref = NAN;
 							cnt = 0;
 							status_value = OFF_line;
