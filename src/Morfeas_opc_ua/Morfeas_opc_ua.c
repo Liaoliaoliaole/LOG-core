@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <arpa/inet.h>
 
 #include <glib.h>
 #include <glibtop.h>
@@ -642,6 +643,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 {
 	char tmp_str[50], *ISO_channel_name, *unit_str, *alarm_str, *cal_date_str,
 		 *cal_period_str, *build_date_str,*mod_date_str;
+	char ch_str[10], dev_addr_str[24], dev_sdaq_net_str[20];
 	float t_min_max;
 	int if_type;
 	unsigned char cal_period;
@@ -695,34 +697,38 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Min", UA_TYPES_FLOAT);
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
-		if(if_type == NOX)
-		{
-			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "onCAN", UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.addr",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Address", UA_TYPES_BYTE);
-		}
-		else
+		/*
+		 * Keep the historic numeric Channel type for SDAQ/IOBOX/MDAQ/MTI.
+		 * Existing OPC-UA clients may read this node as Byte. NOX is the only
+		 * ISO link whose channel is a label (NOx/O2), so it is a string.
+		 */
+		sprintf(tmp_str,"%s.channel",ISO_channel_name);
+		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel",
+										 if_type == NOX ? UA_TYPES_STRING : UA_TYPES_BYTE);
+		if(if_type != NOX)
 		{
 			sprintf(tmp_str,"%s.id",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Identifier", UA_TYPES_UINT32);
-			sprintf(tmp_str,"%s.channel",ISO_channel_name);
-			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel", UA_TYPES_BYTE);
+		}
+		//Device Address (STRING), Device Type (STRING), SDAQnet (STRING) for non-SDAQ
+		if(if_type != SDAQ)
+		{
+			sprintf(tmp_str,"%s.addr",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Address", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Device Type", UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.onBus",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "SDAQnet", UA_TYPES_STRING);
 		}
 		if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 		{
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
-			if(XML_node_get_content(node, "CAL_DATE"))
-			{
-				sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
-				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
-			}
-			if(XML_node_get_content(node, "CAL_PERIOD"))
-			{
-				sprintf(tmp_str,"%s.period",ISO_channel_name);
-				Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
-			}
+			//Calibration Date and Period always created; neutral placeholder used when no XML data
+			sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Date", UA_TYPES_DATETIME);
+			sprintf(tmp_str,"%s.period",ISO_channel_name);
+			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Calibration Period (Months)", UA_TYPES_BYTE);
 			//Special Device related variables
 			switch(if_type)
 			{
@@ -744,19 +750,57 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	if(List_Links_Node)
 	{
 		List_Links_Node_data = List_Links_Node->data;
+		//Channel value: Byte for normal CH<n> links, label string only for NOX.
+		sprintf(tmp_str,"%s.channel",ISO_channel_name);
 		if(if_type == NOX)
 		{
-			sprintf(tmp_str,"%s.onCAN",ISO_channel_name);
-			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), List_Links_Node_data->CAN_IF_name, UA_TYPES_STRING);
-			sprintf(tmp_str,"%s.addr",ISO_channel_name);
-			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->channel), UA_TYPES_BYTE);
+			snprintf(ch_str, sizeof(ch_str), "%s", List_Links_Node_data->rxNum_teleType_or_value == NOx_val ? "NOx" : "O2");
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), ch_str, UA_TYPES_STRING);
 		}
 		else
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->channel), UA_TYPES_BYTE);
+		//Identifier (UINT32) for non-NOX
+		if(if_type != NOX)
 		{
 			sprintf(tmp_str,"%s.id",ISO_channel_name);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->identifier), UA_TYPES_UINT32);
-			sprintf(tmp_str,"%s.channel",ISO_channel_name);
-			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(List_Links_Node_data->channel), UA_TYPES_BYTE);
+		}
+		//Device Address, Device Type, SDAQnet for non-SDAQ
+		if(if_type != SDAQ)
+		{
+			dev_addr_str[0] = '\0';
+			dev_sdaq_net_str[0] = '\0';
+			switch(if_type)
+			{
+				case IOBOX:
+					snprintf(dev_addr_str, sizeof(dev_addr_str), "RX%hhu", List_Links_Node_data->rxNum_teleType_or_value);
+					inet_ntop(AF_INET, &(List_Links_Node_data->identifier), dev_sdaq_net_str, sizeof(dev_sdaq_net_str));
+					break;
+				case MTI:
+					if(List_Links_Node_data->rxNum_teleType_or_value == RMSW_MUX)
+						snprintf(dev_addr_str, sizeof(dev_addr_str), "ID:%hhu", List_Links_Node_data->tele_ID);
+					else
+						snprintf(dev_addr_str, sizeof(dev_addr_str), "%s", MTI_Tele_dev_type_str[List_Links_Node_data->rxNum_teleType_or_value]);
+					inet_ntop(AF_INET, &(List_Links_Node_data->identifier), dev_sdaq_net_str, sizeof(dev_sdaq_net_str));
+					break;
+				case MDAQ:
+					snprintf(dev_addr_str, sizeof(dev_addr_str), "CH%hhu", List_Links_Node_data->channel);
+					inet_ntop(AF_INET, &(List_Links_Node_data->identifier), dev_sdaq_net_str, sizeof(dev_sdaq_net_str));
+					break;
+				case NOX:
+					snprintf(dev_addr_str, sizeof(dev_addr_str), "%hhu", List_Links_Node_data->channel);
+					snprintf(dev_sdaq_net_str, sizeof(dev_sdaq_net_str), "%s", List_Links_Node_data->CAN_IF_name ? List_Links_Node_data->CAN_IF_name : "");
+					break;
+				default:
+					dev_addr_str[0] = '\0';
+					dev_sdaq_net_str[0] = '\0';
+			}
+			sprintf(tmp_str,"%s.addr",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), dev_addr_str, UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.dev_type",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), (char *)Morfeas_IPC_handler_type_name[if_type], UA_TYPES_STRING);
+			sprintf(tmp_str,"%s.onBus",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), dev_sdaq_net_str, UA_TYPES_STRING);
 		}
 		switch(if_type)
 		{
@@ -783,12 +827,11 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
 	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
 	{
-		if((unit_str = XML_node_get_content(node, "UNIT")))
-		{
-			sprintf(tmp_str,"%s.unit",ISO_channel_name);
-			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), unit_str, UA_TYPES_STRING);
-		}
-		if((cal_date_str = XML_node_get_content(node, "CAL_DATE")))
+		unit_str = XML_node_get_content(node, "UNIT");
+		sprintf(tmp_str,"%s.unit",ISO_channel_name);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), unit_str ? unit_str : "", UA_TYPES_STRING);
+		cal_date_str = XML_node_get_content(node, "CAL_DATE");
+		if(cal_date_str)
 		{
 			memset(&opcua_cal_date_struct, 0, sizeof(struct UA_DateTimeStruct));
 			if(sscanf(cal_date_str, "%4hu/%2hu/%2hu", &(opcua_cal_date_struct.year), &(opcua_cal_date_struct.month), &(opcua_cal_date_struct.day)) == 3)
@@ -800,35 +843,62 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			else
 				UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Calibration Date \"%s\" on line %d is invalid !!!", cal_date_str, node->line);
 		}
-		if((cal_period_str = XML_node_get_content(node, "CAL_PERIOD")))
+		else
 		{
-			cal_period = atoi(cal_period_str);
-			sprintf(tmp_str,"%s.period",ISO_channel_name);
-			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_period, UA_TYPES_BYTE);
+			opcua_datetime = 0;
+			sprintf(tmp_str,"%s.Cal_date",ISO_channel_name);
+			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &opcua_datetime, UA_TYPES_DATETIME);
+		}
+		cal_period_str = XML_node_get_content(node, "CAL_PERIOD");
+		cal_period = cal_period_str ? (unsigned char)atoi(cal_period_str) : 0;
+		sprintf(tmp_str,"%s.period",ISO_channel_name);
+		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_period, UA_TYPES_BYTE);
+	}
+	if(if_type == SDAQ)
+	{
+		// Preserve SDAQ's legacy behavior: alarm nodes exist only when configured.
+		if((alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")))
+		{
+			sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
+			t_min_max = atof(alarm_str);
+			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", &t_min_max, UA_TYPES_FLOAT);
+		}
+		if((alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")))
+		{
+			sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
+			t_min_max = atof(alarm_str);
+			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", &t_min_max, UA_TYPES_FLOAT);
+		}
+		if((alarm_str = XML_node_get_content(node, "ALARM_LOW")))
+		{
+			sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
+			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", alarm_str, UA_TYPES_STRING);
+		}
+		if((alarm_str = XML_node_get_content(node, "ALARM_HIGH")))
+		{
+			sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
+			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", alarm_str, UA_TYPES_STRING);
 		}
 	}
-	//Add and/or Update extra variables that added in runtime.
-	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")))
+	else
 	{
-		sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
-		t_min_max = atof(alarm_str);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", &t_min_max, UA_TYPES_FLOAT);
-	}
-	if((alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")))
-	{
-		sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
-		t_min_max = atof(alarm_str);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", &t_min_max, UA_TYPES_FLOAT);
-	}
-	if((alarm_str = XML_node_get_content(node, "ALARM_LOW")))
-	{
-		sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", alarm_str, UA_TYPES_STRING);
-	}
-	if((alarm_str = XML_node_get_content(node, "ALARM_HIGH")))
-	{
+		// Non-SDAQ ISO links expose the full mapper contract with safe defaults.
+		sprintf(tmp_str,"%s.alarm",ISO_channel_name);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm", "no", UA_TYPES_STRING);
+		sprintf(tmp_str,"%s.alarm_stop",ISO_channel_name);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Stop", "no", UA_TYPES_STRING);
+		alarm_str = XML_node_get_content(node, "ALARM_HIGH");
 		sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", alarm_str, UA_TYPES_STRING);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", alarm_str ? alarm_str : "no", UA_TYPES_STRING);
+		t_min_max = (alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")) ? atof(alarm_str) : 0.0f;
+		sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", &t_min_max, UA_TYPES_FLOAT);
+		alarm_str = XML_node_get_content(node, "ALARM_LOW");
+		sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", alarm_str ? alarm_str : "no", UA_TYPES_STRING);
+		t_min_max = (alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")) ? atof(alarm_str) : 0.0f;
+		sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
+		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", &t_min_max, UA_TYPES_FLOAT);
 	}
 	if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
 	{
