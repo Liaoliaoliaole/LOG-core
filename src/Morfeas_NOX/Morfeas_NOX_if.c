@@ -266,9 +266,10 @@ int main(int argc, char *argv[])
 		stats.Bus_amperage = NAN;
 		stats.Shunt_temp = NAN;
 	}
-	//Get stored configuration
+	//Legacy persisted NOX auto switch-off config. Missing file is normal on
+	//first run or after /var/tmp cleanup; keep the default runtime value.
 	if(NOX_handler_config_file(&stats, "r"))
-		Logger("Error at reading of the configuration file !!!\n");
+		Logger("Warning: NOX legacy auto switch-off configuration not found or invalid; using default value.\n");
 	//----Make of FIFO file----//
 	mkfifo(Data_FIFO, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 	//Register handler to Morfeas_OPC-UA Server
