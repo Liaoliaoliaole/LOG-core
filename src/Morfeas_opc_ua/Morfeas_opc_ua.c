@@ -300,9 +300,11 @@ void* IPC_Receiver(void *varg_pt)
 						case SDAQ:
 							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
-						case MDAQ:
-							MDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
-							break;
+							/* MDAQ: device type retired, handler will never register.
+							case MDAQ:
+								MDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);
+								break;
+							*/
 						case IOBOX:
 						    IOBOX_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
@@ -332,8 +334,10 @@ void* IPC_Receiver(void *varg_pt)
 						IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
 					else if(type>=Morfeas_IPC_IOBOX_MIN_type && type<=Morfeas_IPC_IOBOX_MAX_type)//Msg type from IOBOX_handler
 						IPC_msg_from_IOBOX_handler(server, type, &IPC_msg_dec);//mutex inside
-					else if(type>=Morfeas_IPC_MDAQ_MIN_type && type<=Morfeas_IPC_MDAQ_MAX_type)//Msg type from MDAQ_handler
-						IPC_msg_from_MDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
+					/* MDAQ: device type retired, IPC messages from MDAQ handler ignored.
+					else if(type>=Morfeas_IPC_MDAQ_MIN_type && type<=Morfeas_IPC_MDAQ_MAX_type)
+						IPC_msg_from_MDAQ_handler(server, type, &IPC_msg_dec);
+					*/
 					else if(type>=Morfeas_IPC_MTI_MIN_type && type<=Morfeas_IPC_MTI_MAX_type)//Msg type from MTI_handler
 						IPC_msg_from_MTI_handler(server, type, &IPC_msg_dec);//mutex inside
 					else if(type>=Morfeas_IPC_NOX_MIN_type && type<=Morfeas_IPC_NOX_MAX_type)//Msg type from NOX_handler
@@ -377,14 +381,20 @@ int Morfeas_ISO_Channels_request_dec(const UA_NodeId *nodeId, char **ISO_Channel
 }
 
 // DataSource onRead callback for linked ISO channel measurements.
-// Returns the source node value when available. For SDAQ/IOBOX/MTI, a missing
-// source node falls back to MORFEAS_MEAS_ERROR_OFFLINE so downstream consumers
-// always receive a numeric measurement value.
-// NOX is excluded from this fallback: NOX source nodes use device-specific
-// naming (req_value is rewritten to "NOx"/"O2" for NodeID construction), and
-// a missing NOX source can mean several things -- sensor not yet detected,
-// timed out, handler not running -- each handled by NOX nodeset/logstat logic.
-// Applying a generic -901 here would create phantom sensor readings.
+// Returns the source node value when available. When the source node is
+// missing -- typically because the handler exited and IPC_Handler_unregister
+// deleted the device subtree -- the callback falls back to
+// MORFEAS_MEAS_ERROR_UNREGISTERED (-905) so downstream consumers always
+// receive a numeric measurement value.
+//
+// Per error-code design:
+//   -901 (OFFLINE)      : handler alive, individual source/sensor disconnected
+//                         (handlers proactively write this to source nodes).
+//   -905 (UNREGISTERED) : handler/device gone (this fallback fires) OR device
+//                         transport unreachable (handlers proactively write
+//                         this to source nodes for IOBOX/MTI modbus errors).
+// The fallback applies to all device families that use reserved numeric
+// error codes for the "meas" channel (SDAQ/IOBOX/MTI/NOX).
 UA_StatusCode CH_update_value(UA_Server *server_ptr,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
@@ -411,13 +421,13 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 																   Node_data->channel,
 																   req_value);
 						break;
+					/* MDAQ: device type retired, ISO links to MDAQ sources return default: UA_STATUSCODE_GOOD.
 					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																		   Node_data->identifier,
-																		   Node_data->channel,
-																		   Node_data->rxNum_teleType_or_value,
-																		   req_value);
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", ...);
+						// Node_data->identifier, channel, rxNum, req_value
+						// (kept for reference)
 						break;
+					*/
 					case IOBOX:
 						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
 																		  Node_data->identifier,
@@ -465,13 +475,17 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 					dataValue->hasValue = true;
 				}
-				else if(!strcmp(req_value, "meas")
-						&& (Node_data->interface_type_num == SDAQ ||
-							Node_data->interface_type_num == IOBOX ||
-							Node_data->interface_type_num == MTI))
+				else if((!strcmp(req_value, "meas")
+						  && (Node_data->interface_type_num == SDAQ ||
+							  Node_data->interface_type_num == IOBOX ||
+							  Node_data->interface_type_num == MTI))
+						 || (Node_data->interface_type_num == NOX))
 				{
-					const float offline_meas = MORFEAS_MEAS_ERROR_OFFLINE;
-					UA_Variant_setScalarCopy(&(dataValue->value), &offline_meas, &UA_TYPES[UA_TYPES_FLOAT]);
+					//Source node missing -> handler exited / subtree removed by
+					//IPC_Handler_unregister. Emit -905 UNREGISTERED so consumers can
+					//distinguish this from -901 (handler alive, source disconnected).
+					const float unregistered_meas = MORFEAS_MEAS_ERROR_UNREGISTERED;
+					UA_Variant_setScalarCopy(&(dataValue->value), &unregistered_meas, &UA_TYPES[UA_TYPES_FLOAT]);
 					dataValue->hasValue = true;
 				}
 			}
@@ -570,13 +584,13 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 																   Node_data->channel,
 																   req_value);
 						break;
+					/* MDAQ: device type retired, see CH_update_value comment.
 					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																		   Node_data->identifier,
-																		   Node_data->channel,
-																		   Node_data->rxNum_teleType_or_value,
-																		   req_value);
+						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", ...);
+						// (kept for reference)
+						// Node_data->identifier, channel, rxNum, req_value
 						break;
+					*/
 					case IOBOX:
 						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
 																		  Node_data->identifier,
@@ -720,7 +734,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 			sprintf(tmp_str,"%s.onBus",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "SDAQnet", UA_TYPES_STRING);
 		}
-		if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
+		if(if_type == IOBOX || if_type == MTI || if_type == NOX)
 		{
 			sprintf(tmp_str,"%s.unit",ISO_channel_name);
 			Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Unit", UA_TYPES_STRING);
@@ -783,10 +797,12 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 						snprintf(dev_addr_str, sizeof(dev_addr_str), "%s", MTI_Tele_dev_type_str[List_Links_Node_data->rxNum_teleType_or_value]);
 					inet_ntop(AF_INET, &(List_Links_Node_data->identifier), dev_sdaq_net_str, sizeof(dev_sdaq_net_str));
 					break;
+				/* MDAQ: device type retired.
 				case MDAQ:
 					snprintf(dev_addr_str, sizeof(dev_addr_str), "CH%hhu", List_Links_Node_data->channel);
 					inet_ntop(AF_INET, &(List_Links_Node_data->identifier), dev_sdaq_net_str, sizeof(dev_sdaq_net_str));
 					break;
+				*/
 				case NOX:
 					snprintf(dev_addr_str, sizeof(dev_addr_str), "%hhu", List_Links_Node_data->channel);
 					snprintf(dev_sdaq_net_str, sizeof(dev_sdaq_net_str), "%s", List_Links_Node_data->CAN_IF_name ? List_Links_Node_data->CAN_IF_name : "");
@@ -825,7 +841,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 	sprintf(tmp_str,"%s.max",ISO_channel_name);
 	t_min_max = atof(XML_node_get_content(node, "MAX"));
 	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str),  &t_min_max, UA_TYPES_FLOAT);
-	if(if_type == IOBOX || if_type == MDAQ || if_type == MTI || if_type == NOX)
+	if(if_type == IOBOX || if_type == MTI || if_type == NOX)
 	{
 		unit_str = XML_node_get_content(node, "UNIT");
 		sprintf(tmp_str,"%s.unit",ISO_channel_name);

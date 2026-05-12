@@ -75,31 +75,51 @@ enum status_byte_enum{
  * write them to OPC-UA and logstat. Web clients should only display values that
  * core already emitted; they should not infer these numbers from status text.
  *
- * DEVICE_MEAS_ERROR_OFFLINE:
- *   Source/device/channel is unavailable. Status text should explain whether
- *   the context is OFF-Line, Disconnected, or another unavailable source.
- * DEVICE_MEAS_ERROR_NO_SENSOR:
+ * DEVICE_MEAS_ERROR_OFFLINE (-901):
+ *   Handler is alive, but the linked source is currently disconnected.
+ *   Examples: SDAQ physical removal (CAN silence), MTI radio disabled by
+ *   configuration, MTI RMSW_MUX child device removed via IDs_to_be_removed,
+ *   MTI Data_isValid=false with RX_Success_ratio==0 (no signal), IOBOX
+ *   per-channel RX loss, NOX physical removal.
+ * DEVICE_MEAS_ERROR_NO_SENSOR (-902):
  *   The device explicitly reports no sensor on that measurement channel.
- * SDAQ_MEAS_ERROR_STALL:
+ *   Used by SDAQ, IOBOX, and MTI telemetry channels.
+ * SDAQ_MEAS_ERROR_STALL (-903):
  *   SDAQ channel is present, but fresh samples are not arriving.
- * DEVICE_MEAS_ERROR_UNCLASSIFIED:
+ *   NOX_HEATING_MODE reuses this slot (legacy-compatible).
+ * DEVICE_MEAS_ERROR_UNCLASSIFIED (-904):
  *   Device/channel reports an invalid condition without a more specific code.
- *
- * NOX_HEATING_MODE and NOX_HEATER_OFF intentionally reuse the existing numeric
- * slots for legacy-compatible measurement consumers; the status text carries
- * the NOX-specific meaning.
+ *   Used by SDAQ unclassified status, NOX unclassified error.
+ * MORFEAS_MEAS_ERROR_UNREGISTERED (-905):
+ *   Either the handler exited (IPC_Handler_unregister deleted the source
+ *   subtree, ISO callback fallback fires) OR the device-level transport is
+ *   unreachable while the handler keeps retrying (IOBOX/MTI modbus error).
+ *   Distinguished from -901 in that -901 means "handler there, individual
+ *   source/sensor disconnected", while -905 means "handler/device gone".
+ * MORFEAS_MEAS_ERROR_STANDBY (-906):
+ *   Device is reachable and reporting, but in a non-measuring standby mode.
+ *   Currently only NOX heater-off (heater_mode_state==3) uses this.
+ * MORFEAS_MEAS_ERROR_DATA_INVALID (-907):
+ *   Data was received but failed validation (signal-quality / link-layer
+ *   problem). MTI: Data_isValid=false with RX_Success_ratio>0.
  */
-#define MORFEAS_MEAS_ERROR_OFFLINE (-901.0f)
-#define MORFEAS_MEAS_ERROR_NO_SENSOR (-902.0f)
-#define MORFEAS_MEAS_ERROR_STALL (-903.0f)
+#define MORFEAS_MEAS_ERROR_OFFLINE      (-901.0f)
+#define MORFEAS_MEAS_ERROR_NO_SENSOR    (-902.0f)
+#define MORFEAS_MEAS_ERROR_STALL        (-903.0f)
 #define MORFEAS_MEAS_ERROR_UNCLASSIFIED (-904.0f)
+#define MORFEAS_MEAS_ERROR_UNREGISTERED (-905.0f)
+#define MORFEAS_MEAS_ERROR_STANDBY      (-906.0f)
+#define MORFEAS_MEAS_ERROR_DATA_INVALID (-907.0f)
 
-#define DEVICE_MEAS_ERROR_OFFLINE MORFEAS_MEAS_ERROR_OFFLINE
-#define DEVICE_MEAS_ERROR_NO_SENSOR MORFEAS_MEAS_ERROR_NO_SENSOR
-#define DEVICE_MEAS_ERROR_UNCLASSIFIED MORFEAS_MEAS_ERROR_UNCLASSIFIED
-#define SDAQ_MEAS_ERROR_STALL MORFEAS_MEAS_ERROR_STALL
-#define NOX_HEATING_MODE MORFEAS_MEAS_ERROR_STALL
-#define NOX_HEATER_OFF MORFEAS_MEAS_ERROR_OFFLINE
+#define DEVICE_MEAS_ERROR_OFFLINE       MORFEAS_MEAS_ERROR_OFFLINE
+#define DEVICE_MEAS_ERROR_NO_SENSOR     MORFEAS_MEAS_ERROR_NO_SENSOR
+#define DEVICE_MEAS_ERROR_UNCLASSIFIED  MORFEAS_MEAS_ERROR_UNCLASSIFIED
+#define SDAQ_MEAS_ERROR_STALL           MORFEAS_MEAS_ERROR_STALL
+#define NOX_HEATING_MODE                MORFEAS_MEAS_ERROR_STALL
+#define NOX_HEATER_OFF                  MORFEAS_MEAS_ERROR_STANDBY  /* was -901, now -906 */
+#define MTI_MEAS_ERROR_UNREACHABLE      MORFEAS_MEAS_ERROR_UNREGISTERED
+#define MTI_MEAS_ERROR_DATA_INVALID     MORFEAS_MEAS_ERROR_DATA_INVALID
+#define IOBOX_MEAS_ERROR_UNREACHABLE    MORFEAS_MEAS_ERROR_UNREGISTERED
 
 //Array with strings of the Supported Interface_names.
 extern const char *Morfeas_IPC_handler_type_name[];

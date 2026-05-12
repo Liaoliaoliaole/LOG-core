@@ -68,7 +68,10 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 	UA_Variant dataValue;
 	char IOBOX_IPv4_addr_str[20], Node_name[30];
 	char Node_ID_str[60], Node_ID_child_str[80], Node_ID_child_child_str[100], val_Node_ID_str[160];
-	float error_code = MORFEAS_MEAS_ERROR_OFFLINE;
+	//Modbus error to IOBOX itself: device-level transport unreachable.
+	//Per error-code design: -905 (UNREGISTERED) means "handler/device gone",
+	//distinct from -901 (per-channel RX disconnect while device is reachable).
+	float error_code = IOBOX_MEAS_ERROR_UNREACHABLE;
 	unsigned char negative_one = -1;
 
 	//Msg type from IOBOX_handler
@@ -110,7 +113,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 									sprintf(val_Node_ID_str, "%s.meas", Node_name);
 									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &error_code, UA_TYPES_FLOAT);
 									sprintf(val_Node_ID_str, "%s.status", Node_name);
-									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "OFF-Line", UA_TYPES_STRING);
+									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "Unreachable", UA_TYPES_STRING);
 									sprintf(val_Node_ID_str, "%s.status_byte", Node_name);
 									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &negative_one, UA_TYPES_BYTE);
 								}

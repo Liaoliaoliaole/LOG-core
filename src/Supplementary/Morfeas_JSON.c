@@ -54,7 +54,7 @@ static float morfeas_sdaq_log_meas_value(float value, unsigned char status, unsi
 static float morfeas_mti_log_meas_value(float value, unsigned char data_valid, unsigned char rx_success_ratio)
 {
 	if(!data_valid)
-		return rx_success_ratio ? DEVICE_MEAS_ERROR_UNCLASSIFIED : DEVICE_MEAS_ERROR_OFFLINE;
+		return rx_success_ratio ? MORFEAS_MEAS_ERROR_DATA_INVALID : DEVICE_MEAS_ERROR_OFFLINE;
 	if(value >= NO_SENSOR_VALUE)
 		return DEVICE_MEAS_ERROR_NO_SENSOR;
 	if(value != value)
@@ -84,7 +84,8 @@ static void morfeas_json_add_offline_iobox_rx(cJSON *root)
 		for(int j=0; j<IOBOX_Amount_of_channels; j++)
 		{
 			sprintf(ch_name, "CH%1u", j+1);
-			cJSON_AddNumberToObject(RX_json, ch_name, DEVICE_MEAS_ERROR_OFFLINE);
+			/* Device-level modbus error: align with OPC-UA which writes -905 (UNREACHABLE). */
+			cJSON_AddNumberToObject(RX_json, ch_name, IOBOX_MEAS_ERROR_UNREACHABLE);
 		}
 		cJSON_AddNumberToObject(RX_json, "Index", 0);
 		cJSON_AddNumberToObject(RX_json, "Status", 0);
@@ -124,7 +125,8 @@ static void morfeas_json_add_offline_mti_tele(cJSON *root, unsigned char tele_de
 	}
 	cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
 	for(unsigned int i=0; i<ch_count; i++)
-		cJSON_AddItemToArray(CHs, cJSON_CreateNumber(DEVICE_MEAS_ERROR_OFFLINE));
+		/* Device-level modbus error: align with OPC-UA which writes -905 (UNREACHABLE). */
+		cJSON_AddItemToArray(CHs, cJSON_CreateNumber(MTI_MEAS_ERROR_UNREACHABLE));
 
 	if(tele_dev_type == Tele_TC4 || tele_dev_type == Tele_TC8)
 	{
@@ -132,7 +134,7 @@ static void morfeas_json_add_offline_mti_tele(cJSON *root, unsigned char tele_de
 
 		cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
 		for(unsigned int i=0; i<ref_count; i++)
-			cJSON_AddItemToArray(REFs, cJSON_CreateNumber(DEVICE_MEAS_ERROR_OFFLINE));
+			cJSON_AddItemToArray(REFs, cJSON_CreateNumber(MTI_MEAS_ERROR_UNREACHABLE));
 	}
 	else if(tele_dev_type == Tele_quad)
 	{
@@ -369,8 +371,8 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 		if((node_dec->status & (1<<No_sensor)))//Check if No_Sensor bit is set
 		{
 			node_dec->meas_acc = NAN;
-			node_dec->meas_max = NAN;
-			node_dec->meas_min = NAN;
+			node_dec->meas_max = DEVICE_MEAS_ERROR_NO_SENSOR;
+			node_dec->meas_min = DEVICE_MEAS_ERROR_NO_SENSOR;
 		}
 			else if(node_dec->cnt)
 			{
@@ -382,10 +384,8 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 				cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
 				cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
 				cJSON_AddNumberToObject(node_data, "Last_Meas", log_meas_value);
-				if(isfinite(node_dec->raw_last_meas))
-					cJSON_AddNumberToObject(node_data, "Raw_Last_Meas", node_dec->raw_last_meas);
-				else
-					cJSON_AddNullToObject(node_data, "Raw_Last_Meas");
+				cJSON_AddNumberToObject(node_data, "Raw_Last_Meas",
+					isfinite(node_dec->raw_last_meas) ? node_dec->raw_last_meas : DEVICE_MEAS_ERROR_UNCLASSIFIED);
 				node_dec->last_meas = log_meas_value;
 			node_dec->cnt = 0;
 			cJSON_AddItemToObject(array, "Measurement_data", node_data);
@@ -565,6 +565,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 }
 
 //Delete logstat file for MDAQ_handler
+/* MDAQ: device type retired.
 int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 {
 	int ret_val;
@@ -581,8 +582,10 @@ int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 	free(logstat_path_and_name);
 	return ret_val;
 }
+*/
 
 //Converting and exporting function for MDAQ Modbus register. Convert it to JSON format and save it to logstat_path
+/* MDAQ: device type retired.
 int logstat_MDAQ(char *logstat_path, void *stats_arg)
 {
 	if(!logstat_path || !stats_arg)
@@ -669,6 +672,7 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	free(logstat_path_and_name);
 	return 0;
 }
+*/
 
 //Converting and exporting function for MTI's stats struct. Convert it to JSON format and save it to logstat_path
 int logstat_MTI(char *logstat_path, void *stats_arg)
@@ -978,8 +982,10 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			cJSON_AddNumberToObject(curr_NOx_data, "last_seen", stats->NOXs_data[i].last_seen);
 			//NOx value statistics
 			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_integral_size", stats->NOx_statistics[i].NOx_value_sample_cnt);
-			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_min", stats->NOx_statistics[i].NOx_value_min);
-			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_max", stats->NOx_statistics[i].NOx_value_max);
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_min",
+				isnan(stats->NOx_statistics[i].NOx_value_min) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].NOx_value_min);
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_max",
+				isnan(stats->NOx_statistics[i].NOx_value_max) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].NOx_value_max);
 				if(stats->NOx_statistics[i].NOx_value_sample_cnt)
 				{
 					value = stats->NOx_statistics[i].NOx_value_acc/stats->NOx_statistics[i].NOx_value_sample_cnt;
@@ -987,14 +993,16 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 					stats->NOx_statistics[i].NOx_value_sample_cnt = 0;
 				}
 				else
-					value = NAN;
+					value = MORFEAS_MEAS_ERROR_UNCLASSIFIED; /* No samples in interval but sensor valid */
 				if(!stats->NOXs_data[i].status.is_NOx_value_valid)
 					value = morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state);
 				cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_avg", value);
 			//O2 value statistics
 			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_integral_size", stats->NOx_statistics[i].O2_value_sample_cnt);
-			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_min", stats->NOx_statistics[i].O2_value_min);
-			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_max", stats->NOx_statistics[i].O2_value_max);
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_min",
+				isnan(stats->NOx_statistics[i].O2_value_min) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].O2_value_min);
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_max",
+				isnan(stats->NOx_statistics[i].O2_value_max) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].O2_value_max);
 				if(stats->NOx_statistics[i].O2_value_sample_cnt)
 				{
 					value = stats->NOx_statistics[i].O2_value_acc/stats->NOx_statistics[i].O2_value_sample_cnt;
@@ -1002,7 +1010,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 					stats->NOx_statistics[i].O2_value_sample_cnt = 0;
 				}
 				else
-					value = NAN;
+					value = MORFEAS_MEAS_ERROR_UNCLASSIFIED; /* No samples in interval but sensor valid */
 				if(!stats->NOXs_data[i].status.is_O2_value_valid)
 					value = morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state);
 				cJSON_AddNumberToObject(curr_NOx_data, "O2_value_avg", value);
