@@ -870,52 +870,25 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.period",ISO_channel_name);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &cal_period, UA_TYPES_BYTE);
 	}
-	if(if_type == SDAQ)
-	{
-		// Preserve SDAQ's legacy behavior: alarm nodes exist only when configured.
-		if((alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")))
-		{
-			sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
-			t_min_max = atof(alarm_str);
-			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", &t_min_max, UA_TYPES_FLOAT);
-		}
-		if((alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")))
-		{
-			sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
-			t_min_max = atof(alarm_str);
-			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", &t_min_max, UA_TYPES_FLOAT);
-		}
-		if((alarm_str = XML_node_get_content(node, "ALARM_LOW")))
-		{
-			sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
-			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", alarm_str, UA_TYPES_STRING);
-		}
-		if((alarm_str = XML_node_get_content(node, "ALARM_HIGH")))
-		{
-			sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
-			Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", alarm_str, UA_TYPES_STRING);
-		}
-	}
-	else
-	{
-		// Non-SDAQ ISO links expose the full mapper contract with safe defaults.
-		sprintf(tmp_str,"%s.alarm",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm", "no", UA_TYPES_STRING);
-		sprintf(tmp_str,"%s.alarm_stop",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Stop", "no", UA_TYPES_STRING);
-		alarm_str = XML_node_get_content(node, "ALARM_HIGH");
-		sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", alarm_str ? alarm_str : "no", UA_TYPES_STRING);
-		t_min_max = (alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")) ? atof(alarm_str) : 0.0f;
-		sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", &t_min_max, UA_TYPES_FLOAT);
-		alarm_str = XML_node_get_content(node, "ALARM_LOW");
-		sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", alarm_str ? alarm_str : "no", UA_TYPES_STRING);
-		t_min_max = (alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")) ? atof(alarm_str) : 0.0f;
-		sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
-		Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", &t_min_max, UA_TYPES_FLOAT);
-	}
+	// Alarm mapper contract for all ISO channel families.  SDAQ used to expose
+	// optional alarm nodes only when XML configured them; keep configured values
+	// but publish neutral defaults so downstream mappers see a stable shape.
+	sprintf(tmp_str,"%s.alarm",ISO_channel_name);
+	Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm", "no", UA_TYPES_STRING);
+	sprintf(tmp_str,"%s.alarm_stop",ISO_channel_name);
+	Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Stop", "no", UA_TYPES_STRING);
+	alarm_str = XML_node_get_content(node, "ALARM_HIGH");
+	sprintf(tmp_str,"%s.alarm_high",ISO_channel_name);
+	Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High", alarm_str ? alarm_str : "no", UA_TYPES_STRING);
+	t_min_max = (alarm_str = XML_node_get_content(node, "ALARM_HIGH_VAL")) ? atof(alarm_str) : 0.0f;
+	sprintf(tmp_str,"%s.alarm_high_val",ISO_channel_name);
+	Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm High Value", &t_min_max, UA_TYPES_FLOAT);
+	alarm_str = XML_node_get_content(node, "ALARM_LOW");
+	sprintf(tmp_str,"%s.alarm_low",ISO_channel_name);
+	Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low", alarm_str ? alarm_str : "no", UA_TYPES_STRING);
+	t_min_max = (alarm_str = XML_node_get_content(node, "ALARM_LOW_VAL")) ? atof(alarm_str) : 0.0f;
+	sprintf(tmp_str,"%s.alarm_low_val",ISO_channel_name);
+	Morfeas_opc_ua_add_and_update_variable_node(server_ptr, ISO_channel_name, tmp_str, "Alarm Low Value", &t_min_max, UA_TYPES_FLOAT);
 	if((build_date_str = XML_node_get_content(node, "BUILD_DATE")))
 	{
 		if(sscanf(build_date_str, "%lu", &time_UNIX) == 1)
