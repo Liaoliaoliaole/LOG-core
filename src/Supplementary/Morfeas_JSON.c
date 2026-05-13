@@ -57,7 +57,7 @@ static float morfeas_mti_log_meas_value(float value, unsigned char data_valid, u
 		return rx_success_ratio ? MORFEAS_MEAS_ERROR_DATA_INVALID : DEVICE_MEAS_ERROR_OFFLINE;
 	if(value >= NO_SENSOR_VALUE)
 		return DEVICE_MEAS_ERROR_NO_SENSOR;
-	if(value != value)
+	if(isnan(value))
 		return DEVICE_MEAS_ERROR_UNCLASSIFIED;
 	return value;
 }

@@ -1178,11 +1178,11 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 		fclose(fp);
 		if(use_legacy_format)
 		{
-			/* Legacy LogBook content is intentionally not migrated.
-			 * The new cache starts empty and is rebuilt only by devices
+			/* Previous LogBook layout is intentionally not migrated.
+			 * The current cache starts empty and is rebuilt only by devices
 			 * that are currently online and successfully register again.
 			 */
-			Logger("Legacy LogBook detected on %s - clearing old history and rebuilding cache from currently online devices\n",
+			Logger("Previous LogBook format detected on %s - clearing address cache and rebuilding from currently online devices\n",
 				   stats->CAN_IF_name);
 			LogBook_file(stats, "w");
 			return EXIT_SUCCESS;

@@ -159,23 +159,26 @@ Guide link [here](./RE-INSTALL.md)
 - open62541 API compatibility: `UA_ServerConfig_clear` vs `UA_ServerConfig_clean` probed at link time via `__attribute__((weak))` — same binary works across open62541 build variants
 
 ### 2. SDAQ Address Allocation Redesign
-The old LogBook was append-only and accumulated duplicate entries over time, causing address conflicts. The new design:
+The previous LogBook was append-only and accumulated duplicate entries over time, causing address conflicts. The current design:
 
 - **Deduplicated TTL cache** — 1 record per S/N, 1 record per address; always rewritten atomically
 - **Address reservation** — when a device goes offline, its address slot is reserved for that S/N for **14 days**; the device recovers its original address automatically on return
 - **O(1) conflict check** — `address_owners[64]` in-memory table replaces linear list scans
-- **Auto migration** — legacy file detected by checksum probe and discarded on first boot; no manual steps required
+- **On-card upgrade behavior** — if an existing SD card is upgraded in place and the stored SDAQ LogBook uses the previous format, Morfeas clears that address cache and rebuilds it from SDAQs that are currently online. This does not apply to a freshly imaged/replaced SD card. When the cache is rebuilt, SDAQ addresses may be reassigned according to the current conflict-free allocation rules.
 - Max 62 simultaneous devices; extras go to Parking (addr 63) and retry automatically when a slot frees
 
-### 3. Measurement Error Codes (replacing NaN)
-Invalid measurements now carry typed error codes instead of `NaN`:
+### 3. Reserved Measurement Error Codes
+Invalid or unavailable measurements carry typed numeric error codes instead of `NaN` or device-specific strings:
 
 | Code | Meaning |
 |------|---------|
-| `-901` | Offline / disconnected |
+| `-901` | Offline / disconnected source while the handler is alive |
 | `-902` | No sensor |
-| `-903` | Stall — timestamp not advancing for ≥ 2 cycles |
-| `-904` | Unclassified device error |
+| `-903` | Stall / heating / not ready |
+| `-904` | Unclassified invalid runtime condition |
+| `-905` | Source unregistered or device-level transport unreachable |
+| `-906` | Standby / heater off |
+| `-907` | Signal invalid / data invalid |
 
 `Out of Range` and `Over Range` now preserve the measured value (previously discarded). Error codes propagate through IPC → OPC UA → web backend and display as red integers in Morfeas Web.
 

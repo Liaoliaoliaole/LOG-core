@@ -60,6 +60,7 @@ static void Morfeas_ServerConfig_cleanup(UA_ServerConfig *config)
         UA_ServerConfig_clean(config);
         return;
     }
+    fprintf(stderr, "Morfeas_opc_ua: no UA_ServerConfig_clear/clean symbol found; config cleanup skipped\n");
 #else
     UA_ServerConfig_clear(config);
 #endif

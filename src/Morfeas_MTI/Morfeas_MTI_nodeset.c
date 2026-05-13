@@ -239,9 +239,9 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 					}
 					else if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
 					{
-						//Real reconfiguration: tear down old Tele subtree and rebuild below.
-						//ISO links to the old anchor will fall back to -905 (source removed),
-						//which correctly reflects "old configuration is gone".
+						//Real reconfiguration: replace the active Tele subtree below.
+						//ISO links to the removed anchor fall back to -905 because
+						//that configured source no longer exists.
 						UA_Server_deleteNode(server, NodeId, 1);
 						UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 					}

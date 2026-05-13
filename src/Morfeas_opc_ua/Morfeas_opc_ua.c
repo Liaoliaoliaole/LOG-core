@@ -406,10 +406,12 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 	//UA_Variant outValue;
 	UA_NodeId src_NodeId;
 	char *ISO_Channel, *req_value, src_NodeId_str[128];
+	int is_meas_request;
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
 		{
+			is_meas_request = !strcmp(req_value, "meas");
 			if((List_Links_Node = g_slist_find_custom(Links, ISO_Channel, List_Links_cmp)))
 			{
 				Node_data = List_Links_Node->data;
@@ -475,11 +477,11 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 					dataValue->hasValue = true;
 				}
-				else if((!strcmp(req_value, "meas")
-						  && (Node_data->interface_type_num == SDAQ ||
-							  Node_data->interface_type_num == IOBOX ||
-							  Node_data->interface_type_num == MTI))
-						 || (Node_data->interface_type_num == NOX))
+				else if(is_meas_request &&
+						(Node_data->interface_type_num == SDAQ ||
+						 Node_data->interface_type_num == IOBOX ||
+						 Node_data->interface_type_num == MTI ||
+						 Node_data->interface_type_num == NOX))
 				{
 					//Source node missing -> handler exited / subtree removed by
 					//IPC_Handler_unregister. Emit -905 UNREGISTERED so consumers can
@@ -712,9 +714,8 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 		sprintf(tmp_str,"%s.max",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Max", UA_TYPES_FLOAT);
 		/*
-		 * Keep the historic numeric Channel type for SDAQ/IOBOX/MDAQ/MTI.
-		 * Existing OPC-UA clients may read this node as Byte. NOX is the only
-		 * ISO link whose channel is a label (NOx/O2), so it is a string.
+		 * Channel node type is part of the deployed OPC-UA client contract:
+		 * SDAQ/IOBOX/MTI use Byte CH numbers, while NOX uses NOx/O2 labels.
 		 */
 		sprintf(tmp_str,"%s.channel",ISO_channel_name);
 		Morfeas_opc_ua_add_variable_node(server_ptr, ISO_channel_name, tmp_str, "Channel",
