@@ -23,6 +23,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
+static void IOBOX_add_linkable_metric(UA_Server *server_ptr, char *Parent_id, const char *Metric_name, unsigned int IOBOX_IPv4, unsigned char RX_num)
+{
+	char Node_ID_str[100], Node_name[30], val_Node_ID_str[160];
+
+	sprintf(Node_ID_str, "%s.%s", Parent_id, Metric_name);
+	sprintf(Node_name, "%s", Metric_name);
+	Morfeas_opc_ua_add_object_node(server_ptr, Parent_id, Node_ID_str, Node_name);
+
+	sprintf(Node_name, "IOBOX.%u.RX%hhu.%s", IOBOX_IPv4, RX_num, Metric_name);
+	sprintf(val_Node_ID_str, "%s.meas", Node_name);
+	Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_str, val_Node_ID_str, "Value", UA_TYPES_FLOAT);
+	sprintf(val_Node_ID_str, "%s.status", Node_name);
+	Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_str, val_Node_ID_str, "Status", UA_TYPES_STRING);
+	sprintf(val_Node_ID_str, "%s.status_byte", Node_name);
+	Morfeas_opc_ua_add_variable_node(server_ptr, Node_ID_str, val_Node_ID_str, "Status_value", UA_TYPES_BYTE);
+}
+
+static void IOBOX_update_linkable_metric(UA_Server *server_ptr, const char *Metric_Node_ID_str, float meas, const char *status, unsigned char status_byte)
+{
+	char val_Node_ID_str[160];
+
+	sprintf(val_Node_ID_str, "%s.meas", Metric_Node_ID_str);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,val_Node_ID_str), &meas, UA_TYPES_FLOAT);
+	sprintf(val_Node_ID_str, "%s.status", Metric_Node_ID_str);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,val_Node_ID_str), status, UA_TYPES_STRING);
+	sprintf(val_Node_ID_str, "%s.status_byte", Metric_Node_ID_str);
+	Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,val_Node_ID_str), &status_byte, UA_TYPES_BYTE);
+}
+
 void IOBOX_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	int negative_one = -1;
@@ -73,6 +102,7 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 	//distinct from -901 (per-channel RX disconnect while device is reachable).
 	float error_code = IOBOX_MEAS_ERROR_UNREACHABLE;
 	unsigned char negative_one = -1;
+	const char *link_metric_names[] = {"Status", "Success"};
 
 	//Msg type from IOBOX_handler
 	switch(type)
@@ -110,12 +140,12 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 								{
 									//Add variables for channels: meas, status, status_value (Linkable)
 									sprintf(Node_name, "IOBOX.%u.RX%hhu.CH%hhu", IPC_msg_dec->IOBOX_report.IOBOX_IPv4, i, j);
-									sprintf(val_Node_ID_str, "%s.meas", Node_name);
-									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &error_code, UA_TYPES_FLOAT);
-									sprintf(val_Node_ID_str, "%s.status", Node_name);
-									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), "Unreachable", UA_TYPES_STRING);
-									sprintf(val_Node_ID_str, "%s.status_byte", Node_name);
-									Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &negative_one, UA_TYPES_BYTE);
+									IOBOX_update_linkable_metric(server, Node_name, error_code, "Unreachable", negative_one);
+								}
+								for(unsigned char j=0; j<2; j++)
+								{
+									sprintf(Node_name, "IOBOX.%u.RX%hhu.%s", IPC_msg_dec->IOBOX_report.IOBOX_IPv4, i, link_metric_names[j]);
+									IOBOX_update_linkable_metric(server, Node_name, error_code, "Unreachable", negative_one);
 								}
 							}
 						}
@@ -173,6 +203,8 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 							sprintf(val_Node_ID_str, "%s.status_byte", Node_name);
 							Morfeas_opc_ua_add_variable_node(server, Node_ID_child_child_str, val_Node_ID_str, "Status_value", UA_TYPES_BYTE);
 						}
+						for(unsigned char j=0; j<2; j++)
+							IOBOX_add_linkable_metric(server, Node_ID_child_str, link_metric_names[j], IPC_msg_dec->IOBOX_data.IOBOX_IPv4, i);
 					}
 				}
 				else
@@ -203,6 +235,18 @@ void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type, IPC_messa
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &(IPC_msg_dec->IOBOX_data.RX[i].status), UA_TYPES_BYTE);
 					sprintf(val_Node_ID_str, "%s.success", Node_ID_str);
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,val_Node_ID_str), &(IPC_msg_dec->IOBOX_data.RX[i].success), UA_TYPES_BYTE);
+
+					unsigned char rx_link_status_byte = IPC_msg_dec->IOBOX_data.RX[i].status ? Okay : Disconnected;
+					const char *rx_link_status_str = IPC_msg_dec->IOBOX_data.RX[i].status ? "Okay" : "Disconnected";
+					float rx_status_meas = IPC_msg_dec->IOBOX_data.RX[i].status ? 1.0f : 0.0f;
+					float rx_success_meas = (float)IPC_msg_dec->IOBOX_data.RX[i].success;
+
+					sprintf(Node_ID_str, "%s.RX%hhu.Status", Node_name, i+1);
+					// Status is a boolean link metric: both 0 and 1 are valid reads.
+					// Success quality follows the RX link state because it is meaningless when disconnected.
+					IOBOX_update_linkable_metric(server, Node_ID_str, rx_status_meas, "Okay", Okay);
+					sprintf(Node_ID_str, "%s.RX%hhu.Success", Node_name, i+1);
+					IOBOX_update_linkable_metric(server, Node_ID_str, rx_success_meas, rx_link_status_str, rx_link_status_byte);
 
 					//Variables of Telemetry Channels (Linkable)
 					sprintf(Node_name, "IOBOX.%u", IPC_msg_dec->IOBOX_data.IOBOX_IPv4);

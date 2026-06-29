@@ -197,6 +197,7 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 {
 	unsigned int anchor_arg_int[max_arg_range], i, dots;
 	char *channel, *receiver_or_value, *tele_type_or_id, *addr=NULL, *UniNOx_val=NULL;
+	char metric_str[16];
 	if(!anchor_str)
 		return EXIT_FAILURE;
 	if(handler_type != NOX)
@@ -204,10 +205,13 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 		//Check anchor_str for correct anchor component names
 		if(!atoi(anchor_str)) //identifier component check
 			return EXIT_FAILURE;
-		if(!(channel = strstr(anchor_str, ".CH")))//channel component check
-			return EXIT_FAILURE;
-		if(!atoi(channel+strlen(".CH")))//Channel value check
-			return EXIT_FAILURE;
+		if(handler_type != IOBOX)
+		{
+			if(!(channel = strstr(anchor_str, ".CH")))//channel component check
+				return EXIT_FAILURE;
+			if(!atoi(channel+strlen(".CH")))//Channel value check
+				return EXIT_FAILURE;
+		}
 	}
 	switch(handler_type)
 	{
@@ -218,11 +222,28 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 			{
 				if(!atoi(receiver_or_value+strlen(".RX")))//Receiver value check
 					return EXIT_FAILURE;
-				if(strstr(anchor_str, ".RX")>=channel)//If Receiver exist must be before channels component
-					return EXIT_FAILURE;
-				sscanf(anchor_str, "%u.RX%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
-				if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
-					return EXIT_FAILURE;
+				if((channel = strstr(anchor_str, ".CH")))
+				{
+					if(strstr(anchor_str, ".RX")>=channel)//If Receiver exist must be before channels component
+						return EXIT_FAILURE;
+					sscanf(anchor_str, "%u.RX%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
+					if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
+						return EXIT_FAILURE;
+					if(anchor_arg_int[1] > IOBOX_Amount_of_All_RXs || anchor_arg_int[2] > IOBOX_Amount_of_channels)
+						return EXIT_FAILURE;
+				}
+				else
+				{
+					metric_str[0] = '\0';
+					if(sscanf(anchor_str, "%u.RX%u.%15s", &anchor_arg_int[0], &anchor_arg_int[1], metric_str) != 3)
+						return EXIT_FAILURE;
+					if(!anchor_arg_int[0] || !anchor_arg_int[1])
+						return EXIT_FAILURE;
+					if(anchor_arg_int[1] > IOBOX_Amount_of_All_RXs)
+						return EXIT_FAILURE;
+					if(strcmp(metric_str, "Status") && strcmp(metric_str, "Success"))
+						return EXIT_FAILURE;
+				}
 			}
 			else
 				return EXIT_FAILURE;
@@ -512,9 +533,16 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 					switch((list_cur_Links_node_data->interface_type_num = if_type_str_2_num(dev_type_str)))
 					{
 						case IOBOX:
-							sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
-																   &(list_cur_Links_node_data->rxNum_teleType_or_value),
-																   &(list_cur_Links_node_data->channel));
+							sscanf(anchor_ptr, "%u.RX%hhu", &(list_cur_Links_node_data->identifier),
+															 &(list_cur_Links_node_data->rxNum_teleType_or_value));
+							if(strstr(anchor_ptr, ".Status"))
+								list_cur_Links_node_data->channel = IOBOX_RX_Status_link_channel;
+							else if(strstr(anchor_ptr, ".Success"))
+								list_cur_Links_node_data->channel = IOBOX_RX_Success_link_channel;
+							else
+								sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
+																	   &(list_cur_Links_node_data->rxNum_teleType_or_value),
+																	   &(list_cur_Links_node_data->channel));
 							break;
 						case MDAQ:
 							sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),

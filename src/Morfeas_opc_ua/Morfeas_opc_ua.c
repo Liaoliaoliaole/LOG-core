@@ -431,11 +431,22 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 						break;
 					*/
 					case IOBOX:
-						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																		  Node_data->identifier,
-																		  Node_data->rxNum_teleType_or_value,
-																		  Node_data->channel,
-																		  req_value);
+						if(Node_data->channel == IOBOX_RX_Status_link_channel)
+							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Status.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			  Node_data->identifier,
+																			  Node_data->rxNum_teleType_or_value,
+																			  req_value);
+						else if(Node_data->channel == IOBOX_RX_Success_link_channel)
+							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Success.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			   Node_data->identifier,
+																			   Node_data->rxNum_teleType_or_value,
+																			   req_value);
+						else
+							sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			  Node_data->identifier,
+																			  Node_data->rxNum_teleType_or_value,
+																			  Node_data->channel,
+																			  req_value);
 						break;
 					case MTI:
 						if(Node_data->rxNum_teleType_or_value == RMSW_MUX)
@@ -594,11 +605,22 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 						break;
 					*/
 					case IOBOX:
-						sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																		  Node_data->identifier,
-																		  Node_data->rxNum_teleType_or_value,
-																	      Node_data->channel,
-																	      req_value);
+						if(Node_data->channel == IOBOX_RX_Status_link_channel)
+							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Status.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			  Node_data->identifier,
+																			  Node_data->rxNum_teleType_or_value,
+																			  req_value);
+						else if(Node_data->channel == IOBOX_RX_Success_link_channel)
+							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Success.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			   Node_data->identifier,
+																			   Node_data->rxNum_teleType_or_value,
+																			   req_value);
+						else
+							sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+																			  Node_data->identifier,
+																			  Node_data->rxNum_teleType_or_value,
+																		      Node_data->channel,
+																		      req_value);
 						break;
 					case MTI:
 						if(Node_data->rxNum_teleType_or_value == RMSW_MUX)

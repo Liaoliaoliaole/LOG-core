@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define IOBOX_Amount_of_Extra_RXs 2
 #define IOBOX_Amount_of_All_RXs (IOBOX_Amount_of_STD_RXs + IOBOX_Amount_of_Extra_RXs)
 #define IOBOX_Amount_of_channels 16
+#define IOBOX_RX_Status_link_channel 17
+#define IOBOX_RX_Success_link_channel 18
 #define IOBOX_RXs_mem_offset 25
 #define IOBOX_Index_reg_pos 20
 #define IOBOX_Status_reg_pos 21
