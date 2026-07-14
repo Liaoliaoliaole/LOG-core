@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
@@ -192,11 +193,77 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
 #define max_arg_range 3
 #define anchor_check_buff_size 100
 
+/*
+ * Decode both the core's canonical NOX anchor format
+ *     can0.addr_0.NOx
+ * and the operator-facing format historically written by the web UI
+ *     CAN0.ADDR:0.NOx
+ *
+ * The CAN interface is normalised to lower case because OPC-UA source node
+ * identifiers are case-sensitive and are registered as e.g. "can0.sensors".
+ */
+static int decode_nox_anchor(const char *anchor_str, char *can_if_name, size_t can_if_name_size,
+                             unsigned int *sensor_address, unsigned char *measurement)
+{
+	const char *first_dot, *second_dot, *address_begin, *address_end;
+	const char *address_value;
+	char *parse_end;
+	unsigned long parsed_address;
+	size_t can_if_length;
+
+	if(!anchor_str || !can_if_name || can_if_name_size == 0 || !sensor_address || !measurement)
+		return EXIT_FAILURE;
+
+	first_dot = strchr(anchor_str, '.');
+	second_dot = first_dot ? strchr(first_dot + 1, '.') : NULL;
+	if(!first_dot || !second_dot || strchr(second_dot + 1, '.'))
+		return EXIT_FAILURE;
+
+	can_if_length = (size_t)(first_dot - anchor_str);
+	if(can_if_length == 0 || can_if_length >= can_if_name_size || can_if_length >= Dev_or_Bus_name_str_size)
+		return EXIT_FAILURE;
+
+	for(size_t i = 0; i < can_if_length; i++)
+		can_if_name[i] = (char)g_ascii_tolower(anchor_str[i]);
+	can_if_name[can_if_length] = '\0';
+
+	address_begin = first_dot + 1;
+	address_end = second_dot;
+	if((size_t)(address_end - address_begin) <= strlen("addr_"))
+		return EXIT_FAILURE;
+	if(strncasecmp(address_begin, "addr_", strlen("addr_")) &&
+	   strncasecmp(address_begin, "addr:", strlen("addr:")))
+		return EXIT_FAILURE;
+
+	address_value = address_begin + strlen("addr_");
+	for(const char *digit = address_value; digit < address_end; digit++)
+	{
+		if(!g_ascii_isdigit(*digit))
+			return EXIT_FAILURE;
+	}
+
+	parsed_address = strtoul(address_value, &parse_end, 10);
+	if(parse_end != address_end || parsed_address > 1)
+		return EXIT_FAILURE;
+
+	if(!strcasecmp(second_dot + 1, "NOx"))
+		*measurement = NOx_val;
+	else if(!strcasecmp(second_dot + 1, "O2"))
+		*measurement = O2_val;
+	else
+		return EXIT_FAILURE;
+
+	*sensor_address = (unsigned int)parsed_address;
+	return EXIT_SUCCESS;
+}
+
 //Function that validate the anchor's components. Return 0 on success or -1 on failure.
 int validate_anchor_comp(char *anchor_str, char handler_type)
 {
-	unsigned int anchor_arg_int[max_arg_range], i, dots;
-	char *channel, *receiver_or_value, *tele_type_or_id, *addr=NULL, *UniNOx_val=NULL;
+	unsigned int anchor_arg_int[max_arg_range], i, nox_sensor_address;
+	unsigned char nox_measurement;
+	char *channel, *receiver_or_value, *tele_type_or_id;
+	char nox_can_if[Dev_or_Bus_name_str_size];
 	char metric_str[16];
 	if(!anchor_str)
 		return EXIT_FAILURE;
@@ -301,30 +368,8 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 				return EXIT_FAILURE;
 			break;
 		case NOX:
-			//Check amount of dots('.') in anchor_str.
-			for(dots=0, i=0; anchor_str[i]; i++)
-			{
-				if(anchor_str[i] == '.')
-				{
-					dots++;
-					switch(dots)
-					{
-						case 1: addr = anchor_str+i+1; break;
-						case 2: UniNOx_val = anchor_str+i+1; break;
-					}
-				}
-			}
-			if(dots != 2)//Check if anchor_str have only 2 dots.
-				return EXIT_FAILURE;
-			if(!addr || !UniNOx_val)
-				return EXIT_FAILURE;
-			for(i=0; anchor_str[i] != '.'; i++); //Count characters of CAN_if_name section of anchor_str.
-			if(i >= Dev_or_Bus_name_str_size)
-				return EXIT_FAILURE;
-			size_t addr_str_len = strlen("addr_x");
-			if(strncmp(addr, "addr_0", addr_str_len) && strncmp(addr, "addr_1", addr_str_len))
-				return EXIT_FAILURE;
-			if(strcmp(UniNOx_val, "NOx") && strcmp(UniNOx_val, "O2"))
+			if(decode_nox_anchor(anchor_str, nox_can_if, sizeof(nox_can_if),
+			                     &nox_sensor_address, &nox_measurement))
 				return EXIT_FAILURE;
 			break;
 		default: return EXIT_FAILURE;
@@ -510,10 +555,13 @@ int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList *
 int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 {
 	int i;
+	unsigned int nox_sensor_address;
+	unsigned char nox_measurement;
 	xmlNode *check_element;
 	struct Link_entry *list_cur_Links_node_data;
 	char *iso_channel_str, *dev_type_str, *anchor_ptr, *TeleID;
 	char format_str[30];
+	char nox_can_if[Dev_or_Bus_name_str_size];
 
 	g_slist_free_full(*cur_Links, free_Link_entry);//Free List cur_Links
 	*cur_Links = NULL;
@@ -572,22 +620,19 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 														   &(list_cur_Links_node_data->channel));
 							break;
 						case NOX:
-							for(i=0; anchor_ptr[i]!='.'; i++);//Count characters until first dot.
-							if(!(list_cur_Links_node_data->CAN_IF_name = calloc(i+1, sizeof(char))))
+							if(decode_nox_anchor(anchor_ptr, nox_can_if, sizeof(nox_can_if),
+							                     &nox_sensor_address, &nox_measurement))
+							{
+								free_Link_entry(list_cur_Links_node_data);
+								continue;
+							}
+							if(!(list_cur_Links_node_data->CAN_IF_name = strdup(nox_can_if)))
 							{
 								fprintf(stderr,"Memory error!\n");
 								exit(EXIT_FAILURE);
 							}
-							for(i=0; anchor_ptr[i]!='.'; i++)//copy CAN_IF_name section from anchor to Links_node list.
-								list_cur_Links_node_data->CAN_IF_name[i] = anchor_ptr[i];
-							list_cur_Links_node_data->CAN_IF_name[i] = '\0';
-							anchor_ptr += i+strlen("addr_")+1;
-							list_cur_Links_node_data->channel = atoi(anchor_ptr);
-							anchor_ptr += 2;//move to last anchor's argument.
-							if(!strcmp(anchor_ptr, "NOx"))
-								list_cur_Links_node_data->rxNum_teleType_or_value = NOx_val;
-							else if(!strcmp(anchor_ptr, "O2"))
-								list_cur_Links_node_data->rxNum_teleType_or_value = O2_val;
+							list_cur_Links_node_data->channel = (unsigned char)nox_sensor_address;
+							list_cur_Links_node_data->rxNum_teleType_or_value = nox_measurement;
 							break;
 					}
 					*cur_Links = g_slist_append(*cur_Links, list_cur_Links_node_data);
