@@ -52,7 +52,7 @@ unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
 	fd_set readCheck;
     fd_set errCheck;
     struct timeval timeout;
-	unsigned char type;
+	unsigned char type = 0;
 	int select_ret;
 	ssize_t read_bytes = -1;
 	FD_ZERO(&readCheck);
@@ -69,11 +69,20 @@ unsigned char IPC_msg_RX(int FIFO_fd, IPC_message *IPC_msg_ptr)
 	else if (FD_ISSET(FIFO_fd, &readCheck))
 	{
 		read_bytes = read(FIFO_fd, IPC_msg_ptr, sizeof(IPC_message));
-		if((type = ((unsigned char *)IPC_msg_ptr)[0]) <= Morfeas_IPC_MAX_type)
+		if(read_bytes != (ssize_t)sizeof(IPC_message))
+		{
+			fprintf(stderr,
+				"Morfeas_IPC: ABI mismatch or partial IPC frame (read=%zd expected=%zu). "
+				"Drop message and require unified restart of Morfeas_system.service.\n",
+				read_bytes, sizeof(IPC_message));
+			return 0;
+		}
+		type = ((unsigned char *)IPC_msg_ptr)[0];
+		if(type <= Morfeas_IPC_MAX_type)
 			return type;
 	}
-	if(read_bytes != -1)
-		printf("Morfeas_IPC: Wrong amount of Bytes Received!!!\n");
+	if(read_bytes == (ssize_t)sizeof(IPC_message) && type > Morfeas_IPC_MAX_type)
+		printf("Morfeas_IPC: Unknown IPC message type (%u)\n", type);
 	return 0;
 }
 

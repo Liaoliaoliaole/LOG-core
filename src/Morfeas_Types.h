@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define IOBOX_Amount_of_Extra_RXs 2
 #define IOBOX_Amount_of_All_RXs (IOBOX_Amount_of_STD_RXs + IOBOX_Amount_of_Extra_RXs)
 #define IOBOX_Amount_of_channels 16
+#define IOBOX_RX_Status_link_channel 17
+#define IOBOX_RX_Success_link_channel 18
 #define IOBOX_RXs_mem_offset 25
 #define IOBOX_Index_reg_pos 20
 #define IOBOX_Status_reg_pos 21
@@ -41,6 +43,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //Defs for MDAQ_handler
 #define MDAQ_Amount_of_Channels 8
+
+#include <stdint.h>
 
 #include <gmodule.h>
 #include <glib.h>
@@ -64,6 +68,60 @@ enum status_byte_enum{
 	Disconnected = 127,
 	OFF_line = -1
 };
+
+/*
+ * Reserved measurement values.
+ *
+ * These values are real numeric measurement payloads used when a linked
+ * measurement cannot provide a valid physical value. Core owns the decision to
+ * write them to OPC-UA and logstat. Web clients should only display values that
+ * core already emitted; they should not infer these numbers from status text.
+ *
+ * DEVICE_MEAS_ERROR_OFFLINE (-901):
+ *   Handler is alive, but the linked source is currently disconnected.
+ *   Examples: SDAQ physical removal (CAN silence), MTI radio disabled by
+ *   configuration, MTI RMSW_MUX child device removed via IDs_to_be_removed,
+ *   MTI Data_isValid=false with RX_Success_ratio==0 (no signal), IOBOX
+ *   per-channel RX loss, NOX physical removal.
+ * DEVICE_MEAS_ERROR_NO_SENSOR (-902):
+ *   The device explicitly reports no sensor on that measurement channel.
+ *   Used by SDAQ, IOBOX, and MTI telemetry channels.
+ * SDAQ_MEAS_ERROR_STALL (-903):
+ *   SDAQ channel is present, but fresh samples are not arriving.
+ *   NOX_HEATING_MODE reuses this slot (legacy-compatible).
+ * DEVICE_MEAS_ERROR_UNCLASSIFIED (-904):
+ *   Device/channel reports an invalid condition without a more specific code.
+ *   Used by SDAQ unclassified status, NOX unclassified error.
+ * MORFEAS_MEAS_ERROR_UNREGISTERED (-905):
+ *   Either the handler exited (IPC_Handler_unregister deleted the source
+ *   subtree, ISO callback fallback fires) OR the device-level transport is
+ *   unreachable while the handler keeps retrying (IOBOX/MTI modbus error).
+ *   Distinguished from -901 in that -901 means "handler there, individual
+ *   source/sensor disconnected", while -905 means "handler/device gone".
+ * MORFEAS_MEAS_ERROR_STANDBY (-906):
+ *   Device is reachable and reporting, but in a non-measuring standby mode.
+ *   Currently only NOX heater-off (heater_mode_state==3) uses this.
+ * MORFEAS_MEAS_ERROR_DATA_INVALID (-907):
+ *   Data was received but failed validation (signal-quality / link-layer
+ *   problem). MTI: Data_isValid=false with RX_Success_ratio>0.
+ */
+#define MORFEAS_MEAS_ERROR_OFFLINE      (-901.0f)
+#define MORFEAS_MEAS_ERROR_NO_SENSOR    (-902.0f)
+#define MORFEAS_MEAS_ERROR_STALL        (-903.0f)
+#define MORFEAS_MEAS_ERROR_UNCLASSIFIED (-904.0f)
+#define MORFEAS_MEAS_ERROR_UNREGISTERED (-905.0f)
+#define MORFEAS_MEAS_ERROR_STANDBY      (-906.0f)
+#define MORFEAS_MEAS_ERROR_DATA_INVALID (-907.0f)
+
+#define DEVICE_MEAS_ERROR_OFFLINE       MORFEAS_MEAS_ERROR_OFFLINE
+#define DEVICE_MEAS_ERROR_NO_SENSOR     MORFEAS_MEAS_ERROR_NO_SENSOR
+#define DEVICE_MEAS_ERROR_UNCLASSIFIED  MORFEAS_MEAS_ERROR_UNCLASSIFIED
+#define SDAQ_MEAS_ERROR_STALL           MORFEAS_MEAS_ERROR_STALL
+#define NOX_HEATING_MODE                MORFEAS_MEAS_ERROR_STALL
+#define NOX_HEATER_OFF                  MORFEAS_MEAS_ERROR_STANDBY  /* was -901, now -906 */
+#define MTI_MEAS_ERROR_UNREACHABLE      MORFEAS_MEAS_ERROR_UNREGISTERED
+#define MTI_MEAS_ERROR_DATA_INVALID     MORFEAS_MEAS_ERROR_DATA_INVALID
+#define IOBOX_MEAS_ERROR_UNREACHABLE    MORFEAS_MEAS_ERROR_UNREGISTERED
 
 //Array with strings of the Supported Interface_names.
 extern const char *Morfeas_IPC_handler_type_name[];
@@ -314,6 +372,20 @@ struct Morfeas_NOX_if_stats{
 
 /*Structs for SDAQ_handler*/
 //Morfeas_SDAQ-if stats struct, used in Morfeas_SDAQ_if
+#define SDAQ_address_owner_slots 64
+
+enum SDAQ_address_owner_state{
+	SDAQ_owner_none = 0,
+	SDAQ_owner_online,
+	SDAQ_owner_cached
+};
+
+struct SDAQ_address_owner{
+	unsigned int SDAQ_sn;
+	uint64_t valid_until;
+	unsigned char state;
+};
+
 struct Morfeas_SDAQ_if_stats{
 	char LogBook_file_path[100];
 	int FIFO_fd;
@@ -330,12 +402,14 @@ struct Morfeas_SDAQ_if_stats{
 	unsigned char incomplete_SDAQs;// Amount of incomplete SDAQ.
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
+	struct SDAQ_address_owner address_owners[SDAQ_address_owner_slots];
 };
 // Data of a current_measurements node
 struct Channel_curr_meas{
 	float meas;
 	unsigned char unit;
 	unsigned char status;
+	unsigned short timestamp;
 };
 // Data of a list_SDAQs node, used in Morfeas_SDAQ_if
 struct SDAQ_info_entry{
@@ -348,6 +422,10 @@ struct SDAQ_info_entry{
 	GSList *SDAQ_Channels_cal_dates;
 	GSList *SDAQ_Channels_acc_meas;
 	struct Channel_curr_meas *SDAQ_Channels_curr_meas;
+	unsigned short *SDAQ_Channels_last_timestamp;
+	unsigned char *SDAQ_Channels_timestamp_initialized;
+	unsigned char *SDAQ_Channels_stall_cycles;
+	unsigned char *SDAQ_Channels_cycle_seen;
 	time_t last_seen;
 	unsigned failed_reg_RX_CNT;
 	unsigned reg_status:3;
@@ -363,6 +441,7 @@ struct Channel_acc_meas_entry{
 	unsigned char status;
 	unsigned char unit_code;
 	float last_meas;
+	float raw_last_meas;
 	float meas_acc;
 	float meas_min;
 	float meas_max;
@@ -370,14 +449,15 @@ struct Channel_acc_meas_entry{
 };
 // Data entry of a LogBook file, used in Morfeas_SDAQ_if
 struct LogBook_entry{
+	uint64_t valid_until;
 	unsigned int SDAQ_sn;
 	unsigned char SDAQ_address;
-}__attribute__((packed, aligned(1)));
+};
 // struct of LogBook entry and it's Checksum, used in Morfeas_SDAQ_if
 struct LogBook{
 	struct LogBook_entry payload;
 	unsigned char checksum;
-}__attribute__((packed, aligned(1)));
+};
 //Data of the List Links, used in Morfeas_opc_ua
 struct Link_entry{
 	char ISO_channel_name[ISO_channel_name_size];

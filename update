@@ -19,5 +19,4 @@ if [ $inp == 'y' ] || [ $inp == 'Y' ]; then
 	cd ../.. &&	make clean && make -j && sudo make install && sudo service Morfeas_system restart
 fi
 echo 'Bye Bye'
-	
 

@@ -91,11 +91,15 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 						}
 						if(IPC_msg_dec->MTI_report.Tele_dev_type>=Dev_type_min && IPC_msg_dec->MTI_report.Tele_dev_type<=Dev_type_max)
 						{
-							meas = NAN;
+							//Modbus error to MTI box itself: device-level transport unreachable.
+							//Handler is alive and retrying, but the MTI box does not answer.
+							//Per error-code design: -905 (UNREGISTERED) means "handler/device gone",
+							//distinct from -901 (sensor disconnected while handler is healthy).
+							meas = MTI_MEAS_ERROR_UNREACHABLE;
 							ref = NAN;
 							cnt = 0;
 							status_value = OFF_line;
-							status_str = "OFF-line";
+							status_str = "Unreachable";
 							switch(IPC_msg_dec->MTI_report.Tele_dev_type)
 							{
 								case Tele_TC16: lim = 16; break;
@@ -207,8 +211,37 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 				if(IPC_msg_dec->MTI_Update_Radio.isNew_config)
 				{
 					sprintf(Node_ID_str, "%s.Radio.Tele", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name);
-					if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+					//Radio Disabled detection: new Tele_dev_type is out of range while an
+					//existing Tele subtree is present. Per error-code design, this is -901
+					//(handler alive, source intentionally disabled). Stamp -901 + "Radio
+					//Disabled" on every existing Tele.CHx and DO NOT delete the subtree, so
+					//ISO links keep reading a real source node instead of the -905 fallback.
+					if(!(IPC_msg_dec->MTI_Update_Radio.Tele_dev_type>=Dev_type_min && IPC_msg_dec->MTI_Update_Radio.Tele_dev_type<=Dev_type_max))
 					{
+						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+						{
+							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+							meas = DEVICE_MEAS_ERROR_OFFLINE;
+							status_value = Disconnected;
+							status_str = "Radio Disabled";
+							//Try CH1..CH16 (Tele_TC16 max). Writes to non-existent nodes are
+							//silently ignored by Update_NodeValue_by_nodeID.
+							for(i=1; i<=16; i++)
+							{
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.meas", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.status", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
+								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.status_byte", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
+								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
+							}
+						}
+					}
+					else if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+					{
+						//Real reconfiguration: replace the active Tele subtree below.
+						//ISO links to the removed anchor fall back to -905 because
+						//that configured source no longer exists.
 						UA_Server_deleteNode(server, NodeId, 1);
 						UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 					}
@@ -389,32 +422,48 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 								cnt = IPC_msg_dec->MTI_tele_data.data.as_QUAD.CNTs[i-1];
 								break;
 						}
-						if(IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid)
-						{
-							status_value = Okay;
-							status_str = "Okay";
-							if(IPC_msg_dec->MTI_tele_data.Tele_dev_type != Tele_quad)
+							if(IPC_msg_dec->MTI_tele_data.data.as_TC4.Data_isValid)
 							{
-								if(meas >= NO_SENSOR_VALUE)//Check for No sensor value
+								status_value = Okay;
+								status_str = "Okay";
+								if(IPC_msg_dec->MTI_tele_data.Tele_dev_type != Tele_quad)
 								{
-									status_str = "No Sensor";
-									status_value = Tele_channel_noSensor;
-									meas = NAN;
-									ref = NAN;
-								}
-								else if(meas != meas)//Check for Telemetry Error (meas == NAN)
-								{
-									status_str = "Error";
-									status_value = Tele_channel_Error;
-									ref = NAN;
+									if(meas >= NO_SENSOR_VALUE)//Check for No sensor value
+									{
+										status_str = "No Sensor";
+										status_value = Tele_channel_noSensor;
+										meas = DEVICE_MEAS_ERROR_NO_SENSOR;
+										ref = NAN;
+									}
+									else if(meas != meas)//Check for Telemetry Error (meas == NAN)
+									{
+										status_str = "Error";
+										status_value = Tele_channel_Error;
+										meas = DEVICE_MEAS_ERROR_UNCLASSIFIED;
+										ref = NAN;
+									}
 								}
 							}
-						}
-						else
-						{
-							status_value = Disconnected;
-							status_str = "Disconnected";
-						}
+							else
+							{
+								//Data_isValid==false: split by RX_Success_ratio.
+								// success>0 : packets arriving but failing validation -> signal
+								//             quality / link-layer corruption -> -907 DATA_INVALID.
+								// success==0: no packets at all -> remote tele unit is gone or
+								//             out of range -> -901 OFFLINE (handler still there).
+								if(IPC_msg_dec->MTI_tele_data.data.as_TC4.RX_Success_ratio)
+								{
+									status_value = Tele_channel_Error;
+									status_str = "Signal Invalid";
+									meas = MTI_MEAS_ERROR_DATA_INVALID;
+								}
+								else
+								{
+									status_value = Disconnected;
+									status_str = "Disconnected";
+									meas = DEVICE_MEAS_ERROR_OFFLINE;
+								}
+							}
 						//Update telemetry's Channel specific variables (Linkable)
 						sprintf(Node_ID_str, "%s.CH%u.meas", anchor, i);
 						Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
@@ -457,13 +506,25 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 			pthread_mutex_lock(&OPC_UA_NODESET_access);
 				if(IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove)//Check if RMSW/MUX nodes is need to be remove
 				{
+					//Per error-code design: a RMSW_MUX child device removed via
+					//IDs_to_be_removed means "handler alive, sensor unit gone" -> -901.
+					//Stamp -901 + "Disconnected" on the 4 CHs of each removed RMSW and
+					//KEEP the subtree so ISO links keep returning a real source value
+					//instead of falling back to -905 (which would imply handler/device gone).
+					meas = DEVICE_MEAS_ERROR_OFFLINE;
+					status_value = Disconnected;
+					status_str = "Disconnected";
 					for(i=0; i<IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.amount_to_be_remove; i++)
 					{
-						sprintf(Node_ID_str, "%s.Radio.Tele.%u", IPC_msg_dec->MTI_RMSW_MUX_data.Dev_or_Bus_name, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed[i]);
-						if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))
+						sprintf(anchor, "MTI.%u.ID:%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.IDs_to_be_removed[i]);
+						for(j=1; j<=4; j++)
 						{
-							UA_Server_deleteNode(server, NodeId, 1);
-							UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+							sprintf(Node_ID_str, "%s.CH%u.meas", anchor, j);
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
+							sprintf(Node_ID_str, "%s.CH%u.status", anchor, j);
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
+							sprintf(Node_ID_str, "%s.CH%u.status_byte", anchor, j);
+							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
 						}
 					}
 				}
@@ -595,12 +656,12 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							}
 							Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
 							sprintf(anchor, "MTI.%u.ID:%u", IPC_msg_dec->MTI_RMSW_MUX_data.MTI_IPv4, IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].dev_id);
-							for(j=1; j<=4; j++)
-							{
-								meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j-1];
-								meas = meas<NO_SENSOR_VALUE ? meas:NAN;
-								status_value = meas!=meas ? Tele_channel_noSensor:Okay;
-								status_str = status_value ? "No Sensor":"Okay";
+								for(j=1; j<=4; j++)
+								{
+									meas = IPC_msg_dec->MTI_RMSW_MUX_data.Devs_data.det_devs_data[i].meas_data[j-1];
+									meas = meas<NO_SENSOR_VALUE ? meas:DEVICE_MEAS_ERROR_NO_SENSOR;
+									status_value = meas==DEVICE_MEAS_ERROR_NO_SENSOR ? Tele_channel_noSensor:Okay;
+									status_str = status_value ? "No Sensor":"Okay";
 								sprintf(Node_ID_str, "%s.CH%u.meas", anchor, j);
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
 								sprintf(Node_ID_str, "%s.CH%u.status", anchor, j);

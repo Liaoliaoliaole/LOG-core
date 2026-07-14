@@ -32,6 +32,146 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Local functions
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass);
 
+static int morfeas_sdaq_status_is_unclassified(unsigned char status)
+{
+	return status
+		&& !(status & (1<<No_sensor))
+		&& !(status & (1<<Out_of_range))
+		&& !(status & (1<<Over_range));
+}
+
+static float morfeas_sdaq_log_meas_value(float value, unsigned char status, unsigned int cnt)
+{
+	if(status & (1<<No_sensor))
+		return DEVICE_MEAS_ERROR_NO_SENSOR;
+	if(morfeas_sdaq_status_is_unclassified(status))
+		return DEVICE_MEAS_ERROR_UNCLASSIFIED;
+	if(!cnt)
+		return SDAQ_MEAS_ERROR_STALL;
+	return value;
+}
+
+static float morfeas_mti_log_meas_value(float value, unsigned char data_valid, unsigned char rx_success_ratio)
+{
+	if(!data_valid)
+		return rx_success_ratio ? MORFEAS_MEAS_ERROR_DATA_INVALID : DEVICE_MEAS_ERROR_OFFLINE;
+	if(value >= NO_SENSOR_VALUE)
+		return DEVICE_MEAS_ERROR_NO_SENSOR;
+	if(isnan(value))
+		return DEVICE_MEAS_ERROR_UNCLASSIFIED;
+	return value;
+}
+
+static float morfeas_nox_log_meas_error_value(unsigned char heater_mode)
+{
+	if(heater_mode == 3)
+		return NOX_HEATER_OFF;
+	if(heater_mode == 1 || heater_mode == 2)
+		return NOX_HEATING_MODE;
+	return DEVICE_MEAS_ERROR_UNCLASSIFIED;
+}
+
+static void morfeas_json_add_offline_iobox_rx(cJSON *root)
+{
+	char rx_name[10], ch_name[10];
+
+	for(int i=0; i<IOBOX_Amount_of_All_RXs; i++)
+	{
+		cJSON *RX_json;
+
+		sprintf(rx_name, "RX%1u", i+1);
+		cJSON_AddItemToObject(root, rx_name, RX_json = cJSON_CreateObject());
+		for(int j=0; j<IOBOX_Amount_of_channels; j++)
+		{
+			sprintf(ch_name, "CH%1u", j+1);
+			/* Device-level modbus error: align with OPC-UA which writes -905 (UNREACHABLE). */
+			cJSON_AddNumberToObject(RX_json, ch_name, IOBOX_MEAS_ERROR_UNREACHABLE);
+		}
+		cJSON_AddNumberToObject(RX_json, "Index", 0);
+		cJSON_AddNumberToObject(RX_json, "Status", 0);
+		cJSON_AddNumberToObject(RX_json, "Success", 0);
+	}
+}
+
+static unsigned int morfeas_mti_tele_channel_count(unsigned char tele_dev_type)
+{
+	switch(tele_dev_type)
+	{
+		case Tele_TC16: return 16;
+		case Tele_TC8:  return 8;
+		case Tele_TC4:  return 4;
+		case Tele_quad: return Amount_OF_GENS;
+		default:        return 0;
+	}
+}
+
+static void morfeas_json_add_offline_mti_tele(cJSON *root, unsigned char tele_dev_type)
+{
+	unsigned int ch_count = morfeas_mti_tele_channel_count(tele_dev_type);
+	cJSON *Tele_data, *CHs, *REFs;
+
+	if(!ch_count)
+		return;
+
+	cJSON_AddItemToObject(root, "Tele_data", Tele_data = cJSON_CreateObject());
+	cJSON_AddNumberToObject(Tele_data, "Packet_Index", 0);
+	cJSON_AddNumberToObject(Tele_data, "RX_Status", 0);
+	cJSON_AddNumberToObject(Tele_data, "RX_Success_Ratio", 0);
+	cJSON_AddItemToObject(Tele_data, "IsValid", cJSON_CreateBool(0));
+	if(tele_dev_type != Tele_quad)
+	{
+		cJSON_AddNumberToObject(Tele_data, "Samples_toValid", 0);
+		cJSON_AddNumberToObject(Tele_data, "samples_toInvalid", 0);
+	}
+	cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
+	for(unsigned int i=0; i<ch_count; i++)
+		/* Device-level modbus error: align with OPC-UA which writes -905 (UNREACHABLE). */
+		cJSON_AddItemToArray(CHs, cJSON_CreateNumber(MTI_MEAS_ERROR_UNREACHABLE));
+
+	if(tele_dev_type == Tele_TC4 || tele_dev_type == Tele_TC8)
+	{
+		unsigned int ref_count = tele_dev_type == Tele_TC4 ? 2 : 8;
+
+		cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
+		for(unsigned int i=0; i<ref_count; i++)
+			cJSON_AddItemToArray(REFs, cJSON_CreateNumber(MTI_MEAS_ERROR_UNREACHABLE));
+	}
+	else if(tele_dev_type == Tele_quad)
+	{
+		cJSON_AddItemToObject(Tele_data, "CNTs", REFs = cJSON_CreateArray());
+		for(unsigned int i=0; i<Amount_OF_GENS; i++)
+			cJSON_AddItemToArray(REFs, cJSON_CreateNumber(0));
+	}
+}
+
+static void morfeas_json_add_offline_nox_sensor(cJSON *NOx_array, int addr, time_t last_seen)
+{
+	cJSON *curr_NOx_data, *NOx_status, *NOx_errors;
+
+	cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
+	cJSON_AddNumberToObject(curr_NOx_data, "addr", addr);
+	cJSON_AddNumberToObject(curr_NOx_data, "last_seen", last_seen);
+	cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_integral_size", 0);
+	cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_min", DEVICE_MEAS_ERROR_OFFLINE);
+	cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_max", DEVICE_MEAS_ERROR_OFFLINE);
+	cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_avg", DEVICE_MEAS_ERROR_OFFLINE);
+	cJSON_AddNumberToObject(curr_NOx_data, "O2_value_integral_size", 0);
+	cJSON_AddNumberToObject(curr_NOx_data, "O2_value_min", DEVICE_MEAS_ERROR_OFFLINE);
+	cJSON_AddNumberToObject(curr_NOx_data, "O2_value_max", DEVICE_MEAS_ERROR_OFFLINE);
+	cJSON_AddNumberToObject(curr_NOx_data, "O2_value_avg", DEVICE_MEAS_ERROR_OFFLINE);
+	cJSON_AddItemToObject(curr_NOx_data, "status", NOx_status = cJSON_CreateObject());
+	cJSON_AddItemToObject(NOx_status, "meas_state", cJSON_CreateBool(0));
+	cJSON_AddItemToObject(NOx_status, "supply_in_range", cJSON_CreateBool(0));
+	cJSON_AddItemToObject(NOx_status, "in_temperature", cJSON_CreateBool(0));
+	cJSON_AddItemToObject(NOx_status, "is_NOx_value_valid", cJSON_CreateBool(0));
+	cJSON_AddItemToObject(NOx_status, "is_O2_value_valid", cJSON_CreateBool(0));
+	cJSON_AddStringToObject(NOx_status, "heater_mode_state", "OFF-Line");
+	cJSON_AddItemToObject(curr_NOx_data, "errors", NOx_errors = cJSON_CreateObject());
+	cJSON_AddStringToObject(NOx_errors, "heater", "OFF-Line");
+	cJSON_AddStringToObject(NOx_errors, "NOx", "OFF-Line");
+	cJSON_AddStringToObject(NOx_errors, "O2", "OFF-Line");
+}
+
 //Delete logstat file for SDAQnet_Handler
 int delete_logstat_sys(char *logstat_path)
 {
@@ -210,6 +350,7 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 	struct Channel_acc_meas_entry *node_dec = node;
 	cJSON *array = arg_pass;
 	cJSON *node_data, *channel_status;
+	float log_meas_value;
 
 	if(node)
 	{
@@ -230,20 +371,25 @@ void extract_list_SDAQ_Channels_acc_to_avg_meas(gpointer node, gpointer arg_pass
 		if((node_dec->status & (1<<No_sensor)))//Check if No_Sensor bit is set
 		{
 			node_dec->meas_acc = NAN;
-			node_dec->meas_max = NAN;
-			node_dec->meas_min = NAN;
+			node_dec->meas_max = DEVICE_MEAS_ERROR_NO_SENSOR;
+			node_dec->meas_min = DEVICE_MEAS_ERROR_NO_SENSOR;
 		}
-		else if(node_dec->cnt)
-			node_dec->meas_acc /= node_dec->cnt;
-		cJSON_AddNumberToObject(node_data, "CNT", node_dec->cnt);
-		cJSON_AddNumberToObject(node_data, "Meas_avg", node_dec->meas_acc);
-		cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
-		cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
-		cJSON_AddNumberToObject(node_data, "Last_Meas", node_dec->last_meas);
-		node_dec->last_meas = node_dec->meas_acc;
-		node_dec->cnt = 0;
-		cJSON_AddItemToObject(array, "Measurement_data", node_data);
-	}
+			else if(node_dec->cnt)
+			{
+				node_dec->meas_acc /= node_dec->cnt;
+			}
+				log_meas_value = morfeas_sdaq_log_meas_value(node_dec->meas_acc, node_dec->status, node_dec->cnt);
+				cJSON_AddNumberToObject(node_data, "CNT", node_dec->cnt);
+				cJSON_AddNumberToObject(node_data, "Meas_avg", log_meas_value);
+				cJSON_AddNumberToObject(node_data, "Meas_max", node_dec->meas_max);
+				cJSON_AddNumberToObject(node_data, "Meas_min", node_dec->meas_min);
+				cJSON_AddNumberToObject(node_data, "Last_Meas", log_meas_value);
+				cJSON_AddNumberToObject(node_data, "Raw_Last_Meas",
+					isfinite(node_dec->raw_last_meas) ? node_dec->raw_last_meas : DEVICE_MEAS_ERROR_UNCLASSIFIED);
+				node_dec->last_meas = log_meas_value;
+			node_dec->cnt = 0;
+			cJSON_AddItemToObject(array, "Measurement_data", node_data);
+		}
 }
 
 void extract_list_SDAQnode_data(gpointer node, gpointer arg_pass)
@@ -362,25 +508,38 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 				for(int j=0; j<IOBOX_Amount_of_channels; j++)
 				{
 
-					sprintf(str_buff, "CH%1u", j+1);
-					value = stats->RX[i].CH_value[j]/stats->counter;
-					stats->RX[i].CH_value[j] = 0;
-					if(value<1500.0)
-						cJSON_AddNumberToObject(RX_json, str_buff, value);
-					else
-						cJSON_AddItemToObject(RX_json, str_buff, cJSON_CreateString("No sensor"));
+						sprintf(str_buff, "CH%1u", j+1);
+						value = stats->RX[i].CH_value[j]/stats->counter;
+						stats->RX[i].CH_value[j] = 0;
+						if(value<1500.0)
+							cJSON_AddNumberToObject(RX_json, str_buff, value);
+						else
+							cJSON_AddNumberToObject(RX_json, str_buff, DEVICE_MEAS_ERROR_NO_SENSOR);
 
 				}
 				cJSON_AddNumberToObject(RX_json, "Index", stats->RX[i].index);
 				cJSON_AddNumberToObject(RX_json, "Status", stats->RX[i].status);
 				cJSON_AddNumberToObject(RX_json, "Success", stats->RX[i].success);
+				}
+				else
+				{
+					cJSON_AddItemToObject(root, str_buff, RX_json = cJSON_CreateObject());
+					for(int j=0; j<IOBOX_Amount_of_channels; j++)
+					{
+						sprintf(str_buff, "CH%1u", j+1);
+						cJSON_AddNumberToObject(RX_json, str_buff, DEVICE_MEAS_ERROR_OFFLINE);
+					}
+					cJSON_AddNumberToObject(RX_json, "Index", stats->RX[i].index);
+					cJSON_AddNumberToObject(RX_json, "Status", stats->RX[i].status);
+					cJSON_AddNumberToObject(RX_json, "Success", stats->RX[i].success);
+				}
 			}
-			else
-				cJSON_AddItemToObject(root, str_buff, cJSON_CreateString("Disconnected"));
-		}
 	}
 	else
+	{
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
+		morfeas_json_add_offline_iobox_rx(root);
+	}
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
@@ -406,6 +565,7 @@ int logstat_IOBOX(char *logstat_path, void *stats_arg)
 }
 
 //Delete logstat file for MDAQ_handler
+/* MDAQ: device type retired.
 int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 {
 	int ret_val;
@@ -422,8 +582,10 @@ int delete_logstat_MDAQ(char *logstat_path, void *stats_arg)
 	free(logstat_path_and_name);
 	return ret_val;
 }
+*/
 
 //Converting and exporting function for MDAQ Modbus register. Convert it to JSON format and save it to logstat_path
+/* MDAQ: device type retired.
 int logstat_MDAQ(char *logstat_path, void *stats_arg)
 {
 	if(!logstat_path || !stats_arg)
@@ -484,7 +646,9 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 		}
 	}
 	else
+	{
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
+	}
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
@@ -508,6 +672,7 @@ int logstat_MDAQ(char *logstat_path, void *stats_arg)
 	free(logstat_path_and_name);
 	return 0;
 }
+*/
 
 //Converting and exporting function for MTI's stats struct. Convert it to JSON format and save it to logstat_path
 int logstat_MTI(char *logstat_path, void *stats_arg)
@@ -577,39 +742,39 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 				{
 					case Tele_TC4:
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
-						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
-						for(i=0; i<4; i++)
-						{
-							if(stats->Tele_data.as_TC4.CHs[i]<NO_SENSOR_VALUE)
-								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC4.CHs[i]));
-							else
-								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
-						}
+							cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
+							for(i=0; i<4; i++)
+							{
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(
+									morfeas_mti_log_meas_value(stats->Tele_data.as_TC4.CHs[i],
+															   stats->Tele_data.as_TC4.Data_isValid,
+															   stats->Tele_data.as_TC4.RX_Success_ratio)));
+							}
 						for(i=0; i<2; i++)
 							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_TC4.Refs[i]));
 						break;
 					case Tele_TC8:
 						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
-						cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
-						for(i=0; i<8; i++)
-						{
-							if(stats->Tele_data.as_TC8.CHs[i]<NO_SENSOR_VALUE)
-								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC8.CHs[i]));
-							else
-								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
-						}
+							cJSON_AddItemToObject(Tele_data, "CHs_refs", REFs = cJSON_CreateArray());
+							for(i=0; i<8; i++)
+							{
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(
+									morfeas_mti_log_meas_value(stats->Tele_data.as_TC8.CHs[i],
+															   stats->Tele_data.as_TC8.Data_isValid,
+															   stats->Tele_data.as_TC8.RX_Success_ratio)));
+							}
 						for(i=0; i<8; i++)
 							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_TC8.Refs[i]));
 						break;
 					case Tele_TC16:
-						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
-						for(i=0; i<16; i++)
-						{
-							if(stats->Tele_data.as_TC16.CHs[i]<NO_SENSOR_VALUE)
-								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_TC16.CHs[i]));
-							else
-								cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
-						}
+							cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
+							for(i=0; i<16; i++)
+							{
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(
+									morfeas_mti_log_meas_value(stats->Tele_data.as_TC16.CHs[i],
+															   stats->Tele_data.as_TC16.Data_isValid,
+															   stats->Tele_data.as_TC16.RX_Success_ratio)));
+							}
 						break;
 					case Tele_quad:
 						cJSON_AddItemToObject(MTI_status, "PWMs_config", PWM_config = cJSON_CreateArray());
@@ -622,9 +787,12 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 							cJSON_AddNumberToObject(CHs, "Scaler", stats->Tele_data.as_QUAD.gen_config[i].scaler);
 							cJSON_AddItemToArray(PWM_config, CHs);
 						}
-						cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
-						for(i=0; i<Amount_OF_GENS; i++)
-							cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_QUAD.CHs[i]));
+							cJSON_AddItemToObject(Tele_data, "CHs", CHs = cJSON_CreateArray());
+							for(i=0; i<Amount_OF_GENS; i++)
+								cJSON_AddItemToArray(CHs, cJSON_CreateNumber(
+									morfeas_mti_log_meas_value(stats->Tele_data.as_QUAD.CHs[i],
+															   stats->Tele_data.as_QUAD.Data_isValid,
+															   stats->Tele_data.as_QUAD.RX_Success_ratio)));
 						cJSON_AddItemToObject(Tele_data, "CNTs", REFs = cJSON_CreateArray());
 						for(i=0; i<Amount_OF_GENS; i++)
 							cJSON_AddItemToArray(REFs, cJSON_CreateNumber(stats->Tele_data.as_QUAD.CNTs[i]));
@@ -680,13 +848,13 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 						case Mini_RMSW:
 							//Add measurements
 							CHs = cJSON_CreateArray();
-							for(int j=0; j<4; j++)
-							{
-								if(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]<NO_SENSOR_VALUE)
-									cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]));
-								else
-									cJSON_AddItemToArray(CHs, cJSON_CreateString("No sensor"));
-							}
+								for(int j=0; j<4; j++)
+								{
+									if(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]<NO_SENSOR_VALUE)
+										cJSON_AddItemToArray(CHs, cJSON_CreateNumber(stats->Tele_data.as_RMSWs.det_devs_data[i].meas_data[j]));
+									else
+										cJSON_AddItemToArray(CHs, cJSON_CreateNumber(DEVICE_MEAS_ERROR_NO_SENSOR));
+								}
 							cJSON_AddItemToObject(RMSW_t, "CHs_meas", CHs);
 							//Add control status
 							REFs = cJSON_CreateObject();
@@ -709,7 +877,19 @@ int logstat_MTI(char *logstat_path, void *stats_arg)
 		}
 	}
 	else
+	{
 		cJSON_AddItemToObject(root, "Connection_status", cJSON_CreateString(modbus_strerror(stats->error)));
+		// Keep the last-known configured Tele type when the MTI is OFF-Line. Disabled is excluded.
+		if(stats->MTI_Radio_config.Tele_dev_type >= Dev_type_min &&
+		   stats->MTI_Radio_config.Tele_dev_type <= Dev_type_max)
+		{
+			cJSON_AddItemToObject(root, "MTI_status", MTI_status = cJSON_CreateObject());
+			cJSON_AddNumberToObject(MTI_status, "Radio_CH", stats->MTI_Radio_config.RF_channel);
+			cJSON_AddItemToObject(MTI_status, "Modem_data_rate", cJSON_CreateString(MTI_Data_rate_str[stats->MTI_Radio_config.Data_rate]));
+			cJSON_AddItemToObject(MTI_status, "Tele_Device_type", cJSON_CreateString(MTI_Tele_dev_type_str[stats->MTI_Radio_config.Tele_dev_type]));
+			morfeas_json_add_offline_mti_tele(root, stats->MTI_Radio_config.Tele_dev_type);
+		}
+	}
 	//Reset accumulator counter
 	stats->counter = 0;
 	//Print JSON to File
@@ -787,6 +967,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	//Add BUS_util and Bus_error_rate to JSON root
 	cJSON_AddNumberToObject(root, "BUS_Utilization", stats->Bus_util);
 	cJSON_AddNumberToObject(root, "BUS_Error_rate", stats->Bus_error_rate);
+	cJSON_AddNumberToObject(root, "NOx_sensor_lifetime_sec", NOx_Sensor_lifetime_sec);
 	//Add auto power off value and counter
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_value", stats->auto_switch_off_value);
 	cJSON_AddNumberToObject(root, "Auto_SW_OFF_cnt", stats->auto_switch_off_cnt);
@@ -794,37 +975,45 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "NOx_sensors", NOx_array = cJSON_CreateArray());
 	for(int i=0; i<2; i++)
 	{
-		if((now_time - stats->NOXs_data[i].last_seen) <= 10)
+		if((now_time - stats->NOXs_data[i].last_seen) <= NOx_Sensor_lifetime_sec)
 		{
 			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
 			cJSON_AddNumberToObject(curr_NOx_data, "addr", i);
 			cJSON_AddNumberToObject(curr_NOx_data, "last_seen", stats->NOXs_data[i].last_seen);
 			//NOx value statistics
 			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_integral_size", stats->NOx_statistics[i].NOx_value_sample_cnt);
-			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_min", stats->NOx_statistics[i].NOx_value_min);
-			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_max", stats->NOx_statistics[i].NOx_value_max);
-			if(stats->NOx_statistics[i].NOx_value_sample_cnt)
-			{
-				value = stats->NOx_statistics[i].NOx_value_acc/stats->NOx_statistics[i].NOx_value_sample_cnt;
-				stats->NOx_statistics[i].NOx_value_acc = 0;
-				stats->NOx_statistics[i].NOx_value_sample_cnt = 0;
-			}
-			else
-				value = NAN;
-			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_avg", value);
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_min",
+				isnan(stats->NOx_statistics[i].NOx_value_min) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].NOx_value_min);
+			cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_max",
+				isnan(stats->NOx_statistics[i].NOx_value_max) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].NOx_value_max);
+				if(stats->NOx_statistics[i].NOx_value_sample_cnt)
+				{
+					value = stats->NOx_statistics[i].NOx_value_acc/stats->NOx_statistics[i].NOx_value_sample_cnt;
+					stats->NOx_statistics[i].NOx_value_acc = 0;
+					stats->NOx_statistics[i].NOx_value_sample_cnt = 0;
+				}
+				else
+					value = MORFEAS_MEAS_ERROR_UNCLASSIFIED; /* No samples in interval but sensor valid */
+				if(!stats->NOXs_data[i].status.is_NOx_value_valid)
+					value = morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state);
+				cJSON_AddNumberToObject(curr_NOx_data, "NOx_value_avg", value);
 			//O2 value statistics
 			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_integral_size", stats->NOx_statistics[i].O2_value_sample_cnt);
-			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_min", stats->NOx_statistics[i].O2_value_min);
-			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_max", stats->NOx_statistics[i].O2_value_max);
-			if(stats->NOx_statistics[i].O2_value_sample_cnt)
-			{
-				value = stats->NOx_statistics[i].O2_value_acc/stats->NOx_statistics[i].O2_value_sample_cnt;
-				stats->NOx_statistics[i].O2_value_acc = 0;
-				stats->NOx_statistics[i].O2_value_sample_cnt = 0;
-			}
-			else
-				value = NAN;
-			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_avg", value);
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_min",
+				isnan(stats->NOx_statistics[i].O2_value_min) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].O2_value_min);
+			cJSON_AddNumberToObject(curr_NOx_data, "O2_value_max",
+				isnan(stats->NOx_statistics[i].O2_value_max) ? morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state) : stats->NOx_statistics[i].O2_value_max);
+				if(stats->NOx_statistics[i].O2_value_sample_cnt)
+				{
+					value = stats->NOx_statistics[i].O2_value_acc/stats->NOx_statistics[i].O2_value_sample_cnt;
+					stats->NOx_statistics[i].O2_value_acc = 0;
+					stats->NOx_statistics[i].O2_value_sample_cnt = 0;
+				}
+				else
+					value = MORFEAS_MEAS_ERROR_UNCLASSIFIED; /* No samples in interval but sensor valid */
+				if(!stats->NOXs_data[i].status.is_O2_value_valid)
+					value = morfeas_nox_log_meas_error_value(stats->NOXs_data[i].status.heater_mode_state);
+				cJSON_AddNumberToObject(curr_NOx_data, "O2_value_avg", value);
 			//Add status for curr_NOx_data
 			cJSON_AddItemToObject(curr_NOx_data, "status", NOx_status = cJSON_CreateObject());
 			cJSON_AddItemToObject(NOx_status, "meas_state", cJSON_CreateBool(stats->NOXs_data[i].meas_state));
@@ -840,7 +1029,12 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 			cJSON_AddStringToObject(NOx_errors, "O2", Errors_dec_str[stats->NOXs_data[i].errors.O2]);
 		}
 		else
-			cJSON_AddItemToArray(NOx_array, cJSON_CreateObject());//Add empty object to NOx_array.
+		{
+			if(stats->NOXs_data[i].last_seen > 0)
+				morfeas_json_add_offline_nox_sensor(NOx_array, i, stats->NOXs_data[i].last_seen);
+			else
+				cJSON_AddItemToArray(NOx_array, cJSON_CreateObject());//Keep never-seen sensor slots empty.
+		}
 	}
 	//Print JSON to File
 	JSON_str = cJSON_PrintUnformatted(root);

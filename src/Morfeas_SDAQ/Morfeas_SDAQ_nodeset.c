@@ -21,6 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //Include Functions implementation header
 #include "../Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
+static int sdaq_status_is_unclassified(unsigned char status)
+{
+	return status
+		&& !(status & (1<<No_sensor))
+		&& !(status & (1<<Out_of_range))
+		&& !(status & (1<<Over_range));
+}
+
 void SDAQ_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
 	char Node_id_str[30], Child_Node_ID_str[60], zero=0;
@@ -91,7 +99,9 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 													   UA_TYPES_BYTE);
 					sprintf(Node_ID_str, "%s.meas", Anchor);
 					if(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].status&(1<<No_sensor))
-						IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas = NAN;
+						IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas = MORFEAS_MEAS_ERROR_NO_SENSOR;
+					else if(sdaq_status_is_unclassified(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].status))
+						IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas = MORFEAS_MEAS_ERROR_UNCLASSIFIED;
 					Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 													   &(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas),
 													   UA_TYPES_FLOAT);

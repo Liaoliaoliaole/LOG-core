@@ -267,6 +267,7 @@ void * Morfeas_thread(void *varg_pt)
 														XML_node_get_content(t_arg->component, "CANBUS_IF"),
 														t_arg->logstat_path);
 		}
+		/* MDAQ: device type retired, daemon will never spawn Morfeas_MDAQ_if.
 		else if(!strcmp((char *)(t_arg->component->name), "MDAQ_HANDLER"))
 		{
 			sprintf(Logger_name,"%s_%s.log",Morfeas_MDAQ_if, XML_node_get_content(t_arg->component, "DEV_NAME"));
@@ -275,6 +276,7 @@ void * Morfeas_thread(void *varg_pt)
 														XML_node_get_content(t_arg->component, "DEV_NAME"),
 														t_arg->logstat_path);
 		}
+		*/
 		else if(!strcmp((char *)(t_arg->component->name), "IOBOX_HANDLER"))
 		{
 			sprintf(Logger_name,"%s_%s.log",Morfeas_IOBOX_if, XML_node_get_content(t_arg->component, "DEV_NAME"));

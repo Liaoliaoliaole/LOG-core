@@ -69,83 +69,120 @@ The source of the Morfeas-core project have the following submodules:
 * [open62541](https://open62541.org/) - An open source C (C99) implementation of OPC-UA (IEC 62541).
 
 ### Get the Source
-```
-$ # Clone the project's source code
-$ git clone https://gitlab.com/fantomsam/morfeas_project.git Morfeas_core
-$ cd Morfeas_core
-$ # Get Source of the submodules
-$ git submodule update --init --recursive --remote --merge
-```
-### Compilation and installation of the submodules
+```bash
+# Clone LOG-core
+git clone <your_repo_url> Morfeas_core
+cd Morfeas_core
 
-#### cJSON
+# Pull submodules exactly as pinned by this repo
+git submodule sync --recursive
+git submodule update --init --recursive
 ```
-$ cd src/cJSON
-$ mkdir build && cd build
-$ cmake -D BUILD_SHARED_LIBS=ON ..
-$ make -j$(nproc)
-$ sudo make install
-$ sudo ldconfig
-```
-#### noPoll
-```
-$ cd src/noPoll
-$ ./autogen.sh
-$ make -j$(nproc)
-$ sudo make install
-$ sudo ldconfig
-```
-#### Open62541
-```
-$ cd src/open62541
-$ mkdir build && cd build
-$ cmake -D BUILD_SHARED_LIBS=ON ..
-$ make -j$(nproc)
-$ sudo make install
-$ sudo ldconfig
-```
-#### SDAQ_worker
-```
-$ cd src/sdaq_worker
-$ make tree
-$ make -j$(nproc)
-$ sudo make install
-```
-### Compilation of the Morfeas-core Project
-```
-$ make tree
-$ make -j$(nproc)
-```
-The executable binaries located under the **./build** directory.
 
-### Installation of the Morfeas-core Project
+## Pinned Dependency Baseline
+
+### LOG core v1 (baseline)
+
+- `src/cJSON`: `c859b25da02955fef659d658b8f324b5cde87be3`
+- `src/noPoll`: `ce4da1a102be8a19269813d97562582e7ce94bcc`
+- `src/open62541`: `f63e2a819aff6e468242dc2e54ccbd5b75d63654`
+- `src/sdaq-worker`: `ccc690c57e4171762c42a7e6412b7d92ea5e789f`
+
+Note: `nopoll` upstream `pkg-config` version string can still show `0.4.8.b456` even when pinned to commit `ce4da1a...`.
+
+### LOG core v2 (validated Bookworm build)
+Submodule commits pinned:
+
+- `src/cJSON`: `12c4bf1986c288950a3d06da757109a6aa1ece38` (v1.7.15-44)
+- `src/noPoll`: `fa8b8c90a69fed63b1f1e4f7e9e95672f34c054f` (0.4.9-2)
+- `src/open62541`: `c1960fa4897d06c5fae8c41823fc446c8bbd6345` (v1.4.10-1104)
+- `src/sdaq-worker`: `ccc690c57e4171762c42a7e6412b7d92ea5e789f` (heads/master — unchanged)
+
+Notable upgrades from v1 → v2: open62541 moved from `f63e2a8` to `c1960fa` (v1.4.10 series), which is why the `UA_ServerConfig_clear` / `UA_ServerConfig_clean` compatibility shim was added. cJSON and noPoll received minor upstream bumps.
+
+## Build and Rebuild
+Use the provided scripts instead of manual per-library build commands.
+
+### Full rebuild (dependencies + core)
+Use when dependency pins changed or first setup on a new machine.
+
+```bash
+cd Morfeas_core
+./build_core_full.sh
+sudo systemctl restart Morfeas_system.service
 ```
-$ sudo make install
+
+### Code-only rebuild (core only)
+Use when only LOG-core source code changed and dependency pins did not change.
+
+```bash
+cd Morfeas_core
+./build_core_only.sh
 ```
-### Configuration for the Morfeas_daemon, D-Bus and Systemd service
+
+### Quick runtime checks
+```bash
+systemctl is-active Morfeas_system.service
+ps -ef | egrep 'Morfeas_daemon|Morfeas_opc_ua|Morfeas_SDAQ_if' | grep -v egrep
+pkg-config --modversion open62541 libcjson nopoll
+ldd /usr/local/bin/Morfeas_opc_ua | egrep 'open62541|cjson|nopoll|icu|ssl'
 ```
-$ #--- Optionaly copy the configuration directory to your home ---
-$ cp -r configuration ~/
-$ #Make the nececery modifications on the Morfeas_daemon configuration (.xml) file
-$ vim (~/)configuration/Morfeas_config.xml
-$ #Make the nececery modifications on the Unit file of the Morfeas_daemon service
-$ sudo systemctl edit Morfeas_system.service --full
-$ #Also modify the configuration file of the Morfeas_daemon service
-$ sudo vim /etc/systemd/system/Morfeas_system.service.d/Morfeas_system.conf
-$ #Modify the D-Bus configuration for the Morfeas system
-$ sudo vim /etc/dbus-1/system.d/Morfeas_system.conf
-$ #Start the systemd service daemon
-$ sudo systemctl start Morfeas_system.service
-$ #--- Optionaly If you want to start the daemon on boot ---
-$ sudo systemctl enable Morfeas_system.service
+
+### Configuration for Morfeas_daemon, D-Bus and Systemd service
+```bash
+# Optional: copy the configuration directory
+cp -r configuration ~/
+
+# Edit runtime configuration
+vim ~/configuration/Morfeas_config.xml
+
+# Adjust service unit/override if needed
+sudo systemctl edit Morfeas_system.service --full
+sudo vim /etc/systemd/system/Morfeas_system.service.d/Morfeas_system.conf
+
+# Adjust D-Bus policy if needed
+sudo vim /etc/dbus-1/system.d/Morfeas_system.conf
+
+# Start/enable service
+sudo systemctl start Morfeas_system.service
+sudo systemctl enable Morfeas_system.service
 ```
+
 ### Re-Compilation of the source
 Guide link [here](./RE-INSTALL.md)
 
-## Authors
-* **Sam Harry Tzavaras** - *Initial work*
+---
+
+## What's New in v2
+
+### 1. Dependency
+- open62541 API compatibility: `UA_ServerConfig_clear` vs `UA_ServerConfig_clean` probed at link time via `__attribute__((weak))` — same binary works across open62541 build variants
+
+### 2. SDAQ Address Allocation Redesign
+The previous LogBook was append-only and accumulated duplicate entries over time, causing address conflicts. The current design:
+
+- **Deduplicated TTL cache** — 1 record per S/N, 1 record per address; always rewritten atomically
+- **Address reservation** — when a device goes offline, its address slot is reserved for that S/N for **14 days**; the device recovers its original address automatically on return
+- **O(1) conflict check** — `address_owners[64]` in-memory table replaces linear list scans
+- **On-card upgrade behavior** — if an existing SD card is upgraded in place and the stored SDAQ LogBook uses the previous format, Morfeas clears that address cache and rebuilds it from SDAQs that are currently online. This does not apply to a freshly imaged/replaced SD card. When the cache is rebuilt, SDAQ addresses may be reassigned according to the current conflict-free allocation rules.
+- Max 62 simultaneous devices; extras go to Parking (addr 63) and retry automatically when a slot frees
+
+### 3. Reserved Measurement Error Codes
+Invalid or unavailable measurements carry typed numeric error codes instead of `NaN` or device-specific strings:
+
+| Code | Meaning |
+|------|---------|
+| `-901` | Offline / disconnected source while the handler is alive |
+| `-902` | No sensor |
+| `-903` | Stall / heating / not ready |
+| `-904` | Unclassified invalid runtime condition |
+| `-905` | Source unregistered or device-level transport unreachable |
+| `-906` | Standby / heater off |
+| `-907` | Signal invalid / data invalid |
+
+`Out of Range` and `Over Range` now preserve the measured value (previously discarded). Error codes propagate through IPC → OPC UA → web backend and display as red integers in Morfeas Web.
+
+---
 
 ## License
 The source code of the project is licensed under GPLv3 or later - see the [License](LICENSE) file for details.
-
-
