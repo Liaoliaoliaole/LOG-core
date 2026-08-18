@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <time.h>
 #include <sys/time.h>
 #include <math.h>
+#include <errno.h>
+#include <stdint.h>
 
 #include <glib.h>
 #include <gmodule.h>
@@ -32,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "../IPC/Morfeas_IPC.h"// -> #include "Morfeas_Types.h"
 #include "Morfeas_run_check.h"
+#include "../sdaq-worker/src/SDAQ_drv.h"//Only for the SDAQ_MAX_AMOUNT_OF_CHANNELS constant
 
 /*
 void print_XML_node(xmlNode * node)
@@ -257,6 +260,52 @@ static int decode_nox_anchor(const char *anchor_str, char *can_if_name, size_t c
 	return EXIT_SUCCESS;
 }
 
+/*
+ * Strict, full-string decoder for the canonical SDAQ anchor grammar:
+ *     <serial>.CH<channel>
+ * where <serial> is a non-zero uint32 with no leading zero, and <channel> is
+ * a non-zero decimal with no leading zero, not exceeding SDAQ_MAX_AMOUNT_OF_CHANNELS.
+ * This is the single decoder shared by validate_anchor_comp() and
+ * XML_doc_to_List_ISO_Channels(); it must never be re-implemented a second time.
+ * Return 0 on success, or -1 on failure.
+ */
+static int decode_sdaq_anchor(const char *anchor_str, unsigned int *serial, unsigned char *channel)
+{
+	const char *serial_begin, *serial_end, *channel_begin;
+	char *parse_end;
+	unsigned long parsed_serial, parsed_channel;
+
+	if(!anchor_str || !serial || !channel)
+		return EXIT_FAILURE;
+
+	serial_begin = anchor_str;
+	if(!g_ascii_isdigit(*serial_begin) || *serial_begin == '0')//No leading zero, digits only
+		return EXIT_FAILURE;
+	for(serial_end = serial_begin; g_ascii_isdigit(*serial_end); serial_end++);
+	if(*serial_end != '.')
+		return EXIT_FAILURE;
+
+	if(strncmp(serial_end + 1, "CH", strlen("CH")))//Only the upper-case literal ".CH" is accepted
+		return EXIT_FAILURE;
+	channel_begin = serial_end + 1 + strlen("CH");
+	if(!g_ascii_isdigit(*channel_begin) || *channel_begin == '0')//No leading zero, digits only
+		return EXIT_FAILURE;
+
+	errno = 0;
+	parsed_serial = strtoul(serial_begin, &parse_end, 10);
+	if(parse_end != serial_end || errno == ERANGE || parsed_serial == 0 || parsed_serial > UINT32_MAX)
+		return EXIT_FAILURE;
+
+	errno = 0;
+	parsed_channel = strtoul(channel_begin, &parse_end, 10);
+	if(*parse_end != '\0' || errno == ERANGE || parsed_channel == 0 || parsed_channel > SDAQ_MAX_AMOUNT_OF_CHANNELS)
+		return EXIT_FAILURE;//parse_end must reach the end of the string: no trailing text allowed
+
+	*serial = (unsigned int)parsed_serial;
+	*channel = (unsigned char)parsed_channel;
+	return EXIT_SUCCESS;
+}
+
 //Function that validate the anchor's components. Return 0 on success or -1 on failure.
 int validate_anchor_comp(char *anchor_str, char handler_type)
 {
@@ -267,7 +316,7 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 	char metric_str[16];
 	if(!anchor_str)
 		return EXIT_FAILURE;
-	if(handler_type != NOX)
+	if(handler_type != NOX && handler_type != SDAQ)//SDAQ is validated exclusively by decode_sdaq_anchor() below; it must not also gate through this loose pre-check, to avoid a second independent grammar for the same interface.
 	{
 		//Check anchor_str for correct anchor component names
 		if(!atoi(anchor_str)) //identifier component check
@@ -315,35 +364,16 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 			else
 				return EXIT_FAILURE;
 			break;
-		case MDAQ:
-			if(!(receiver_or_value = strstr(anchor_str, ".CH")))//Value component check
-				return EXIT_FAILURE;
-			receiver_or_value+=strlen(".CH?");
-			if(*(receiver_or_value+1)=='V'&&*(receiver_or_value+2)=='a'&&*(receiver_or_value+3)=='l')
-			{
-				if(!atoi(receiver_or_value+strlen(".CH?")))//Value's value check
-					return EXIT_FAILURE;
-				if(strstr(anchor_str, ".Val")<=channel)//If Value exist must be after channels component
-					return EXIT_FAILURE;
-				sscanf(anchor_str, "%u.CH%u.Val%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
-				if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
-					return EXIT_FAILURE;
-			}
-			else
-				return EXIT_FAILURE;
-			break;
+		case MDAQ://MDAQ device type is retired; INTERFACE_TYPE="MDAQ" is not a supported anchor.
+			return EXIT_FAILURE;
 		case SDAQ:
-			if(!(channel = strchr(anchor_str, '.')))//Channel component check
-				return EXIT_FAILURE;
-			if(*(channel+1)=='C' && *(channel+2)=='H')
-			{
-				sscanf(anchor_str, "%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1]);
-				if(!anchor_arg_int[0]||!anchor_arg_int[1])
-					return EXIT_FAILURE;
-			}
-			else
+		{
+			unsigned int sdaq_serial;
+			unsigned char sdaq_channel;
+			if(decode_sdaq_anchor(anchor_str, &sdaq_serial, &sdaq_channel))
 				return EXIT_FAILURE;
 			break;
+		}
 		case MTI:
 			//Check existence and validity of Tele_type field
 			i=Tele_TC16;//Start checking from Tele_TC16 value
@@ -473,14 +503,40 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 		if((content = XML_node_get_content(check_element, "ANCHOR"))
 		  &&(dev_type_str = XML_node_get_content(check_element, "INTERFACE_TYPE")))
 		{
+			int anchor_if_type = if_type_str_2_num(dev_type_str);
 			fl.as_struct.anchor = 1;
 			//TODO: More checks on values
-			if(validate_anchor_comp(content, if_type_str_2_num(dev_type_str)))
+			if(validate_anchor_comp(content, anchor_if_type))
 			{
 				fprintf(stderr, "\nANCHOR :\"%s\" of ISO_CHANNEL :\"%s\" (Type:\"%s\") is NOT valid!!!!\n\n", content,
 																												  iso_channel,
 																												  dev_type_str);
 				return EXIT_FAILURE;
+			}
+			//Reject two ISO_CHANNELs that resolve to the same (SDAQ, serial, channel) runtime source
+			if(anchor_if_type == SDAQ)
+			{
+				unsigned int serial, other_serial;
+				unsigned char channel_num, other_channel;
+				char *other_content, *other_dev_type_str, *other_iso_channel;
+				xmlNode *other_element;
+
+				decode_sdaq_anchor(content, &serial, &channel_num);//Already validated above
+				for(other_element = check_element->next; other_element; other_element = other_element->next)
+				{
+					if(!(other_content = XML_node_get_content(other_element, "ANCHOR")) ||
+					   !(other_dev_type_str = XML_node_get_content(other_element, "INTERFACE_TYPE")) ||
+					   if_type_str_2_num(other_dev_type_str) != SDAQ ||
+					   decode_sdaq_anchor(other_content, &other_serial, &other_channel))
+						continue;
+					if(serial == other_serial && channel_num == other_channel)
+					{
+						other_iso_channel = XML_node_get_content(other_element, "ISO_CHANNEL");
+						fprintf(stderr, "\nANCHOR :\"%s\" of ISO_CHANNEL :\"%s\" duplicates the SDAQ source already used by ISO_CHANNEL :\"%s\"!!!!\n\n",
+								other_content, other_iso_channel ? other_iso_channel : "?", iso_channel ? iso_channel : "?");
+						return EXIT_FAILURE;
+					}
+				}
 			}
 		}
 	}
@@ -598,9 +654,18 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 																	&(list_cur_Links_node_data->rxNum_teleType_or_value));
 							break;
 						case SDAQ:
-							sscanf(anchor_ptr, "%u.CH%hhu", &(list_cur_Links_node_data->identifier),
-															&(list_cur_Links_node_data->channel));
+						{
+							unsigned int sdaq_serial;
+							unsigned char sdaq_channel;
+							if(decode_sdaq_anchor(anchor_ptr, &sdaq_serial, &sdaq_channel))
+							{
+								free_Link_entry(list_cur_Links_node_data);
+								continue;
+							}
+							list_cur_Links_node_data->identifier = sdaq_serial;
+							list_cur_Links_node_data->channel = sdaq_channel;
 							break;
+						}
 						case MTI:
 							if((TeleID=strstr(anchor_ptr, "ID:")))//Check if anchor referring to MiniRMSW
 							{

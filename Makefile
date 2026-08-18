@@ -277,6 +277,26 @@ uninstall:
 	@echo  "\nRemove LogBooks..."
 	@rm -r /var/tmp/Morfeas_*
 
-.PHONY: all clean delete-tree
+###############################################################################
+# Project's own tests (not the vendored cJSON/open62541 self-tests).         #
+###############################################################################
+TESTS_dir = tests
+
+Morfeas_XML_test_DEP = $(WORK_dir)/Morfeas_run_check.o \
+						$(WORK_dir)/Morfeas_XML.o \
+						$(WORK_dir)/MTI_func.o \
+						$(WORK_dir)/NOX_func.o \
+						$(WORK_dir)/Morfeas_IPC.o
+
+$(WORK_dir)/opcua_config_parser_test.o: $(TESTS_dir)/opcua_config_parser_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(BUILD_dir)/opcua_config_parser_test: $(WORK_dir)/opcua_config_parser_test.o $(Morfeas_XML_test_DEP)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-a1: tree $(BUILD_dir)/opcua_config_parser_test
+	./$(BUILD_dir)/opcua_config_parser_test
+
+.PHONY: all clean delete-tree test-core-a1
 
 

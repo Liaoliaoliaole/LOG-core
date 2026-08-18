@@ -13,7 +13,7 @@
         <CHANNEL>
                 <ISO_CHANNEL>TE2</ISO_CHANNEL>
                 <INTERFACE_TYPE>SDAQ</INTERFACE_TYPE>
-                <ANCHOR>2.CH01</ANCHOR>
+                <ANCHOR>2.CH1</ANCHOR>
                 <DESCRIPTION>This is a test 2</DESCRIPTION>
                 <MIN>-100.55</MIN>
                 <MAX>300</MAX>
@@ -65,14 +65,11 @@
                 <ANCHOR>{Identifier}.RX{n}.Success</ANCHOR> MIN=0 MAX=100 UNIT=%
                 Create concrete entries through the LOG-web linker UI.
         -->
-        <CHANNEL>
-                <ISO_CHANNEL>TE200</ISO_CHANNEL>
-                <INTERFACE_TYPE>MDAQ</INTERFACE_TYPE>
-                <ANCHOR>167772170.CH1.Val1</ANCHOR>
-                <DESCRIPTION>Test ISO channel for MDAQ</DESCRIPTION>
-                <MIN>-2.5</MIN>
-                <MAX>2.5</MAX>
-                <UNIT>°C</UNIT>
-        </CHANNEL>
+        <!--
+                MDAQ device type is retired and INTERFACE_TYPE="MDAQ" is rejected
+                by the strict validator (unsupported_interface). A previous
+                example MDAQ channel used to be here; it has been removed so
+                this default configuration stays valid.
+        -->
 <!---->
 </NODESet>
