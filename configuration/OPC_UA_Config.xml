@@ -60,8 +60,11 @@
                 <UNIT>°C</UNIT>
         </CHANNEL>
         <!--
-                IOBOX RX link metrics use the same CHANNEL schema:
-                <ANCHOR>{Identifier}.RX{n}.Status</ANCHOR>  MIN=0 MAX=1 UNIT omitted
+                IOBOX RX link metrics use the same CHANNEL schema. UNIT is
+                required and must be non-empty for every IOBOX/MTI/NOX
+                CHANNEL (Core-A2 static semantic check), Status included;
+                there is no per-anchor-kind exemption:
+                <ANCHOR>{Identifier}.RX{n}.Status</ANCHOR>  MIN=0 MAX=1 UNIT=bool
                 <ANCHOR>{Identifier}.RX{n}.Success</ANCHOR> MIN=0 MAX=100 UNIT=%
                 Create concrete entries through the LOG-web linker UI.
         -->

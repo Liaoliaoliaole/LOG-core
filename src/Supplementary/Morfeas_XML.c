@@ -193,7 +193,6 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
     return EXIT_SUCCESS;
 }
 
-#define max_arg_range 3
 #define anchor_check_buff_size 100
 
 /*
@@ -306,64 +305,215 @@ static int decode_sdaq_anchor(const char *anchor_str, unsigned int *serial, unsi
 	return EXIT_SUCCESS;
 }
 
+/*
+ * Strict, full-string decoder for the canonical IOBOX anchor grammar:
+ *     <identifier>.RX<receiver>.CH<channel>
+ *     <identifier>.RX<receiver>.Status
+ *     <identifier>.RX<receiver>.Success
+ * identifier: uint32, no leading zero. receiver: 1..IOBOX_Amount_of_All_RXs.
+ * channel (CH form only): 1..IOBOX_Amount_of_channels. ".RX", ".CH",
+ * ".Status" and ".Success" are matched case-sensitively; no suffix, extra
+ * segment or trailing text is accepted. *channel is written using the same
+ * encoding as struct Link_entry's channel field: 1..IOBOX_Amount_of_channels
+ * for a CH anchor, or the IOBOX_RX_Status_link_channel/IOBOX_RX_Success_link_channel
+ * sentinels for the two aggregate anchors, so callers can assign it directly.
+ * This is the single decoder shared by validate_anchor_comp() and
+ * XML_doc_to_List_ISO_Channels(); it must never be re-implemented a second time.
+ * Return 0 on success, or -1 on failure.
+ */
+static int decode_iobox_anchor(const char *anchor_str, unsigned int *identifier, unsigned char *receiver, unsigned char *channel)
+{
+	const char *id_begin, *id_end, *rx_begin, *rx_end, *tail, *ch_begin;
+	char *parse_end;
+	unsigned long parsed_id, parsed_rx, parsed_ch;
+
+	if(!anchor_str || !identifier || !receiver || !channel)
+		return EXIT_FAILURE;
+
+	id_begin = anchor_str;
+	if(!g_ascii_isdigit(*id_begin) || *id_begin == '0')//No leading zero, digits only
+		return EXIT_FAILURE;
+	for(id_end = id_begin; g_ascii_isdigit(*id_end); id_end++);
+	if(*id_end != '.')
+		return EXIT_FAILURE;
+
+	if(strncmp(id_end + 1, "RX", strlen("RX")))//Only the upper-case literal ".RX" is accepted
+		return EXIT_FAILURE;
+	rx_begin = id_end + 1 + strlen("RX");
+	if(!g_ascii_isdigit(*rx_begin) || *rx_begin == '0')//No leading zero, digits only
+		return EXIT_FAILURE;
+	for(rx_end = rx_begin; g_ascii_isdigit(*rx_end); rx_end++);
+	if(*rx_end != '.')
+		return EXIT_FAILURE;
+
+	errno = 0;
+	parsed_id = strtoul(id_begin, &parse_end, 10);
+	if(parse_end != id_end || errno == ERANGE || parsed_id == 0 || parsed_id > UINT32_MAX)
+		return EXIT_FAILURE;
+
+	errno = 0;
+	parsed_rx = strtoul(rx_begin, &parse_end, 10);
+	if(parse_end != rx_end || errno == ERANGE || parsed_rx == 0 || parsed_rx > IOBOX_Amount_of_All_RXs)
+		return EXIT_FAILURE;
+
+	tail = rx_end + 1;
+	if(!strcmp(tail, "Status"))
+	{
+		parsed_ch = IOBOX_RX_Status_link_channel;
+	}
+	else if(!strcmp(tail, "Success"))
+	{
+		parsed_ch = IOBOX_RX_Success_link_channel;
+	}
+	else
+	{
+		if(strncmp(tail, "CH", strlen("CH")))//Only ".CH", "Status" or "Success" are accepted after the receiver
+			return EXIT_FAILURE;
+		ch_begin = tail + strlen("CH");
+		if(!g_ascii_isdigit(*ch_begin) || *ch_begin == '0')//No leading zero, digits only
+			return EXIT_FAILURE;
+		errno = 0;
+		parsed_ch = strtoul(ch_begin, &parse_end, 10);
+		if(*parse_end != '\0' || errno == ERANGE || parsed_ch == 0 || parsed_ch > IOBOX_Amount_of_channels)
+			return EXIT_FAILURE;//parse_end must reach the end of the string: no trailing text allowed
+	}
+
+	*identifier = (unsigned int)parsed_id;
+	*receiver = (unsigned char)parsed_rx;
+	*channel = (unsigned char)parsed_ch;
+	return EXIT_SUCCESS;
+}
+
+/*
+ * Strict, full-string decoder for the canonical MTI anchor grammar:
+ *     <identifier>.TC16.CH<1..16>
+ *     <identifier>.TC8.CH<1..8>
+ *     <identifier>.TC4.CH<1..4>
+ *     <identifier>.QUAD.CH<1..2>
+ *     <identifier>.ID:<1..255>.CH<1..4>
+ * identifier: uint32, no leading zero, full string consumed. The literal
+ * "RMSW/MUX" (a runtime radio mode string) is never itself a valid anchor
+ * token; Mini-RMSW devices are only reachable through the "ID:<id>" form.
+ * tele_ID is unsigned char in struct Link_entry, so an ID>255 is rejected
+ * outright rather than silently truncated by an unchecked atoi()+assignment,
+ * as the previous sscanf-based parser did.
+ * *tele_type_or_id receives RMSW_MUX or the matching
+ * enum MTI_Telemetry_Dev_type_enum value -- exactly the value struct
+ * Link_entry's rxNum_teleType_or_value field already holds, so callers can
+ * assign it directly; *tele_ID is only meaningful when *tele_type_or_id == RMSW_MUX.
+ * This is the single decoder shared by validate_anchor_comp() and
+ * XML_doc_to_List_ISO_Channels(); it must never be re-implemented a second time.
+ * Return 0 on success, or -1 on failure.
+ */
+static int decode_mti_anchor(const char *anchor_str, unsigned int *identifier, unsigned char *tele_type_or_id,
+                              unsigned char *tele_ID, unsigned char *channel)
+{
+	const char *id_begin, *id_end, *tail, *rmsw_id_begin, *rmsw_id_end, *ch_begin;
+	char *parse_end;
+	unsigned long parsed_id, parsed_tele_id, parsed_ch;
+	unsigned char type_out, max_channel, tele_id_out = 0;
+
+	if(!anchor_str || !identifier || !tele_type_or_id || !tele_ID || !channel)
+		return EXIT_FAILURE;
+
+	id_begin = anchor_str;
+	if(!g_ascii_isdigit(*id_begin) || *id_begin == '0')//No leading zero, digits only
+		return EXIT_FAILURE;
+	for(id_end = id_begin; g_ascii_isdigit(*id_end); id_end++);
+	if(*id_end != '.')
+		return EXIT_FAILURE;
+
+	errno = 0;
+	parsed_id = strtoul(id_begin, &parse_end, 10);
+	if(parse_end != id_end || errno == ERANGE || parsed_id == 0 || parsed_id > UINT32_MAX)
+		return EXIT_FAILURE;
+
+	tail = id_end + 1;
+
+	if(!strncmp(tail, "ID:", strlen("ID:")))
+	{
+		rmsw_id_begin = tail + strlen("ID:");
+		if(!g_ascii_isdigit(*rmsw_id_begin) || *rmsw_id_begin == '0')//No leading zero, digits only
+			return EXIT_FAILURE;
+		for(rmsw_id_end = rmsw_id_begin; g_ascii_isdigit(*rmsw_id_end); rmsw_id_end++);
+		if(*rmsw_id_end != '.')
+			return EXIT_FAILURE;
+
+		errno = 0;
+		parsed_tele_id = strtoul(rmsw_id_begin, &parse_end, 10);
+		if(parse_end != rmsw_id_end || errno == ERANGE || parsed_tele_id == 0 || parsed_tele_id > 255)
+			return EXIT_FAILURE;//tele_ID is unsigned char in struct Link_entry: never silently truncate an overflowing ID
+
+		type_out = RMSW_MUX;
+		tele_id_out = (unsigned char)parsed_tele_id;
+		max_channel = 4;//Mini-RMSW: RMSW_MUX_Mini_data_struct.meas_data[4]
+		ch_begin = rmsw_id_end + 1;
+	}
+	else if(!strncmp(tail, "TC16", strlen("TC16")) && tail[strlen("TC16")] == '.')
+	{
+		type_out = Tele_TC16;
+		max_channel = 16;
+		ch_begin = tail + strlen("TC16") + 1;
+	}
+	else if(!strncmp(tail, "TC8", strlen("TC8")) && tail[strlen("TC8")] == '.')
+	{
+		type_out = Tele_TC8;
+		max_channel = 8;
+		ch_begin = tail + strlen("TC8") + 1;
+	}
+	else if(!strncmp(tail, "TC4", strlen("TC4")) && tail[strlen("TC4")] == '.')
+	{
+		type_out = Tele_TC4;
+		max_channel = 4;
+		ch_begin = tail + strlen("TC4") + 1;
+	}
+	else if(!strncmp(tail, "QUAD", strlen("QUAD")) && tail[strlen("QUAD")] == '.')
+	{
+		type_out = Tele_quad;
+		max_channel = 2;
+		ch_begin = tail + strlen("QUAD") + 1;
+	}
+	else
+		return EXIT_FAILURE;//Includes the literal "RMSW/MUX" telemetry-mode string: not a valid direct anchor token
+
+	if(strncmp(ch_begin, "CH", strlen("CH")))
+		return EXIT_FAILURE;
+	ch_begin += strlen("CH");
+	if(!g_ascii_isdigit(*ch_begin) || *ch_begin == '0')//No leading zero, digits only
+		return EXIT_FAILURE;
+	errno = 0;
+	parsed_ch = strtoul(ch_begin, &parse_end, 10);
+	if(*parse_end != '\0' || errno == ERANGE || parsed_ch == 0 || parsed_ch > max_channel)
+		return EXIT_FAILURE;//parse_end must reach the end of the string: no trailing text allowed
+
+	*identifier = (unsigned int)parsed_id;
+	*tele_type_or_id = type_out;
+	*tele_ID = tele_id_out;
+	*channel = (unsigned char)parsed_ch;
+	return EXIT_SUCCESS;
+}
+
 //Function that validate the anchor's components. Return 0 on success or -1 on failure.
 int validate_anchor_comp(char *anchor_str, char handler_type)
 {
-	unsigned int anchor_arg_int[max_arg_range], i, nox_sensor_address;
+	unsigned int nox_sensor_address;
 	unsigned char nox_measurement;
-	char *channel, *receiver_or_value, *tele_type_or_id;
 	char nox_can_if[Dev_or_Bus_name_str_size];
-	char metric_str[16];
 	if(!anchor_str)
 		return EXIT_FAILURE;
-	if(handler_type != NOX && handler_type != SDAQ)//SDAQ is validated exclusively by decode_sdaq_anchor() below; it must not also gate through this loose pre-check, to avoid a second independent grammar for the same interface.
-	{
-		//Check anchor_str for correct anchor component names
-		if(!atoi(anchor_str)) //identifier component check
-			return EXIT_FAILURE;
-		if(handler_type != IOBOX)
-		{
-			if(!(channel = strstr(anchor_str, ".CH")))//channel component check
-				return EXIT_FAILURE;
-			if(!atoi(channel+strlen(".CH")))//Channel value check
-				return EXIT_FAILURE;
-		}
-	}
+	//Every interface below is validated exclusively by its own decode_*_anchor()
+	//function; there must never be a second, independent sscanf/atoi/strstr
+	//grammar for the same interface.
 	switch(handler_type)
 	{
 		case IOBOX:
-			if(!(receiver_or_value = strchr(anchor_str, '.')))//Receiver component check
-				return EXIT_FAILURE;
-			if(*(receiver_or_value+1)=='R'&&*(receiver_or_value+2)=='X')
-			{
-				if(!atoi(receiver_or_value+strlen(".RX")))//Receiver value check
-					return EXIT_FAILURE;
-				if((channel = strstr(anchor_str, ".CH")))
-				{
-					if(strstr(anchor_str, ".RX")>=channel)//If Receiver exist must be before channels component
-						return EXIT_FAILURE;
-					sscanf(anchor_str, "%u.RX%u.CH%u", &anchor_arg_int[0], &anchor_arg_int[1], &anchor_arg_int[2]);
-					if(!anchor_arg_int[0] || !anchor_arg_int[1] || !anchor_arg_int[2])
-						return EXIT_FAILURE;
-					if(anchor_arg_int[1] > IOBOX_Amount_of_All_RXs || anchor_arg_int[2] > IOBOX_Amount_of_channels)
-						return EXIT_FAILURE;
-				}
-				else
-				{
-					metric_str[0] = '\0';
-					if(sscanf(anchor_str, "%u.RX%u.%15s", &anchor_arg_int[0], &anchor_arg_int[1], metric_str) != 3)
-						return EXIT_FAILURE;
-					if(!anchor_arg_int[0] || !anchor_arg_int[1])
-						return EXIT_FAILURE;
-					if(anchor_arg_int[1] > IOBOX_Amount_of_All_RXs)
-						return EXIT_FAILURE;
-					if(strcmp(metric_str, "Status") && strcmp(metric_str, "Success"))
-						return EXIT_FAILURE;
-				}
-			}
-			else
+		{
+			unsigned int iobox_id;
+			unsigned char iobox_rx, iobox_ch;
+			if(decode_iobox_anchor(anchor_str, &iobox_id, &iobox_rx, &iobox_ch))
 				return EXIT_FAILURE;
 			break;
+		}
 		case MDAQ://MDAQ device type is retired; INTERFACE_TYPE="MDAQ" is not a supported anchor.
 			return EXIT_FAILURE;
 		case SDAQ:
@@ -375,28 +525,13 @@ int validate_anchor_comp(char *anchor_str, char handler_type)
 			break;
 		}
 		case MTI:
-			//Check existence and validity of Tele_type field
-			i=Tele_TC16;//Start checking from Tele_TC16 value
-			while(MTI_Tele_dev_type_str[i])
-			{
-				if(!(tele_type_or_id = strstr(anchor_str, MTI_Tele_dev_type_str[i])))
-					i++;
-				else
-					break;
-			}
-			if(!MTI_Tele_dev_type_str[i])
-			{
-				if(!(tele_type_or_id = strstr(anchor_str, ".ID:")))
-					return EXIT_FAILURE;
-				if(!atoi(tele_type_or_id+strlen(".ID:")))
-					return EXIT_FAILURE;
-			}
-			else
-				if(*tele_type_or_id != '.' && *(tele_type_or_id+strlen(MTI_Tele_dev_type_str[i])) != '.')
-					return EXIT_FAILURE;
-			if(tele_type_or_id>channel)//Check if channel is after tele_type_or_id
+		{
+			unsigned int mti_id;
+			unsigned char mti_type, mti_tele_id, mti_ch;
+			if(decode_mti_anchor(anchor_str, &mti_id, &mti_type, &mti_tele_id, &mti_ch))
 				return EXIT_FAILURE;
 			break;
+		}
 		case NOX:
 			if(decode_nox_anchor(anchor_str, nox_can_if, sizeof(nox_can_if),
 			                     &nox_sensor_address, &nox_measurement))
@@ -513,7 +648,37 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 																												  dev_type_str);
 				return EXIT_FAILURE;
 			}
-			//Reject two ISO_CHANNELs that resolve to the same (SDAQ, serial, channel) runtime source
+			//IOBOX/MTI/NOX own their UNIT statically from the XML (unlike SDAQ,
+			//which is not XML-owned and is read from live channel runtime); the
+			//DTD only makes UNIT optional, so this interface-specific
+			//non-empty requirement has to be enforced here.
+			if(anchor_if_type == IOBOX || anchor_if_type == MTI || anchor_if_type == NOX)
+			{
+				char *unit_content = XML_node_get_content(check_element, "UNIT");
+				int unit_is_blank = 1;
+				if(unit_content)
+				{
+					for(char *p = unit_content; *p; p++)
+					{
+						if(!g_ascii_isspace(*p))
+						{
+							unit_is_blank = 0;
+							break;
+						}
+					}
+				}
+				if(unit_is_blank)
+				{
+					fprintf(stderr, "\nISO_CHANNEL :\"%s\" (Type:\"%s\") is missing a non-empty UNIT!!!!\n\n",
+							iso_channel ? iso_channel : "?", dev_type_str);
+					return EXIT_FAILURE;
+				}
+			}
+			//Reject two ISO_CHANNELs that resolve to the same parsed runtime
+			//source, per interface. Comparison is always on decoded fields,
+			//never on raw ANCHOR text: same identifier/IP with a different
+			//receiver/channel/telemetry-type/measurement is a legal pair, not
+			//a duplicate.
 			if(anchor_if_type == SDAQ)
 			{
 				unsigned int serial, other_serial;
@@ -533,6 +698,79 @@ int Morfeas_opc_ua_config_valid(xmlNode *root_element)
 					{
 						other_iso_channel = XML_node_get_content(other_element, "ISO_CHANNEL");
 						fprintf(stderr, "\nANCHOR :\"%s\" of ISO_CHANNEL :\"%s\" duplicates the SDAQ source already used by ISO_CHANNEL :\"%s\"!!!!\n\n",
+								other_content, other_iso_channel ? other_iso_channel : "?", iso_channel ? iso_channel : "?");
+						return EXIT_FAILURE;
+					}
+				}
+			}
+			else if(anchor_if_type == IOBOX)
+			{
+				unsigned int id, other_id;
+				unsigned char rx, other_rx, ch, other_ch;
+				char *other_content, *other_dev_type_str, *other_iso_channel;
+				xmlNode *other_element;
+
+				decode_iobox_anchor(content, &id, &rx, &ch);//Already validated above
+				for(other_element = check_element->next; other_element; other_element = other_element->next)
+				{
+					if(!(other_content = XML_node_get_content(other_element, "ANCHOR")) ||
+					   !(other_dev_type_str = XML_node_get_content(other_element, "INTERFACE_TYPE")) ||
+					   if_type_str_2_num(other_dev_type_str) != IOBOX ||
+					   decode_iobox_anchor(other_content, &other_id, &other_rx, &other_ch))
+						continue;
+					if(id == other_id && rx == other_rx && ch == other_ch)
+					{
+						other_iso_channel = XML_node_get_content(other_element, "ISO_CHANNEL");
+						fprintf(stderr, "\nANCHOR :\"%s\" of ISO_CHANNEL :\"%s\" duplicates the IOBOX source already used by ISO_CHANNEL :\"%s\"!!!!\n\n",
+								other_content, other_iso_channel ? other_iso_channel : "?", iso_channel ? iso_channel : "?");
+						return EXIT_FAILURE;
+					}
+				}
+			}
+			else if(anchor_if_type == MTI)
+			{
+				unsigned int id, other_id;
+				unsigned char type, other_type, tele_id, other_tele_id, ch, other_ch;
+				char *other_content, *other_dev_type_str, *other_iso_channel;
+				xmlNode *other_element;
+
+				decode_mti_anchor(content, &id, &type, &tele_id, &ch);//Already validated above
+				for(other_element = check_element->next; other_element; other_element = other_element->next)
+				{
+					if(!(other_content = XML_node_get_content(other_element, "ANCHOR")) ||
+					   !(other_dev_type_str = XML_node_get_content(other_element, "INTERFACE_TYPE")) ||
+					   if_type_str_2_num(other_dev_type_str) != MTI ||
+					   decode_mti_anchor(other_content, &other_id, &other_type, &other_tele_id, &other_ch))
+						continue;
+					if(id == other_id && type == other_type && tele_id == other_tele_id && ch == other_ch)
+					{
+						other_iso_channel = XML_node_get_content(other_element, "ISO_CHANNEL");
+						fprintf(stderr, "\nANCHOR :\"%s\" of ISO_CHANNEL :\"%s\" duplicates the MTI source already used by ISO_CHANNEL :\"%s\"!!!!\n\n",
+								other_content, other_iso_channel ? other_iso_channel : "?", iso_channel ? iso_channel : "?");
+						return EXIT_FAILURE;
+					}
+				}
+			}
+			else if(anchor_if_type == NOX)
+			{
+				char can_if[Dev_or_Bus_name_str_size], other_can_if[Dev_or_Bus_name_str_size];
+				unsigned int addr, other_addr;
+				unsigned char meas, other_meas;
+				char *other_content, *other_dev_type_str, *other_iso_channel;
+				xmlNode *other_element;
+
+				decode_nox_anchor(content, can_if, sizeof(can_if), &addr, &meas);//Already validated above
+				for(other_element = check_element->next; other_element; other_element = other_element->next)
+				{
+					if(!(other_content = XML_node_get_content(other_element, "ANCHOR")) ||
+					   !(other_dev_type_str = XML_node_get_content(other_element, "INTERFACE_TYPE")) ||
+					   if_type_str_2_num(other_dev_type_str) != NOX ||
+					   decode_nox_anchor(other_content, other_can_if, sizeof(other_can_if), &other_addr, &other_meas))
+						continue;
+					if(addr == other_addr && meas == other_meas && !strcmp(can_if, other_can_if))
+					{
+						other_iso_channel = XML_node_get_content(other_element, "ISO_CHANNEL");
+						fprintf(stderr, "\nANCHOR :\"%s\" of ISO_CHANNEL :\"%s\" duplicates the NOX source already used by ISO_CHANNEL :\"%s\"!!!!\n\n",
 								other_content, other_iso_channel ? other_iso_channel : "?", iso_channel ? iso_channel : "?");
 						return EXIT_FAILURE;
 					}
@@ -610,13 +848,11 @@ int Morfeas_OPC_UA_calc_diff_of_ISO_Channel_node(xmlNode *root_element, GSList *
 
 int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 {
-	int i;
 	unsigned int nox_sensor_address;
 	unsigned char nox_measurement;
 	xmlNode *check_element;
 	struct Link_entry *list_cur_Links_node_data;
-	char *iso_channel_str, *dev_type_str, *anchor_ptr, *TeleID;
-	char format_str[30];
+	char *iso_channel_str, *dev_type_str, *anchor_ptr;
 	char nox_can_if[Dev_or_Bus_name_str_size];
 
 	g_slist_free_full(*cur_Links, free_Link_entry);//Free List cur_Links
@@ -637,17 +873,19 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 					switch((list_cur_Links_node_data->interface_type_num = if_type_str_2_num(dev_type_str)))
 					{
 						case IOBOX:
-							sscanf(anchor_ptr, "%u.RX%hhu", &(list_cur_Links_node_data->identifier),
-															 &(list_cur_Links_node_data->rxNum_teleType_or_value));
-							if(strstr(anchor_ptr, ".Status"))
-								list_cur_Links_node_data->channel = IOBOX_RX_Status_link_channel;
-							else if(strstr(anchor_ptr, ".Success"))
-								list_cur_Links_node_data->channel = IOBOX_RX_Success_link_channel;
-							else
-								sscanf(anchor_ptr, "%u.RX%hhu.CH%hhu", &(list_cur_Links_node_data->identifier),
-																	   &(list_cur_Links_node_data->rxNum_teleType_or_value),
-																	   &(list_cur_Links_node_data->channel));
+						{
+							unsigned int iobox_id;
+							unsigned char iobox_rx, iobox_ch;
+							if(decode_iobox_anchor(anchor_ptr, &iobox_id, &iobox_rx, &iobox_ch))
+							{
+								free_Link_entry(list_cur_Links_node_data);
+								continue;
+							}
+							list_cur_Links_node_data->identifier = iobox_id;
+							list_cur_Links_node_data->rxNum_teleType_or_value = iobox_rx;
+							list_cur_Links_node_data->channel = iobox_ch;
 							break;
+						}
 						case MDAQ:
 							sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),
 																	&(list_cur_Links_node_data->channel),
@@ -667,23 +905,20 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 							break;
 						}
 						case MTI:
-							if((TeleID=strstr(anchor_ptr, "ID:")))//Check if anchor referring to MiniRMSW
+						{
+							unsigned int mti_id;
+							unsigned char mti_type, mti_tele_id, mti_ch;
+							if(decode_mti_anchor(anchor_ptr, &mti_id, &mti_type, &mti_tele_id, &mti_ch))
 							{
-								list_cur_Links_node_data->rxNum_teleType_or_value = RMSW_MUX;
-								list_cur_Links_node_data->tele_ID = atoi(TeleID+strlen("ID:"));
-								sprintf(format_str, "%%u.ID:%u.CH%%hhu", list_cur_Links_node_data->tele_ID);
+								free_Link_entry(list_cur_Links_node_data);
+								continue;
 							}
-							else
-							{
-								i=Tele_TC16;
-								while(!strstr(anchor_ptr, MTI_Tele_dev_type_str[i]))
-									i++;
-								list_cur_Links_node_data->rxNum_teleType_or_value = i;//number or Tele_type
-								sprintf(format_str, "%%u.%s.CH%%hhu", MTI_Tele_dev_type_str[i]);
-							}
-							sscanf(anchor_ptr, format_str, &(list_cur_Links_node_data->identifier),
-														   &(list_cur_Links_node_data->channel));
+							list_cur_Links_node_data->identifier = mti_id;
+							list_cur_Links_node_data->rxNum_teleType_or_value = mti_type;
+							list_cur_Links_node_data->tele_ID = mti_tele_id;
+							list_cur_Links_node_data->channel = mti_ch;
 							break;
+						}
 						case NOX:
 							if(decode_nox_anchor(anchor_ptr, nox_can_if, sizeof(nox_can_if),
 							                     &nox_sensor_address, &nox_measurement))
