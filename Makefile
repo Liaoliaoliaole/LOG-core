@@ -297,6 +297,42 @@ $(BUILD_dir)/opcua_config_parser_test: $(WORK_dir)/opcua_config_parser_test.o $(
 test-core-a1: tree $(BUILD_dir)/opcua_config_parser_test
 	./$(BUILD_dir)/opcua_config_parser_test
 
-.PHONY: all clean delete-tree test-core-a1
+# Phase B2 / Core-O (plan §7.2) offline browse-gate integration test. Needs a
+# real embedded UA_Server, so it links the same object set as the production
+# Morfeas_opc_ua binary -- except Morfeas_opc_ua.c is recompiled with its own
+# main() renamed out of the way (-Dmain=...), since the test brings its own.
+# This is a separate object purely for the test; the production build/rule
+# for Morfeas_opc_ua.o above is untouched.
+$(WORK_dir)/Morfeas_opc_ua_testmain.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_opc_ua.c
+	gcc $(CFLAGS) -Dmain=Morfeas_opc_ua_unused_main $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/sdaq_offline_browse_gate_test.o: $(TESTS_dir)/sdaq_offline_browse_gate_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+Morfeas_opc_ua_test_DEP = $(WORK_dir)/sdaq_offline_browse_gate_test.o \
+						  $(WORK_dir)/Morfeas_run_check.o \
+						  $(WORK_dir)/Morfeas_opc_ua_testmain.o \
+						  $(WORK_dir)/Morfeas_opc_ua_config.o \
+						  $(WORK_dir)/SDAQ_drv.o \
+						  $(WORK_dir)/MTI_func.o \
+						  $(WORK_dir)/NOX_func.o \
+						  $(WORK_dir)/Morfeas_DBus_method_caller.o \
+						  $(WORK_dir)/Morfeas_IPC.o \
+						  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
+						  $(WORK_dir)/Morfeas_MDAQ_nodeset.o \
+						  $(WORK_dir)/Morfeas_IOBOX_nodeset.o \
+						  $(WORK_dir)/Morfeas_MTI_nodeset.o \
+						  $(WORK_dir)/Morfeas_NOX_nodeset.o \
+						  $(WORK_dir)/Morfeas_XML.o \
+						  $(WORK_dir)/Morfeas_JSON.o \
+						  $(WORK_dir)/Morfeas_info.o
+
+$(BUILD_dir)/sdaq_offline_browse_gate_test: $(Morfeas_opc_ua_test_DEP)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-o: tree $(BUILD_dir)/sdaq_offline_browse_gate_test
+	./$(BUILD_dir)/sdaq_offline_browse_gate_test
+
+.PHONY: all clean delete-tree test-core-a1 test-core-o
 
 

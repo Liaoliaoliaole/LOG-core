@@ -361,6 +361,59 @@ static void test_list_builder_mti_rmsw_fields(void)
 	xmlFreeDoc(doc);
 }
 
+//C-1: no CHANNEL child element's content may be empty (2026-08-19 code
+//review, F-1 -- this rule pre-dates Core-A2 but had no test coverage on
+//either side of the Web/Core boundary, which is how the Web equivalent
+//went unimplemented long enough to reach a live LOGDemo32 reproduction).
+static void test_whole_document_rejects_empty_description(void)
+{
+	char channel[512] =
+		"<CHANNEL>"
+		"<ISO_CHANNEL>TE_EmptyDesc</ISO_CHANNEL>"
+		"<INTERFACE_TYPE>SDAQ</INTERFACE_TYPE>"
+		"<ANCHOR>796834087.CH1</ANCHOR>"
+		"<DESCRIPTION></DESCRIPTION>"
+		"<MIN>0</MIN>"
+		"<MAX>1</MAX>"
+		"</CHANNEL>";
+	xmlDocPtr doc = build_doc(channel);
+	CHECK(doc != NULL, "in-memory doc parses (empty-DESCRIPTION fixture)");
+	if (!doc) return;
+
+	int rc = Morfeas_opc_ua_config_valid(xmlDocGetRootElement(doc));
+	CHECK(rc == EXIT_FAILURE, "channel with an empty <DESCRIPTION/> is rejected (rc=%d)", rc);
+	xmlFreeDoc(doc);
+}
+
+//C-4: ISO_CHANNEL length must be < ISO_channel_name_size (20).
+static void test_whole_document_rejects_iso_channel_too_long(void)
+{
+	static const char *too_long = "TE_Twenty_Chars_Long";//20 chars, == ISO_channel_name_size -> reject
+	char channel[512];
+	snprintf(channel, sizeof(channel), CHANNEL_TEMPLATE, too_long, "SDAQ", "796834087.CH1");
+	xmlDocPtr doc = build_doc(channel);
+	CHECK(doc != NULL, "in-memory doc parses (too-long ISO_CHANNEL fixture)");
+	if (!doc) return;
+
+	int rc = Morfeas_opc_ua_config_valid(xmlDocGetRootElement(doc));
+	CHECK(rc == EXIT_FAILURE, "ISO_CHANNEL of length %zu (>= ISO_channel_name_size) is rejected (rc=%d)", strlen(too_long), rc);
+	xmlFreeDoc(doc);
+}
+
+//C-5: ISO_CHANNEL must not contain '.'.
+static void test_whole_document_rejects_iso_channel_with_dot(void)
+{
+	char channel[512];
+	snprintf(channel, sizeof(channel), CHANNEL_TEMPLATE, "TE_Bad.Name", "SDAQ", "796834087.CH1");
+	xmlDocPtr doc = build_doc(channel);
+	CHECK(doc != NULL, "in-memory doc parses (dotted ISO_CHANNEL fixture)");
+	if (!doc) return;
+
+	int rc = Morfeas_opc_ua_config_valid(xmlDocGetRootElement(doc));
+	CHECK(rc == EXIT_FAILURE, "ISO_CHANNEL containing '.' is rejected (rc=%d)", rc);
+	xmlFreeDoc(doc);
+}
+
 //Run through the real DTD + strict validator pipeline, exactly like Morfeas_opc_ua.c does at startup.
 static void test_shipped_default_config_still_boots(void)
 {
@@ -472,6 +525,9 @@ int main(void)
 	test_whole_document_rejects_missing_unit("IOBOX", "117440522.RX1.Status");//no per-anchor-kind exemption: Status is not "naturally unitless" as far as this rule is concerned
 	test_list_builder_iobox_fields();
 	test_list_builder_mti_rmsw_fields();
+	test_whole_document_rejects_empty_description();
+	test_whole_document_rejects_iso_channel_too_long();
+	test_whole_document_rejects_iso_channel_with_dot();
 	test_shipped_default_config_still_boots();
 
 	printf("\n%d/%d checks passed\n", g_checks - g_failures, g_checks);
