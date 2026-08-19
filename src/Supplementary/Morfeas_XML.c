@@ -886,11 +886,6 @@ int XML_doc_to_List_ISO_Channels(xmlNode *root_element, GSList **cur_Links)
 							list_cur_Links_node_data->channel = iobox_ch;
 							break;
 						}
-						case MDAQ:
-							sscanf(anchor_ptr, "%u.CH%hhu.Val%hhu", &(list_cur_Links_node_data->identifier),
-																	&(list_cur_Links_node_data->channel),
-																	&(list_cur_Links_node_data->rxNum_teleType_or_value));
-							break;
 						case SDAQ:
 						{
 							unsigned int sdaq_serial;
