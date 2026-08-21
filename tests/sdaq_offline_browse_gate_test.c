@@ -105,7 +105,7 @@ static int node_exists(UA_Server *server, const char *node_id)
 
 int main(void)
 {
-	struct Nodeset_file_signature signature = {0};
+	struct Nodeset_file_signature applied_signature = {0}, attempted_signature = {0};
 	struct stat first = {0}, same_second_new_inode = {0}, newer_nanosecond = {0};
 	first.st_dev = same_second_new_inode.st_dev = newer_nanosecond.st_dev = 7;
 	first.st_ino = newer_nanosecond.st_ino = 100;
@@ -113,17 +113,25 @@ int main(void)
 	first.st_mtim.tv_sec = same_second_new_inode.st_mtim.tv_sec = newer_nanosecond.st_mtim.tv_sec = 1234;
 	first.st_mtim.tv_nsec = same_second_new_inode.st_mtim.tv_nsec = 10;
 	newer_nanosecond.st_mtim.tv_nsec = 11;
-	check(!Morfeas_Nodeset_file_signature_matches(&signature, &first),
+	check(!Morfeas_Nodeset_file_signature_matches(&attempted_signature, &first),
 		"an uninitialised signature forces the first configuration load");
-	Morfeas_Nodeset_file_signature_record(&signature, &first);
-	check(Morfeas_Nodeset_file_signature_matches(&signature, &first),
-		"a successfully recorded signature matches the applied file version");
-	check(!Morfeas_Nodeset_file_signature_matches(&signature, &same_second_new_inode),
+	Morfeas_Nodeset_file_signature_record_result(&attempted_signature, &applied_signature, &first, 0, 0);
+	check(!Morfeas_Nodeset_file_signature_matches(&attempted_signature, &first),
+		"an XML or DTD parse failure remains retryable");
+	Morfeas_Nodeset_file_signature_record_result(&attempted_signature, &applied_signature, &first, 1, 0);
+	check(Morfeas_Nodeset_file_signature_matches(&attempted_signature, &first),
+		"a rejected file version is not attempted repeatedly");
+	check(!Morfeas_Nodeset_file_signature_matches(&applied_signature, &first),
+		"a semantic validation failure does not mark that version as applied");
+	check(!Morfeas_Nodeset_file_signature_matches(&attempted_signature, &same_second_new_inode),
 		"same-second atomic rename is detected by inode change");
-	check(!Morfeas_Nodeset_file_signature_matches(&signature, &newer_nanosecond),
+	check(!Morfeas_Nodeset_file_signature_matches(&attempted_signature, &newer_nanosecond),
 		"same-inode same-second write is detected by nanosecond mtime");
-	check(!Morfeas_Nodeset_file_signature_matches(&signature, &same_second_new_inode),
-		"an unrecorded invalid candidate remains pending and cannot hide a later valid replacement");
+	Morfeas_Nodeset_file_signature_record_result(&attempted_signature, &applied_signature, &same_second_new_inode, 1, 1);
+	check(Morfeas_Nodeset_file_signature_matches(&attempted_signature, &same_second_new_inode),
+		"a successful file version is recorded as attempted");
+	check(Morfeas_Nodeset_file_signature_matches(&applied_signature, &same_second_new_inode),
+		"a successful file version is also recorded as applied");
 
 	UA_Server *server = UA_Server_new();
 	UA_ServerConfig *config = UA_Server_getConfig(server);

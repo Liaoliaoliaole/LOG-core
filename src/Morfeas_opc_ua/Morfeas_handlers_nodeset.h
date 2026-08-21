@@ -37,6 +37,12 @@ struct Nodeset_file_signature
 
 int Morfeas_Nodeset_file_signature_matches(const struct Nodeset_file_signature *signature, const struct stat *file_stat);
 void Morfeas_Nodeset_file_signature_record(struct Nodeset_file_signature *signature, const struct stat *file_stat);
+void Morfeas_Nodeset_file_signature_record_result(
+	struct Nodeset_file_signature *attempted_signature,
+	struct Nodeset_file_signature *applied_signature,
+	const struct stat *file_stat,
+	int parsed,
+	int applied);
 
 //Assistance function manipulate the Morfeas OPC_UA configuration
 UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version);

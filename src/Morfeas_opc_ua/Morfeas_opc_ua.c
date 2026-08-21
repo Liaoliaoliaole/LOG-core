@@ -75,6 +75,22 @@ void Morfeas_Nodeset_file_signature_record(struct Nodeset_file_signature *signat
 	signature->valid = 1;
 }
 
+void Morfeas_Nodeset_file_signature_record_result(
+	struct Nodeset_file_signature *attempted_signature,
+	struct Nodeset_file_signature *applied_signature,
+	const struct stat *file_stat,
+	int parsed,
+	int applied)
+{
+	// A parse failure may be caused by a temporarily unavailable DTD or I/O.
+	// Leave it retryable without pretending that the XML version was applied.
+	if(!parsed)
+		return;
+	Morfeas_Nodeset_file_signature_record(attempted_signature, file_stat);
+	if(applied)
+		Morfeas_Nodeset_file_signature_record(applied_signature, file_stat);
+}
+
 //Global variables
 pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 static volatile UA_Boolean running = true;
@@ -226,6 +242,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
 	struct Nodeset_file_signature applied_signature = {0};
+	struct Nodeset_file_signature attempted_signature = {0};
 
 	if(!ns_config || access(ns_config, R_OK | F_OK ))
 	{
@@ -239,12 +256,14 @@ void * Nodeset_XML_reader(void *varg_pt)
 		{
 			if(!stat(ns_config, &nsconf_xml_stat))
 			{
-				if(!Morfeas_Nodeset_file_signature_matches(&applied_signature, &nsconf_xml_stat))
+				if(!Morfeas_Nodeset_file_signature_matches(&attempted_signature, &nsconf_xml_stat))
 				{
+					int parsed = 0;
 					int applied = 0;
 					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Configuration XML File Updated!!!!");
 					if(!Morfeas_XML_parsing(ns_config, &doc))
 					{
+						parsed = 1;
 						root_element = xmlDocGetRootElement(doc);
 						if(!Morfeas_opc_ua_config_valid(root_element))
 						{
@@ -278,8 +297,12 @@ void * Nodeset_XML_reader(void *varg_pt)
 							"Data Validation of The OPC-UA Nodeset configuration XML file failed!!!");
 						xmlFreeDoc(doc);//Free XML Doc
 					}
-					if(applied)
-						Morfeas_Nodeset_file_signature_record(&applied_signature, &nsconf_xml_stat);
+					Morfeas_Nodeset_file_signature_record_result(
+						&attempted_signature,
+						&applied_signature,
+						&nsconf_xml_stat,
+						parsed,
+						applied);
 				}
 			}
 			else
