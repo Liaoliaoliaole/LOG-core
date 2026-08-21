@@ -193,8 +193,6 @@ int Morfeas_XML_parsing(const char *filename, xmlDocPtr *doc)
     return EXIT_SUCCESS;
 }
 
-#define anchor_check_buff_size 100
-
 /*
  * Decode both the core's canonical NOX anchor format
  *     can0.addr_0.NOx

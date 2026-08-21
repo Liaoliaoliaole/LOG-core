@@ -1,8 +1,8 @@
 /*
  * tests/sdaq_offline_browse_gate_test.c
  *
- * Core integration test for the Phase B2 / Core-O offline browse-gate
- * (plan §7.2, 2026-08-19). Starts a real embedded UA_Server (no network
+ * Core integration test for the SDAQ Unit browse gate. Starts a real
+ * embedded UA_Server (no network
  * I/O -- node CRUD and the Browse service work synchronously without the
  * event loop running, exactly like Morfeas_opc_ua.c's own registration
  * functions already rely on) and drives the actual production entry
@@ -13,13 +13,13 @@
  * to confirm the ISO channel's "Unit" child reference is present/absent,
  * which is the exact mechanism a Gateway browse depends on.
  *
- * This does NOT replace Phase B3: a genuine `MorfeasMapper.IsMappable()`
+ * This does not replace a genuine `MorfeasMapper.IsMappable()`
  * check against the real Configuration Tool binary still requires that
  * product plus SDAQ+Gateway hardware. This test instead validates the one
  * mechanism IsMappable() depends on -- the browse-visible child reference
  * set -- using open62541's own Browse service, so it is not "inferring
- * behaviour from open62541 API existing" (the risk the plan explicitly
- * calls out); it exercises the service end to end.
+ * behaviour from open62541 API existing"; it exercises the service end to
+ * end.
  *
  * Run: make test-core-o   (from repo root)
  */
@@ -93,8 +93,38 @@ static int browse_has_child(UA_Server *server, const char *parent_id, const char
 	return found;
 }
 
+static int node_exists(UA_Server *server, const char *node_id)
+{
+	UA_NodeId out;
+	UA_NodeId_init(&out);
+	UA_StatusCode rc = UA_Server_readNodeId(server, UA_NODEID_STRING(1, (char *)node_id), &out);
+	if(rc == UA_STATUSCODE_GOOD)
+		UA_clear(&out, &UA_TYPES[UA_TYPES_NODEID]);
+	return rc == UA_STATUSCODE_GOOD;
+}
+
 int main(void)
 {
+	struct Nodeset_file_signature signature = {0};
+	struct stat first = {0}, same_second_new_inode = {0}, newer_nanosecond = {0};
+	first.st_dev = same_second_new_inode.st_dev = newer_nanosecond.st_dev = 7;
+	first.st_ino = newer_nanosecond.st_ino = 100;
+	same_second_new_inode.st_ino = 101;
+	first.st_mtim.tv_sec = same_second_new_inode.st_mtim.tv_sec = newer_nanosecond.st_mtim.tv_sec = 1234;
+	first.st_mtim.tv_nsec = same_second_new_inode.st_mtim.tv_nsec = 10;
+	newer_nanosecond.st_mtim.tv_nsec = 11;
+	check(!Morfeas_Nodeset_file_signature_matches(&signature, &first),
+		"an uninitialised signature forces the first configuration load");
+	Morfeas_Nodeset_file_signature_record(&signature, &first);
+	check(Morfeas_Nodeset_file_signature_matches(&signature, &first),
+		"a successfully recorded signature matches the applied file version");
+	check(!Morfeas_Nodeset_file_signature_matches(&signature, &same_second_new_inode),
+		"same-second atomic rename is detected by inode change");
+	check(!Morfeas_Nodeset_file_signature_matches(&signature, &newer_nanosecond),
+		"same-inode same-second write is detected by nanosecond mtime");
+	check(!Morfeas_Nodeset_file_signature_matches(&signature, &same_second_new_inode),
+		"an unrecorded invalid candidate remains pending and cannot hide a later valid replacement");
+
 	UA_Server *server = UA_Server_new();
 	UA_ServerConfig *config = UA_Server_getConfig(server);
 	UA_ServerConfig_setDefault(config);
@@ -128,7 +158,7 @@ int main(void)
 	 * translation unit to populate. The one line this test does not
 	 * exercise as a result is the single `if(if_type == SDAQ)
 	 * SDAQ_refresh_unit_gate(...)` call added at the end of that function
-	 * (plan §7.2's "XML apply" boundary) -- reviewed by inspection instead,
+	 * (the XML-apply boundary) -- reviewed by inspection instead,
 	 * since it is a one-line call into the exact same SDAQ_refresh_unit_gate()
 	 * this test exercises directly and repeatedly below.
 	 */
@@ -278,6 +308,25 @@ int main(void)
 	SDAQ_refresh_unit_gate(server, "_TEST1", 796834087, 1);
 	check(!browse_has_child(server, "_TEST1", "_TEST1.unit"),
 		"repeat clean_up for an already-gone device is a harmless no-op (idempotent hide)");
+
+	/*
+	 * A hidden Unit still exists but is detached from its parent. Deleting
+	 * only the parent used to orphan that NodeId, so rebuilding the same ISO
+	 * name as IOBOX/MTI/NOX could not create a browse-visible Unit until the
+	 * whole Core process restarted.
+	 */
+	check(node_exists(server, "_TEST1.unit"),
+		"hidden Unit node still exists before ISO channel deletion");
+	Morfeas_OPC_UA_delete_ISO_Channel_node(server, "_TEST1");
+	check(!node_exists(server, "_TEST1"),
+		"ISO channel parent is deleted by the shared deletion helper");
+	check(!node_exists(server, "_TEST1.unit"),
+		"detached Unit node is explicitly deleted with its ISO channel");
+
+	Morfeas_opc_ua_add_object_node(server, "ISO_Channels", "_TEST1", "_TEST1");
+	Morfeas_opc_ua_add_variable_node(server, "_TEST1", "_TEST1.unit", "Unit", UA_TYPES_STRING);
+	check(browse_has_child(server, "_TEST1", "_TEST1.unit"),
+		"same ISO name rebuilt as a non-SDAQ object has a browse-visible Unit immediately");
 
 	UA_Server_delete(server);
 

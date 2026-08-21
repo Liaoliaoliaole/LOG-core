@@ -58,6 +58,23 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server);
 //Function that adds a child object under the OPC-UA node "ISO_Channels".
 void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server, xmlNode *node);
 
+int Morfeas_Nodeset_file_signature_matches(const struct Nodeset_file_signature *signature, const struct stat *file_stat)
+{
+	return signature->valid &&
+		signature->device == file_stat->st_dev &&
+		signature->inode == file_stat->st_ino &&
+		signature->modified.tv_sec == file_stat->st_mtim.tv_sec &&
+		signature->modified.tv_nsec == file_stat->st_mtim.tv_nsec;
+}
+
+void Morfeas_Nodeset_file_signature_record(struct Nodeset_file_signature *signature, const struct stat *file_stat)
+{
+	signature->device = file_stat->st_dev;
+	signature->inode = file_stat->st_ino;
+	signature->modified = file_stat->st_mtim;
+	signature->valid = 1;
+}
+
 //Global variables
 pthread_mutex_t OPC_UA_NODESET_access = PTHREAD_MUTEX_INITIALIZER;
 static volatile UA_Boolean running = true;
@@ -208,6 +225,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 	xmlNode *xml_node, *root_element; //XML root Node
 	char *ns_config = varg_pt;
 	struct stat nsconf_xml_stat;
+	struct Nodeset_file_signature applied_signature = {0};
 
 	if(!ns_config || access(ns_config, R_OK | F_OK ))
 	{
@@ -215,15 +233,15 @@ void * Nodeset_XML_reader(void *varg_pt)
 		"Path to Configuration XML file is invalid. Server will run in compatible mode");
 		return NULL;
 	}
-	time_t file_last_mod = 0;
 	while(running)
 	{
 		if(ns_config)
 		{
 			if(!stat(ns_config, &nsconf_xml_stat))
 			{
-				if(nsconf_xml_stat.st_mtime - file_last_mod)
+				if(!Morfeas_Nodeset_file_signature_matches(&applied_signature, &nsconf_xml_stat))
 				{
+					int applied = 0;
 					UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Configuration XML File Updated!!!!");
 					if(!Morfeas_XML_parsing(ns_config, &doc))
 					{
@@ -238,7 +256,7 @@ void * Nodeset_XML_reader(void *varg_pt)
 								while(t_list_ptr)
 								{
 									list_data = t_list_ptr->data;
-									UA_Server_deleteNode(server, UA_NODEID_STRING(1, list_data->ISO_channel_name), 1);
+									Morfeas_OPC_UA_delete_ISO_Channel_node(server, list_data->ISO_channel_name);
 									t_list_ptr = t_list_ptr->next;
 								}
 								//Copy Links(Anchored) data from xmlDoc to List Links
@@ -253,14 +271,16 @@ void * Nodeset_XML_reader(void *varg_pt)
 								now_date = UA_DateTime_now();
 								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,"last_update"), &now_date, UA_TYPES_DATETIME);
 							pthread_mutex_unlock(&OPC_UA_NODESET_access);
+							applied = 1;
 						}
 						else
 							UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
 							"Data Validation of The OPC-UA Nodeset configuration XML file failed!!!");
 						xmlFreeDoc(doc);//Free XML Doc
 					}
+					if(applied)
+						Morfeas_Nodeset_file_signature_record(&applied_signature, &nsconf_xml_stat);
 				}
-				file_last_mod = nsconf_xml_stat.st_mtime;
 			}
 			else
 				perror("Error on get stats for Nodeset configuration XML");
@@ -300,11 +320,6 @@ void* IPC_Receiver(void *varg_pt)
 						case SDAQ:
 							SDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
-							/* MDAQ: device type retired, handler will never register.
-							case MDAQ:
-								MDAQ_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);
-								break;
-							*/
 						case IOBOX:
 						    IOBOX_handler_reg(server, IPC_msg_dec.Handler_reg.Dev_or_Bus_name);//mutex inside
 							break;
@@ -334,10 +349,6 @@ void* IPC_Receiver(void *varg_pt)
 						IPC_msg_from_SDAQ_handler(server, type, &IPC_msg_dec);//mutex inside
 					else if(type>=Morfeas_IPC_IOBOX_MIN_type && type<=Morfeas_IPC_IOBOX_MAX_type)//Msg type from IOBOX_handler
 						IPC_msg_from_IOBOX_handler(server, type, &IPC_msg_dec);//mutex inside
-					/* MDAQ: device type retired, IPC messages from MDAQ handler ignored.
-					else if(type>=Morfeas_IPC_MDAQ_MIN_type && type<=Morfeas_IPC_MDAQ_MAX_type)
-						IPC_msg_from_MDAQ_handler(server, type, &IPC_msg_dec);
-					*/
 					else if(type>=Morfeas_IPC_MTI_MIN_type && type<=Morfeas_IPC_MTI_MAX_type)//Msg type from MTI_handler
 						IPC_msg_from_MTI_handler(server, type, &IPC_msg_dec);//mutex inside
 					else if(type>=Morfeas_IPC_NOX_MIN_type && type<=Morfeas_IPC_NOX_MAX_type)//Msg type from NOX_handler
@@ -423,13 +434,6 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 																   Node_data->channel,
 																   req_value);
 						break;
-					/* MDAQ: device type retired, ISO links to MDAQ sources return default: UA_STATUSCODE_GOOD.
-					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", ...);
-						// Node_data->identifier, channel, rxNum, req_value
-						// (kept for reference)
-						break;
-					*/
 					case IOBOX:
 						if(Node_data->channel == IOBOX_RX_Status_link_channel)
 							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Status.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
@@ -564,6 +568,30 @@ void SDAQ_refresh_unit_gates_for_serial(UA_Server *server_ptr, unsigned int seri
 	}
 }
 
+void Morfeas_OPC_UA_delete_ISO_Channel_node(UA_Server *server_ptr, const char *iso_channel_name)
+{
+	char unit_node_id[64];
+	UA_NodeId existing;
+	UA_StatusCode rc;
+
+	/* A hidden SDAQ Unit has no hierarchical link for recursive deletion. */
+	snprintf(unit_node_id, sizeof(unit_node_id), "%s.unit", iso_channel_name);
+	UA_NodeId_init(&existing);
+	if(UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, unit_node_id), &existing) == UA_STATUSCODE_GOOD)
+	{
+		UA_clear(&existing, &UA_TYPES[UA_TYPES_NODEID]);
+		rc = UA_Server_deleteNode(server_ptr, UA_NODEID_STRING(1, unit_node_id), true);
+		if(rc != UA_STATUSCODE_GOOD)
+			UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+				"Failed to delete ISO Unit node \"%s\" (0x%08X)", unit_node_id, rc);
+	}
+
+	rc = UA_Server_deleteNode(server_ptr, UA_NODEID_STRING(1, (char *)iso_channel_name), true);
+	if(rc != UA_STATUSCODE_GOOD && rc != UA_STATUSCODE_BADNODEIDUNKNOWN)
+		UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+			"Failed to delete ISO channel node \"%s\" (0x%08X)", iso_channel_name, rc);
+}
+
 // Used only by Status_update_value() to label missing MTI telemetry sources.
 static int MTI_link_tele_is_disabled(UA_Server *server_ptr, struct Link_entry *Node_data)
 {
@@ -617,13 +645,6 @@ UA_StatusCode Status_update_value(UA_Server *server_ptr,
 																   Node_data->channel,
 																   req_value);
 						break;
-					/* MDAQ: device type retired, see CH_update_value comment.
-					case MDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.Val%hhu.%s", ...);
-						// (kept for reference)
-						// Node_data->identifier, channel, rxNum, req_value
-						break;
-					*/
 					case IOBOX:
 						if(Node_data->channel == IOBOX_RX_Status_link_channel)
 							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Status.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
@@ -840,12 +861,6 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 						snprintf(dev_addr_str, sizeof(dev_addr_str), "%s", MTI_Tele_dev_type_str[List_Links_Node_data->rxNum_teleType_or_value]);
 					inet_ntop(AF_INET, &(List_Links_Node_data->identifier), dev_sdaq_net_str, sizeof(dev_sdaq_net_str));
 					break;
-				/* MDAQ: device type retired.
-				case MDAQ:
-					snprintf(dev_addr_str, sizeof(dev_addr_str), "CH%hhu", List_Links_Node_data->channel);
-					inet_ntop(AF_INET, &(List_Links_Node_data->identifier), dev_sdaq_net_str, sizeof(dev_sdaq_net_str));
-					break;
-				*/
 				case NOX:
 					snprintf(dev_addr_str, sizeof(dev_addr_str), "%hhu", List_Links_Node_data->channel);
 					snprintf(dev_sdaq_net_str, sizeof(dev_sdaq_net_str), "%s", List_Links_Node_data->CAN_IF_name ? List_Links_Node_data->CAN_IF_name : "");
@@ -872,7 +887,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), MTI_Tele_dev_type_str[List_Links_Node_data->rxNum_teleType_or_value], UA_TYPES_STRING);
 				break;
 		}
-		//Offline browse-gate (plan §7.2): re-derive the Unit gate on every XML
+		//Re-derive the SDAQ Unit browse gate on every XML
 		//apply, not just first creation -- the ISO object may already have
 		//existed (hot reload of an unrelated field) while the SDAQ device's
 		//own readiness changed in the meantime.

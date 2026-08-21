@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
@@ -25,6 +26,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../IPC/Morfeas_IPC.h"//<-#include "Morfeas_Types.h"
 
 extern pthread_mutex_t OPC_UA_NODESET_access;
+
+struct Nodeset_file_signature
+{
+	dev_t device;
+	ino_t inode;
+	struct timespec modified;
+	int valid;
+};
+
+int Morfeas_Nodeset_file_signature_matches(const struct Nodeset_file_signature *signature, const struct stat *file_stat);
+void Morfeas_Nodeset_file_signature_record(struct Nodeset_file_signature *signature, const struct stat *file_stat);
 
 //Assistance function manipulate the Morfeas OPC_UA configuration
 UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version);
@@ -47,12 +59,14 @@ void SDAQ_handler_reg(UA_Server *server, char *connected_to_BUS);
 void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr);
 void SDAQ2OPC_UA_register_update_info(UA_Server *server, SDAQ_info_msg *ptr);
 void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec);
-//Offline browse-gate (plan §7.2): idempotently show/hide the single ISO_channel.unit
+//Idempotently show/hide the ISO_channel.unit reference based on current SDAQ metadata.
 //HasComponent reference to match live SDAQ.<serial>.* readiness -- never deletes/recreates
 //the six stable runtime-metadata nodes themselves.
 void SDAQ_refresh_unit_gate(UA_Server *server_ptr, const char *iso_channel_name, unsigned int serial, unsigned char channel);
 //Same, but for every ISO channel currently linked to the given SDAQ serial (looks up Links).
 void SDAQ_refresh_unit_gates_for_serial(UA_Server *server_ptr, unsigned int serial);
+//Delete an ISO object and its Unit node, including a Unit detached by the SDAQ browse gate.
+void Morfeas_OPC_UA_delete_ISO_Channel_node(UA_Server *server_ptr, const char *iso_channel_name);
 //IOBOX's Handler related
 void IOBOX_handler_reg(UA_Server *server, char *dev_name);
 void IPC_msg_from_IOBOX_handler(UA_Server *server, unsigned char type,IPC_message *IPC_msg_dec);

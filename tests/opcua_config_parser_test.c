@@ -361,8 +361,8 @@ static void test_list_builder_mti_rmsw_fields(void)
 	xmlFreeDoc(doc);
 }
 
-//C-1: no CHANNEL child element's content may be empty (2026-08-19 code
-//review, F-1 -- this rule pre-dates Core-A2 but had no test coverage on
+//No CHANNEL child element's content may be empty (the Core rule pre-dates
+//this strict parser test but previously had no direct coverage on
 //either side of the Web/Core boundary, which is how the Web equivalent
 //went unimplemented long enough to reach a live LOGDemo32 reproduction).
 static void test_whole_document_rejects_empty_description(void)

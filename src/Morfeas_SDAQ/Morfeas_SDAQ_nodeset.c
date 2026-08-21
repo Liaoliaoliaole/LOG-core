@@ -363,7 +363,7 @@ static int sdaq_read_byte(UA_Server *server_ptr, const char *Node_id_str, UA_Byt
 
 /*
  * sdaq_iso_runtime_metadata_ready(serial, channel): the full readiness
- * predicate from plan §7.2. Every SDAQ node it reads defaults, when never
+ * predicate for exposing Unit to a fresh browse. Every SDAQ node it reads defaults, when never
  * written by live IPC data, to open62541's own type-zero value (empty
  * String, 0 Byte, DateTime epoch 1601-01-01) -- all of which already fail
  * the checks below on their own, so there is no separate "was this ever
@@ -427,7 +427,7 @@ static int sdaq_iso_runtime_metadata_ready(UA_Server *server_ptr, unsigned int s
 	//   per-channel subtree in SDAQ2OPC_UA_register_update_info()) and
 	//   Cal_date must have actually been written by a live IPC_SDAQ_cal_date
 	//   message: a device-reported "explicitly uncalibrated" date normalizes
-	//   to year 2000 (plan §7.2), which is unambiguously distinct from
+	//   to year 2000, which is unambiguously distinct from
 	//   open62541's own never-written DateTime zero value (year 1601). This
 	//   is why period alone (legitimately 0 when uncalibrated) cannot be
 	//   used as the "written" signal, but Cal_date's year can.
