@@ -1,25 +1,9 @@
 /*
  * tests/sdaq_offline_browse_gate_test.c
  *
- * Core integration test for the SDAQ Unit browse gate. Starts a real
- * embedded UA_Server (no network
- * I/O -- node CRUD and the Browse service work synchronously without the
- * event loop running, exactly like Morfeas_opc_ua.c's own registration
- * functions already rely on) and drives the actual production entry
- * points:
- *   - Morfeas_OPC_UA_add_update_ISO_Channel_node() for the XML-apply boundary
- *   - IPC_msg_from_SDAQ_handler() for every SDAQ IPC message boundary
- * then uses the real OPC UA Browse service -- not a private struct peek --
- * to confirm the ISO channel's "Unit" child reference is present/absent,
- * which is the exact mechanism a Gateway browse depends on.
- *
- * This does not replace a genuine `MorfeasMapper.IsMappable()`
- * check against the real Configuration Tool binary still requires that
- * product plus SDAQ+Gateway hardware. This test instead validates the one
- * mechanism IsMappable() depends on -- the browse-visible child reference
- * set -- using open62541's own Browse service, so it is not "inferring
- * behaviour from open62541 API existing"; it exercises the service end to
- * end.
+ * Integration test for the SDAQ Unit browse gate. It uses an embedded
+ * UA_Server and the production IPC handlers, then verifies the Unit child
+ * through the OPC UA Browse service.
  *
  * Run: make test-core-o   (from repo root)
  */
@@ -29,14 +13,9 @@
 #include "../src/Supplementary/Morfeas_XML.h"
 #include "../src/Morfeas_opc_ua/Morfeas_handlers_nodeset.h"
 
-// OPC_UA_NODESET_access itself is defined in Morfeas_opc_ua.c (linked in as
-// Morfeas_opc_ua_testmain.o below); only declared extern via the shared header.
+// Defined by Morfeas_opc_ua.c, linked here with its main function renamed.
 
-// None of these three DataSource read callbacks are declared in
-// Morfeas_handlers_nodeset.h either (only used internally, wired up via a
-// void* function pointer at node-creation time); declared here with their
-// real UA_DataSourceReadCallback-shaped signature so this test can attach
-// them to the same node names the production SDAQ branch uses.
+// Internal callbacks are declared here so the test creates the production shape.
 UA_StatusCode CH_update_value(UA_Server *server_ptr, const UA_NodeId *sessionId, void *sessionContext,
 	const UA_NodeId *nodeId, void *nodeContext, UA_Boolean sourceTimeStamp,
 	const UA_NumericRange *range, UA_DataValue *dataValue);
@@ -61,10 +40,7 @@ static void check(int cond, const char *msg)
 	}
 }
 
-// True if parent_id currently has a HasComponent reference whose target is child_id
-// (compares by target NodeId, not BrowseName: every node this codebase creates uses
-// its own NodeId string as its BrowseName too, but comparing the actual target
-// identity is what a Gateway's browse-driven auto-mapper structurally depends on).
+// Check the reference target NodeId, not the display name.
 static int browse_has_child(UA_Server *server, const char *parent_id, const char *child_id)
 {
 	UA_BrowseDescription bd;
@@ -136,13 +112,10 @@ int main(void)
 	UA_Server *server = UA_Server_new();
 	UA_ServerConfig *config = UA_Server_getConfig(server);
 	UA_ServerConfig_setDefault(config);
-	// Matches Morfeas_OPC_UA_config() (Morfeas_opc_ua_config.c): these
-	// DataSource nodes are created with no explicit initial value (the read
-	// callback supplies it later), which the default ruleset rejects.
+	// Production DataSource nodes receive their values from read callbacks.
 	config->allowEmptyVariables = UA_RULEHANDLING_ACCEPT;
 
-	// Minimal root objects the real startup path (Morfeas_opc_ua_root_nodeset_Define(),
-	// not exported/callable here) creates before any channel or SDAQ handler exists.
+	// Create the root objects normally built during Core startup.
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 	oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ISO Channels");
 	UA_Server_addObjectNode(server, UA_NODEID_STRING(1, "ISO_Channels"),
@@ -156,20 +129,8 @@ int main(void)
 		oAttr, NULL, NULL);
 	SDAQ_handler_reg(server, "vcan0"); //Sets up "vcan0", "vcan0.amount", etc.
 
-	/*
-	 * Build one SDAQ ISO channel's node tree exactly like the SDAQ branch of
-	 * Morfeas_OPC_UA_add_update_ISO_Channel_node() does (Morfeas_opc_ua.c,
-	 * ~line 700-727), rather than calling that function itself: it reads
-	 * the file-static `Links` list (populated from XML by
-	 * XML_doc_to_List_ISO_Channels()) to find this channel's serial/channel,
-	 * and that static has no external linkage for a test in a different
-	 * translation unit to populate. The one line this test does not
-	 * exercise as a result is the single `if(if_type == SDAQ)
-	 * SDAQ_refresh_unit_gate(...)` call added at the end of that function
-	 * (the XML-apply boundary) -- reviewed by inspection instead,
-	 * since it is a one-line call into the exact same SDAQ_refresh_unit_gate()
-	 * this test exercises directly and repeatedly below.
-	 */
+	/* Build the SDAQ ISO node shape directly because the production XML apply
+	 * function owns a file-local Links list that this test cannot populate. */
 	Morfeas_opc_ua_add_object_node(server, "ISO_Channels", "_TEST1", "_TEST1");
 	Morfeas_opc_ua_add_variable_node_with_callback_onRead(server, "_TEST1", "_TEST1.status", "Status", UA_TYPES_STRING, Status_update_value);
 	Morfeas_opc_ua_add_variable_node_with_callback_onRead(server, "_TEST1", "_TEST1.status_byte", "Status value", UA_TYPES_BYTE, Status_update_value);
@@ -186,20 +147,8 @@ int main(void)
 	check(browse_has_child(server, "_TEST1", "_TEST1.unit"),
 		"Unit node itself is attached at creation time by the shared node-creation helper, before any gate refresh has run");
 
-	/*
-	 * Every step below sends the real IPC message through the real
-	 * IPC_msg_from_SDAQ_handler() entry point, then calls
-	 * SDAQ_refresh_unit_gate() directly for "_TEST1". In production the
-	 * second part happens automatically, inside the same message handler,
-	 * via SDAQ_refresh_unit_gates_for_serial() walking Morfeas_opc_ua.c's
-	 * file-static `Links` list to find which ISO channel(s) reference this
-	 * serial -- that static has no external linkage, so this test cannot
-	 * populate it and instead drives the single-channel primitive directly
-	 * for the one channel it knows about. This still exercises the actual
-	 * readiness logic against real, live SDAQ.<serial>.* node state written
-	 * by the real message handlers -- only the Links-lookup fan-out itself
-	 * (a plain for-loop, reviewed by inspection) is not exercised here.
-	 */
+	/* Drive production IPC handlers, then refresh this known single link
+	 * directly because the file-local Links fan-out is not test-populatable. */
 	SDAQ_refresh_unit_gate(server, "_TEST1", 796834087, 1);
 	check(!browse_has_child(server, "_TEST1", "_TEST1.unit"),
 		"Unit gate hidden by the first refresh, before any SDAQ IPC data has arrived");

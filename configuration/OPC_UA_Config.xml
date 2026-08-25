@@ -62,7 +62,7 @@
         <!--
                 IOBOX RX link metrics use the same CHANNEL schema. UNIT is
                 required and must be non-empty for every IOBOX/MTI/NOX
-                CHANNEL (Core-A2 static semantic check), Status included;
+                CHANNEL, including Status;
                 there is no per-anchor-kind exemption:
                 <ANCHOR>{Identifier}.RX{n}.Status</ANCHOR>  MIN=0 MAX=1 UNIT=bool
                 <ANCHOR>{Identifier}.RX{n}.Success</ANCHOR> MIN=0 MAX=100 UNIT=%

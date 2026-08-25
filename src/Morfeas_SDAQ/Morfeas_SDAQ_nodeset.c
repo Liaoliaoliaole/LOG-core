@@ -106,8 +106,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 													   &(IPC_msg_dec->SDAQ_meas.SDAQ_channel_meas[Channel].meas),
 													   UA_TYPES_FLOAT);
 				}
-				//Plan §7.2: a meas message is what carries per-channel Unit,
-				//so this is a boundary where gate readiness can flip.
+				// A measurement update can change the runtime Unit readiness.
 				SDAQ_refresh_unit_gates_for_serial(server, IPC_msg_dec->SDAQ_meas.SDAQ_serial_number);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
@@ -143,9 +142,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 					UA_Server_deleteNode(server, NodeId, 1);
 					UA_clear(&NodeId, &UA_TYPES[UA_TYPES_NODEID]);
 				}
-				//Plan §7.2: the SDAQ.<serial>.* subtree is gone (cascaded by
-				//the delete above), so every linked ISO channel's readiness
-				//now reads back false -- hide their Unit gates to match.
+				// The removed runtime subtree makes linked Unit gates unavailable.
 				SDAQ_refresh_unit_gates_for_serial(server, IPC_msg_dec->SDAQ_clean.SDAQ_serial_number);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
@@ -190,7 +187,7 @@ void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type,IPC_message
 				Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str),
 												   &(IPC_msg_dec->SDAQ_cal_date.SDAQ_cal_date.amount_of_points),
 												   UA_TYPES_BYTE);
-				//Plan §7.2: Cal_date/period just changed for this one channel.
+				// Calibration metadata can change Unit readiness.
 				SDAQ_refresh_unit_gates_for_serial(server, IPC_msg_dec->SDAQ_cal_date.SDAQ_serial_number);
 			pthread_mutex_unlock(&OPC_UA_NODESET_access);
 			break;
@@ -276,8 +273,7 @@ void SDAQ2OPC_UA_register_update_info(UA_Server *server_ptr, SDAQ_info_msg *ptr)
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.sample_rate), UA_TYPES_BYTE);
 			sprintf(tmp_str,"SDAQ.%u.Max_cal_points",ptr->SDAQ_serial_number);
 			Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), &(ptr->SDAQ_info_data.max_cal_point), UA_TYPES_BYTE);
-			//Plan §7.2: Type and Amount_of_channels (and per-channel Unit
-			//node existence) just changed for this device.
+			// Device metadata can change Unit readiness.
 			SDAQ_refresh_unit_gates_for_serial(server_ptr, ptr->SDAQ_serial_number);
 		}
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
@@ -315,14 +311,9 @@ char * find_if_SDAQ_is_registered(UA_Server *server_ptr, const unsigned int seri
 }
 
 /*
- * Plan §7.2 (offline browse-gate contract). "Unit" is the single designated
- * mapping gate for a SDAQ ISO channel: instead of deleting/recreating any
- * of the six runtime-metadata nodes across online/offline transitions, we
- * idempotently attach/detach the HasComponent reference from the ISO object
- * to its already-stable "<iso>.unit" node, based on a live readiness
- * snapshot -- never a latch. Node existence never implies readiness by
- * itself; every condition below is re-read from the live SDAQ.<serial>.*
- * subtree every time this is called.
+ * Unit is the SDAQ ISO mapping gate. Its node remains stable; its browse
+ * reference exists only while live runtime metadata is complete. Readiness is
+ * derived from the current SDAQ subtree, never retained as a latch.
  */
 
 // True if Node_id_str resolves to a Variant holding a non-empty UA_String.
@@ -361,15 +352,8 @@ static int sdaq_read_byte(UA_Server *server_ptr, const char *Node_id_str, UA_Byt
 	return ok;
 }
 
-/*
- * sdaq_iso_runtime_metadata_ready(serial, channel): the full readiness
- * predicate for exposing Unit to a fresh browse. Every SDAQ node it reads defaults, when never
- * written by live IPC data, to open62541's own type-zero value (empty
- * String, 0 Byte, DateTime epoch 1601-01-01) -- all of which already fail
- * the checks below on their own, so there is no separate "was this ever
- * written" flag to keep in sync; a disappeared/never-registered device
- * reads back as not-ready with no extra bookkeeping.
- */
+/* Unit requires live registration, device identity, a reported channel,
+ * a non-empty Unit and a calibration value written by the SDAQ handler. */
 static int sdaq_iso_runtime_metadata_ready(UA_Server *server_ptr, unsigned int serial, unsigned char channel)
 {
 	char node_id[64];
@@ -377,7 +361,7 @@ static int sdaq_iso_runtime_metadata_ready(UA_Server *server_ptr, unsigned int s
 	UA_Variant cal_date_val;
 	UA_DateTimeStruct cal_struct;
 
-	//1) Registration must be fully Done (a String; SDAQ_reg_status_str[Ready] == "Done").
+	// Registration must be complete.
 	sprintf(node_id, "SDAQ.%u.Reg_status", serial);
 	{
 		UA_Variant value;
@@ -400,12 +384,12 @@ static int sdaq_iso_runtime_metadata_ready(UA_Server *server_ptr, unsigned int s
 			return 0;
 	}
 
-	//2) Device Address must be a real bus address: never 0, never Parking_address (63).
+	// Address 0 and the parking address are not assigned devices.
 	sprintf(node_id, "SDAQ.%u.Address", serial);
 	if(!sdaq_read_byte(server_ptr, node_id, &addr) || addr < 1 || addr >= Parking_address)
 		return 0;
 
-	//3) onBus and Type must be non-empty strings (device identity is known).
+	// The device identity must be available.
 	sprintf(node_id, "SDAQ.%u.onBus", serial);
 	if(!sdaq_read_nonempty_string(server_ptr, node_id))
 		return 0;
@@ -413,24 +397,18 @@ static int sdaq_iso_runtime_metadata_ready(UA_Server *server_ptr, unsigned int s
 	if(!sdaq_read_nonempty_string(server_ptr, node_id))
 		return 0;
 
-	//4) This channel must be within the device's reported Amount_of_channels.
+	// The device must report this channel.
 	sprintf(node_id, "SDAQ.%u.Amount_of_channels", serial);
 	if(!sdaq_read_byte(server_ptr, node_id, &amount) || channel < 1 || channel > amount)
 		return 0;
 
-	//5) This channel's Unit must be a non-empty string.
+	// The channel Unit must be available.
 	sprintf(node_id, "SDAQ.%u.CH%hhu.unit", serial, channel);
 	if(!sdaq_read_nonempty_string(server_ptr, node_id))
 		return 0;
 
-	//6) Cal_date/period must exist (created together with the rest of the
-	//   per-channel subtree in SDAQ2OPC_UA_register_update_info()) and
-	//   Cal_date must have actually been written by a live IPC_SDAQ_cal_date
-	//   message: a device-reported "explicitly uncalibrated" date normalizes
-	//   to year 2000, which is unambiguously distinct from
-	//   open62541's own never-written DateTime zero value (year 1601). This
-	//   is why period alone (legitimately 0 when uncalibrated) cannot be
-	//   used as the "written" signal, but Cal_date's year can.
+	/* A 1601 DateTime is open62541's unwritten default. Year 2000 is a valid
+	 * device-reported uncalibrated date, so the Date—not period—is the marker. */
 	sprintf(node_id, "SDAQ.%u.CH%hhu.period", serial, channel);
 	{
 		UA_NodeId period_id;
@@ -456,16 +434,8 @@ static int sdaq_iso_runtime_metadata_ready(UA_Server *server_ptr, unsigned int s
 	return 1;
 }
 
-/*
- * SDAQ_refresh_unit_gate(): idempotently attach/detach the HasComponent
- * reference between an ISO channel object and its own "<iso>.unit" node,
- * to match sdaq_iso_runtime_metadata_ready() right now. Safe to call at any
- * time, including before the ISO object or its Unit node exist yet (no-op).
- * BADDUPLICATEREFERENCENOTALLOWED / UNCERTAINREFERENCENOTDELETED are the
- * expected outcomes of a repeat call in the same direction and are not
- * errors -- same tolerance this codebase's own node-creation helpers already
- * apply to duplicate-node/duplicate-reference outcomes.
- */
+/* Attach or detach the Unit browse reference from the current readiness.
+ * Repeated add/remove status codes are expected and are treated as no-ops. */
 void SDAQ_refresh_unit_gate(UA_Server *server_ptr, const char *iso_channel_name, unsigned int serial, unsigned char channel)
 {
 	char unit_node_id[64];
@@ -571,7 +541,7 @@ void SDAQ2OPC_UA_register_update(UA_Server *server_ptr, SDAQ_reg_update_msg *ptr
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), status_byte_dec(ptr->SDAQ_status.status, Mode), UA_TYPES_STRING);
 		sprintf(tmp_str,"SDAQ.%u.Reg_status",ptr->SDAQ_status.dev_sn);
 		Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), SDAQ_reg_status_str[ptr->reg_status], UA_TYPES_STRING);
-		//Plan §7.2: Reg_status/Address just changed for this device.
+		// Registration or address changes can change Unit readiness.
 		SDAQ_refresh_unit_gates_for_serial(server_ptr, ptr->SDAQ_status.dev_sn);
 	pthread_mutex_unlock(&OPC_UA_NODESET_access);
 }

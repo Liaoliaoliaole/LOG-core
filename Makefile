@@ -297,12 +297,9 @@ $(BUILD_dir)/opcua_config_parser_test: $(WORK_dir)/opcua_config_parser_test.o $(
 test-core-a1: tree $(BUILD_dir)/opcua_config_parser_test
 	./$(BUILD_dir)/opcua_config_parser_test
 
-# Phase B2 / Core-O (plan §7.2) offline browse-gate integration test. Needs a
-# real embedded UA_Server, so it links the same object set as the production
-# Morfeas_opc_ua binary -- except Morfeas_opc_ua.c is recompiled with its own
-# main() renamed out of the way (-Dmain=...), since the test brings its own.
-# This is a separate object purely for the test; the production build/rule
-# for Morfeas_opc_ua.o above is untouched.
+# Integration test for the SDAQ Unit browse gate. It links an embedded
+# UA_Server and compiles Morfeas_opc_ua.c with its main renamed because the
+# test supplies its own entry point. The production build remains unchanged.
 $(WORK_dir)/Morfeas_opc_ua_testmain.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_opc_ua.c
 	gcc $(CFLAGS) -Dmain=Morfeas_opc_ua_unused_main $^ -c -o $@ $(LDLIBS)
 
@@ -334,5 +331,4 @@ test-core-o: tree $(BUILD_dir)/sdaq_offline_browse_gate_test
 	./$(BUILD_dir)/sdaq_offline_browse_gate_test
 
 .PHONY: all clean delete-tree test-core-a1 test-core-o
-
 

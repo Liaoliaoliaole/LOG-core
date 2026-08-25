@@ -1,9 +1,8 @@
 /*
  * tests/opcua_config_parser_test.c
  *
- * Standalone regression test for Core-A1 (strict SDAQ anchor decoder,
- * validator/list-builder parity, duplicate-SDAQ-source detection and
- * retired-MDAQ rejection) in src/Supplementary/Morfeas_XML.c.
+ * Standalone test for strict anchor parsing, validator/list-builder parity,
+ * duplicate-source detection and retired-MDAQ rejection in Morfeas_XML.c.
  *
  * This test does not use the project's DTD-validating file loader
  * (Morfeas_XML_parsing) because it needs to exercise both valid and
@@ -140,17 +139,17 @@ static void test_whole_document_valid_serial_anchor(void)
 	xmlFreeDoc(doc);
 }
 
-//Reproduces the field incident: an address-style SDAQ anchor must reject the whole document.
+// Address-style SDAQ anchors are not canonical source identities.
 static void test_whole_document_rejects_address_style_anchor(void)
 {
 	char channel[512];
 	snprintf(channel, sizeof(channel), CHANNEL_TEMPLATE, "_Protea_NH3", "SDAQ", "CAN1.ADDR:05.CH:01");
 	xmlDocPtr doc = build_doc(channel);
-	CHECK(doc != NULL, "in-memory doc parses (incident fixture)");
+	CHECK(doc != NULL, "in-memory doc parses (address-style fixture)");
 	if (!doc) return;
 
 	int rc = Morfeas_opc_ua_config_valid(xmlDocGetRootElement(doc));
-	CHECK(rc == EXIT_FAILURE, "field-incident address-style anchor \"CAN1.ADDR:05.CH:01\" rejects whole document (rc=%d)", rc);
+	CHECK(rc == EXIT_FAILURE, "address-style anchor \"CAN1.ADDR:05.CH:01\" rejects whole document (rc=%d)", rc);
 	xmlFreeDoc(doc);
 }
 
@@ -244,8 +243,7 @@ static void test_whole_document_rejects_duplicate_mti_source(void)
 	xmlFreeDoc(doc);
 }
 
-//Same identifier/channel number, different telemetry type: TC16.CH1 and TC8.CH1
-//are not a semantic duplicate (plan section 6: "TC16.CH1 与 TC8.CH1 不是 semantic duplicate").
+// Same identifier/channel number with distinct telemetry types are separate sources.
 static void test_whole_document_allows_distinct_mti_telemetry_type(void)
 {
 	char c1[512], c2[512], both[1024];
@@ -361,10 +359,7 @@ static void test_list_builder_mti_rmsw_fields(void)
 	xmlFreeDoc(doc);
 }
 
-//No CHANNEL child element's content may be empty (the Core rule pre-dates
-//this strict parser test but previously had no direct coverage on
-//either side of the Web/Core boundary, which is how the Web equivalent
-//went unimplemented long enough to reach a live LOGDemo32 reproduction).
+// CHANNEL fields required by the schema must not be empty.
 static void test_whole_document_rejects_empty_description(void)
 {
 	char channel[512] =
@@ -385,7 +380,7 @@ static void test_whole_document_rejects_empty_description(void)
 	xmlFreeDoc(doc);
 }
 
-//C-4: ISO_CHANNEL length must be < ISO_channel_name_size (20).
+// ISO_CHANNEL must fit the Core's fixed-size name buffer.
 static void test_whole_document_rejects_iso_channel_too_long(void)
 {
 	static const char *too_long = "TE_Twenty_Chars_Long";//20 chars, == ISO_channel_name_size -> reject
@@ -400,7 +395,7 @@ static void test_whole_document_rejects_iso_channel_too_long(void)
 	xmlFreeDoc(doc);
 }
 
-//C-5: ISO_CHANNEL must not contain '.'.
+// Dots are reserved as OPC UA NodeId separators.
 static void test_whole_document_rejects_iso_channel_with_dot(void)
 {
 	char channel[512];
@@ -452,7 +447,7 @@ int main(void)
 
 	test_mdaq_rejected();
 
-	//Core-A2: IOBOX grammar acceptance table
+	// IOBOX grammar acceptance table
 	test_iobox_grammar_accept("1.RX1.CH1");
 	test_iobox_grammar_accept("117440522.RX1.CH1");
 	test_iobox_grammar_accept("117440522.RX6.CH16");//IOBOX_Amount_of_All_RXs max receiver, IOBOX_Amount_of_channels max channel
@@ -477,7 +472,7 @@ int main(void)
 	test_iobox_grammar_reject("4294967296.RX1.CH1");//uint32 overflow by 1
 	test_iobox_grammar_reject("-117440522.RX1.CH1");//negative
 
-	//Core-A2: MTI grammar acceptance table
+	// MTI grammar acceptance table
 	test_mti_grammar_accept("222222.TC16.CH1");
 	test_mti_grammar_accept("222222.TC16.CH16");
 	test_mti_grammar_accept("222222.TC8.CH8");

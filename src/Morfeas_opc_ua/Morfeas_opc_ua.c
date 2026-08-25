@@ -571,16 +571,8 @@ UA_StatusCode Dev_update_value(UA_Server *server_ptr,
 	return UA_STATUSCODE_GOOD;
 }
 
-/*
- * Plan §7.2: refresh the ISO_channel.unit browse-gate for every ISO channel
- * currently linked to a given SDAQ serial. Callers on the SDAQ IPC side
- * (Morfeas_SDAQ_nodeset.c) know the serial (and sometimes a specific
- * channel) but not which ISO_channel_name(s), if any, currently link to it
- * -- that mapping only exists in this file's own file-local `Links` list,
- * so this lookup has to live here rather than being duplicated elsewhere.
- * Safe to call for a serial with zero, one or several linked channels;
- * each match is refreshed independently via SDAQ_refresh_unit_gate().
- */
+/* Refresh every SDAQ ISO link for one serial. The file-local Links list owns
+ * the serial-to-ISO mapping, so IPC handlers must not duplicate that lookup. */
 void SDAQ_refresh_unit_gates_for_serial(UA_Server *server_ptr, unsigned int serial)
 {
 	for(GSList *iter = Links; iter; iter = iter->next)
@@ -910,10 +902,7 @@ void Morfeas_OPC_UA_add_update_ISO_Channel_node(UA_Server *server_ptr, xmlNode *
 				Update_NodeValue_by_nodeID(server_ptr, UA_NODEID_STRING(1,tmp_str), MTI_Tele_dev_type_str[List_Links_Node_data->rxNum_teleType_or_value], UA_TYPES_STRING);
 				break;
 		}
-		//Re-derive the SDAQ Unit browse gate on every XML
-		//apply, not just first creation -- the ISO object may already have
-		//existed (hot reload of an unrelated field) while the SDAQ device's
-		//own readiness changed in the meantime.
+		// XML apply must refresh an existing SDAQ channel's live Unit gate.
 		if(if_type == SDAQ)
 			SDAQ_refresh_unit_gate(server_ptr, ISO_channel_name, List_Links_Node_data->identifier, List_Links_Node_data->channel);
 	}

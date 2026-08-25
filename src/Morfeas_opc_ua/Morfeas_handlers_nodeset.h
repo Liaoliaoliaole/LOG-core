@@ -65,13 +65,11 @@ void SDAQ_handler_reg(UA_Server *server, char *connected_to_BUS);
 void SDAQ2OPC_UA_register_update(UA_Server *server, SDAQ_reg_update_msg *ptr);
 void SDAQ2OPC_UA_register_update_info(UA_Server *server, SDAQ_info_msg *ptr);
 void IPC_msg_from_SDAQ_handler(UA_Server *server, unsigned char type, IPC_message *IPC_msg_dec);
-//Idempotently show/hide the ISO_channel.unit reference based on current SDAQ metadata.
-//HasComponent reference to match live SDAQ.<serial>.* readiness -- never deletes/recreates
-//the six stable runtime-metadata nodes themselves.
+// Show Unit only when current SDAQ metadata is ready; runtime nodes stay stable.
 void SDAQ_refresh_unit_gate(UA_Server *server_ptr, const char *iso_channel_name, unsigned int serial, unsigned char channel);
-//Same, but for every ISO channel currently linked to the given SDAQ serial (looks up Links).
+// Refresh every ISO channel linked to one SDAQ serial.
 void SDAQ_refresh_unit_gates_for_serial(UA_Server *server_ptr, unsigned int serial);
-//Delete an ISO object and its Unit node, including a Unit detached by the SDAQ browse gate.
+// Delete an ISO object and a possibly detached Unit child.
 void Morfeas_OPC_UA_delete_ISO_Channel_node(UA_Server *server_ptr, const char *iso_channel_name);
 //IOBOX's Handler related
 void IOBOX_handler_reg(UA_Server *server, char *dev_name);
