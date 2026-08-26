@@ -14,6 +14,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include <time.h>
+
 #define NOx_Bitrate 250000
 #define NOx_Sensor_lifetime_sec 10
 #define NOx_high_addr 0x18F00F52
@@ -26,6 +28,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define NOx_val_scaling(val) (val * 0.05 - 200.0)
 #define O2_val_scaling(val) (val * 0.000514 - 12.0)
+
+/* Shared by active-device reporting and logstat export. */
+static inline int nox_sensor_is_active(time_t now, time_t last_seen)
+{
+	return (now - last_seen) <= NOx_Sensor_lifetime_sec;
+}
 
 enum NOx_Error_codes{
 	NOx_No_error = 0x1F,

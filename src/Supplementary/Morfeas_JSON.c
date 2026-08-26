@@ -975,7 +975,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "NOx_sensors", NOx_array = cJSON_CreateArray());
 	for(int i=0; i<2; i++)
 	{
-		if((now_time - stats->NOXs_data[i].last_seen) <= NOx_Sensor_lifetime_sec)
+		if(nox_sensor_is_active(now_time, stats->NOXs_data[i].last_seen))
 		{
 			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
 			cJSON_AddNumberToObject(curr_NOx_data, "addr", i);

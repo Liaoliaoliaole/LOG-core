@@ -6,12 +6,29 @@ reconstruct the link command manually.
 
 ```bash
 make test-core-a1
+make test-core-d
 make test-core-o
+make test-core-sdaq-cache
+make test-core-nox
+# Run all maintained project suites:
+make test-core-all
 ```
 
 `test-core-a1` builds and runs `opcua_config_parser_test.c`. It covers the
 strict OPC UA configuration grammar, semantic duplicate checks, supported
 interface rules, and parser/list-builder agreement.
+
+`test-core-d` runs the production `Morfeas_daemon_config_valid()` function
+against `tests/fixtures/daemon_config_validation_cases.json`. Web's
+`logConfigValidationTest.php` consumes the same corpus, so a semantic rule
+change cannot silently make only one layer accept a configuration.
+
+`test-core-sdaq-cache` links the production `Morfeas_SDAQ_if.c` with its
+`main()` renamed and tests the address-reservation cache's TTL, uniqueness,
+ownership, and expiry semantics without opening CAN.
+
+`test-core-nox` checks the shared ten-second NOX lifetime boundary used by
+both active-device reporting and logstat export.
 
 `test-core-o` builds and runs `sdaq_offline_browse_gate_test.c`. It starts an
 embedded open62541 server and covers the SDAQ Unit browse gate, ISO-channel
@@ -33,5 +50,5 @@ For a complete source build followed by both regression suites:
 
 ```bash
 make all
-make test-core-a1 test-core-o
+make test-core-all
 ```

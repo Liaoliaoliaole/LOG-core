@@ -161,7 +161,7 @@ Guide link [here](./RE-INSTALL.md)
 ### 2. SDAQ Address Allocation Redesign
 The previous LogBook was append-only and accumulated duplicate entries over time, causing address conflicts. The current design:
 
-- **Deduplicated TTL cache** — 1 record per S/N, 1 record per address; always rewritten atomically
+- **Deduplicated TTL cache** — 1 record per S/N and 1 record per address; checksum-validated and rewritten whenever reservations change. It is an advisory reservation cache: an invalid/truncated file is cleared and rebuilt from currently online SDAQs.
 - **Address reservation** — when a device goes offline, its address slot is reserved for that S/N for **14 days**; the device recovers its original address automatically on return
 - **O(1) conflict check** — `address_owners[64]` in-memory table replaces linear list scans
 - **On-card upgrade behavior** — if an existing SD card is upgraded in place and the stored SDAQ LogBook uses the previous format, Morfeas clears that address cache and rebuilds it from SDAQs that are currently online. This does not apply to a freshly imaged/replaced SD card. When the cache is rebuilt, SDAQ addresses may be reassigned according to the current conflict-free allocation rules.
@@ -179,6 +179,12 @@ Invalid or unavailable measurements carry typed numeric error codes instead of `
 | `-905` | Source unregistered or device-level transport unreachable |
 | `-906` | Standby / heater off |
 | `-907` | Signal invalid / data invalid |
+
+NOX active-device reporting and `logstat_NOXs_*.json` use the same **10-second**
+last-seen boundary. At exactly ten seconds the sensor remains active; at eleven
+seconds it is omitted as offline. When a sensor is still present but its NOx or
+O2 value is invalid, Core exports the applicable reserved error value instead
+of forwarding a stale physical reading.
 
 `Out of Range` and `Over Range` now preserve the measured value (previously discarded). Error codes propagate through IPC → OPC UA → web backend and display as red integers in Morfeas Web.
 

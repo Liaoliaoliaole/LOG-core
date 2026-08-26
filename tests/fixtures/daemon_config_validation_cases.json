@@ -1,0 +1,48 @@
+[
+  {
+    "name": "valid_minimal_handlers",
+    "accepted": true,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><SDAQ_HANDLER Disable=\"false\"><CANBUS_IF>can0</CANBUS_IF></SDAQ_HANDLER><IOBOX_HANDLER Disable=\"false\"><DEV_NAME>Box1</DEV_NAME><IPv4_ADDR>10.0.0.1</IPv4_ADDR></IOBOX_HANDLER><MTI_HANDLER Disable=\"false\"><DEV_NAME>Mti1</DEV_NAME><IPv4_ADDR>10.0.0.2</IPv4_ADDR></MTI_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "disable_must_be_literal_boolean",
+    "accepted": false,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><SDAQ_HANDLER Disable=\"maybe\"><CANBUS_IF>can0</CANBUS_IF></SDAQ_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "device_name_space_rejected",
+    "accepted": false,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><IOBOX_HANDLER Disable=\"false\"><DEV_NAME>Bad Name</DEV_NAME><IPv4_ADDR>10.0.0.1</IPv4_ADDR></IOBOX_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "duplicate_sdaq_bus_rejected_even_disabled",
+    "accepted": false,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><SDAQ_HANDLER Disable=\"true\"><CANBUS_IF>can0</CANBUS_IF></SDAQ_HANDLER><SDAQ_HANDLER Disable=\"false\"><CANBUS_IF>can0</CANBUS_IF></SDAQ_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "disabled_sdaq_and_enabled_nox_may_share_bus",
+    "accepted": true,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><SDAQ_HANDLER Disable=\"true\"><CANBUS_IF>can0</CANBUS_IF></SDAQ_HANDLER><NOX_HANDLER Disable=\"false\"><CANBUS_IF>can0</CANBUS_IF></NOX_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "device_name_15_bytes_accepted",
+    "accepted": true,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><IOBOX_HANDLER Disable=\"false\"><DEV_NAME>ABCDEFGHIJKLMNO</DEV_NAME><IPv4_ADDR>10.0.0.1</IPv4_ADDR></IOBOX_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "device_name_16_bytes_core_accepted_web_warned",
+    "accepted": true,
+    "web_warning_codes": ["dev_name_at_ifnamsiz"],
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><IOBOX_HANDLER Disable=\"false\"><DEV_NAME>ABCDEFGHIJKLMNOP</DEV_NAME><IPv4_ADDR>10.0.0.1</IPv4_ADDR></IOBOX_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "device_name_17_bytes_rejected",
+    "accepted": false,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><IOBOX_HANDLER Disable=\"false\"><DEV_NAME>ABCDEFGHIJKLMNOPQ</DEV_NAME><IPv4_ADDR>10.0.0.1</IPv4_ADDR></IOBOX_HANDLER></COMPONENTS></CONFIG>"
+  },
+  {
+    "name": "invalid_device_ipv4_rejected",
+    "accepted": false,
+    "xml": "<?xml version=\"1.0\"?><!DOCTYPE CONFIG SYSTEM \"Morfeas.dtd\"><CONFIG><CONFIGS_DIR>/tmp/config</CONFIGS_DIR><LOGGERS_DIR>/tmp/loggers</LOGGERS_DIR><LOGSTAT_DIR>/tmp/logstat</LOGSTAT_DIR><COMPONENTS><OPC_UA_SERVER Disable=\"false\"><APP_NAME>Morfeas_App</APP_NAME></OPC_UA_SERVER><IOBOX_HANDLER Disable=\"false\"><DEV_NAME>Box1</DEV_NAME><IPv4_ADDR>999.999.999.999</IPv4_ADDR></IOBOX_HANDLER></COMPONENTS></CONFIG>"
+  }
+]

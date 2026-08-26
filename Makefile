@@ -297,6 +297,57 @@ $(BUILD_dir)/opcua_config_parser_test: $(WORK_dir)/opcua_config_parser_test.o $(
 test-core-a1: tree $(BUILD_dir)/opcua_config_parser_test
 	./$(BUILD_dir)/opcua_config_parser_test
 
+# Shared semantic daemon-config corpus. The same JSON fixtures are consumed
+# by this production C validator and Web's logConfigValidationTest.php.
+$(WORK_dir)/daemon_config_fixture_test.o: $(TESTS_dir)/daemon_config_fixture_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(BUILD_dir)/daemon_config_fixture_test: $(WORK_dir)/daemon_config_fixture_test.o $(Morfeas_XML_test_DEP)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-d: tree $(BUILD_dir)/daemon_config_fixture_test
+	./$(BUILD_dir)/daemon_config_fixture_test $(TESTS_dir)/fixtures/daemon_config_validation_cases.json
+
+# Address-cache logic is exercised through the production Morfeas_SDAQ_if.c
+# with only its main() symbol renamed for the test link.
+$(WORK_dir)/Morfeas_SDAQ_if_cache_testmain.o: $(SRC_dir)/Morfeas_SDAQ/Morfeas_SDAQ_if.c
+	$(GCC_opt) $(CFLAGS) -Dmain=Morfeas_SDAQ_if_unused_main $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/sdaq_address_cache_test.o: $(TESTS_dir)/sdaq_address_cache_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+Morfeas_SDAQ_if_cache_test_DEP = $(WORK_dir)/sdaq_address_cache_test.o \
+						  $(WORK_dir)/Morfeas_SDAQ_if_cache_testmain.o \
+						  $(WORK_dir)/Morfeas_run_check.o \
+						  $(WORK_dir)/Morfeas_JSON.o \
+						  $(WORK_dir)/Morfeas_RPi_Hat.o \
+						  $(WORK_dir)/SDAQ_drv.o \
+						  $(WORK_dir)/MTI_func.o \
+						  $(WORK_dir)/NOX_func.o \
+						  $(WORK_dir)/Morfeas_IPC.o \
+						  $(WORK_dir)/Morfeas_Logger.o \
+						  $(WORK_dir)/Morfeas_info.o
+
+$(BUILD_dir)/sdaq_address_cache_test: $(Morfeas_SDAQ_if_cache_test_DEP)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-sdaq-cache: tree $(BUILD_dir)/sdaq_address_cache_test
+	./$(BUILD_dir)/sdaq_address_cache_test
+
+$(WORK_dir)/nox_lifetime_test.o: $(TESTS_dir)/nox_lifetime_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(BUILD_dir)/nox_lifetime_test: $(WORK_dir)/nox_lifetime_test.o
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-nox: tree $(BUILD_dir)/nox_lifetime_test
+	./$(BUILD_dir)/nox_lifetime_test
+
+# One command for every maintained project regression suite. Keep individual
+# targets for focused development, but CI/review must not rely on remembering
+# which of them exist.
+test-core-all: test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-nox
+
 # Integration test for the SDAQ Unit browse gate. It links an embedded
 # UA_Server and compiles Morfeas_opc_ua.c with its main renamed because the
 # test supplies its own entry point. The production build remains unchanged.
@@ -330,5 +381,4 @@ $(BUILD_dir)/sdaq_offline_browse_gate_test: $(Morfeas_opc_ua_test_DEP)
 test-core-o: tree $(BUILD_dir)/sdaq_offline_browse_gate_test
 	./$(BUILD_dir)/sdaq_offline_browse_gate_test
 
-.PHONY: all clean delete-tree test-core-a1 test-core-o
-
+.PHONY: all clean delete-tree test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-nox test-core-all
