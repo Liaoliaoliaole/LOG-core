@@ -26,7 +26,7 @@ runs as daemon type processes, and they communicating using messages established
 that passing through **PIPEs**. All the project's components are written in **ANSI C**.
 
 ### Documentation
-Project documentation located @:[/Docs/Morfeas_project_Documentation](./Docs/Morfeas_project_Documentation)
+The current build, test, runtime, and SDAQ address-cache contracts are maintained in this README and [`tests/README.md`](./tests/README.md). The LaTeX tree under [`Docs/Morfeas_project_Documentation`](./Docs/Morfeas_project_Documentation) is retained as the original architectural reference; it is not the current operator or deployment manual. The current LOG WEB operator manual is generated from `LOG-web/Morfeas_WEB/docs/manual/`.
 
 #### The Morfeas-core components:
 * **Morfeas_daemon**: The supervisor.
@@ -96,7 +96,7 @@ Submodule commits pinned:
 - `src/cJSON`: `12c4bf1986c288950a3d06da757109a6aa1ece38` (v1.7.15-44)
 - `src/noPoll`: `fa8b8c90a69fed63b1f1e4f7e9e95672f34c054f` (0.4.9-2)
 - `src/open62541`: `c1960fa4897d06c5fae8c41823fc446c8bbd6345` (v1.4.10-1104)
-- `src/sdaq-worker`: `ccc690c57e4171762c42a7e6412b7d92ea5e789f` (heads/master — unchanged)
+- `src/sdaq-worker`: `ad088dd1a3bd98ef13855061d00ae63155eeb749` (calibration validation and serialization fixes)
 
 Notable upgrades from v1 → v2: open62541 moved from `f63e2a8` to `c1960fa` (v1.4.10 series), which is why the `UA_ServerConfig_clear` / `UA_ServerConfig_clean` compatibility shim was added. cJSON and noPoll received minor upstream bumps.
 
@@ -112,8 +112,8 @@ cd Morfeas_core
 sudo systemctl restart Morfeas_system.service
 ```
 
-### Code-only rebuild (core only)
-Use when only LOG-core source code changed and dependency pins did not change.
+### Code-only rebuild (core + pinned SDAQ worker)
+Use when LOG-core or the recorded `src/sdaq-worker` submodule changed and third-party dependency pins did not change. The script synchronizes the pinned SDAQ-worker submodule, builds and installs `SDAQ_worker`, then builds and installs LOG core. Do not replace this with `git submodule foreach git pull`: that would discard the parent repository's pinned dependency contract.
 
 ```bash
 cd Morfeas_core
