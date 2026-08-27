@@ -1203,6 +1203,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 			return EXIT_FAILURE;
 		}
 		cache_remove_expired_entries(stats, now);
+		LogBook_node = stats->LogBook;//Re-fetch head: the sweep above may have freed the node captured at function entry
 			while(LogBook_node)
 			{
 				node_data = LogBook_node->data;
@@ -1636,6 +1637,8 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				}
 			}
 			//If not any address available set SDAQ to park
+			Logger("%s: address pool exhausted, parking S/N:%u (cached owner of its previous address is still reserved)\n",
+				   stats->CAN_IF_name, status_dec->dev_sn);
 			if(sdaq_id_dec->device_addr != Parking_address)
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
 			return NULL;
@@ -1670,6 +1673,8 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				}
 			}
 			//If not any address available set SDAQ to park
+			Logger("%s: address pool exhausted, parking previously-unknown S/N:%u\n",
+				   stats->CAN_IF_name, status_dec->dev_sn);
 			if(sdaq_id_dec->device_addr != Parking_address)
 				SetDeviceAddress(socket_fd, status_dec->dev_sn, Parking_address);
 			return NULL;
