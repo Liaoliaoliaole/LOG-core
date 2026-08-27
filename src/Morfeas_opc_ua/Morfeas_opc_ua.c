@@ -1109,7 +1109,7 @@ void Morfeas_opc_ua_root_nodeset_Define(UA_Server *server_ptr)
                             oAttr, NULL, NULL);
 
 	char *health_status_str[][5]={
-		{"Up_time (sec)","CPU_Util (%)","RAM_Util (%)","Disk_Util (%)","CPU_temp (°F)"},
+		{"Up_time (sec)","CPU_Util (%)","RAM_Util (%)","Disk_Util (%)","CPU_temp (°C)"},
 		{"Up_time","CPU_Util","RAM_Util","Disk_Util","CPU_temp"}
 	};
 	//loop that adding CPU_Temp, UpTime and CPU, RAM and Disk utilization properties;
@@ -1177,7 +1177,7 @@ void Rpi_health_update(void)
 	{
 		fscanf(CPU_temp_fp, "%s", cpu_temp_str);
 		fclose(CPU_temp_fp);
-		sys_stats.CPU_temp = 32+(atof(cpu_temp_str)/1E3)*9/5;
+		sys_stats.CPU_temp = atof(cpu_temp_str)/1E3;
 	}
 	else
 		sys_stats.CPU_temp = NAN;
