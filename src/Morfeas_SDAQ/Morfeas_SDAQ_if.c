@@ -62,6 +62,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../IPC/Morfeas_IPC.h" //<-#include -> "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_Logger.h"
 #include "../Morfeas_RPi_Hat/Morfeas_RPi_Hat.h"
+#include "Morfeas_SDAQ_measurement.h"
 
 //Global variables
 static volatile struct Morfeas_SDAQ_if_flags{
@@ -133,7 +134,6 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 //Function for construction of message for registration or update of a SDAQ
 int IPC_SDAQ_reg_update(int FIFO_fd, char *CANBus_if_name, unsigned char address, sdaq_status *SDAQ_status, unsigned char reg_status, unsigned char amount);
 static int sdaq_status_is_unclassified(unsigned char status);
-static void sdaq_prepare_cycle_measurements(struct SDAQ_info_entry *sdaq_node, SDAQ_meas_msg *ipc_meas);
 
 	/*GSList related functions*/
 void free_SDAQ_info_entry(gpointer node);//used with g_slist_free_full to free the data of each node of list_SDAQs
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
 									memcpy(&(IPC_msg.SDAQ_meas.SDAQ_channel_meas),
 											 SDAQ_data->SDAQ_Channels_curr_meas,
 											 sizeof(struct Channel_curr_meas)*SDAQ_data->SDAQ_info.num_of_ch);
-									sdaq_prepare_cycle_measurements(SDAQ_data, &(IPC_msg.SDAQ_meas));
+									SDAQ_prepare_cycle_measurements(SDAQ_data, &(IPC_msg.SDAQ_meas));
 									IPC_msg_TX(stats.FIFO_fd, &IPC_msg);
 								}
 							}
@@ -559,7 +559,7 @@ int main(int argc, char *argv[])
 						stats.Bus_voltage = port_meas.port_voltage * MAX9611_default_volt_meas_scaler;
 						stats.Bus_amperage = port_meas.port_current * MAX9611_default_current_meas_scaler;
 					}
-					stats.Shunt_temp = port_meas.temperature * MAX9611_temp_scaler * 5.0 / 9.0;
+					stats.Shunt_temp = Morfeas_hat_temperature_celsius(port_meas.temperature);
 				}
 				IPC_msg.SDAQ_BUS_info.Electrics = -1;
 				IPC_msg.SDAQ_BUS_info.voltage = stats.Bus_voltage;
@@ -734,7 +734,7 @@ static int sdaq_status_is_unclassified(unsigned char status)
 		&& !(status & (1<<Over_range));
 }
 
-static void sdaq_prepare_cycle_measurements(struct SDAQ_info_entry *sdaq_node, SDAQ_meas_msg *ipc_meas)
+void SDAQ_prepare_cycle_measurements(struct SDAQ_info_entry *sdaq_node, SDAQ_meas_msg *ipc_meas)
 {
 	unsigned char ch;
 	if(!sdaq_node || !ipc_meas || !sdaq_node->SDAQ_Channels_last_timestamp

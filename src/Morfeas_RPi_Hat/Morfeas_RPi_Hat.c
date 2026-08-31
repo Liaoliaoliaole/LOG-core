@@ -38,6 +38,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 int Morfeas_hat_error_num = -1;
 
+float Morfeas_hat_temperature_celsius(short raw_temperature)
+{
+	return raw_temperature * MAX9611_temp_scaler * 5.0f / 9.0f;
+}
+
 //Function that return error message
 char* Morfeas_hat_error()
 {
@@ -579,4 +584,3 @@ int erase_EEPROM(unsigned char port, unsigned char i2c_dev_num)
 	}
 	return 0;
 }
-

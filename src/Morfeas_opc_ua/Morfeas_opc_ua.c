@@ -414,21 +414,75 @@ int Morfeas_ISO_Channels_request_dec(const UA_NodeId *nodeId, char **ISO_Channel
 	return -1;
 }
 
-// DataSource onRead callback for linked ISO channel measurements.
-// Returns the source node value when available. When the source node is
-// missing -- typically because the handler exited and IPC_Handler_unregister
-// deleted the device subtree -- the callback falls back to
-// MORFEAS_MEAS_ERROR_UNREGISTERED (-905) so downstream consumers always
-// receive a numeric measurement value.
-//
-// Per error-code design:
-//   -901 (OFFLINE)      : handler alive, individual source/sensor disconnected
-//                         (handlers proactively write this to source nodes).
-//   -905 (UNREGISTERED) : handler/device gone (this fallback fires) OR device
-//                         transport unreachable (handlers proactively write
-//                         this to source nodes for IOBOX/MTI modbus errors).
-// The fallback applies to all device families that use reserved numeric
-// error codes for the "meas" channel (SDAQ/IOBOX/MTI/NOX).
+/* Read one configured source. A vanished measurement node remains numeric
+ * so a consumer can distinguish it from a missing ISO link. */
+UA_StatusCode Morfeas_read_linked_value(UA_Server *server_ptr,
+	const struct Link_entry *Node_data, const char *request,
+	UA_DataValue *dataValue)
+{
+	UA_NodeId src_NodeId;
+	char src_NodeId_str[128];
+	const char *source_request = request;
+	int is_meas_request;
+
+	if(!server_ptr || !Node_data || !request || !dataValue)
+		return UA_STATUSCODE_GOOD;
+
+	is_meas_request = !strcmp(request, "meas");
+	switch(Node_data->interface_type_num)
+	{
+		case SDAQ:
+			sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+				Node_data->identifier, Node_data->channel, source_request);
+			break;
+		case IOBOX:
+			if(Node_data->channel == IOBOX_RX_Status_link_channel)
+				sprintf(src_NodeId_str, "%s.%u.RX%hhu.Status.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+					Node_data->identifier, Node_data->rxNum_teleType_or_value, source_request);
+			else if(Node_data->channel == IOBOX_RX_Success_link_channel)
+				sprintf(src_NodeId_str, "%s.%u.RX%hhu.Success.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+					Node_data->identifier, Node_data->rxNum_teleType_or_value, source_request);
+			else
+				sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+					Node_data->identifier, Node_data->rxNum_teleType_or_value, Node_data->channel, source_request);
+			break;
+		case MTI:
+			if(Node_data->rxNum_teleType_or_value == RMSW_MUX)
+				sprintf(src_NodeId_str, "%s.%u.ID:%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+					Node_data->identifier, Node_data->tele_ID, Node_data->channel, source_request);
+			else
+				sprintf(src_NodeId_str, "%s.%u.%s.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
+					Node_data->identifier, MTI_Tele_dev_type_str[Node_data->rxNum_teleType_or_value], Node_data->channel, source_request);
+			break;
+		case NOX:
+			if(Node_data->rxNum_teleType_or_value == NOx_val)
+				source_request = "NOx";
+			else if(Node_data->rxNum_teleType_or_value == O2_val)
+				source_request = "O2";
+			else
+				return UA_STATUSCODE_GOOD;
+			sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.%s_value", Node_data->CAN_IF_name,
+				Node_data->channel, source_request);
+			break;
+		default:
+			return UA_STATUSCODE_GOOD;
+	}
+
+	if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
+	{
+		UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));
+		UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
+		dataValue->hasValue = true;
+	}
+	else if(is_meas_request)
+	{
+		const float unregistered_meas = MORFEAS_MEAS_ERROR_UNREGISTERED;
+		UA_Variant_setScalarCopy(&(dataValue->value), &unregistered_meas, &UA_TYPES[UA_TYPES_FLOAT]);
+		dataValue->hasValue = true;
+	}
+	return UA_STATUSCODE_GOOD;
+}
+
 UA_StatusCode CH_update_value(UA_Server *server_ptr,
 						  const UA_NodeId *sessionId, void *sessionContext,
 						  const UA_NodeId *nodeId, void *nodeContext,
@@ -438,96 +492,15 @@ UA_StatusCode CH_update_value(UA_Server *server_ptr,
 	GSList *List_Links_Node;
 	struct Link_entry *Node_data;
 	//UA_Variant outValue;
-	UA_NodeId src_NodeId;
-	char *ISO_Channel, *req_value, src_NodeId_str[128];
-	int is_meas_request;
+	char *ISO_Channel, *req_value;
 	if(nodeId->identifierType == UA_NODEIDTYPE_STRING)
 	{
 		if(!Morfeas_ISO_Channels_request_dec(nodeId, &ISO_Channel, &req_value))
 		{
-			is_meas_request = !strcmp(req_value, "meas");
 			if((List_Links_Node = g_slist_find_custom(Links, ISO_Channel, List_Links_cmp)))
 			{
 				Node_data = List_Links_Node->data;
-				switch(Node_data->interface_type_num)
-				{
-					case SDAQ:
-						sprintf(src_NodeId_str, "%s.%u.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																   Node_data->identifier,
-																   Node_data->channel,
-																   req_value);
-						break;
-					case IOBOX:
-						if(Node_data->channel == IOBOX_RX_Status_link_channel)
-							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Status.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																			  Node_data->identifier,
-																			  Node_data->rxNum_teleType_or_value,
-																			  req_value);
-						else if(Node_data->channel == IOBOX_RX_Success_link_channel)
-							sprintf(src_NodeId_str, "%s.%u.RX%hhu.Success.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																			   Node_data->identifier,
-																			   Node_data->rxNum_teleType_or_value,
-																			   req_value);
-						else
-							sprintf(src_NodeId_str, "%s.%u.RX%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																			  Node_data->identifier,
-																			  Node_data->rxNum_teleType_or_value,
-																			  Node_data->channel,
-																			  req_value);
-						break;
-					case MTI:
-						if(Node_data->rxNum_teleType_or_value == RMSW_MUX)
-							sprintf(src_NodeId_str, "%s.%u.ID:%hhu.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																			   Node_data->identifier,
-																			   Node_data->tele_ID,
-																			   Node_data->channel,
-																			   req_value);
-						else
-							sprintf(src_NodeId_str, "%s.%u.%s.CH%hhu.%s", Morfeas_IPC_handler_type_name[Node_data->interface_type_num],
-																		  Node_data->identifier,
-																		  MTI_Tele_dev_type_str[Node_data->rxNum_teleType_or_value],
-																		  Node_data->channel,
-																		  req_value);
-						break;
-					case NOX:
-							switch(Node_data->rxNum_teleType_or_value)
-							{
-								case NOx_val: req_value = "NOx"; break;
-								case O2_val: req_value = "O2"; break;
-								default: return UA_STATUSCODE_GOOD;
-							}
-							sprintf(src_NodeId_str, "%s.sensors.addr_%hhu.%s_value", Node_data->CAN_IF_name,
-																			   		 Node_data->channel,
-																			   		 req_value);
-						break;
-					default: return UA_STATUSCODE_GOOD;
-				}
-				// Check if the source node exists. When a linked numeric
-				// measurement source disappears, OPC-UA still has to return
-				// a float for downstream consumers. This generic fallback is
-				// intentionally limited to measurement values for device
-				// families that use reserved numeric error codes. It does not
-				// change logstat; logstat writers must emit their own core
-				// measurement value when one is available.
-				if(!UA_Server_readNodeId(server_ptr, UA_NODEID_STRING(1, src_NodeId_str), &src_NodeId))
-				{
-					UA_Server_readValue(server_ptr, src_NodeId, &(dataValue->value));//Get requested Value and write on dataValue
-					UA_clear(&src_NodeId, &UA_TYPES[UA_TYPES_NODEID]);
-					dataValue->hasValue = true;
-				}
-				else if(is_meas_request &&
-						(Node_data->interface_type_num == SDAQ ||
-						 Node_data->interface_type_num == IOBOX ||
-						 Node_data->interface_type_num == MTI ||
-						 Node_data->interface_type_num == NOX))
-				{
-					//Source node missing -> handler exited / subtree removed by
-					//IPC_Handler_unregister. Emit -905 UNREGISTERED so consumers can
-					//distinguish this from -901 (handler alive, source disconnected).
-					const float unregistered_meas = MORFEAS_MEAS_ERROR_UNREGISTERED;
-					UA_Variant_setScalarCopy(&(dataValue->value), &unregistered_meas, &UA_TYPES[UA_TYPES_FLOAT]);
-					dataValue->hasValue = true;
-				}
+				Morfeas_read_linked_value(server_ptr, Node_data, req_value, dataValue);
 			}
 			else
 				dataValue->hasValue = false;
@@ -1177,7 +1150,7 @@ void Rpi_health_update(void)
 	{
 		fscanf(CPU_temp_fp, "%s", cpu_temp_str);
 		fclose(CPU_temp_fp);
-		sys_stats.CPU_temp = atof(cpu_temp_str)/1E3;
+		sys_stats.CPU_temp = Morfeas_cpu_temp_millicelsius_to_celsius(atof(cpu_temp_str));
 	}
 	else
 		sys_stats.CPU_temp = NAN;

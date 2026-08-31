@@ -11,6 +11,8 @@ make test-core-o
 make test-core-sdaq-cache
 make test-core-logbook-disk
 make test-core-nox
+make test-core-ipc-temperature
+make test-core-measurement-errors
 # Run all maintained project suites:
 make test-core-all
 ```
@@ -39,6 +41,16 @@ freed.
 
 `test-core-nox` checks the shared ten-second NOX lifetime boundary used by
 both active-device reporting and logstat export.
+
+`test-core-ipc-temperature` drives the production IPC reader through a pipe,
+checks full/partial/unknown frames, exercises SDAQ repeated-timestamp stall
+handling, and locks the CPU and MAX9611 Celsius conversions.
+
+`test-core-measurement-errors` starts an embedded open62541 server and sends
+real IPC messages through the SDAQ, IOBOX, MTI, and NOX node handlers. It
+checks normal recovery and the reserved measurement values `-901` through
+`-907` used by the 2026 error-code work, including the generic `-905`
+fallback when a configured source node is absent.
 
 `test-core-o` builds and runs `sdaq_offline_browse_gate_test.c`. It starts an
 embedded open62541 server and covers the SDAQ Unit browse gate, ISO-channel

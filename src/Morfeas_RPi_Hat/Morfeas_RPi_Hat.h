@@ -89,6 +89,9 @@ char* Morfeas_hat_error();
 
 //Decode string CAN_if_name to Port number. Return: Port's Number or -1 on failure
 int get_port_num(char * CAN_if_name);
+
+/* Convert the MAX9611 shunt-temperature reading to Celsius. */
+float Morfeas_hat_temperature_celsius(short raw_temperature);
 	//---- LEDs related ----//
 //Init Morfeas_RPi_Hat LEDs, return 1 if sysfs files exist, 0 otherwise.
 int LEDs_init();
@@ -113,6 +116,5 @@ int read_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, 
 int write_port_config(struct Morfeas_RPi_Hat_EEPROM_SDAQnet_Port_config *config, unsigned char port, unsigned char i2c_dev_num);
 //Function that erase EEPROM.
 int erase_EEPROM(unsigned char port, unsigned char i2c_dev_num);
-
 
 

@@ -55,6 +55,7 @@ Morfeas_daemon_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 
 Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_opc_ua.o \
+					  $(WORK_dir)/Morfeas_temperature.o \
 					  $(WORK_dir)/Morfeas_opc_ua_config.o \
 					  $(WORK_dir)/SDAQ_drv.o \
 					  $(WORK_dir)/MTI_func.o \
@@ -167,6 +168,9 @@ $(WORK_dir)/Morfeas_opc_ua_config.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_opc_ua_co
 #Dependencies of the Morfeas_opc_ua
 $(WORK_dir)/Morfeas_opc_ua.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_opc_ua.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_temperature.o: $(SRC_dir)/Supplementary/Morfeas_temperature.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_DBus_method_caller.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_DBus_method_caller.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
@@ -370,7 +374,7 @@ test-core-nox: tree $(BUILD_dir)/nox_lifetime_test
 # One command for every maintained project regression suite. Keep individual
 # targets for focused development, but CI/review must not rely on remembering
 # which of them exist.
-test-core-all: test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-logbook-disk test-core-nox
+test-core-all: test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-logbook-disk test-core-nox test-core-ipc-temperature test-core-measurement-errors
 
 # Integration test for the SDAQ Unit browse gate. It links an embedded
 # UA_Server and compiles Morfeas_opc_ua.c with its main renamed because the
@@ -384,6 +388,7 @@ $(WORK_dir)/sdaq_offline_browse_gate_test.o: $(TESTS_dir)/sdaq_offline_browse_ga
 Morfeas_opc_ua_test_DEP = $(WORK_dir)/sdaq_offline_browse_gate_test.o \
 						  $(WORK_dir)/Morfeas_run_check.o \
 						  $(WORK_dir)/Morfeas_opc_ua_testmain.o \
+						  $(WORK_dir)/Morfeas_temperature.o \
 						  $(WORK_dir)/Morfeas_opc_ua_config.o \
 						  $(WORK_dir)/SDAQ_drv.o \
 						  $(WORK_dir)/MTI_func.o \
@@ -405,4 +410,56 @@ $(BUILD_dir)/sdaq_offline_browse_gate_test: $(Morfeas_opc_ua_test_DEP)
 test-core-o: tree $(BUILD_dir)/sdaq_offline_browse_gate_test
 	./$(BUILD_dir)/sdaq_offline_browse_gate_test
 
-.PHONY: all clean delete-tree test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-logbook-disk test-core-nox test-core-all
+# IPC framing, SDAQ timestamp-stall detection, and temperature conversions.
+$(WORK_dir)/ipc_temperature_test.o: $(TESTS_dir)/ipc_temperature_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+Morfeas_ipc_temperature_test_DEP = $(WORK_dir)/ipc_temperature_test.o \
+						  $(WORK_dir)/Morfeas_SDAQ_if_cache_testmain.o \
+						  $(WORK_dir)/Morfeas_run_check.o \
+						  $(WORK_dir)/Morfeas_temperature.o \
+						  $(WORK_dir)/Morfeas_RPi_Hat.o \
+						  $(WORK_dir)/SDAQ_drv.o \
+						  $(WORK_dir)/MTI_func.o \
+						  $(WORK_dir)/NOX_func.o \
+						  $(WORK_dir)/Morfeas_IPC.o \
+						  $(WORK_dir)/Morfeas_JSON.o \
+						  $(WORK_dir)/Morfeas_Logger.o \
+						  $(WORK_dir)/Morfeas_info.o
+
+$(BUILD_dir)/ipc_temperature_test: $(Morfeas_ipc_temperature_test_DEP)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-ipc-temperature: tree $(BUILD_dir)/ipc_temperature_test
+	./$(BUILD_dir)/ipc_temperature_test
+
+# Production IPC handlers are exercised with an embedded OPC-UA server.
+$(WORK_dir)/measurement_error_nodeset_test.o: $(TESTS_dir)/measurement_error_nodeset_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+Morfeas_measurement_error_test_DEP = $(WORK_dir)/measurement_error_nodeset_test.o \
+							  $(WORK_dir)/Morfeas_run_check.o \
+							  $(WORK_dir)/Morfeas_opc_ua_testmain.o \
+							  $(WORK_dir)/Morfeas_temperature.o \
+							  $(WORK_dir)/Morfeas_opc_ua_config.o \
+							  $(WORK_dir)/SDAQ_drv.o \
+							  $(WORK_dir)/MTI_func.o \
+							  $(WORK_dir)/NOX_func.o \
+							  $(WORK_dir)/Morfeas_DBus_method_caller.o \
+							  $(WORK_dir)/Morfeas_IPC.o \
+							  $(WORK_dir)/Morfeas_SDAQ_nodeset.o \
+							  $(WORK_dir)/Morfeas_MDAQ_nodeset.o \
+							  $(WORK_dir)/Morfeas_IOBOX_nodeset.o \
+							  $(WORK_dir)/Morfeas_MTI_nodeset.o \
+							  $(WORK_dir)/Morfeas_NOX_nodeset.o \
+							  $(WORK_dir)/Morfeas_XML.o \
+							  $(WORK_dir)/Morfeas_JSON.o \
+							  $(WORK_dir)/Morfeas_info.o
+
+$(BUILD_dir)/measurement_error_nodeset_test: $(Morfeas_measurement_error_test_DEP)
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-measurement-errors: tree $(BUILD_dir)/measurement_error_nodeset_test
+	./$(BUILD_dir)/measurement_error_nodeset_test
+
+.PHONY: all clean delete-tree test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-logbook-disk test-core-nox test-core-ipc-temperature test-core-measurement-errors test-core-all

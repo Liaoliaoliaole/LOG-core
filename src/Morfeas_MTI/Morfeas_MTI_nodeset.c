@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include <math.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
 
 #include <modbus.h>
@@ -29,6 +30,63 @@ void Morfeas_add_new_MTI_config(UA_Server *server_ptr, char *Parent_id, char *No
 void Morfeas_add_MTI_Global_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_new_Gen_config(UA_Server *server_ptr, char *Parent_id, char *Node_id);
 void Morfeas_add_ctrl_tele_SWs(UA_Server *server_ptr, char *Parent_id, char *Node_id, unsigned char dev_type);
+
+static void MTI_mark_channels_offline(UA_Server *server, const char *anchor, unsigned char amount)
+{
+	char node_id[100];
+	float meas = DEVICE_MEAS_ERROR_OFFLINE;
+	unsigned char status = Disconnected;
+	for(unsigned char channel = 1; channel <= amount; channel++)
+	{
+		sprintf(node_id, "%s.CH%u.meas", anchor, channel);
+		Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,node_id), &meas, UA_TYPES_FLOAT);
+		sprintf(node_id, "%s.CH%u.status", anchor, channel);
+		Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,node_id), "Radio Disabled", UA_TYPES_STRING);
+		sprintf(node_id, "%s.CH%u.status_byte", anchor, channel);
+		Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,node_id), &status, UA_TYPES_BYTE);
+	}
+}
+
+static void MTI_mark_radio_sources_offline(UA_Server *server, MTI_Update_Radio_msg *radio)
+{
+	char parent_id[60], anchor[60], child_id[100], prefix[70], *end;
+	UA_BrowseDescription browse;
+	UA_BrowseDescription_init(&browse);
+	sprintf(parent_id, "%s.Radio.Tele", radio->Dev_or_Bus_name);
+
+	/* Standard telemetry sources are named by telemetry type. */
+	for(unsigned char type = Dev_type_min; type <= Dev_type_max; type++)
+	{
+		sprintf(anchor, "MTI.%u.%s", radio->MTI_IPv4, MTI_Tele_dev_type_str[type]);
+		MTI_mark_channels_offline(server, anchor, 16);
+	}
+
+	/* RMSW/MUX sources are named by device ID. Discover only existing children
+	 * instead of inventing IDs that the radio-disable IPC frame does not carry. */
+	browse.nodeId = UA_NODEID_STRING(1, parent_id);
+	browse.referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+	browse.includeSubtypes = true;
+	browse.browseDirection = UA_BROWSEDIRECTION_FORWARD;
+	browse.resultMask = UA_BROWSERESULTMASK_ALL;
+	UA_BrowseResult result = UA_Server_browse(server, 0, &browse);
+	sprintf(prefix, "%s.", parent_id);
+	for(size_t i = 0; i < result.referencesSize; i++)
+	{
+		UA_NodeId *child = &result.references[i].nodeId.nodeId;
+		if(child->identifierType != UA_NODEIDTYPE_STRING || child->identifier.string.length >= sizeof(child_id))
+			continue;
+		snprintf(child_id, sizeof(child_id), "%.*s", (int)child->identifier.string.length,
+			(const char *)child->identifier.string.data);
+		if(strncmp(child_id, prefix, strlen(prefix)))
+			continue;
+		unsigned long id = strtoul(child_id + strlen(prefix), &end, 10);
+		if(*end || id > UCHAR_MAX)
+			continue;
+		sprintf(anchor, "MTI.%u.ID:%lu", radio->MTI_IPv4, id);
+		MTI_mark_channels_offline(server, anchor, 4);
+	}
+	UA_BrowseResult_clear(&result);
+}
 
 void MTI_handler_reg(UA_Server *server_ptr, char *Dev_or_Bus_name)
 {
@@ -224,17 +282,7 @@ void IPC_msg_from_MTI_handler(UA_Server *server, unsigned char type, IPC_message
 							meas = DEVICE_MEAS_ERROR_OFFLINE;
 							status_value = Disconnected;
 							status_str = "Radio Disabled";
-							//Try CH1..CH16 (Tele_TC16 max). Writes to non-existent nodes are
-							//silently ignored by Update_NodeValue_by_nodeID.
-							for(i=1; i<=16; i++)
-							{
-								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.meas", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &meas, UA_TYPES_FLOAT);
-								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.status", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), status_str, UA_TYPES_STRING);
-								sprintf(Node_ID_str, "%s.Radio.Tele.CH%u.status_byte", IPC_msg_dec->MTI_Update_Radio.Dev_or_Bus_name, i);
-								Update_NodeValue_by_nodeID(server, UA_NODEID_STRING(1,Node_ID_str), &status_value, UA_TYPES_BYTE);
-							}
+							MTI_mark_radio_sources_offline(server, &(IPC_msg_dec->MTI_Update_Radio));
 						}
 					}
 					else if(!UA_Server_readNodeId(server, UA_NODEID_STRING(1, Node_ID_str), &NodeId))

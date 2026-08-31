@@ -44,6 +44,11 @@ void Morfeas_Nodeset_file_signature_record_result(
 	int parsed,
 	int applied);
 
+float Morfeas_cpu_temp_millicelsius_to_celsius(float millicelsius);
+UA_StatusCode Morfeas_read_linked_value(UA_Server *server_ptr,
+	const struct Link_entry *node_data, const char *request,
+	UA_DataValue *dataValue);
+
 //Assistance function manipulate the Morfeas OPC_UA configuration
 UA_StatusCode Morfeas_OPC_UA_config(UA_ServerConfig *config, const char *app_name, const char *version);
 
