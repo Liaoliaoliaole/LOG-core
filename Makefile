@@ -22,6 +22,7 @@ LDLIBS= -lm -lrt -li2c -lpthread $(shell pkg-config --cflags --libs $(LIBs))
 BUILD_dir=build
 WORK_dir=work
 SRC_dir=src
+CONFIG_dir=/home/morfeas/configuration
 CANif_DEP_HEADERS_dir = ./src/sdaq-worker/src/*.h
 CANif_DEP_SRC_dir = ./src/sdaq-worker/src
 D_opt = -D RELEASE_HASH='"$(shell git log -1 --format=%h)"' \
@@ -267,6 +268,9 @@ clean:
 install:
 	@echo "\nInstallation of executable Binaries..."
 	@install $(BUILD_dir)/* -v -t /usr/local/bin/
+	@echo "Installation of shared configuration schema..."
+	@install -d -g morfeas -m 2775 $(CONFIG_dir)
+	@install -g morfeas -m 0644 configuration/Morfeas.dtd $(CONFIG_dir)/Morfeas.dtd
 	@echo "Instalation of D-Bus configuration"
 	cp -r -n ./dbus/* /etc/dbus-1/system.d/
 	@echo "\nInstallation of Systemd service for Morfeas_daemon..."
