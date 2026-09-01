@@ -32,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 /* Shared by active-device reporting and logstat export. */
 static inline int nox_sensor_is_active(time_t now, time_t last_seen)
 {
-	return (now - last_seen) <= NOx_Sensor_lifetime_sec;
+	return last_seen > 0 && (now - last_seen) <= NOx_Sensor_lifetime_sec;
 }
 
 enum NOx_Error_codes{

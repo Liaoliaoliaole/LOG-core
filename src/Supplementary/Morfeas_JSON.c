@@ -293,6 +293,11 @@ int logstat_SDAQ(char *logstat_path, void *stats_arg)
 	cJSON_AddNumberToObject(root, "BUS_Error_rate", stats->Bus_error_rate);
 	cJSON_AddNumberToObject(root, "Detected_SDAQs", stats->detected_SDAQs);
 	cJSON_AddNumberToObject(root, "Incomplete_SDAQs", stats->incomplete_SDAQs);
+	if(stats->last_clock_step_unix)
+	{
+		cJSON_AddNumberToObject(root, "Last_clock_step_UNIX", stats->last_clock_step_unix);
+		cJSON_AddNumberToObject(root, "Last_clock_step_delta_sec", stats->last_clock_step_delta);
+	}
 	if(stats->detected_SDAQs)
 	{
 		cJSON_AddItemToObject(root, "SDAQs_data",logstat = cJSON_CreateArray());
@@ -943,6 +948,9 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	char *logstat_path_and_name, *slash;
 	//make time_t variable and get unix time
 	time_t now_time = time(NULL);
+	struct timespec monotonic_time = {0};
+	if(clock_gettime(CLOCK_MONOTONIC, &monotonic_time))
+		monotonic_time.tv_sec = 0;
 	//Correct logstat_path_and_name
 	logstat_path_and_name = (char *) malloc(sizeof(char) * strlen(logstat_path) + strlen(stats->CAN_IF_name) + strlen("/logstat_NOXs_.json") + 1);
 	slash = logstat_path[strlen(logstat_path)-1] == '/' ? "" : "/";
@@ -975,7 +983,7 @@ int logstat_NOX(char *logstat_path, void *stats_arg)
 	cJSON_AddItemToObject(root, "NOx_sensors", NOx_array = cJSON_CreateArray());
 	for(int i=0; i<2; i++)
 	{
-		if(nox_sensor_is_active(now_time, stats->NOXs_data[i].last_seen))
+		if(nox_sensor_is_active(monotonic_time.tv_sec, stats->NOXs_data[i].last_seen_monotonic))
 		{
 			cJSON_AddItemToArray(NOx_array, curr_NOx_data = cJSON_CreateObject());
 			cJSON_AddNumberToObject(curr_NOx_data, "addr", i);

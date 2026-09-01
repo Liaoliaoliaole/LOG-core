@@ -21,6 +21,7 @@ int main(void)
     CHECK(nox_sensor_is_active(now, now - NOx_Sensor_lifetime_sec), "sensor is active exactly at the 10-second lifetime boundary");
     CHECK(!nox_sensor_is_active(now, now - NOx_Sensor_lifetime_sec - 1), "sensor is inactive one second beyond the lifetime boundary");
     CHECK(nox_sensor_is_active(now, now), "newly seen sensor is active");
+    CHECK(!nox_sensor_is_active(5, 0), "a never-seen sensor is inactive during the first lifetime after boot");
     printf("\n%d checks, %d passed, %d failed\n", g_checks, g_checks - g_failures, g_failures);
     return g_failures ? EXIT_FAILURE : EXIT_SUCCESS;
 }

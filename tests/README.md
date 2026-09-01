@@ -9,6 +9,7 @@ make test-core-a1
 make test-core-d
 make test-core-o
 make test-core-sdaq-cache
+make test-core-clock-guard
 make test-core-logbook-disk
 make test-core-nox
 make test-core-ipc-temperature
@@ -28,7 +29,12 @@ change cannot silently make only one layer accept a configuration.
 
 `test-core-sdaq-cache` links the production `Morfeas_SDAQ_if.c` with its
 `main()` renamed and tests the address-reservation cache's TTL, uniqueness,
-ownership, and expiry semantics without opening CAN.
+ownership, expiry, clock-rebase boundaries, and online-owner sentinel without
+opening CAN.
+
+`test-core-clock-guard` checks the deterministic clock-step detector with
+injected wall-clock and monotonic readings, including the closed ±2-second
+boundary and multi-year corrections.
 
 `test-core-logbook-disk` exercises `LogBook_file()`'s on-disk persistence
 against the same renamed-`main()` link: read/write round-trip, new-format
@@ -37,7 +43,8 @@ starts empty), and rejection of a file matching neither record size. It
 includes a fixed regression for a use-after-free that existed in `"w"` mode:
 the function captured the list head before sweeping expired entries, so a
 head entry that expired between capture and sweep was read after being
-freed.
+freed. It also verifies that callers supply the one observation time used for
+both expiry and disk I/O.
 
 `test-core-nox` checks the shared ten-second NOX lifetime boundary used by
 both active-device reporting and logstat export.

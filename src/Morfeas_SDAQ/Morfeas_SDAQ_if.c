@@ -37,6 +37,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <errno.h>
 #include <signal.h>
 #include <pthread.h>
+#include <inttypes.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -61,6 +62,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../Supplementary/Morfeas_JSON.h"
 #include "../IPC/Morfeas_IPC.h" //<-#include -> "Morfeas_Types.h"
 #include "../Supplementary/Morfeas_Logger.h"
+#include "../Supplementary/Morfeas_clock_guard.h"
 #include "../Morfeas_RPi_Hat/Morfeas_RPi_Hat.h"
 #include "Morfeas_SDAQ_measurement.h"
 
@@ -110,9 +112,9 @@ void print_usage(char *prog_name);//print the usage manual
 //Function for Status LEDs
 void led_stat(struct Morfeas_SDAQ_if_stats *stats);
 //Logbook read and write from file;
-int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode);
+int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode, time_t now);
 //Function to clean-up list_SDAQs from non active SDAQ, also send IPC msg to opc_ua for each dead SDAQ
-int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats);
+int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats, time_t now);
 //Function that found and return the status of a node from the list_SDAQ with SDAQ_address == address. Used in FSM
 struct SDAQ_info_entry * find_SDAQ(unsigned char address, struct Morfeas_SDAQ_if_stats *stats);
 //Function that add or refresh SDAQ to lists list_SDAQ and LogBook, Return the data of node or NULL. Used in FSM
@@ -156,6 +158,87 @@ void rebuild_address_owner_table_from_cache(struct Morfeas_SDAQ_if_stats *stats,
 bool cache_entry_is_valid(const struct LogBook_entry *entry, time_t now);
 bool logbook_validate_new_format(FILE *fp, long file_size);
 bool logbook_validate_legacy_format(FILE *fp, long file_size);
+bool rebase_deadline(uint64_t *deadline, intmax_t delta);
+unsigned rebase_address_cache(struct Morfeas_SDAQ_if_stats *stats, intmax_t delta, unsigned *invalidated);
+intmax_t update_cache_clock_guard(struct Morfeas_clock_guard *guard,
+		struct Morfeas_SDAQ_if_stats *stats, time_t realtime, time_t monotonic);
+
+static time_t monotonic_seconds(void)
+{
+	struct timespec now = {0};
+	if(clock_gettime(CLOCK_MONOTONIC, &now))
+		return 0;
+	return now.tv_sec;
+}
+
+static void update_last_seen(struct SDAQ_info_entry *entry)
+{
+	time(&(entry->last_seen));
+	entry->last_seen_monotonic = monotonic_seconds();
+}
+
+bool rebase_deadline(uint64_t *deadline, intmax_t delta)
+{
+	uint64_t magnitude;
+	if(!*deadline || !delta)
+		return false;
+	magnitude = delta < 0 ? (uint64_t)(-(delta + 1)) + 1 : (uint64_t)delta;
+	if((delta < 0 && *deadline < magnitude) ||
+	   (delta > 0 && UINT64_MAX - *deadline < magnitude))
+	{
+		*deadline = 0;
+		return true;
+	}
+	if(delta < 0)
+		*deadline -= magnitude;
+	else
+		*deadline += magnitude;
+	return false;
+}
+
+unsigned rebase_address_cache(struct Morfeas_SDAQ_if_stats *stats, intmax_t delta, unsigned *invalidated)
+{
+	GSList *node;
+	unsigned changed = 0;
+	for(node = stats->LogBook; node; node = node->next)
+	{
+		struct LogBook_entry *entry = node->data;
+		if(entry && entry->valid_until)
+		{
+			if(rebase_deadline(&(entry->valid_until), delta))
+				(*invalidated)++;
+			changed++;
+		}
+	}
+	for(unsigned char address = 1; address < SDAQ_address_owner_slots; address++)
+	{
+		struct SDAQ_address_owner *owner = &(stats->address_owners[address]);
+		if(owner->state == SDAQ_owner_cached && owner->valid_until)
+		{
+			if(rebase_deadline(&(owner->valid_until), delta))
+				(*invalidated)++;
+			changed++;
+		}
+	}
+	return changed;
+}
+
+intmax_t update_cache_clock_guard(struct Morfeas_clock_guard *guard,
+		struct Morfeas_SDAQ_if_stats *stats, time_t realtime, time_t monotonic)
+{
+	intmax_t drift;
+	unsigned invalidated = 0;
+	drift = Morfeas_clock_guard_update(guard, realtime, monotonic);
+	if(!drift)
+		return 0;
+	stats->last_clock_step_unix = realtime;
+	stats->last_clock_step_delta = drift;
+	Logger("Clock step detected: %+jd s, address cache entries rebased: %u, invalidated: %u\n", drift,
+		   rebase_address_cache(stats, drift, &invalidated), invalidated);
+	return drift;
+}
+
+static struct Morfeas_clock_guard cache_clock_guard = {0};
 
 int main(int argc, char *argv[])
 {
@@ -355,7 +438,11 @@ int main(int argc, char *argv[])
 	//Load the LogBook file to LogBook List
 	Logger("Morfeas_SDAQ_if (%s) Read of LogBook file\n", stats.CAN_IF_name);
 	sprintf(stats.LogBook_file_path, "%sMorfeas_SDAQ_if_%s_LogBook", LogBooks_dir, stats.CAN_IF_name);
-	RX_bytes = LogBook_file(&stats, "r");
+	{
+		time_t cache_now = time(NULL);
+		update_cache_clock_guard(&cache_clock_guard, &stats, cache_now, monotonic_seconds());
+		RX_bytes = LogBook_file(&stats, "r", cache_now);
+	}
 	if(RX_bytes>0)
 		Logger("IO Error on LogBook File!!!\n");
 	else if(RX_bytes<0)
@@ -396,7 +483,7 @@ int main(int argc, char *argv[])
 						{
 							if(flags.is_meas_started && (SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 							{
-								time(&(SDAQ_data->last_seen));
+								update_last_seen(SDAQ_data);
 								if(logstat_path && acc_raw_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data) != EXIT_SUCCESS)
 									Logger("SDAQ raw measurement dropped: channel %02hhu is not in accumulator list for address %02hhu\n",
 										   sdaq_id_dec->channel_num,
@@ -411,7 +498,7 @@ int main(int argc, char *argv[])
 							Stop(CAN_socket_num, sdaq_id_dec->device_addr);
 						else if((SDAQ_data = find_SDAQ(sdaq_id_dec->device_addr, &stats)))
 						{
-							time(&(SDAQ_data->last_seen));//Update last seen time
+							update_last_seen(SDAQ_data);//Update last seen time
 							if(logstat_path)//Add current measurements to Average Accumulator
 								acc_meas(sdaq_id_dec->channel_num, meas_dec, SDAQ_data);//Add meas to acc
 							if(SDAQ_data->SDAQ_Channels_curr_meas && sdaq_id_dec->channel_num <= SDAQ_data->SDAQ_info.num_of_ch)
@@ -530,8 +617,11 @@ int main(int argc, char *argv[])
 		}
 		if(flags.Clean_flag)
 		{
+			time_t cache_now = time(NULL);
+			if(update_cache_clock_guard(&cache_clock_guard, &stats, cache_now, monotonic_seconds()))
+				LogBook_file(&stats, "w", cache_now);
 			if(stats.detected_SDAQs)
-				clean_up_list_SDAQs(&stats);
+				clean_up_list_SDAQs(&stats, cache_now);
 			flags.Clean_flag = 0;
 			if(!stats.detected_SDAQs)
 				flags.is_meas_started = 0;
@@ -581,7 +671,11 @@ int main(int argc, char *argv[])
 	Logger("Morfeas_SDAQ_if (%s) Exiting...\n",stats.CAN_IF_name);
 	//Save LogBook list to a file before destroy it
 	Logger("Save LogBook list to LogBook file\n");
-	LogBook_file(&stats,"w");
+	{
+		time_t cache_now = time(NULL);
+		update_cache_clock_guard(&cache_clock_guard, &stats, cache_now, monotonic_seconds());
+		LogBook_file(&stats, "w", cache_now);
+	}
 	//Free all lists
 	Logger("Free allocated memory...\n");
 	g_slist_free_full(stats.list_SDAQs, free_SDAQ_info_entry);
@@ -1073,13 +1167,12 @@ gint SDAQ_info_entry_cmp (gconstpointer a, gconstpointer b)
 }
 
 //Logbook read and write from file;
-int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
+int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode, time_t now)
 {
 	FILE *fp;
 	GSList *LogBook_node = stats->LogBook;
 	struct LogBook_entry *node_data;
 	unsigned char checksum;
-	time_t now = time(NULL);
 
 	if(!strcmp(mode, "r"))
 	{
@@ -1184,14 +1277,14 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 			 */
 			Logger("Previous LogBook format detected on %s - clearing address cache and rebuilding from currently online devices\n",
 				   stats->CAN_IF_name);
-			LogBook_file(stats, "w");
+			LogBook_file(stats, "w", now);
 			return EXIT_SUCCESS;
 		}
 		if(cache_remove_expired_entries(stats, now))
 			rewrite_needed = true;
 		rebuild_address_owner_table_from_cache(stats, now);
 		if(rewrite_needed)
-			LogBook_file(stats, "w");
+			LogBook_file(stats, "w", now);
 		return EXIT_SUCCESS;
 	}
 	else if(!strcmp(mode, "w"))
@@ -1222,7 +1315,7 @@ int LogBook_file(struct Morfeas_SDAQ_if_stats *stats, const char *mode)
 		return EXIT_SUCCESS;
 	}
 	else if(!strcmp(mode, "a"))
-		return LogBook_file(stats, "w");
+		return LogBook_file(stats, "w", now);
 	return EXIT_FAILURE;
 }
 //Function that find and return the amount of incomplete (incomplete info and/or dates) nodes.
@@ -1261,7 +1354,7 @@ int update_Timediff(unsigned char address, sdaq_sync_debug_data *ts_dec, struct 
 		{
 			sdaq_node = list_node->data;
 			sdaq_node->Timediff = time_diff_cal(ts_dec->dev_time, ts_dec->ref_time);
-			time(&(sdaq_node->last_seen));
+			update_last_seen(sdaq_node);
 			//Send timediff over IPC
 			IPC_msg.SDAQ_timediff.IPC_msg_type = IPC_SDAQ_timediff;
 			sprintf(IPC_msg.SDAQ_timediff.Dev_or_Bus_name,"%s",stats->CAN_IF_name);
@@ -1322,7 +1415,7 @@ int update_info(unsigned char address, sdaq_info *info_dec, struct Morfeas_SDAQ_
 		{
 			sdaq_node = list_node->data;
 			memcpy(&(sdaq_node->SDAQ_info), info_dec, sizeof(sdaq_info));
-			time(&(sdaq_node->last_seen));
+			update_last_seen(sdaq_node);
 			if(sdaq_node->reg_status < Pending_Calibration_data)
 			{
 				sdaq_node->reg_status = Pending_Calibration_data;
@@ -1381,7 +1474,7 @@ int update_input_mode(unsigned char address, sdaq_sysvar *sysvar_dec, struct Mor
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
-			time(&(sdaq_node->last_seen));
+			update_last_seen(sdaq_node);
 			if(*dev_input_mode_str[sdaq_node->SDAQ_info.dev_type])//Check if selected dev_type of sdaq_node have available input mode.
 			{	//Send SDAQ's input mode through IPC
 				IPC_msg.SDAQ_inpMode.IPC_msg_type = IPC_SDAQ_inpMode;
@@ -1431,7 +1524,7 @@ int add_update_channel_date(unsigned char address, unsigned char channel, sdaq_c
 		if(list_node)
 		{
 			sdaq_node = list_node->data;
-			time(&(sdaq_node->last_seen));
+			update_last_seen(sdaq_node);
 			if(sdaq_node->reg_status < Pending_Calibration_data)//Check, if "cal_date" msg comes before "Dev_info".
 				return EXIT_FAILURE;
 			date_list_node = g_slist_find_custom(sdaq_node->SDAQ_Channels_cal_dates, &channel, SDAQ_Channels_cal_dates_entry_find_channel);
@@ -1573,13 +1666,15 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	GSList *check_is_in_list_SDAQ;
 	time_t now = time(NULL);
 
+	if(update_cache_clock_guard(&cache_clock_guard, stats, now, monotonic_seconds()))
+		LogBook_file(stats, "w", now);
 	cache_remove_expired_entries(stats, now);
 	LogBook_node_data = cache_find_by_sn(stats, status_dec->dev_sn);
 	check_is_in_list_SDAQ = g_slist_find_custom(stats->list_SDAQs, &(status_dec->dev_sn), SDAQ_info_entry_find_serial_number);
 	if(check_is_in_list_SDAQ)//SDAQ is in list_SDAQ
 	{
 		list_SDAQ_node_data = check_is_in_list_SDAQ->data;
-		time(&(list_SDAQ_node_data->last_seen));//Update last_seen for the SDAQ entry
+		update_last_seen(list_SDAQ_node_data);//Update last_seen for the SDAQ entry
 		memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status)); //Update SDAQ's status value
 		cache_upsert_entry(stats, status_dec->dev_sn, list_SDAQ_node_data->SDAQ_address, cache_valid_until_from(now));
 		set_address_owner(stats, list_SDAQ_node_data->SDAQ_address, status_dec->dev_sn, SDAQ_owner_online, 0);
@@ -1596,11 +1691,11 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 			{
 				list_SDAQ_node_data->SDAQ_address = LogBook_node_data->SDAQ_address;
 				memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
-				time(&(list_SDAQ_node_data->last_seen));
+				update_last_seen(list_SDAQ_node_data);
 				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
 				set_address_owner(stats, list_SDAQ_node_data->SDAQ_address, status_dec->dev_sn, SDAQ_owner_online, 0);
 				cache_upsert_entry(stats, status_dec->dev_sn, list_SDAQ_node_data->SDAQ_address, cache_valid_until_from(now));
-				LogBook_file(stats, "w");
+				LogBook_file(stats, "w", now);
 				stats->detected_SDAQs++;
 				if(sdaq_id_dec->device_addr != LogBook_node_data->SDAQ_address)//Check and configure SDAQ with Address from LogBook
 					SetDeviceAddress(socket_fd, status_dec->dev_sn, LogBook_node_data->SDAQ_address);
@@ -1621,12 +1716,12 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				{
 					list_SDAQ_node_data->SDAQ_address = address_test;
 					memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
-					time(&(list_SDAQ_node_data->last_seen));
+					update_last_seen(list_SDAQ_node_data);
 					stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
 					cache_upsert_entry(stats, status_dec->dev_sn, address_test, cache_valid_until_from(now));
 					set_address_owner(stats, address_test, status_dec->dev_sn, SDAQ_owner_online, 0);
 					SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
-					LogBook_file(stats, "w");
+					LogBook_file(stats, "w", now);
 					stats->detected_SDAQs++;
 					return list_SDAQ_node_data;
 				}
@@ -1657,11 +1752,11 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 				{
 					list_SDAQ_node_data->SDAQ_address = address_test;
 					memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
-					time(&(list_SDAQ_node_data->last_seen));
+					update_last_seen(list_SDAQ_node_data);
 					stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
 					cache_upsert_entry(stats, status_dec->dev_sn, address_test, cache_valid_until_from(now));
 					set_address_owner(stats, address_test, status_dec->dev_sn, SDAQ_owner_online, 0);
-					LogBook_file(stats, "w");
+					LogBook_file(stats, "w", now);
 					SetDeviceAddress(socket_fd, status_dec->dev_sn, address_test);
 					stats->detected_SDAQs++;
 					return list_SDAQ_node_data;
@@ -1686,11 +1781,11 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 			{	//Load SDAQ data on new list_SDAQ entry
 				list_SDAQ_node_data->SDAQ_address = address_test;
 				memcpy(&(list_SDAQ_node_data->SDAQ_status), status_dec, sizeof(sdaq_status));
-				time(&(list_SDAQ_node_data->last_seen));
+				update_last_seen(list_SDAQ_node_data);
 				stats->list_SDAQs = g_slist_insert_sorted(stats->list_SDAQs, list_SDAQ_node_data, SDAQ_info_entry_cmp);
 				cache_upsert_entry(stats, status_dec->dev_sn, address_test, cache_valid_until_from(now));
 				set_address_owner(stats, address_test, status_dec->dev_sn, SDAQ_owner_online, 0);
-				LogBook_file(stats, "w");
+				LogBook_file(stats, "w", now);
 				stats->detected_SDAQs++;
 				return list_SDAQ_node_data;
 			}
@@ -1704,12 +1799,12 @@ struct SDAQ_info_entry * add_or_refresh_SDAQ_to_lists(int socket_fd, sdaq_can_id
 	return NULL;
 }
 //Function that cleaning the list_SDAQ from dead entries.
-int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
+int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats, time_t now)
 {
 	IPC_message IPC_msg = {0};
 	struct SDAQ_info_entry *sdaq_node;
 	GSList *check_node;
-	time_t now=time(NULL);
+	time_t monotonic_now=monotonic_seconds();
 	bool SDAQs_to_be_removed=false, cache_changed=false;
 
 	if(cache_remove_expired_entries(stats, now))
@@ -1723,7 +1818,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 			if(check_node->data)
 			{
 				sdaq_node = check_node->data;
-				if((now - sdaq_node->last_seen) > LIFE_TIME)
+				if((monotonic_now - sdaq_node->last_seen_monotonic) > LIFE_TIME)
 				{
 					uint64_t valid_until = cache_valid_until_from(now);
 					stats->detected_SDAQs--;
@@ -1754,7 +1849,7 @@ int clean_up_list_SDAQs(struct Morfeas_SDAQ_if_stats *stats)
 	else if(!cache_changed)
 		return EXIT_FAILURE;
 	if(cache_changed)
-		LogBook_file(stats, "w");
+		LogBook_file(stats, "w", now);
 	return EXIT_SUCCESS;
 }
 

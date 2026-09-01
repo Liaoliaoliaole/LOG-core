@@ -322,6 +322,7 @@ struct UniNOx_sensor{
 	float NOx_value;
 	float O2_value;
 	time_t last_seen;
+	time_t last_seen_monotonic;
 	unsigned meas_state : 1;
 	struct NOx_sensor_status{
 		unsigned supply_in_range : 1;
@@ -403,6 +404,8 @@ struct Morfeas_SDAQ_if_stats{
 	GSList *list_SDAQs;// List with SDAQ status, info and last seen timestamp.
 	GSList *LogBook;//List of the LogBook file
 	struct SDAQ_address_owner address_owners[SDAQ_address_owner_slots];
+	time_t last_clock_step_unix;
+	intmax_t last_clock_step_delta;
 };
 // Data of a current_measurements node
 struct Channel_curr_meas{
@@ -427,6 +430,7 @@ struct SDAQ_info_entry{
 	unsigned char *SDAQ_Channels_stall_cycles;
 	unsigned char *SDAQ_Channels_cycle_seen;
 	time_t last_seen;
+	time_t last_seen_monotonic;
 	unsigned failed_reg_RX_CNT;
 	unsigned reg_status:3;
 };

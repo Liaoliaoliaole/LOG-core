@@ -73,6 +73,7 @@ Morfeas_opc_ua_DEP =  $(WORK_dir)/Morfeas_run_check.o \
 
 Morfeas_SDAQ_if_DEP = $(WORK_dir)/Morfeas_run_check.o \
 					  $(WORK_dir)/Morfeas_SDAQ_if.o \
+					  $(WORK_dir)/Morfeas_clock_guard.o \
 					  $(WORK_dir)/Morfeas_JSON.o \
 					  $(WORK_dir)/Morfeas_RPi_Hat.o \
 					  $(WORK_dir)/SDAQ_drv.o \
@@ -170,6 +171,9 @@ $(WORK_dir)/Morfeas_opc_ua.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_opc_ua.c
 	gcc $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_temperature.o: $(SRC_dir)/Supplementary/Morfeas_temperature.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(WORK_dir)/Morfeas_clock_guard.o: $(SRC_dir)/Supplementary/Morfeas_clock_guard.c
 	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
 
 $(WORK_dir)/Morfeas_DBus_method_caller.o: $(SRC_dir)/Morfeas_opc_ua/Morfeas_DBus_method_caller.c
@@ -322,6 +326,7 @@ $(WORK_dir)/sdaq_address_cache_test.o: $(TESTS_dir)/sdaq_address_cache_test.c
 
 Morfeas_SDAQ_if_cache_test_DEP = $(WORK_dir)/sdaq_address_cache_test.o \
 						  $(WORK_dir)/Morfeas_SDAQ_if_cache_testmain.o \
+						  $(WORK_dir)/Morfeas_clock_guard.o \
 						  $(WORK_dir)/Morfeas_run_check.o \
 						  $(WORK_dir)/Morfeas_JSON.o \
 						  $(WORK_dir)/Morfeas_RPi_Hat.o \
@@ -338,6 +343,15 @@ $(BUILD_dir)/sdaq_address_cache_test: $(Morfeas_SDAQ_if_cache_test_DEP)
 test-core-sdaq-cache: tree $(BUILD_dir)/sdaq_address_cache_test
 	./$(BUILD_dir)/sdaq_address_cache_test
 
+$(WORK_dir)/clock_guard_test.o: $(TESTS_dir)/clock_guard_test.c
+	$(GCC_opt) $(CFLAGS) $^ -c -o $@ $(LDLIBS)
+
+$(BUILD_dir)/clock_guard_test: $(WORK_dir)/clock_guard_test.o $(WORK_dir)/Morfeas_clock_guard.o
+	$(GCC_opt) $(CFLAGS) $^ -o $@ $(LDLIBS)
+
+test-core-clock-guard: tree $(BUILD_dir)/clock_guard_test
+	./$(BUILD_dir)/clock_guard_test
+
 # On-disk LogBook persistence: read/write round-trip, new/legacy format
 # detection, checksum validation, and the fixed use-after-free regression.
 # Reuses the same renamed-main Morfeas_SDAQ_if.o as the address-cache test.
@@ -346,6 +360,7 @@ $(WORK_dir)/sdaq_logbook_disk_test.o: $(TESTS_dir)/sdaq_logbook_disk_test.c
 
 Morfeas_SDAQ_if_logbook_disk_test_DEP = $(WORK_dir)/sdaq_logbook_disk_test.o \
 						  $(WORK_dir)/Morfeas_SDAQ_if_cache_testmain.o \
+						  $(WORK_dir)/Morfeas_clock_guard.o \
 						  $(WORK_dir)/Morfeas_run_check.o \
 						  $(WORK_dir)/Morfeas_JSON.o \
 						  $(WORK_dir)/Morfeas_RPi_Hat.o \
@@ -374,7 +389,7 @@ test-core-nox: tree $(BUILD_dir)/nox_lifetime_test
 # One command for every maintained project regression suite. Keep individual
 # targets for focused development, but CI/review must not rely on remembering
 # which of them exist.
-test-core-all: test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-logbook-disk test-core-nox test-core-ipc-temperature test-core-measurement-errors
+test-core-all: test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-clock-guard test-core-logbook-disk test-core-nox test-core-ipc-temperature test-core-measurement-errors
 
 # Integration test for the SDAQ Unit browse gate. It links an embedded
 # UA_Server and compiles Morfeas_opc_ua.c with its main renamed because the
@@ -416,6 +431,7 @@ $(WORK_dir)/ipc_temperature_test.o: $(TESTS_dir)/ipc_temperature_test.c
 
 Morfeas_ipc_temperature_test_DEP = $(WORK_dir)/ipc_temperature_test.o \
 						  $(WORK_dir)/Morfeas_SDAQ_if_cache_testmain.o \
+						  $(WORK_dir)/Morfeas_clock_guard.o \
 						  $(WORK_dir)/Morfeas_run_check.o \
 						  $(WORK_dir)/Morfeas_temperature.o \
 						  $(WORK_dir)/Morfeas_RPi_Hat.o \
@@ -462,4 +478,4 @@ $(BUILD_dir)/measurement_error_nodeset_test: $(Morfeas_measurement_error_test_DE
 test-core-measurement-errors: tree $(BUILD_dir)/measurement_error_nodeset_test
 	./$(BUILD_dir)/measurement_error_nodeset_test
 
-.PHONY: all clean delete-tree test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-logbook-disk test-core-nox test-core-ipc-temperature test-core-measurement-errors test-core-all
+.PHONY: all clean delete-tree test-core-a1 test-core-d test-core-o test-core-sdaq-cache test-core-clock-guard test-core-logbook-disk test-core-nox test-core-ipc-temperature test-core-measurement-errors test-core-all

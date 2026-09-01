@@ -65,6 +65,14 @@ volatile unsigned char NOX_handler_run = 1;
 static volatile struct Morfeas_NOX_if_flags flags = {0};
 pthread_mutex_t NOX_access = PTHREAD_MUTEX_INITIALIZER;
 
+static time_t monotonic_seconds(void)
+{
+	struct timespec now = {0};
+	if(clock_gettime(CLOCK_MONOTONIC, &now))
+		return 0;
+	return now.tv_sec;
+}
+
 /* Local function (declaration)
  * Return value: EXIT_FAILURE(1) of failure or EXIT_SUCCESS(0) on success. Except of other notice
  */
@@ -311,6 +319,7 @@ int main(int argc, char *argv[])
 			if(sensor_index>=0 && sensor_index<=1)//Decode and Load NOx sensor frame
 			{
 				stats.NOXs_data[sensor_index].last_seen = time(NULL);
+				stats.NOXs_data[sensor_index].last_seen_monotonic = monotonic_seconds();
 				stats.dev_msg_cnt[sensor_index]++;
 				//Decode and Load Sensor's status
 				stats.NOXs_data[sensor_index].status.supply_in_range = NOx_data->Supply_valid == 1;
@@ -452,7 +461,7 @@ int main(int argc, char *argv[])
 				IPC_msg.NOX_BUS_info.Dev_on_bus = 0;
 				for(int i=0; i<2; i++)
 				{
-					if(nox_sensor_is_active(time(NULL), stats.NOXs_data[i].last_seen))
+					if(nox_sensor_is_active(monotonic_seconds(), stats.NOXs_data[i].last_seen_monotonic))
 					{
 						IPC_msg.NOX_BUS_info.Dev_on_bus++;
 						IPC_msg.NOX_BUS_info.active_devs[i] = -1;
